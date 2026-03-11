@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="approve">
+  <!-- 표준 승인 -->
+  <select id="selectStdAprvStatList" parameterType="com.ndata.quality.model.std.StdApproveStatVo$RetrieveCond" resultType="com.ndata.quality.model.std.StdApproveStatVo">
+			select 
+        ''            as id
+				,'TERMS'				as reqTp		--용어
+				,TERMS_ID			as reqItemId
+				,TERMS_NM			as reqItemNm
+				,0					as aprvStat		--요청됨
+				,CRET_USER_ID		as reqUserId
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqUpdtDt
+        ,APRV_USER_ID as aprvUserId
+        ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt 
+        ,''           as aprvStatUpdtRsn
+			from TB_TERMS
+			where APRV_YN = 'N'
+    <if test="reqUserId != null">
+        		AND CRET_USER_ID = #{reqUserId}
+    </if>
+    <if test="statusList != null and statusList.size() != 0">
+            AND 0 in <foreach collection="statusList" item="item" index="index" open="(" separator="," close=")">
+        					#{item.value}</foreach>
+    </if>
+    <if test="from != null">
+        		AND CRET_DT &gt;= #{from}
+    </if>
+    <if test="to != null">
+        		AND CRET_DT &lt;= #{to}
+    </if>
+			union all
+			select 
+        ''            as id
+				,'WORD'				as reqTp		--단어
+				,WORD_ID			as reqItemId
+				,WORD_NM			as reqItemNm
+				,0					as aprvStat		--요청됨
+				,CRET_USER_ID		as reqUserId
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqUpdtDt
+        ,APRV_USER_ID as aprvUserId
+        ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt 
+        ,''           as aprvStatUpdtRsn
+			from TB_WORD
+			where APRV_YN = 'N'
+    <if test="reqUserId != null">
+        		AND CRET_USER_ID = #{reqUserId}
+    </if>
+    <if test="statusList != null and statusList.size() != 0">
+            AND 0 in <foreach collection="statusList" item="item" index="index" open="(" separator="," close=")">
+        					#{item.value}</foreach>
+    </if>
+    <if test="from != null">
+        		AND CRET_DT &gt;= #{from}
+    </if>
+    <if test="to != null">
+        		AND CRET_DT &lt;= #{to}
+    </if>
+			union all
+			select 
+        ''            as id
+				,'DOMAIN'			as reqTp		--도메인
+				,DOMAIN_ID			as reqItemId
+				,DOMAIN_NM			as reqItemNm
+				,0					as aprvStat		--요청됨
+				,CRET_USER_ID		as reqUserId
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqUpdtDt
+        ,APRV_USER_ID as aprvUserId
+        ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt 
+        ,''           as aprvStatUpdtRsn
+			from TB_DOMAIN
+			where APRV_YN = 'N'
+    <if test="reqUserId != null">
+        		AND CRET_USER_ID = #{reqUserId}
+    </if>
+    <if test="statusList != null and statusList.size() != 0">
+            AND 0 in <foreach collection="statusList" item="item" index="index" open="(" separator="," close=")">
+        					#{item.value}</foreach>
+    </if>
+    <if test="from != null">
+        		AND CRET_DT &gt;= #{from}
+    </if>
+    <if test="to != null">
+        		AND CRET_DT &lt;= #{to}
+    </if>
+      union all
+			select 
+             REQ_ID              as id
+            ,REQ_TP			         as reqTp
+            ,REQ_ITEM_ID         as reqItemId
+            ,CASE
+            WHEN A.REQ_TP = 'WORD'  	-- WORD
+            	THEN (select WORD_NM from tb_word where WORD_ID = A.REQ_ITEM_ID)
+            WHEN A.REQ_TP = 'TERMS' 	-- TERMS
+            	THEN (select TERMS_NM from tb_terms where TERMS_ID = A.REQ_ITEM_ID)
+            WHEN A.REQ_TP = 'DOMAIN'	-- DOMAIN
+            	THEN (select DOMAIN_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
+            ELSE NULL
+            END 				    	  as reqItemNm
+            ,APRV_STAT		      as aprvStat
+            ,REQ_USER_ID	      as reqUserId
+            ,to_char(to_timestamp(REQ_CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
+				    ,to_char(to_timestamp(REQ_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqUpdtDt
+            ,APRV_USER_ID       as aprvUserId
+            ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt
+            ,APRV_STAT_UPDT_RSN as aprvStatUpdtRsn
+			from TB_APRV_STATS A
+			where REQ_ID is not null 
+    <if test="reqUserId != null">
+        		AND REQ_USER_ID = #{reqUserId}
+    </if>
+    <if test="statusList != null and statusList.size() != 0">
+        		AND APRV_STAT in <foreach collection="statusList" item="item" index="index" open="(" separator="," close=")">
+        					#{item.value}</foreach>
+    </if>
+    <if test="from != null">
+        		AND REQ_CRET_DT &gt;= #{from}
+    </if>
+    <if test="to != null">
+        		AND REQ_CRET_DT &lt;= #{to}
+    </if>
+			order by reqCretDt desc, aprvStatUpdtDt desc, reqItemId
+  </select>
+
+  <insert id="insertStdAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
+           INSERT INTO TB_APRV_STATS
+           (
+             REQ_ID
+            ,REQ_TP			
+            ,REQ_ITEM_ID
+            ,APRV_STAT		
+            ,REQ_USER_ID	
+            ,REQ_CRET_DT
+			      ,REQ_UPDT_DT
+            ,APRV_USER_ID	
+            ,APRV_STAT_UPDT_DT	
+            ,APRV_STAT_UPDT_RSN
+           )
+           VALUES
+           (
+             #{id}
+            ,#{reqTp}
+            ,#{reqItemId}
+            ,#{aprvStat}
+            ,#{reqUserId, jdbcType=VARCHAR}
+            ,#{reqCretDt, jdbcType=VARCHAR}
+			      ,#{reqUpdtDt, jdbcType=VARCHAR}
+            ,#{aprvUserId, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{aprvStatUpdtRsn, jdbcType=VARCHAR}
+           )
+  </insert>
+
+  <update id="updateTermsAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
+            UPDATE
+              TB_TERMS
+            SET
+               APRV_YN = 
+					      CASE WHEN 2 = #{aprvStat} THEN 'Y'
+                    ELSE 'N'
+                    END
+              ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
+              ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+            WHERE
+              TERMS_ID = #{reqItemId}
+  </update>
+
+  <update id="updateWordAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
+            UPDATE
+              TB_WORD
+            SET
+               APRV_YN = 
+					      CASE WHEN 2 = #{aprvStat} THEN 'Y'
+                    ELSE 'N'
+                    END
+              ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
+              ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+            WHERE
+              WORD_ID = #{reqItemId}
+  </update>
+
+  <update id="updateDomainAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
+            UPDATE
+              TB_DOMAIN
+            SET
+               APRV_YN = 
+					      CASE WHEN 2 = #{aprvStat} THEN 'Y'
+                    ELSE 'N'
+                    END
+              ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
+              ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+            WHERE
+              DOMAIN_ID = #{reqItemId}
+  </update>
+</mapper>

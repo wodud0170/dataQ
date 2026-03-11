@@ -1,0 +1,415 @@
+html {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    overflow: auto !important;
+}
+
+/* table {
+    width: 100%;
+}
+
+td {
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+} */
+
+.v-data-table th,
+.v-data-table td {
+    border-right: thin solid rgba(0, 0, 0, 0.12);
+    border-bottom: thin solid rgba(0, 0, 0, 0.12);
+}
+
+.v-data-table th {
+    border-top: thin solid rgba(0, 0, 0, 0.12);
+}
+
+.v-data-table th:nth-child(1),
+.v-data-table td:nth-child(1) {
+    border-left: thin solid rgba(0, 0, 0, 0.12);
+}
+
+/* vue-split-panel js 적용을 위한 CSS 수정 */
+nav.v-navigation-drawer {
+    position: relative;
+    width: initial !important;
+    min-width: 60px !important;
+}
+
+nav.v-navigation-drawer .v-navigation-drawer__border {
+    display: none;
+}
+
+[v-clock] {
+    display: none;
+}
+
+#tabList {
+    position: relative;
+    width: 100%;
+    top: 64px;
+}
+
+main {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 64px - 48px) !important;
+    /* height: calc(100vh - 64px - 58px); */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding-top: 0px !important;
+    padding-left: 0px !important;
+}
+/* v-btn */
+.v-btn {
+    width: 100px;
+    height: 40px !important;
+    /* 버튼 대문자 자동전환 막기 */
+    text-transform: none;
+}
+.v-btn.gradient {
+    background-image: linear-gradient(to bottom, #187fc4 0%, #3678a7 100%);
+    color: #ffffff !important;
+}
+
+.v-btn.gradient:hover {
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.19), 0 3px 3px rgba(0, 0, 0, 0.23);
+}
+/* 데이터 표준 - 데이터 모델 - 데이터 모델 현황 - 데이터 피커 날짜 버튼 */
+#dmcltPicker .v-btn {
+    height: 32px !important;
+}
+
+/* 텍스트필드 필수 입력값 */
+.reqText:after {
+    content:" *";
+    color: #ff5252;
+}
+/* nav active color */
+.v-list-item-group .v-list-item--active {
+    color: #187fc4 !important;
+}
+
+/* 네비게이션 아이콘 margin-right 조절 (기존 32px) */
+.v-application--is-ltr .v-list-item__action:first-child,
+.v-application--is-ltr .v-list-item__icon:first-child {
+    margin-right: 20px !important;
+}
+
+/* 메뉴 마우스 오버 시 색상 변화되는 것 방지 */
+.theme--light.v-list-item:hover::before {
+    opacity: 0 !important;
+}
+
+.v-icon,
+.header_logo {
+    cursor: pointer;
+}
+.wsLogViewer .v-icon.v-icon:after {
+    background-color: transparent;
+}
+/*  */
+.theme--light.v-list-item:focus:before,
+.theme--light.v-list-item:hover::before {
+    opacity: 0;
+}
+
+.v-list-item__title {
+    align-items: center;
+    color: inherit;
+    display: flex;
+    flex: 1 0 auto;
+    justify-content: inherit;
+    line-height: normal;
+    position: relative;
+    transition: inherit;
+    transition-property: opacity;
+    font-weight: 500;
+    letter-spacing: 0.0892857143em;
+}
+
+.v-btn:not(.v-btn--round).v-size--default {
+    height: 20px;
+}
+
+.v-application a {
+    text-decoration: none;
+}
+
+/* alert */
+.swal2-title {
+    font-size: 1.2rem !important;
+}
+.swal2-select:focus-visible {
+    outline: #187fc4 auto 1px;
+} 
+/* table checkbox */
+.v-application--is-ltr .v-input--selection-controls__input {
+    margin-right: 0px;
+}
+
+.theme--light.v-data-table>.v-data-table__wrapper th {
+    font-size: 1rem;
+    /* text-align: center !important; */
+    background-color: rgba(24, 127, 196, 0.17);
+}
+
+/* scroll */
+/* width */
+::-webkit-scrollbar {
+    width: 14px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+    /* background: #ffffff; */
+    background: transparent;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    border: 4px solid rgba(0, 0, 0, 0);
+    background-clip: padding-box;
+    border-radius: 9999px;
+    background-color: rgb(24, 127, 196);
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(24, 127, 196);
+}
+
+td.v-data-table__mobile-row {
+    border-left: thin solid rgba(0, 0, 0, 0.12);
+}
+
+/* tab */
+#tabList .v-tab:last-child {
+    border-top-right-radius: 10px;
+}
+
+#tabList .v-tab:before,
+#tabList .v-tabs-slider {
+    background-color: transparent;
+}
+
+.v-slide-group__content.v-tabs-bar__content>.draggableWrap {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+/* table checkbox width 고정 */
+/* #word_table th.text-start {
+    width: 20px !important;
+    max-width: 20px !important;
+} */
+
+/* 단어 테이블  */
+#word_table tbody tr td:nth-child(2),
+#word_table tbody tr td:nth-child(3),
+#word_table tbody tr td:nth-child(4),
+#word_table tbody tr td:nth-child(5),
+#word_table tbody tr td:nth-child(7),
+/* 용어 테이블 */
+#term_table tbody tr td:nth-child(2),
+#term_table tbody tr td:nth-child(3),
+#term_table tbody tr td:nth-child(4),
+#term_table tbody tr td:nth-child(5),
+#term_table tbody tr td:nth-child(6),
+#term_table tbody tr td:nth-child(7),
+/* 도메인 테이블 */
+#domain_table tbody tr td:nth-child(2),
+#domain_table tbody tr td:nth-child(3), 
+#domain_table tbody tr td:nth-child(4),
+#domain_table tbody tr td:nth-child(5),
+#domain_table tbody tr td:nth-child(6),
+/* 도메인 그룹 테이블 */
+#domainGroup_table tbody tr td:nth-child(2),
+#domainGroup_table tbody tr td:nth-child(3),
+#domainGroup_table tbody tr td:nth-child(4),
+#domainGroup_table tbody tr td:nth-child(5),
+#domainGroup_table tbody tr td:nth-child(6),
+#domainGroup_table tbody tr td:nth-child(7),
+/* 도메인 분류 테이블 */
+#domainClassification_table tbody tr td:nth-child(2),
+#domainClassification_table tbody tr td:nth-child(3),
+#domainClassification_table tbody tr td:nth-child(4),
+#domainClassification_table tbody tr td:nth-child(5),
+#domainClassification_table tbody tr td:nth-child(6),
+#domainClassification_table tbody tr td:nth-child(7),
+/* 코드 테이블 */
+#code_table tbody tr td:nth-child(2),
+#code_table tbody tr td:nth-child(3),
+#code_table tbody tr td:nth-child(4),
+#code_table tbody tr td:nth-child(5),
+#code_table tbody tr td:nth-child(6),
+#code_table tbody tr td:nth-child(7)
+{
+    text-align: left !important;
+}
+
+/*  */
+#domain_table tbody tr td:nth-child(7) {
+    text-align: right !important;
+}
+/* Modal common style */
+.v-dialog--custom {
+    width: 80%;
+}
+.v-dialog.v-dialog--active {
+    overflow: hidden !important;
+    position: relative;
+    /* max-height: 90vh; */
+}
+
+.v-dialog .modal_body {
+    height: 66vh;
+}
+
+.v-dialog .modal_body .container {
+    position: relative;
+    height: auto;
+    /* max-height: 64vh; */
+}
+
+.v-dialog .v-text-field {
+    padding-top: 0px;
+    margin-top: 0px;
+}
+
+.v-dialog .v-input--selection-controls {
+    padding-top: 12px;
+    margin-top: 0px;
+}
+
+.v-dialog .v-radio label {
+    left: 5px !important;
+}
+
+/* vue-ip-input */
+.ip-segment {
+    width: auto !important;
+  }
+/* 네비게이션 서브 메뉴 padding left 조절 기존 24px -> 15px */
+
+.v-application--is-ltr .v-list--dense .v-list-group--sub-group .v-list-group__header {
+    padding-left: 8px;
+}
+.v-application--is-ltr .v-list-group--sub-group .v-list-group__items .v-list-item {
+    padding-left: 16px;
+}
+/* tree */
+#systenmTree .v-application ol, 
+#systenmTree .v-application ul {
+    padding-left: 10px;
+}
+#systenmTree .mdi-folder::before,
+#systemTree .mdi-file-document::before,
+#systemTree .mdi:before {
+    font-size: 1.25rem !important;
+    color: #187fc4 !important;
+}
+#systemTree ul li {
+    margin-left: 0px;
+}
+#systemTree span {
+    font-size: 1rem !important;
+}
+
+/* 데이터 모델 현황 테이블 CSS */
+#dmStatus_table .v-progress-linear__content {
+    justify-content : flex-start;
+}
+#dmStatus_table .v-progress-linear__content p {
+    margin: 0;
+    text-align: center;
+}
+#dmStatus_table .v-progress-linear__background.blue,
+#dmStatus_table .v-progress-linear__background.amber,
+#dmStatus_table .v-progress-linear__background.cyan,
+#dmStatus_table .v-progress-linear__background.lime  {
+    opacity: 0 !important;
+}
+/* 데이터 모델 현황 - 용어 정보 보기 */
+#term_detail_table tbody tr:nth-child(1) td{
+    border-top: thin solid rgba(0, 0, 0, 0.12);
+}
+#dataModel_table > .v-data-table__wrapper{
+    overflow: hidden !important;
+}
+
+/* 승인 - 날짜 입력 박스 높이 조절 */
+#approvalWrap .mx-datepicker-range {
+    width: 330px !important;
+}
+#approvalWrap .mx-input {
+    height: 40px !important;
+}
+
+/* 데이터 모델 수집 */
+/* CSS 통일을 위해 API CSS수정 */
+#addDataModelModal .vue-treeselect,
+#updateDataModelModal .vue-treeselect {
+    color: rgba(0,0,0,.87);
+}
+#addDataModelModal .vue-treeselect__control,
+#updateDataModelModal .vue-treeselect__control {
+    height: 34px;
+    border: none !important;
+    border-radius: 0 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4) !important;
+    color: rgba(0,0,0,.87);
+    font-family: 'Roboto', 'sans-serif';
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 20px;
+    padding-left: 0px;
+    padding-right: 0px;
+}
+#addDataModelModal .vue-treeselect__control .vue-treeselect__input-container,
+#addDataModelModal .vue-treeselect__control .vue-treeselect__placeholder,
+#updateDataModelModal .vue-treeselect__control .vue-treeselect__input-container,
+#updateDataModelModal .vue-treeselect__control .vue-treeselect__placeholder {
+    padding-left: 0px;
+}
+#addDataModelModal .vue-treeselect__control-arrow-container svg,
+#updateDataModelModal .vue-treeselect__control-arrow-container svg  {
+    color: rgba(0,0,0,.54);
+}
+/* 대시보드 차트 레이블 숨김 */
+.apexcharts-legend.apx-legend-position-right {
+    display: none !important;
+}
+.chart_full { 
+    width: 85% !important;
+    height: 85% !important;
+    min-height: 85% !important;
+    max-height: 85% !important;
+    position: absolute;
+    top: 50px;
+    
+}
+.bar_full {
+    position: relative;
+    width: 100%;
+    height: 95% !important;
+    min-height: 95% !important;
+    max-height: 95% !important;
+    overflow: hidden;
+}
+
+/* 미디어 쿼리 */
+@media screen and (orientation: landscape) and (max-width: 916px) {
+    body {
+        overflow: auto;
+    }
+}

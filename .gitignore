@@ -1,0 +1,39 @@
+HELP.md
+target/
+**/index.html
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**
+!**/src/main/resources/**
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+### VS Code ###
+.vscode/
+**/.DS_Store
+**/vue/node_modules
+**/src/main/resources/static/
+**/src/main/resources/static/static/
+**/vue/front/node/
+**/vue/front/node_modules/
+!/vue/front/build/

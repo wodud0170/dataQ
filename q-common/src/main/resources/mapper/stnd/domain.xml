@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="domain">
+  <!-- 도메인 -->
+  <resultMap id="stdDomainMap" type="com.ndata.quality.model.std.StdDomainVo">
+    <result property="id" column="DOMAIN_ID"/>
+    <result property="domainNm" column="DOMAIN_NM"/>
+    <result property="domainGrpNm" column="DOMAIN_GRP_NM"/>
+    <result property="domainClsfNm" column="DOMAIN_CLSF_NM"/>
+    <result property="domainDesc" column="DOMAIN_DESC"/>
+    <result property="dataType" column="DATA_TYPE"/>
+    <result property="dataLen" column="DATA_LEN"/>
+    <result property="dataDecimalLen" column="DATA_DECIMAL_LEN"/>
+    <result property="dataUnit" column="DATA_UNIT"/>
+    <result property="storFmt" column="STOR_FMT"/>
+    <result property="exprFmtLst" column="EXPR_FMT_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+    <result property="allowValLst" column="ALLOW_VAL_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+    <result property="commStndYn" column="COMM_STND_YN"/>
+    <result property="magntdOrd" column="MAGNTD_ORD"/>
+    <result property="aprvYn" column="APRV_YN"/>
+    <result property="aprvUserId" column="APRV_USER_ID"/>
+    <result property="cretDt" column="CRET_DT"/>
+    <result property="cretUserId" column="CRET_USER_ID"/>
+    <result property="updtDt" column="UPDT_DT"/>
+    <result property="updtUserId" column="UPDT_USER_ID"/>
+    <result property="aprvStatUpdtDt" column="APRV_STAT_UPDT_DT"/>
+    <result property="reqSysCd" column="REQ_SYS_CD"/>
+		<result property="reqSysNm" column="REQ_SYS_NM"/>
+  </resultMap>
+
+  <select id="selectDomainList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDomainMap">
+			select 
+				 DOMAIN_ID
+				,DOMAIN_NM			
+				,DOMAIN_GRP_NM
+				,DOMAIN_CLSF_NM		
+				,DOMAIN_DESC		
+				,DATA_TYPE	
+				,DATA_LEN
+				,DATA_DECIMAL_LEN	
+				,DATA_UNIT		
+				,STOR_FMT
+				,EXPR_FMT_LST		
+				,ALLOW_VAL_LST	
+				,COMM_STND_YN	
+				,MAGNTD_ORD		
+				,APRV_YN			
+				,APRV_USER_ID	
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,CRET_USER_ID	
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+				,UPDT_USER_ID	
+				,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+        ,REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+			from TB_DOMAIN
+      where 1=1
+			<if test="schNm != null">
+				AND DOMAIN_NM like '%' || #{schNm} || '%'
+			</if>
+			<if test="schAprvYn != null">
+				AND APRV_YN = #{schAprvYn}
+			</if>
+			order by DOMAIN_NM
+  </select>
+
+  <select id="selectDomainInfoByNm" parameterType="String" resultMap="stdDomainMap">
+			select 
+				 DOMAIN_ID
+				,DOMAIN_NM			
+				,DOMAIN_GRP_NM
+				,DOMAIN_CLSF_NM		
+				,DOMAIN_DESC		
+				,DATA_TYPE	
+				,DATA_LEN
+				,DATA_DECIMAL_LEN	
+				,DATA_UNIT		
+				,STOR_FMT
+				,EXPR_FMT_LST		
+				,ALLOW_VAL_LST	
+				,COMM_STND_YN	
+				,MAGNTD_ORD		
+				,APRV_YN			
+				,APRV_USER_ID	
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,CRET_USER_ID	
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+				,UPDT_USER_ID	
+				,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+        ,REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+			from TB_DOMAIN
+			where DOMAIN_NM = #{domainNm}
+  </select>
+
+  <select id="selectDomainInfoByClsfNm" parameterType="String" resultMap="stdDomainMap">
+			select 
+				 DOMAIN_ID
+				,DOMAIN_NM			
+				,DOMAIN_GRP_NM
+				,DOMAIN_CLSF_NM		
+				,DOMAIN_DESC		
+				,DATA_TYPE	
+				,DATA_LEN
+				,DATA_DECIMAL_LEN	
+				,DATA_UNIT		
+				,STOR_FMT
+				,EXPR_FMT_LST		
+				,ALLOW_VAL_LST	
+				,COMM_STND_YN	
+				,MAGNTD_ORD		
+				,APRV_YN			
+				,APRV_USER_ID	
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,CRET_USER_ID	
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+				,UPDT_USER_ID	
+				,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+        ,REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+			from TB_DOMAIN
+			where DOMAIN_CLSF_NM = #{domainClsfNm}
+      order by DOMAIN_NM
+  </select>
+
+  <insert id="insertDomain" parameterType="com.ndata.quality.model.std.StdDomainVo">
+           INSERT INTO TB_DOMAIN
+           (
+            DOMAIN_ID
+            ,DOMAIN_NM			
+            ,DOMAIN_GRP_NM
+            ,DOMAIN_CLSF_NM		
+            ,DOMAIN_DESC		
+            ,DATA_TYPE	
+            ,DATA_LEN
+            ,DATA_DECIMAL_LEN	
+            ,DATA_UNIT
+            ,STOR_FMT 		
+            ,EXPR_FMT_LST			
+            ,ALLOW_VAL_LST	
+            ,COMM_STND_YN	
+            ,MAGNTD_ORD		
+            ,APRV_YN			
+            ,APRV_USER_ID	
+            ,CRET_DT			
+            ,CRET_USER_ID	
+            ,APRV_STAT_UPDT_DT
+            ,REQ_SYS_CD
+           )
+           VALUES
+           (
+             #{id}
+            ,#{domainNm}
+            ,#{domainGrpNm}
+            ,#{domainClsfNm}
+            ,#{domainDesc}
+            ,#{dataType}
+            ,#{dataLen, jdbcType=SMALLINT}
+            ,#{dataDecimalLen, jdbcType=SMALLINT}
+            ,#{dataUnit, jdbcType=VARCHAR}
+            ,#{storFmt, jdbcType=VARCHAR}
+            ,#{exprFmtLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+            ,#{allowValLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+            ,#{commStndYn, jdbcType=VARCHAR}
+            ,#{magntdOrd, jdbcType=VARCHAR}
+            ,#{aprvYn, jdbcType=VARCHAR}
+            ,#{aprvUserId, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{cretUserId, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{reqSysCd, jdbcType=VARCHAR}
+           )
+  </insert>
+
+  <update id="updateDomain" parameterType="com.ndata.quality.model.std.StdDomainVo">
+            UPDATE
+              TB_DOMAIN
+            SET
+               DOMAIN_NM = #{domainNm}
+              ,DOMAIN_GRP_NM = #{domainGrpNm}
+              ,DOMAIN_CLSF_NM = #{domainClsfNm}
+              ,DOMAIN_DESC = #{domainDesc}
+              ,DATA_TYPE = #{dataType}
+			        ,DATA_LEN = #{dataLen}
+              ,DATA_DECIMAL_LEN = #{dataDecimalLen}
+              ,DATA_UNIT = #{dataUnit, jdbcType=VARCHAR}
+              ,STOR_FMT = #{storFmt, jdbcType=VARCHAR}
+              ,EXPR_FMT_LST = #{exprFmtLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+              ,ALLOW_VAL_LST = #{allowValLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+              ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
+              ,MAGNTD_ORD = #{magntdOrd, jdbcType=VARCHAR}
+              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+              ,UPDT_USER_ID = #{updtUserId}
+              ,REQ_SYS_CD = #{reqSysCd, jdbcType=VARCHAR}
+            WHERE
+              DOMAIN_ID = #{id}
+  </update>
+
+  <delete id="deleteDomains" parameterType="java.util.List">
+            DELETE FROM TB_DOMAIN
+            WHERE
+              DOMAIN_ID IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.id}
+    </foreach>
+  </delete>
+
+  <!-- 도메인 그룹-->
+  <select id="selectDomainGroupList" resultType="com.ndata.quality.model.std.StdDomainGroupVo">
+			select 
+				 DOMAIN_GRP_ID		as id
+				,DOMAIN_GRP_NM		as domainGrpNm
+				,COMM_STND_YN		  as coimmStndYn
+        ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+				,CRET_USER_ID	    as cretUserId
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+				,UPDT_USER_ID	    as updtUserId
+			from TB_DOMAIN_GRP
+			order by DOMAIN_GRP_NM
+  </select>
+
+  <insert id="insertDomainGroup" parameterType="com.ndata.quality.model.std.StdDomainGroupVo">
+           INSERT INTO TB_DOMAIN_GRP
+           (
+				 DOMAIN_GRP_ID
+				,DOMAIN_GRP_NM			
+				,COMM_STND_YN	
+				,CRET_DT			
+				,CRET_USER_ID	
+           )
+           VALUES
+           (
+             #{id}
+            ,#{domainGrpNm}
+            ,#{commStndYn, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{cretUserId, jdbcType=VARCHAR}
+           )
+  </insert>
+
+  <update id="updateDomainGroup" parameterType="com.ndata.quality.model.std.StdDomainGroupVo">
+            UPDATE
+              TB_DOMAIN_GRP
+            SET
+              DOMAIN_GRP_NM = #{domainGrpNm}
+              ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
+              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+              ,UPDT_USER_ID = #{updtUserId}
+            WHERE
+              DOMAIN_GRP_ID = #{id}
+  </update>
+
+  <delete id="deleteDomainGroups" parameterType="java.util.List">
+            DELETE FROM TB_DOMAIN_GRP
+            WHERE
+              DOMAIN_GRP_ID IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.id}
+    </foreach>
+  </delete>
+
+  <!-- 도메인 분류-->
+  <select id="selectDomainClassificationList" resultType="com.ndata.quality.model.std.StdDomainClassificationVo">
+			select 
+				 DOMAIN_CLSF_ID		as id
+				,DOMAIN_CLSF_NM		as domainClsfNm
+				,DOMAIN_GRP_NM		as domainGrpNm
+				,COMM_STND_YN		  as coimmStndYn
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+				,CRET_USER_ID	    as cretUserId
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+				,UPDT_USER_ID	    as updtUserId
+			from TB_DOMAIN_CLSF
+			order by DOMAIN_CLSF_NM
+  </select>
+
+  <select id="selectDomainClassificationListByNm" resultType="com.ndata.quality.model.std.StdDomainClassificationVo">
+			select 
+				 DOMAIN_CLSF_ID		as id
+				,DOMAIN_CLSF_NM		as domainClsfNm
+				,DOMAIN_GRP_NM		as domainGrpNm
+				,COMM_STND_YN		  as coimmStndYn
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+				,CRET_USER_ID	    as cretUserId
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+				,UPDT_USER_ID	    as updtUserId
+			from TB_DOMAIN_CLSF
+      where DOMAIN_CLSF_NM like #{domainClsfNm}
+			order by DOMAIN_CLSF_NM
+  </select>
+
+  <select id="selectDomainClassificationListByGrpNm" resultType="com.ndata.quality.model.std.StdDomainClassificationVo">
+			select 
+				 DOMAIN_CLSF_ID		as id
+				,DOMAIN_CLSF_NM		as domainClsfNm
+				,DOMAIN_GRP_NM		as domainGrpNm
+				,COMM_STND_YN		  as coimmStndYn
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+				,CRET_USER_ID	    as cretUserId
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+				,UPDT_USER_ID	    as updtUserId
+			from TB_DOMAIN_CLSF
+      where DOMAIN_GRP_NM = #{domainGrpNm}
+			order by DOMAIN_CLSF_NM
+  </select>
+
+  <insert id="insertDomainClassification" parameterType="com.ndata.quality.model.std.StdDomainClassificationVo">
+           INSERT INTO TB_DOMAIN_CLSF
+           (
+				 DOMAIN_CLSF_ID
+				,DOMAIN_CLSF_NM	
+				,DOMAIN_GRP_NM		
+				,COMM_STND_YN	
+				,CRET_DT			
+				,CRET_USER_ID	
+           )
+           VALUES
+           (
+             #{id}
+            ,#{domainClsfNm}
+            ,#{domainGrpNm}
+            ,#{commStndYn, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{cretUserId, jdbcType=VARCHAR}
+           )
+  </insert>
+
+  <update id="updateDomainClassification" parameterType="com.ndata.quality.model.std.StdDomainClassificationVo">
+            UPDATE
+              TB_DOMAIN_CLSF
+            SET
+               DOMAIN_CLSF_NM = #{domainClsfNm}
+              ,DOMAIN_GRP_NM = #{domainGrpNm}
+              ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
+              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+              ,UPDT_USER_ID = #{updtUserId}
+            WHERE
+              DOMAIN_CLSF_ID = #{id}
+  </update>
+
+  <delete id="deleteDomainClassifications" parameterType="java.util.List">
+            DELETE FROM TB_DOMAIN_CLSF
+            WHERE
+              DOMAIN_CLSF_ID IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.id}
+    </foreach>
+  </delete>
+
+</mapper>

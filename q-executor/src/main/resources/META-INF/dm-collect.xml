@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entity-mappings xmlns="http://java.sun.com/xml/ns/persistence/orm"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://java.sun.com/xml/ns/persistence/orm
+                 http://java.sun.com/xml/ns/persistence/orm_1_0.xsd" version="1.0">
+    <!-- Cubrid -->
+    <named-native-query name="CubridGetAttrs">
+        <query>
+            <![CDATA[
+                SELECT A.CLASS_NAME AS objNm
+                    , B.ATTR_NAME   AS attrNm
+                    , B.COMMENT     AS attrNmKr
+                    , CASE WHEN B.DATA_TYPE = 'STRING' THEN 'VARCHAR' ELSE B.DATA_TYPE END AS dataType
+                    , B.PREC        AS dataLen
+                    , B.SCALE       AS dataDecimalLen
+                    , CASE WHEN B.IS_NULLABLE = 'YES' THEN 'Y' END AS nullableYn
+                    , CASE WHEN D.KEY_ATTR_NAME IS NOT NULL THEN 'Y' END AS pkYn
+                    , CASE WHEN F.KEY_ATTR_NAME IS NOT NULL THEN 'Y' END AS fkYn 
+                    , B.DEFAULT_VALUE AS defaultVal
+                    , B.DEF_ORDER + 1 AS attrOrder
+                FROM DB_CLASS A
+                        INNER JOIN DB_ATTRIBUTE B
+                            ON B.CLASS_NAME = A.CLASS_NAME
+                        LEFT JOIN DB_INDEX C
+                            ON C.IS_PRIMARY_KEY = 'YES'
+                            AND C.CLASS_NAME = B.CLASS_NAME              
+                        LEFT JOIN DB_INDEX_KEY D
+                            ON  D.CLASS_NAME = C.CLASS_NAME
+                            AND D.INDEX_NAME = C.INDEX_NAME
+                            AND D.KEY_ATTR_NAME = B.ATTR_NAME 
+                        LEFT JOIN DB_INDEX E
+                            ON E.IS_FOREIGN_KEY = 'YES'
+                            AND E.CLASS_NAME = B.CLASS_NAME              
+                        LEFT JOIN DB_INDEX_KEY F
+                            ON  F.CLASS_NAME = E.CLASS_NAME
+                            AND F.INDEX_NAME = E.INDEX_NAME
+                            AND F.KEY_ATTR_NAME = B.ATTR_NAME            
+                WHERE A.is_system_class = 'NO' AND A.CLASS_TYPE = 'CLASS'
+                    AND UPPER(A.OWNER_NAME) = :owner
+                GROUP BY objNm, attrNm
+                ORDER BY objNm, attrOrder
+            ]]>
+        </query>
+    </named-native-query>
+    <named-native-query name="CubridGetObjs">
+        <query>
+            <![CDATA[
+                SELECT	
+                     A.OWNER_NAME          AS objOwner
+                    ,A.CLASS_NAME          AS objNm
+                    ,A.COMMENT	           AS objNmkr
+                    ,count(B.ATTR_NAME)	   AS objAttrCnt
+                    ,''                    AS objCretDt
+                    ,''                    AS objUpdtDt
+                FROM DB_CLASS A, DB_ATTRIBUTE B
+                WHERE A.CLASS_NAME = B.CLASS_NAME
+                AND UPPER(A.OWNER_NAME) = :owner
+                AND A.CLASS_TYPE = 'CLASS'
+                AND A.is_system_class = 'NO'
+                GROUP BY A.CLASS_NAME
+                ORDER BY objOwner, objNm
+            ]]>
+        </query>
+    </named-native-query>
+
+    <!-- Oracle -->
+    <named-native-query name="OracleGetAttrs">
+        <query>
+            <![CDATA[
+                SELECT 
+                    A.TABLE_NAME AS objNm,
+                    A.COLUMN_NAME AS attrNm,
+                    A.COL_CMT AS attrNmKr,   
+                    CASE WHEN A.DATA_TYPE = 'VARCHAR2' or A.DATA_TYPE = 'NVARCHAR' THEN 'VARCHAR' 
+                         WHEN A.DATA_TYPE = 'NCHAR' THEN 'CHAR'
+                         WHEN A.DATA_TYPE = 'FLOAT' THEN 'NUMERIC'
+                         WHEN A.DATA_TYPE = 'NUMBER' THEN 'NUMERIC'
+                         WHEN A.DATA_TYPE = 'LONG' or A.DATA_TYPE = 'NCLOB' THEN 'CLOB'
+                         WHEN A.DATA_TYPE = 'BFILE' THEN 'BLOB'
+                         WHEN A.DATA_TYPE like 'TIMESTAMP%' THEN 'TIMESTAMP'
+                         ELSE A.DATA_TYPE 
+                    END AS dataType,
+                    A.LEN AS dataLen,
+                    A.DATA_SCALE AS dataDecimalLen,
+                    A.NULLABLE AS nullableYn,   
+                    B.POS AS pkYn,
+                    C.FK_POS fkYn,         
+                    A.DATA_DEFAULT AS defaultVal,
+                    A.COLUMN_ID AS attrOrder
+                FROM 
+                (SELECT S1.OWNER ,
+                        S1.TABLE_NAME,
+                        S3.COMMENTS AS TAB_CMT, 
+                        S1.COLUMN_NAME,
+                        S2.COMMENTS AS COL_CMT,
+                        S1.DATA_TYPE,
+                        CASE WHEN S1.DATA_PRECISION IS NOT NULL THEN DATA_PRECISION
+                        ELSE S1.DATA_LENGTH
+                        END  AS  LEN,
+                        DATA_SCALE,
+                        NULLABLE,
+                        COLUMN_ID,
+                        DATA_DEFAULT
+                FROM  ALL_TAB_COLUMNS S1,
+                        ALL_COL_COMMENTS S2,
+                        ALL_TAB_COMMENTS S3
+                WHERE S1.OWNER = S2.OWNER
+                    AND S1.TABLE_NAME = S2.TABLE_NAME
+                    AND S1.COLUMN_NAME = S2.COLUMN_NAME
+                    AND S1.OWNER = S3.OWNER
+                    AND S3.TABLE_TYPE = 'TABLE'
+                    AND S1.TABLE_NAME = S3.TABLE_NAME ) A,         
+                (SELECT T1.OWNER, T1.TABLE_NAME, T2.COLUMN_NAME, 'Y' AS POS
+                FROM (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME   
+                                FROM USER_CONSTRAINTS
+                            WHERE  CONSTRAINT_TYPE = 'P' )T1,
+                                (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME,  COLUMN_NAME, POSITION 
+                                FROM USER_CONS_COLUMNS ) T2
+                        WHERE T1.OWNER = T2.OWNER
+                            AND T1.TABLE_NAME = T2.TABLE_NAME
+                            AND T1.CONSTRAINT_NAME = T2.CONSTRAINT_NAME  ) B,
+                (SELECT DISTINCT T1.OWNER, T1.TABLE_NAME, T2.COLUMN_NAME, 'Y' AS FK_POS
+                FROM (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME   
+                                FROM USER_CONSTRAINTS
+                            WHERE  CONSTRAINT_TYPE = 'R' )T1,
+                            (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME,  COLUMN_NAME, POSITION 
+                                FROM USER_CONS_COLUMNS ) T2
+                        WHERE T1.OWNER = T2.OWNER
+                            AND T1.TABLE_NAME = T2.TABLE_NAME
+                            AND T1.CONSTRAINT_NAME = T2.CONSTRAINT_NAME  ) C            
+                WHERE A.OWNER = B.OWNER(+) 
+                    AND A.TABLE_NAME = B.TABLE_NAME(+)
+                AND A.COLUMN_NAME = B.COLUMN_NAME(+)
+                    AND A.OWNER = C.OWNER(+) 
+                    AND A.TABLE_NAME = C.TABLE_NAME(+)
+                AND A.COLUMN_NAME = C.COLUMN_NAME(+)  
+                AND UPPER(A.OWNER) = :owner
+                ORDER BY objNm, attrOrder
+            ]]>
+        </query>
+    </named-native-query>
+    <named-native-query name="OracleGetObjs">
+        <query>
+            <![CDATA[
+                SELECT  distinct S1.OWNER          as objOwner   --OWNER명
+                        ,S1.TABLE_NAME             as objNm      --영문테이블명
+                        ,S2.COMMENTS               as objNmKr    --한글테이블명 
+                        ,(SELECT count(COLUMN_NAME) FROM ALL_TAB_COLUMNS
+                          WHERE OWNER = S1.OWNER AND TABLE_NAME = S1.TABLE_NAME)     as objAttrCnt --테이블컬럼개수
+                        ,to_char(S3.CREATED,'YYYYMMDDHH24MISS')        as objCretDt     --등록일자
+                        ,to_char(S3.LAST_DDL_TIME,'YYYYMMDDHH24MISS')  as objUpdtDt     --수정일자
+                FROM   ALL_TABLES S1 
+                      ,ALL_TAB_COMMENTS S2
+                      ,ALL_OBJECTS S3
+                WHERE   1=1
+                AND     S1.OWNER = S2.OWNER 
+                AND     S1.TABLE_NAME = S2.TABLE_NAME
+                AND     S1.OWNER = S3.OWNER
+                AND     S1.TABLE_NAME = S3.OBJECT_NAME
+                AND     S2.TABLE_TYPE = 'TABLE'
+                AND     S3.OBJECT_TYPE = 'TABLE'
+                AND     S1.TABLE_NAME NOT LIKE '%TEMP%'
+                AND     S1.OWNER NOT IN ('SYS')
+                AND     S1.TABLESPACE_NAME NOT IN ('SYSTEM' , 'SYSAUX')
+                AND     UPPER(S1.OWNER) = :owner          -- Owner명 입력
+                ORDER BY objOwner, objNm
+            ]]>
+        </query>
+    </named-native-query>
+
+    <!-- MariaDB -->
+    <named-native-query name="MariaDBGetAttrs">
+        <query>
+            <![CDATA[
+                SELECT
+	                 t1.table_name  AS objNm
+	                ,t2.column_name    AS attrNm
+	                ,t2.column_comment AS attrNmKr
+	                ,CASE 
+	                    WHEN t2.is_nullable = 'YES' THEN 'Y'
+	                    WHEN t2.is_nullable = 'NO' THEN 'N'
+	                 END          AS nullableYn
+	                ,t2.DATA_TYPE AS dataType
+	                ,CASE WHEN t2.NUMERIC_PRECISION is not null THEN t2.NUMERIC_PRECISION
+	                 ELSE t2.CHARACTER_MAXIMUM_LENGTH END AS dataLen
+	                ,t2.NUMERIC_SCALE AS dataDecimalLen
+	                ,CASE WHEN t2.column_key = 'PRI' THEN 'Y' END AS pkYn
+	                ,CASE WHEN t2.FK_COLUMN is not null THEN 'Y' END AS fkYn
+	                ,t2.column_default AS defaultVal 
+	                ,t2.ORDINAL_POSITION AS attrOrder
+	            FROM
+	                (SELECT
+	                    table_schema, table_name, table_comment
+	                    FROM information_schema.TABLES) t1,
+	                (SELECT
+	                    table_schema, table_name, ORDINAL_POSITION, column_name, DATA_TYPE, column_key, 
+	                    (select column_name from information_schema.key_column_usage 
+	                     where table_schema = c1.table_schema and table_name = c1.table_name 
+                          and referenced_table_name is not null) as FK_COLUMN,
+	                    CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, is_nullable, column_default, column_comment
+	                    FROM information_schema.COLUMNS c1) t2
+	            WHERE   upper(t1.TABLE_SCHEMA) = :owner 
+	                AND t1.table_schema = t2.table_schema
+	                AND t1.table_name = t2.table_name
+                ORDER BY objNm, attrOrder
+            ]]>
+        </query>
+    </named-native-query>
+    <named-native-query name="MariaDBGetObjs">
+        <query>
+            <![CDATA[
+                SELECT	distinct S1.TABLE_SCHEMA     as objOwner   #OWNER명
+                    ,	S1.TABLE_NAME       as objNm      #영문테이블명
+                    ,	S1.TABLE_COMMENT    as objNmKr    #한글테이블명
+                    ,	count(S2.COLUMN_NAME) over(partition by S1.TABLE_SCHEMA, S1.TABLE_NAME) as objAttrCnt #테이블컬럼개수
+                    ,	to_char(S1.CREATE_TIME,'YYYYMMDDHH24MISS')   as objCretDt     #생성일자
+                    ,	to_char(S1.UPDATE_TIME,'YYYYMMDDHH24MISS')   as objUpdtDt     #수정일자
+                FROM	information_schema.TABLES S1, information_schema.COLUMNS S2
+                WHERE 	S1.TABLE_SCHEMA = S2.TABLE_SCHEMA AND S1.TABLE_NAME = S2.TABLE_NAME
+                    AND upper(S1.TABLE_SCHEMA) = :owner 
+                    AND	TABLE_TYPE = 'BASE TABLE'
+                ORDER BY objOwner, objNm
+            ]]>
+        </query>
+    </named-native-query>
+</entity-mappings>

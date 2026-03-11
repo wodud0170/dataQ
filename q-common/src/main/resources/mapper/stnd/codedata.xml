@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="codedata">
+  <!-- 코드데이터 -->
+  <select id="selectCodeDataList" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+        SELECT
+             CODE_ID            as id
+            ,CODE_GRP           as codeGrp
+            ,CODE_NM            as codeNm
+            ,CODE_ENG_NM        as codeEngNm
+            ,CODE_VAL           as codeVal
+            ,CODE_VAL_DESC      as codeValDesc
+            ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+            ,CRET_USER_ID       as cretUserId
+            ,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+            ,UPDT_USER_ID       as updtUserId
+        FROM
+            TB_CODE_DATA
+        ORDER BY CODE_NM, CODE_VAL
+  </select>
+
+  <select id="selectCodeDataListByNm" parameterType="String" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+        SELECT
+             CODE_ID            as id
+            ,CODE_GRP           as codeGrp
+            ,CODE_NM            as codeNm
+            ,CODE_ENG_NM        as codeEngNm
+            ,CODE_VAL           as codeVal
+            ,CODE_VAL_DESC      as codeValDesc
+            ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+            ,CRET_USER_ID       as cretUserId
+            ,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+            ,UPDT_USER_ID       as updtUserId
+        FROM
+            TB_CODE_DATA
+        WHERE 
+            CODE_NM like '%' || #{codeNm} || '%'
+        ORDER BY CODE_NM, CODE_VAL
+  </select>
+
+  <select id="selectCodeDataListByEngNm" parameterType="String" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+        SELECT
+             CODE_ID            as id
+            ,CODE_GRP           as codeGrp
+            ,CODE_NM            as codeNm
+            ,CODE_ENG_NM        as codeEngNm
+            ,CODE_VAL           as codeVal
+            ,CODE_VAL_DESC      as codeValDesc
+            ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+            ,CRET_USER_ID       as cretUserId
+            ,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+            ,UPDT_USER_ID       as updtUserId
+        FROM
+            TB_CODE_DATA
+        WHERE 
+            CODE_ENG_NM = #{codeEngNm}
+        ORDER BY CODE_NM, CODE_VAL
+  </select>
+
+  <select id="selectCodeDataByNmAndVal" parameterType="com.ndata.quality.model.std.StdCodeDataVo" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+        SELECT
+             CODE_ID            as id
+            ,CODE_GRP           as codeGrp
+            ,CODE_NM            as codeNm
+            ,CODE_ENG_NM        as codeEngNm
+            ,CODE_VAL           as codeVal
+            ,CODE_VAL_DESC      as codeValDesc
+            ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+            ,CRET_USER_ID       as cretUserId
+            ,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+            ,UPDT_USER_ID       as updtUserId
+        FROM
+            TB_CODE_DATA
+        WHERE 
+            CODE_NM = #{codeNm} AND CODE_VAL = #{codeVal}
+        ORDER BY CODE_NM, CODE_VAL
+  </select>
+
+  <insert id="insertCodeData" parameterType="com.ndata.quality.model.std.StdCodeDataVo">
+           INSERT INTO TB_CODE_DATA
+           (
+             CODE_ID
+            ,CODE_GRP
+            ,CODE_NM
+            ,CODE_ENG_NM
+            ,CODE_VAL
+            ,CODE_VAL_DESC
+            ,CRET_DT
+            ,CRET_USER_ID
+           )
+           VALUES
+           (
+             #{id}
+            ,#{codeGrp}
+            ,#{codeNm}
+            ,#{codeEngNm}
+            ,#{codeVal}
+            ,#{codeValDesc, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{cretUserId, jdbcType=VARCHAR}
+           )
+  </insert>
+
+  <update id="updateCodeData" parameterType="com.ndata.quality.model.std.StdCodeDataVo">
+            UPDATE
+              TB_CODE_DATA
+            SET
+                CODE_GRP = #{codeGrp}
+               ,CODE_NM = #{codeNm}
+               ,CODE_ENG_NM = #{codeEngNm}
+               ,CODE_VAL = #{codeVal}
+               ,CODE_VAL_DESC = #{codeValDesc, jdbcType=VARCHAR}
+               ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+               ,UPDT_USER_ID  = #{updtUserId, jdbcType=VARCHAR}
+            WHERE
+              CODE_ID = #{id}
+  </update>
+
+  <delete id="deleteCodeDatas" parameterType="java.util.List">
+            DELETE FROM TB_CODE_DATA
+            WHERE
+              CODE_ID IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.id}
+    </foreach>
+  </delete>
+</mapper>

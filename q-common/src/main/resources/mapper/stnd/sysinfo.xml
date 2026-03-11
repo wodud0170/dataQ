@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="sysinfo">
+  <!-- 시스템정보 -->
+  <resultMap id="sysInfoMap" type="com.ndata.quality.model.mgmt.SysInfoVo">
+    <result property="sysCd" column="SYS_CD"/>
+    <result property="parentSysCd" column="P_SYS_CD"/>
+    <result property="sysTp" column="SYS_TP"/>
+    <result property="sysNm" column="SYS_NM"/>
+    <result property="sysDsLst" column="SYS_DS_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+    <result property="sysDesc" column="SYS_DESC"/>
+    <result property="level" column="DEPTH"/>
+    <result property="path" column="PATH" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+    <result property="cretDt" column="CRET_DT"/>
+    <result property="cretUserId" column="CRET_USER_ID"/>
+    <result property="updtDt" column="UPDT_DT"/>
+    <result property="updtUserId" column="UPDT_USER_ID"/>
+  </resultMap>
+
+  <select id="selectSysInfoList" resultMap="sysInfoMap">
+       with recursive CODE_LIST(SYS_CD, P_SYS_CD, SYS_TP, SYS_NM, SYS_DS_LST, SYS_DESC, DEPTH, PATH, CYCLE,
+				   CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+			as (
+				select A.SYS_CD,
+				       A.P_SYS_CD,
+				       A.SYS_TP,
+				       A.SYS_NM,
+				       A.SYS_DS_LST,
+				       A.SYS_DESC,
+				       1,
+				       array[A.SYS_NM::text],
+				       false,
+				       A.CRET_DT, A.CRET_USER_ID, A.UPDT_DT, A.UPDT_USER_ID
+				from TB_SYS_INFO A
+				where A.P_SYS_CD is null
+				union all 
+				select A.SYS_CD,
+				       A.P_SYS_CD,
+				       A.SYS_TP,
+				       A.SYS_NM,
+				       A.SYS_DS_LST,
+				       A.SYS_DESC,
+				       B.DEPTH + 1,
+				       array_append(B.PATH,A.SYS_NM::text),
+				       A.SYS_CD = any(B.PATH),
+				       A.CRET_DT, A.CRET_USER_ID, A.UPDT_DT, A.UPDT_USER_ID
+				from TB_SYS_INFO A, CODE_LIST B
+				where A.P_SYS_CD = B.SYS_CD
+					and not CYCLE 
+			   )
+			select SYS_CD,
+			   P_SYS_CD,
+			   SYS_NM,
+			   SYS_TP,
+			   SYS_DS_LST,
+			   SYS_DESC,
+			   DEPTH,
+			   PATH,
+			   to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT, 
+			   CRET_USER_ID, 
+			   to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT, 
+			   UPDT_USER_ID
+			from CODE_LIST
+			order by PATH
+  </select>
+
+  <select id="selectSysInfoBySysCd" parameterType="String" resultMap="sysInfoMap">
+       with recursive CODE_LIST(SYS_CD, P_SYS_CD, SYS_TP, SYS_NM, SYS_DS_LST, SYS_DESC, DEPTH, PATH, CYCLE,
+				   CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+			as (
+				select A.SYS_CD,
+				       A.P_SYS_CD,
+				       A.SYS_TP,
+				       A.SYS_NM,
+				       A.SYS_DS_LST,
+				       A.SYS_DESC,
+				       1,
+				       array[A.SYS_NM::text],
+				       false,
+				       A.CRET_DT, A.CRET_USER_ID, A.UPDT_DT, A.UPDT_USER_ID
+				from TB_SYS_INFO A
+				where A.P_SYS_CD is null
+				union all 
+				select A.SYS_CD,
+				       A.P_SYS_CD,
+				       A.SYS_TP,
+				       A.SYS_NM,
+				       A.SYS_DS_LST,
+				       A.SYS_DESC,
+				       B.DEPTH + 1,
+				       array_append(B.PATH,A.SYS_NM::text),
+				       A.SYS_CD = any(B.PATH),
+				       A.CRET_DT, A.CRET_USER_ID, A.UPDT_DT, A.UPDT_USER_ID
+				from TB_SYS_INFO A, CODE_LIST B
+				where A.P_SYS_CD = B.SYS_CD
+					and not CYCLE 
+			   )
+			select SYS_CD,
+			   P_SYS_CD,
+			   SYS_NM,
+			   SYS_TP,
+			   SYS_DS_LST,
+			   SYS_DESC,
+			   DEPTH,
+			   PATH,
+			   to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT, 
+			   CRET_USER_ID, 
+			   to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT, 
+			   UPDT_USER_ID
+			from CODE_LIST
+      where SYS_CD = #{sysCd}
+			order by PATH
+  </select>
+
+  <select id="selectSysInfoBySysNm" parameterType="String" resultType="com.ndata.quality.model.mgmt.SysInfoVo">
+				select SYS_CD,
+				       P_SYS_CD,
+				       SYS_TP,
+				       SYS_NM,
+				       SYS_DESC,
+				       CRET_DT, 
+               CRET_USER_ID, 
+               UPDT_DT, 
+               UPDT_USER_ID
+				from TB_SYS_INFO
+        where SYS_NM = #{sysNm}
+  </select>
+
+  <insert id="insertSysInfo" parameterType="com.ndata.quality.model.mgmt.SysInfoVo">
+           INSERT INTO TB_SYS_INFO
+           (
+             SYS_CD
+            ,P_SYS_CD			
+            ,SYS_TP
+            ,SYS_NM		
+            ,SYS_DS_LST		
+            ,SYS_DESC	
+            ,CRET_DT			
+            ,CRET_USER_ID	
+           )
+           VALUES
+           (
+             #{sysCd}
+            ,#{parentSysCd}
+            ,#{sysTp}
+            ,#{sysNm}
+			      ,#{sysDsLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+            ,#{sysDesc, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{cretUserId, jdbcType=VARCHAR}
+           )
+           ON CONFLICT (SYS_CD) DO UPDATE
+            SET
+               P_SYS_CD = #{parentSysCd}
+              ,SYS_TP = #{sysTp}
+              ,SYS_NM = #{sysNm}
+              ,SYS_DS_LST = #{sysDsLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+              ,SYS_DESC = #{sysDesc, jdbcType=VARCHAR}
+              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+              ,UPDT_USER_ID = #{updtUserId}
+  </insert>
+
+  <update id="updateSysInfo" parameterType="com.ndata.quality.model.mgmt.SysInfoVo">
+            UPDATE
+              TB_SYS_INFO
+            SET
+               P_SYS_CD = #{parentSysCd}
+              ,SYS_TP = #{sysTp}
+              ,SYS_NM = #{sysNm}
+              ,SYS_DS_LST = #{sysDsLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+              ,SYS_DESC = #{sysDesc, jdbcType=VARCHAR}
+              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+              ,UPDT_USER_ID = #{updtUserId}
+            WHERE
+              SYS_CD = #{sysCd}
+  </update>
+
+  <delete id="deleteSysInfoList" parameterType="java.util.List">
+            DELETE FROM TB_SYS_INFO
+            WHERE
+              SYS_CD IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.sysCd}
+    </foreach>
+              OR P_SYS_CD IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.sysCd}
+    </foreach>
+  </delete>
+
+  <delete id="deleteSysInfos" parameterType="java.util.List">
+       with recursive CODE_LIST(SYS_CD, P_SYS_CD, SYS_TP, SYS_NM, SYS_DS_LST, SYS_DESC, DEPTH, PATH, CYCLE)
+			as (
+				select A.SYS_CD,
+				       A.P_SYS_CD,
+				       A.SYS_TP,
+				       A.SYS_NM,
+				       A.SYS_DS_LST,
+				       A.SYS_DESC,
+				       1,
+				       array[A.SYS_NM::text],
+				       false
+				from TB_SYS_INFO A
+				where A.SYS_CD IN
+            <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                  #{item.sysCd}
+            </foreach>
+				union all 
+				select A.SYS_CD,
+				       A.P_SYS_CD,
+				       A.SYS_TP,
+				       A.SYS_NM,
+				       A.SYS_DS_LST,
+				       A.SYS_DESC,
+				       B.DEPTH + 1,
+				       array_append(B.PATH,A.SYS_NM::text),
+				       A.SYS_CD = any(B.PATH)
+				from TB_SYS_INFO A, CODE_LIST B
+				where A.P_SYS_CD = B.SYS_CD
+					and not CYCLE 
+			   )
+        DELETE FROM TB_SYS_INFO
+        WHERE SYS_CD IN (SELECT SYS_CD FROM CODE_LIST)
+  </delete>
+
+  <!-- 데이터소스 -->
+  <select id="selectDataSourceList" resultType="com.ndata.model.DataSourceVo">
+        SELECT
+             DS_ID              as id
+            ,DSN                as dsn
+            ,DS_TP              as dsTp
+            ,DBMS_TP            as dbmsTp
+            ,DRIVER_NM          as driverName
+            ,SVR_ADDR           as svrAddr
+            ,PORT               as port
+            ,USER_ID            as userId
+            ,PWD                as pwd
+            ,CHARSET            as charSet
+            ,PRIVATE_KEY        as privateKey
+            ,DB_NAME            as dbName
+            ,RM_DIR             as rmDir
+        FROM
+            ndata.tb_data_source
+  </select>
+
+  <select id="selectDataSourceListBySysCd" parameterType="String" resultType="com.ndata.model.DataSourceVo">
+       with recursive CODE_LIST(SYS_CD, P_SYS_CD, SYS_DS_LST, DEPTH, PATH, CYCLE)
+			as (
+				select A.SYS_CD,
+				       A.P_SYS_CD,
+               A.SYS_DS_LST,
+				       1,
+				       array[A.SYS_NM::text],
+				       false
+				from TB_SYS_INFO A
+				where A.SYS_CD = #{sysCd}
+				union all 
+				select A.SYS_CD,
+				       A.P_SYS_CD,
+               A.SYS_DS_LST,
+				       B.DEPTH + 1,
+				       array_append(B.PATH,A.SYS_NM::text),
+				       A.SYS_CD = any(B.PATH)
+				from TB_SYS_INFO A, CODE_LIST B
+				where A.P_SYS_CD = B.SYS_CD
+					and not CYCLE 
+			   )
+        SELECT distinct
+             DS_ID              as id
+            ,DSN                as dsn
+            ,DS_TP              as dsTp
+            ,DBMS_TP            as dbmsTp
+        FROM ndata.tb_data_source
+        WHERE DS_ID IN (SELECT UNNEST(CASE WHEN array_length(SYS_DS_LST, 1) >= 1
+                THEN SYS_DS_LST
+                ELSE '{null}'::text[] END
+              ) FROM CODE_LIST)
+  </select>
+
+  <select id="selectDataSourceById" parameterType="String" resultType="com.ndata.model.DataSourceVo">
+        SELECT
+             DS_ID              as id
+            ,DSN                as dsn
+            ,DS_TP              as dsTp
+            ,DBMS_TP            as dbmsTp
+            ,DRIVER_NM          as driverName
+            ,SVR_ADDR           as svrAddr
+            ,PORT               as port
+            ,USER_ID            as userId
+            ,PWD                as pwd
+            ,CHARSET            as charSet
+            ,PRIVATE_KEY        as privateKey
+            ,DB_NAME            as dbName
+            ,RM_DIR             as rmDir
+            ,CONN_PROPS         as connProps
+            ,SECURE_YN          as useSecure
+        FROM
+            ndata.tb_data_source
+        WHERE 
+            DS_ID = #{id}
+  </select>
+
+  <select id="selectDataSourceByDsTp" parameterType="String" resultType="com.ndata.model.DataSourceVo">
+        SELECT
+             DS_ID              as id
+            ,DSN                as dsn
+            ,DS_TP              as dsTp
+            ,DBMS_TP            as dbmsTp
+            ,DRIVER_NM          as driverName
+            ,SVR_ADDR           as svrAddr
+            ,PORT               as port
+            ,USER_ID            as userId
+            ,PWD                as pwd
+            ,CHARSET            as charSet
+            ,PRIVATE_KEY        as privateKey
+            ,DB_NAME            as dbName
+            ,RM_DIR             as rmDir
+            ,CONN_PROPS         as connProps
+            ,SECURE_YN          as useSecure
+        FROM
+            ndata.tb_data_source
+        WHERE 
+            DS_TP = #{dsTp}
+  </select>
+
+  <insert id="insertDataSource" parameterType="com.ndata.model.DataSourceVo">
+           INSERT INTO ndata.tb_data_source
+           (
+             DS_ID
+            ,DSN
+            ,DS_TP
+            ,DBMS_TP
+            ,DRIVER_NM
+            ,SVR_ADDR
+            ,PORT
+            ,USER_ID
+            ,PWD
+            ,CHARSET
+            ,PRIVATE_KEY
+            ,DB_NAME
+            ,RM_DIR
+            ,CONN_PROPS
+            ,SECURE_YN
+           )
+           VALUES
+           (
+             #{id}
+            ,#{dsn}
+            ,#{dsTp, jdbcType=SMALLINT}
+            ,#{dbmsTp, jdbcType=VARCHAR}
+            ,#{driverName, jdbcType=VARCHAR}
+            ,#{svrAddr}
+            ,#{port}
+            ,#{userId, jdbcType=VARCHAR}
+            ,#{pwd, jdbcType=VARCHAR}
+            ,#{charSet, jdbcType=VARCHAR}
+            ,#{privateKey, jdbcType=VARCHAR}
+            ,#{dbName, jdbcType=VARCHAR}
+            ,#{rmDir, jdbcType=VARCHAR}
+            ,#{connProps, jdbcType=VARCHAR}
+            ,#{useSecure, jdbcType=BOOLEAN}
+           )
+  </insert>
+
+  <update id="updateDataSource" parameterType="com.ndata.model.DataSourceVo">
+            UPDATE
+              ndata.tb_data_source
+            SET
+                DSN = #{dsn}
+               ,DS_TP = #{dsTp}
+               ,DBMS_TP = #{dbmsTp}
+               ,DRIVER_NM = #{driverName}
+               ,SVR_ADDR = #{svrAddr}
+               ,PORT = #{port}
+               ,USER_ID = #{userId}
+               ,PWD = #{pwd}
+               ,CHARSET = #{charSet}
+               ,PRIVATE_KEY = #{privateKey}
+               ,DB_NAME = #{dbName}
+               ,RM_DIR = #{rmDir}
+               ,CONN_PROPS = #{connProps}
+               ,SECURE_YN = #{useSecure}
+            WHERE
+              DS_ID = #{id}
+  </update>
+
+  <delete id="deleteDataSource" parameterType="String">
+            DELETE FROM ndata.tb_data_source
+            WHERE
+              DS_ID = #{id}
+  </delete>
+
+  <delete id="deleteDataSources" parameterType="java.util.List">
+            DELETE FROM ndata.tb_data_source
+            WHERE
+              DS_ID IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.id}
+    </foreach>
+  </delete>
+</mapper>

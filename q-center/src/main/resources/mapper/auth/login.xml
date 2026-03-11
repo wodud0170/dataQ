@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="login">
+    <select id="getUser" parameterType="String" resultType="qualitycenter.model.auth.AdminVo">
+        SELECT
+            USER_ID  as id,
+            PWD      as password,
+            NM       as name,
+            EMAIL    as email,
+            ADM_YN   as admin
+        FROM
+            tb_user
+        WHERE
+            USER_ID = #{id} AND (DEL_YN = false or DEL_YN is null)
+    </select>
+    <select id="getUserList" resultType="qualitycenter.model.auth.AdminVo">
+        SELECT
+            USER_ID  as id,
+            NM       as name,
+            EMAIL    as email,
+            ADM_YN   as admin
+        FROM
+            tb_user
+        WHERE USER_ID != 'space' AND (DEL_YN = false or DEL_YN is null)
+        ORDER BY USER_ID
+    </select>
+    <select id="getBlockTime" parameterType="String" resultType="String">
+        SELECT
+            BLOCK_TIME
+        FROM
+            tb_user
+        WHERE
+            USER_ID = #{id}
+    </select>
+    <insert id="createAdmin" parameterType="qualitycenter.model.auth.AdminVo">
+        INSERT INTO
+            tb_user
+            (
+                USER_ID,
+                PWD,
+                NM,
+                EMAIL,
+                ADM_YN,
+                CRET_DT,
+                UPDT_DT,
+                LOGIN_FAIL_COUNT
+            )
+        VALUES
+            (
+                #{id},
+                #{password},
+                #{name},
+                #{email},
+                #{admin},
+                #{createDate},
+                #{updateDate},
+                0
+            )
+    </insert>
+    <update id="deleteAdmin" parameterType="qualitycenter.model.auth.AdminVo">
+        UPDATE tb_user
+        SET
+            DEL_YN  = true
+        WHERE
+            USER_ID = #{id}
+    </update>
+    <update id="updateAdmin" parameterType="qualitycenter.model.auth.AdminVo">
+        UPDATE tb_user
+        SET
+        <if test="password != null">
+        	PWD   = #{password},
+        </if>
+            NM    = #{name},
+            EMAIL = #{email},
+            ADM_YN  = #{admin}
+        WHERE
+            USER_ID = #{id}
+    </update>
+    <update id="changePassword" parameterType="qualitycenter.model.auth.AdminVo">
+        UPDATE
+            tb_user
+        SET
+            PWD = #{password}
+        WHERE
+            USER_ID = #{id}
+    </update>
+    <update id="increaseLoginFailCount" parameterType="String">
+        UPDATE
+            tb_user
+        SET
+            LOGIN_FAIL_COUNT = LOGIN_FAIL_COUNT + 1
+        WHERE
+            USER_ID = #{id}
+    </update>
+    <update id="initializeLogin" parameterType="String">
+        UPDATE
+            tb_user
+        SET
+            LOGIN_FAIL_COUNT = 0,
+            BLOCK_TIME = NULL
+        WHERE
+            USER_ID = #{id}
+    </update>
+    <select id="getLoginFailCount" parameterType="String" resultType="int">
+        SELECT
+            LOGIN_FAIL_COUNT
+        FROM
+            tb_user
+        WHERE
+            USER_ID = #{id}
+    </select>
+    <update id="setBlockTime" parameterType="qualitycenter.model.auth.AdminVo">
+        UPDATE
+            tb_user
+        SET
+            BLOCK_TIME = #{blockTime}
+        WHERE
+            USER_ID = #{id}
+    </update>
+    <insert id="putEventLog" parameterType="java.util.HashMap">
+        INSERT INTO
+            tb_event_log
+            (
+                TIME_VAL,
+                HOSTNAME,
+                JOB_ID,
+                JOB_EX_SVC,
+                SEVERITY,
+                MSG,
+                JOB_EX_USER_ID
+            )
+        VALUES
+            (
+                now(),
+                #{hostName},
+                #{jobId},
+                #{jobExSvc},
+                #{severity},
+                #{msg},
+                #{jobExUserId}
+            )
+    </insert>
+</mapper>

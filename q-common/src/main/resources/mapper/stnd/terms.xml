@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="terms">
+	<!-- 용어 -->
+	<resultMap id="stdTermsMap" type="com.ndata.quality.model.std.StdTermsVo">
+		<result property="id" column="TERMS_ID"/>
+		<result property="termsNm" column="TERMS_NM"/>
+		<result property="termsEngAbrvNm" column="TERMS_ENG_ABRV_NM"/>
+		<result property="termsDesc" column="TERMS_DESC"/>
+		<result property="domainNm" column="DOMAIN_NM"/>
+		<result property="dataType" column="DATA_TYPE"/>
+		<result property="dataLen" column="DATA_LEN"/>
+		<result property="dataDecimalLen" column="DATA_DECIMAL_LEN"/>
+		<result property="allowValLst" column="ALLOW_VAL_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+		<result property="storFmt" column="STOR_FMT"/>
+		<result property="exprFmtLst" column="EXPR_FMT_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+		<result property="codeGrp" column="CODE_GRP"/>
+		<result property="chrgOrg" column="CHRG_ORG"/>
+		<result property="allophSynmLst" column="ALLOPH_SYNM_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+		<result property="commStndYn" column="COMM_STND_YN"/>
+		<result property="magntdOrd" column="MAGNTD_ORD"/>
+		<result property="aprvYn" column="APRV_YN"/>
+		<result property="aprvUserId" column="APRV_USER_ID"/>
+		<result property="cretDt" column="CRET_DT"/>
+		<result property="cretUserId" column="CRET_USER_ID"/>
+		<result property="updtDt" column="UPDT_DT"/>
+		<result property="updtUserId" column="UPDT_USER_ID"/>
+		<result property="aprvStatUpdtDt" column="APRV_STAT_UPDT_DT"/>
+		<result property="reqSysCd" column="REQ_SYS_CD"/>
+		<result property="reqSysNm" column="REQ_SYS_NM"/>
+	</resultMap>
+
+	<select id="selectTermsList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdTermsMap">
+            select distinct
+					 A.TERMS_ID
+					,A.TERMS_NM			
+					,A.TERMS_ENG_ABRV_NM
+					,A.TERMS_DESC		
+					,A.DOMAIN_NM	
+					,A.DATA_TYPE
+					,A.DATA_LEN
+					,A.DATA_DECIMAL_LEN
+					,A.ALLOW_VAL_LST	
+					,CASE
+						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'VARCHAR'	-- VARCHAR
+							THEN (select A.DATA_LEN||'자리 이내 문자' from dual)
+						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'CHAR'	-- CHAR
+							THEN (select A.DATA_LEN||'자리 문자' from dual)
+						ELSE A.STOR_FMT
+					END as STOR_FMT
+					,A.EXPR_FMT_LST	
+					,A.CODE_GRP	
+					,A.CHRG_ORG	
+					,A.ALLOPH_SYNM_LST	
+					,A.COMM_STND_YN	
+					,A.MAGNTD_ORD		
+					,A.APRV_YN			
+					,A.APRV_USER_ID	
+					,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+					,A.CRET_USER_ID	
+					,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT	
+					,A.UPDT_USER_ID	
+					,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+					,A.REQ_SYS_CD
+					,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
+				from (select T.*, D.ALLOW_VAL_LST, D.DATA_TYPE, D.DATA_LEN, D.DATA_DECIMAL_LEN, D.STOR_FMT, D.EXPR_FMT_LST,
+						UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
+							THEN ALLOPH_SYNM_LST
+							ELSE '{null}'::text[] END
+						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM) A
+				where 1=1
+				<if test="schNm != null">
+					AND (A.TERMS_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%')
+				</if>
+				<if test="schAprvYn != null">
+					AND A.APRV_YN = #{schAprvYn}
+				</if>
+				order by A.TERMS_NM
+	</select>
+
+	<select id="selectTermsInfoByNm" parameterType="String" resultMap="stdTermsMap">
+            select distinct
+					 A.TERMS_ID
+					,A.TERMS_NM			
+					,A.TERMS_ENG_ABRV_NM
+					,A.TERMS_DESC		
+					,A.DOMAIN_NM	
+					,B.DATA_TYPE
+					,B.DATA_LEN
+					,B.DATA_DECIMAL_LEN
+					,B.ALLOW_VAL_LST	
+					,CASE
+						WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
+							THEN (select B.DATA_LEN||'자리 이내 문자' from dual)
+						WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
+							THEN (select B.DATA_LEN||'자리 문자' from dual)
+						ELSE B.STOR_FMT
+					END as STOR_FMT
+					,B.EXPR_FMT_LST	
+					,A.CODE_GRP	
+					,A.CHRG_ORG	
+					,A.ALLOPH_SYNM_LST	
+					,A.COMM_STND_YN	
+					,A.MAGNTD_ORD		
+					,A.APRV_YN			
+					,A.APRV_USER_ID	
+					,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+					,A.CRET_USER_ID	
+					,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT	
+					,A.UPDT_USER_ID	
+					,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+					,A.REQ_SYS_CD
+					,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
+			from (select *, UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
+						THEN ALLOPH_SYNM_LST
+						ELSE '{null}'::text[] END
+					) as ALLOPH_SYNM from TB_TERMS) A LEFT OUTER JOIN TB_DOMAIN B 
+					on A.DOMAIN_NM = B.DOMAIN_NM
+			where A.TERMS_NM = #{termsNm} OR A.ALLOPH_SYNM = #{termsNm}
+	</select>
+
+	<select id="selectTermsByNm" parameterType="String" resultMap="stdTermsMap">
+			select 
+				 A.TERMS_ID
+				,A.TERMS_NM			
+				,A.TERMS_ENG_ABRV_NM
+				,A.TERMS_DESC		
+				,A.DOMAIN_NM	
+				,B.DATA_TYPE
+				,B.DATA_LEN
+				,B.DATA_DECIMAL_LEN
+				,B.ALLOW_VAL_LST	
+				,CASE
+		            WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
+		            	THEN (select B.DATA_LEN||'자리 이내 문자' from dual)
+		            WHEN STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
+		            	THEN (select B.DATA_LEN||'자리 문자' from dual)
+		            ELSE B.STOR_FMT
+		         END as STOR_FMT
+				,B.EXPR_FMT_LST	
+				,A.CODE_GRP	
+				,A.CHRG_ORG	
+				,A.ALLOPH_SYNM_LST	
+				,A.COMM_STND_YN	
+				,A.MAGNTD_ORD		
+				,A.APRV_YN			
+				,A.APRV_USER_ID	
+				,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,A.CRET_USER_ID	
+				,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT	
+				,A.UPDT_USER_ID	
+				,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+				,A.REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
+			from TB_TERMS A LEFT OUTER JOIN TB_DOMAIN B 
+			     on A.DOMAIN_NM = B.DOMAIN_NM
+			where A.TERMS_NM = #{termsNm} OR #{termsNm} = any(A.ALLOPH_SYNM_LST)
+	</select>
+
+	<select id="selectTermsByEngNm" parameterType="String" resultMap="stdTermsMap">
+			select 
+				 A.TERMS_ID
+				,A.TERMS_NM			
+				,A.TERMS_ENG_ABRV_NM
+				,A.TERMS_DESC		
+				,A.DOMAIN_NM	
+				,B.DATA_TYPE
+				,B.DATA_LEN
+				,B.DATA_DECIMAL_LEN
+				,B.ALLOW_VAL_LST	
+				,CASE
+		            WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
+		            	THEN B.DATA_LEN||'자리 이내 문자'
+		            WHEN STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
+		            	THEN B.DATA_LEN||'자리 문자'
+		            ELSE B.STOR_FMT
+		         END as STOR_FMT
+				,B.EXPR_FMT_LST	
+				,A.CODE_GRP	
+				,A.CHRG_ORG	
+				,A.ALLOPH_SYNM_LST	
+				,A.COMM_STND_YN	
+				,A.MAGNTD_ORD		
+				,A.APRV_YN			
+				,A.APRV_USER_ID	
+				,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,A.CRET_USER_ID	
+				,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT	
+				,A.UPDT_USER_ID	
+				,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+				,A.REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
+			from TB_TERMS A LEFT OUTER JOIN TB_DOMAIN B 
+			     on A.DOMAIN_NM = B.DOMAIN_NM
+			where A.TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
+	</select>
+
+	<insert id="insertTerms" parameterType="com.ndata.quality.model.std.StdTermsVo">
+           INSERT INTO TB_TERMS
+           (
+             TERMS_ID
+            ,TERMS_NM			
+            ,TERMS_ENG_ABRV_NM
+            ,TERMS_DESC		
+            ,DOMAIN_NM	
+            ,CODE_GRP	
+            ,CHRG_ORG	
+			,ALLOPH_SYNM_LST	
+            ,COMM_STND_YN	
+            ,MAGNTD_ORD		
+            ,APRV_YN			
+            ,APRV_USER_ID	
+            ,CRET_DT			
+            ,CRET_USER_ID	
+			,APRV_STAT_UPDT_DT
+			,REQ_SYS_CD
+           )
+           VALUES
+           (
+             #{id}
+            ,#{termsNm}
+            ,#{termsEngAbrvNm}
+            ,#{termsDesc}
+            ,#{domainNm, jdbcType=VARCHAR}
+            ,#{codeGrp, jdbcType=VARCHAR}
+            ,#{chrgOrg, jdbcType=VARCHAR}
+			,#{allophSynmLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+            ,#{commStndYn, jdbcType=VARCHAR}
+            ,#{magntdOrd, jdbcType=VARCHAR}
+            ,#{aprvYn, jdbcType=VARCHAR}
+            ,#{aprvUserId, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{cretUserId, jdbcType=VARCHAR}
+			,to_char(now(), 'YYYYMMDDHH24MISS')
+			,#{reqSysCd, jdbcType=VARCHAR}
+           )
+	</insert>
+
+	<insert id="insertTermsWords" parameterType="java.util.List">
+           INSERT INTO TB_TERMS_WORDS
+           (
+             TERMS_ID
+            ,WORD_ID
+            ,WORD_NM			
+            ,WORD_ORD
+           )
+           VALUES
+		<foreach item="item" index="index" collection="list" separator=",">
+           (
+             #{item.termsId}
+            ,#{item.wordId}
+            ,#{item.wordNm}
+            ,#{item.wordOrd}
+           )
+		</foreach>
+	</insert>
+
+	<delete id="deleteTermsWords" parameterType="String">
+            DELETE FROM TB_TERMS_WORDS
+            WHERE
+              TERMS_ID = #{id}
+	</delete>
+
+	<update id="updateTerms" parameterType="com.ndata.quality.model.std.StdTermsVo">
+            UPDATE
+              TB_TERMS
+            SET
+               TERMS_NM = #{termsNm}
+              ,TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
+              ,TERMS_DESC = #{termsDesc}
+              ,DOMAIN_NM = #{domainNm}
+              ,CODE_GRP = #{codeGrp, jdbcType=VARCHAR}
+              ,CHRG_ORG = #{chrgOrg, jdbcType=VARCHAR}
+			  ,ALLOPH_SYNM_LST = #{allophSynmLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+              ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
+              ,MAGNTD_ORD = #{magntdOrd, jdbcType=VARCHAR}
+              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+              ,UPDT_USER_ID = #{updtUserId, jdbcType=VARCHAR}
+			  ,REQ_SYS_CD = #{reqSysCd, jdbcType=VARCHAR}
+            WHERE
+              TERMS_ID = #{id}
+	</update>
+
+	<delete id="deleteTermsList" parameterType="java.util.List">
+            DELETE FROM TB_TERMS
+            WHERE
+              TERMS_ID IN
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.id}
+		</foreach>
+	</delete>
+
+	<!-- 코드 조회 -->
+	<resultMap id="stdCodeMap" type="com.ndata.quality.model.std.StdCodeInfoVo">
+		<result property="id" column="TERMS_ID"/>
+		<result property="codeNm" column="TERMS_NM"/>
+		<result property="codeEngAbrvNm" column="TERMS_ENG_ABRV_NM"/>
+		<result property="codeDesc" column="TERMS_DESC"/>
+		<result property="domainNm" column="DOMAIN_NM"/>
+		<result property="allowValLst" column="ALLOW_VAL_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+		<result property="storFmt" column="STOR_FMT"/>
+		<result property="exprFmtLst" column="EXPR_FMT_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+		<result property="codeGrp" column="CODE_GRP"/>
+		<result property="chrgOrg" column="CHRG_ORG"/>
+		<result property="allophSynmLst" column="ALLOPH_SYNM_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+		<result property="commStndYn" column="COMM_STND_YN"/>
+		<result property="magntdOrd" column="MAGNTD_ORD"/>
+		<result property="aprvYn" column="APRV_YN"/>
+		<result property="aprvUserId" column="APRV_USER_ID"/>
+		<result property="cretDt" column="CRET_DT"/>
+		<result property="cretUserId" column="CRET_USER_ID"/>
+		<result property="updtDt" column="UPDT_DT"/>
+		<result property="updtUserId" column="UPDT_USER_ID"/>
+		<result property="aprvStatUpdtDt" column="APRV_STAT_UPDT_DT"/>
+		<result property="reqSysCd" column="REQ_SYS_CD"/>
+		<result property="reqSysNm" column="REQ_SYS_NM"/>
+	</resultMap>
+
+	<select id="selectCodeInfoList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdCodeMap">
+            select distinct
+					 A.TERMS_ID
+					,A.TERMS_NM			
+					,A.TERMS_ENG_ABRV_NM
+					,A.TERMS_DESC		
+					,A.DOMAIN_NM	
+					,A.ALLOW_VAL_LST	
+					,CASE
+						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'VARCHAR'	-- VARCHAR
+							THEN (select A.DATA_LEN||'자리 이내 문자' from dual)
+						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'CHAR'	-- CHAR
+							THEN (select A.DATA_LEN||'자리 문자' from dual)
+						ELSE A.STOR_FMT
+					END as STOR_FMT
+					,A.EXPR_FMT_LST	
+					,A.CODE_GRP	
+					,A.CHRG_ORG	
+					,A.ALLOPH_SYNM_LST	
+					,A.COMM_STND_YN	
+					,A.MAGNTD_ORD		
+					,A.APRV_YN			
+					,A.APRV_USER_ID	
+					,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+					,A.CRET_USER_ID	
+					,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT	
+					,A.UPDT_USER_ID	
+					,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+					,A.REQ_SYS_CD
+					,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
+				from (select T.*, D.ALLOW_VAL_LST, D.DATA_TYPE, D.DATA_LEN, D.STOR_FMT, D.EXPR_FMT_LST,
+						UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
+							THEN ALLOPH_SYNM_LST
+							ELSE '{null}'::text[] END
+						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM) A
+      		where A.CODE_GRP is not null 
+			<if test="schNm != null">
+				AND (A.TERMS_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%')
+			</if>
+			<if test="schAprvYn != null">
+				AND A.APRV_YN = #{schAprvYn}
+			</if>
+			order by A.TERMS_NM
+	</select>
+
+	<select id="selectCodeInfoListByNm" parameterType="String" resultMap="stdCodeMap">
+            select distinct
+					A.TERMS_ID
+					,A.TERMS_NM			
+					,A.TERMS_ENG_ABRV_NM
+					,A.TERMS_DESC		
+					,A.DOMAIN_NM	
+					,B.ALLOW_VAL_LST	
+					,CASE
+						WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
+							THEN (select B.DATA_LEN||'자리 이내 문자' from dual)
+						WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
+							THEN (select B.DATA_LEN||'자리 문자' from dual)
+						ELSE B.STOR_FMT
+					END as STOR_FMT
+					,B.EXPR_FMT_LST	
+					,A.CODE_GRP	
+					,A.CHRG_ORG	
+					,A.ALLOPH_SYNM_LST	
+					,A.COMM_STND_YN	
+					,A.MAGNTD_ORD		
+					,A.APRV_YN			
+					,A.APRV_USER_ID	
+					,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+					,A.CRET_USER_ID	
+					,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT	
+					,A.UPDT_USER_ID	
+					,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+					,A.REQ_SYS_CD
+					,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
+			from (select *, UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
+						THEN ALLOPH_SYNM_LST
+						ELSE '{null}'::text[] END
+					) as ALLOPH_SYNM from TB_TERMS) A LEFT OUTER JOIN TB_DOMAIN B 
+					on A.DOMAIN_NM = B.DOMAIN_NM
+			where A.CODE_GRP is not null AND (A.TERMS_NM like #{codeNm} OR A.ALLOPH_SYNM like #{codeNm})
+	</select>
+
+	<select id="selectCodeInfoByNm" parameterType="String" resultMap="stdCodeMap">
+			select 
+				 A.TERMS_ID
+				,A.TERMS_NM			
+				,A.TERMS_ENG_ABRV_NM
+				,A.TERMS_DESC		
+				,A.DOMAIN_NM	
+				,B.ALLOW_VAL_LST	
+				,CASE
+		            WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
+		            	THEN (select B.DATA_LEN||'자리 이내 문자' from dual)
+		            WHEN STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
+		            	THEN (select B.DATA_LEN||'자리 문자' from dual)
+		            ELSE B.STOR_FMT
+		         END as STOR_FMT
+				,B.EXPR_FMT_LST	
+				,A.CODE_GRP	
+				,A.CHRG_ORG	
+				,A.ALLOPH_SYNM_LST	
+				,A.COMM_STND_YN	
+				,A.MAGNTD_ORD		
+				,A.APRV_YN			
+				,A.APRV_USER_ID	
+				,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,A.CRET_USER_ID	
+				,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT	
+				,A.UPDT_USER_ID	
+				,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+				,A.REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
+			from TB_TERMS A LEFT OUTER JOIN TB_DOMAIN B 
+			     on A.DOMAIN_NM = B.DOMAIN_NM
+			where A.CODE_GRP is not null AND (A.TERMS_NM = #{codeNm} OR #{codeNm} = any(A.ALLOPH_SYNM_LST))
+	</select>
+</mapper>

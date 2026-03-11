@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="word">
+	<!-- 단어 -->
+	<resultMap id="stdWordMap" type="com.ndata.quality.model.std.StdWordVo">
+		<result property="id" column="WORD_ID"/>
+		<result property="wordNm" column="WORD_NM"/>
+		<result property="wordEngAbrvNm" column="WORD_ENG_ABRV_NM"/>
+		<result property="wordEngNm" column="WORD_ENG_NM"/>
+		<result property="wordDesc" column="WORD_DESC"/>
+		<result property="wordClsfYn" column="WORD_CLSF_YN"/>
+		<result property="domainClsfNm" column="DOMAIN_CLSF_NM"/>
+		<result property="allophSynmLst" column="ALLOPH_SYNM_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+		<result property="forbdnWordLst" column="FORBDN_WORD_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
+		<result property="commStndYn" column="COMM_STND_YN"/>
+		<result property="magntdOrd" column="MAGNTD_ORD"/>
+		<result property="aprvYn" column="APRV_YN"/>
+		<result property="aprvUserId" column="APRV_USER_ID"/>
+		<result property="cretDt" column="CRET_DT"/>
+		<result property="cretUserId" column="CRET_USER_ID"/>
+		<result property="updtDt" column="UPDT_DT"/>
+		<result property="updtUserId" column="UPDT_USER_ID"/>
+		<result property="aprvStatUpdtDt" column="APRV_STAT_UPDT_DT"/>
+		<result property="reqSysCd" column="REQ_SYS_CD"/>
+		<result property="reqSysNm" column="REQ_SYS_NM"/>
+	</resultMap>
+
+	<select id="selectWordList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdWordMap">
+			select distinct		
+				WORD_ID
+				,WORD_NM			
+				,WORD_ENG_ABRV_NM
+				,WORD_ENG_NM		
+				,WORD_DESC		
+				,WORD_CLSF_YN	
+				,DOMAIN_CLSF_NM	
+				,ALLOPH_SYNM_LST	
+				,FORBDN_WORD_LST	
+				,COMM_STND_YN	
+				,MAGNTD_ORD		
+				,APRV_YN			
+				,APRV_USER_ID	
+				,CRET_DT
+				,CRET_USER_ID	
+				,UPDT_DT
+				,UPDT_USER_ID	
+				,APRV_STAT_UPDT_DT
+				,REQ_SYS_CD
+				,REQ_SYS_NM 
+			from (
+				select WORD_ID
+					,WORD_NM			
+					,WORD_ENG_ABRV_NM
+					,WORD_ENG_NM		
+					,WORD_DESC		
+					,WORD_CLSF_YN	
+					,DOMAIN_CLSF_NM	
+					,ALLOPH_SYNM_LST	
+					,FORBDN_WORD_LST	
+					,COMM_STND_YN	
+					,MAGNTD_ORD		
+					,APRV_YN			
+					,APRV_USER_ID	
+					,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+					,CRET_USER_ID	
+					,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+					,UPDT_USER_ID	
+					,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+					,REQ_SYS_CD
+					,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+					,UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
+						THEN ALLOPH_SYNM_LST
+						ELSE '{null}'::text[] END
+					) as ALLOPH_SYNM
+				from TB_WORD ) A
+			where 1=1
+			<if test="schNm != null">
+				AND A.WORD_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%'
+			</if>
+			<if test="schAprvYn != null">
+				AND A.APRV_YN = #{schAprvYn}
+			</if>
+			order by A.WORD_NM
+	</select>
+
+	<select id="selectWordInfoByNm" parameterType="String" resultMap="stdWordMap">
+			select distinct		
+				WORD_ID
+				,WORD_NM			
+				,WORD_ENG_ABRV_NM
+				,WORD_ENG_NM		
+				,WORD_DESC		
+				,WORD_CLSF_YN	
+				,DOMAIN_CLSF_NM	
+				,ALLOPH_SYNM_LST	
+				,FORBDN_WORD_LST	
+				,COMM_STND_YN	
+				,MAGNTD_ORD		
+				,APRV_YN			
+				,APRV_USER_ID	
+				,CRET_DT
+				,CRET_USER_ID	
+				,UPDT_DT
+				,UPDT_USER_ID	
+				,APRV_STAT_UPDT_DT
+				,REQ_SYS_CD
+				,REQ_SYS_NM 
+			from (
+				select WORD_ID
+					,WORD_NM			
+					,WORD_ENG_ABRV_NM
+					,WORD_ENG_NM		
+					,WORD_DESC		
+					,WORD_CLSF_YN	
+					,DOMAIN_CLSF_NM	
+					,ALLOPH_SYNM_LST	
+					,FORBDN_WORD_LST	
+					,COMM_STND_YN	
+					,MAGNTD_ORD		
+					,APRV_YN			
+					,APRV_USER_ID	
+					,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+					,CRET_USER_ID	
+					,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+					,UPDT_USER_ID	
+					,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+					,REQ_SYS_CD
+					,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+					,UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
+						THEN ALLOPH_SYNM_LST
+						ELSE '{null}'::text[] END
+					) as ALLOPH_SYNM
+			    from TB_WORD ) A
+			where A.WORD_NM = #{wordNm} OR A.ALLOPH_SYNM = #{wordNm}
+	</select>
+
+	<select id="selectWordInfoById" parameterType="String" resultMap="stdWordMap">
+			select 
+				WORD_ID
+				,WORD_NM			
+				,WORD_ENG_ABRV_NM
+				,WORD_ENG_NM		
+				,WORD_DESC		
+				,WORD_CLSF_YN	
+				,DOMAIN_CLSF_NM	
+				,ALLOPH_SYNM_LST	
+				,FORBDN_WORD_LST	
+				,COMM_STND_YN	
+				,MAGNTD_ORD		
+				,APRV_YN			
+				,APRV_USER_ID	
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,CRET_USER_ID	
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+				,UPDT_USER_ID	
+				,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+				,REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+			from TB_WORD
+			where WORD_ID = #{id}
+	</select>
+	
+	<select id="selectWordByNm" parameterType="String" resultMap="stdWordMap">
+			select 
+				WORD_ID
+				,WORD_NM			
+				,WORD_ENG_ABRV_NM
+				,WORD_ENG_NM		
+				,WORD_DESC		
+				,WORD_CLSF_YN	
+				,DOMAIN_CLSF_NM	
+				,ALLOPH_SYNM_LST	
+				,FORBDN_WORD_LST	
+				,COMM_STND_YN	
+				,MAGNTD_ORD		
+				,APRV_YN			
+				,APRV_USER_ID	
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,CRET_USER_ID	
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+				,UPDT_USER_ID	
+				,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+				,REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+			from TB_WORD
+			where WORD_NM = #{wordNm} OR #{wordNm} = any(ALLOPH_SYNM_LST)
+	</select>
+
+	<select id="selectWordByEngAbrvNm" parameterType="String" resultMap="stdWordMap">
+			select 
+				WORD_ID
+				,WORD_NM			
+				,WORD_ENG_ABRV_NM
+				,WORD_ENG_NM		
+				,WORD_DESC		
+				,WORD_CLSF_YN	
+				,DOMAIN_CLSF_NM	
+				,ALLOPH_SYNM_LST	
+				,FORBDN_WORD_LST	
+				,COMM_STND_YN	
+				,MAGNTD_ORD		
+				,APRV_YN			
+				,APRV_USER_ID	
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,CRET_USER_ID	
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+				,UPDT_USER_ID	
+				,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT	
+				,REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+			from TB_WORD
+			where WORD_ENG_ABRV_NM = #{wordEngAbrvNm}
+	</select>
+
+	<select id="selectTermsWordInfoList" parameterType="String" resultMap="stdWordMap">
+			select 
+				A.WORD_ID
+				,A.WORD_NM			
+				,A.WORD_ENG_ABRV_NM
+				,A.WORD_ENG_NM		
+				,A.WORD_DESC		
+				,A.WORD_CLSF_YN	
+				,A.DOMAIN_CLSF_NM	
+				,A.ALLOPH_SYNM_LST	
+				,A.FORBDN_WORD_LST	
+				,A.COMM_STND_YN	
+				,A.MAGNTD_ORD		
+				,A.APRV_YN			
+				,A.APRV_USER_ID	
+				,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,A.CRET_USER_ID	
+				,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+				,A.UPDT_USER_ID	
+				,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+			from TB_WORD A inner join (select * from TB_TERMS_WORDS where TERMS_ID = #{termsId}) B 
+				on A.WORD_ID = B.WORD_ID
+			order by B.WORD_ORD
+	</select>
+
+	<insert id="insertWord" parameterType="com.ndata.quality.model.std.StdWordVo">
+           INSERT INTO TB_WORD
+           (
+			 WORD_ID
+			,WORD_NM			
+			,WORD_ENG_ABRV_NM
+			,WORD_ENG_NM		
+			,WORD_DESC		
+			,WORD_CLSF_YN	
+			,DOMAIN_CLSF_NM	
+			,ALLOPH_SYNM_LST	
+			,FORBDN_WORD_LST	
+			,COMM_STND_YN	
+			,MAGNTD_ORD		
+			,APRV_YN			
+			,APRV_USER_ID	
+			,CRET_DT			
+			,CRET_USER_ID	
+			,APRV_STAT_UPDT_DT
+			,REQ_SYS_CD
+           )
+           VALUES
+           (
+             #{id}
+            ,#{wordNm}
+            ,#{wordEngAbrvNm}
+            ,#{wordEngNm}
+            ,#{wordDesc}
+            ,#{wordClsfYn}
+            ,#{domainClsfNm, jdbcType=VARCHAR}
+            ,#{allophSynmLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+            ,#{forbdnWordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+            ,#{commStndYn, jdbcType=VARCHAR}
+            ,#{magntdOrd, jdbcType=VARCHAR}
+            ,#{aprvYn, jdbcType=VARCHAR}
+            ,#{aprvUserId, jdbcType=VARCHAR}
+            ,to_char(now(), 'YYYYMMDDHH24MISS')
+            ,#{cretUserId, jdbcType=VARCHAR}
+			,to_char(now(), 'YYYYMMDDHH24MISS')
+			,#{reqSysCd, jdbcType=VARCHAR}
+		   )
+	</insert>
+
+	<update id="updateWord" parameterType="com.ndata.quality.model.std.StdWordVo">
+            UPDATE
+              TB_WORD
+            SET
+               WORD_NM = #{wordNm}
+              ,WORD_ENG_ABRV_NM = #{wordEngAbrvNm}
+              ,WORD_ENG_NM = #{wordEngNm}
+              ,WORD_DESC = #{wordDesc}
+              ,WORD_CLSF_YN = #{wordClsfYn}
+              ,DOMAIN_CLSF_NM = #{domainClsfNm}
+              ,ALLOPH_SYNM_LST = #{allophSynmLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+              ,FORBDN_WORD_LST = #{forbdnWordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+              ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
+              ,MAGNTD_ORD = #{magntdOrd, jdbcType=VARCHAR}
+              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+              ,UPDT_USER_ID = #{updtUserId, jdbcType=VARCHAR}
+			  ,REQ_SYS_CD	= #{reqSysCd, jdbcType=VARCHAR}
+            WHERE
+              WORD_ID = #{id}
+	</update>
+
+	<delete id="deleteWords" parameterType="java.util.List">
+            DELETE FROM TB_WORD
+            WHERE
+              WORD_ID IN
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item.id}
+		</foreach>
+	</delete>
+</mapper>

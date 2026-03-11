@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="search">
+	<!-- 표준현황 -->
+	<resultMap id="dashboardMap" type="HashMap">
+		<id column="termsCnt" property="termsCnt"/>
+		<id column="wordCnt" property="wordCnt"/>
+		<id column="domainCnt" property="domainCnt"/>
+		<id column="aprvStatRequestedCnt" property="aprvStatRequestedCnt"/>
+		<id column="aprvStatCheckingCnt" property="aprvStatCheckingCnt"/>
+		<id column="aprvStatApprovedCnt" property="aprvStatApprovedCnt"/>
+		<id column="aprvStatRejectedCnt" property="aprvStatRejectedCnt"/>
+	</resultMap>
+	<select id="selectDataboardInfo" parameterType="com.ndata.quality.model.std.StdApproveStatVo$RetrieveCond" resultMap="dashboardMap">
+			select 
+				(select count(*) from TB_TERMS where APRV_YN = 'Y') as termsCnt,
+				(select count(*) from TB_WORD where APRV_YN = 'Y') as wordCnt,
+				(select count(*) from TB_DOMAIN where APRV_YN = 'Y') as domainCnt,
+				(select (select count(*) from TB_TERMS where APRV_YN = 'N'
+							<if test="reqUserId != null">
+							AND CRET_USER_ID = #{reqUserId}
+							</if>) + 
+						(select count(*) from TB_WORD where APRV_YN = 'N'
+							<if test="reqUserId != null">
+							AND CRET_USER_ID = #{reqUserId}
+							</if>) + 
+						(select count(*) from TB_DOMAIN where APRV_YN = 'N'
+							<if test="reqUserId != null">
+							AND CRET_USER_ID = #{reqUserId}
+							</if>) from DUAL) as aprvStatRequestedCnt,
+				(select count(*) from TB_APRV_STATS where APRV_STAT = 1
+							<if test="reqUserId != null">
+							AND REQ_USER_ID = #{reqUserId}
+							</if>) as aprvStatCheckingCnt,
+				(select count(*) from TB_APRV_STATS where APRV_STAT = 2
+							<if test="reqUserId != null">
+							AND REQ_USER_ID = #{reqUserId}
+							</if>) as aprvStatApprovedCnt,
+				(select count(*) from TB_APRV_STATS where APRV_STAT = 3
+							<if test="reqUserId != null">
+							AND REQ_USER_ID = #{reqUserId}
+							</if>) as aprvStatRejectedCnt
+			from DUAL
+	</select>
+
+	<!-- 데이터모델현황 -->
+	<resultMap id="dataModelStatMap" type="HashMap">
+		<id column="dataModelCnt" property="dataModelCnt"/>
+		<id column="objCnt" property="objCnt"/>
+		<id column="attrCnt" property="attrCnt"/>
+		<id column="totalStndRate" property="totalStndRate"/>
+		<id column="termsStndRate" property="termsStndRate"/>
+		<id column="wordStndRate" property="wordStndRate"/>
+		<id column="domainStndRate" property="domainStndRate"/>
+	</resultMap>
+	<select id="selectDataModelStat" resultMap="dataModelStatMap">
+			select 		
+				 count(A.DM_ID) as dataModelCnt
+				,sum(COALESCE(B.OBJ_CNT,0)) as objCnt
+				,sum(COALESCE(B.ATTR_CNT,0)) as attrCnt
+				,ROUND(avg(COALESCE(B.TOTAL_STND_RATE,0)),2) as totalStndRate
+				,ROUND(avg(COALESCE(B.TERMS_STND_RATE,0)),2) as termsStndRate
+				,ROUND(avg(COALESCE(B.WORD_STND_RATE,0)),2) as wordStndRate
+				,ROUND(avg(COALESCE(B.DOMAIN_STND_RATE,0)),2) as domainStndRate
+			from TB_DATA_MODEL A LEFT OUTER JOIN (
+				select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID
+				  ,(S.TERMS_STND_RATE+S.WORD_STND_RATE+S.DOMAIN_STND_RATE)/3::NUMERIC as TOTAL_STND_RATE 
+				  ,S.TERMS_STND_RATE, S.WORD_STND_RATE, S.DOMAIN_STND_RATE, T.CLCT_END_DT as CLCT_DT
+				from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
+				where S.DM_CLCT_ID = T.DM_CLCT_ID and 
+				    T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID)
+				) B on A.DM_ID = B.DM_ID
+			where A.USE_YN = 'Y'
+	</select>
+
+	<!-- Top 10 표준준수율 데이터모델 -->
+	<resultMap id="topDataModelList" type="HashMap">
+		<id column="dataModelNm" property="dataModelNm"/>
+		<id column="totalStndRate" property="totalStndRate"/>
+		<id column="termsStndRate" property="termsStndRate"/>
+		<id column="wordStndRate" property="wordStndRate"/>
+		<id column="domainStndRate" property="domainStndRate"/>
+	</resultMap>
+	<select id="selectTopDataModelList" resultMap="topDataModelList">
+			select distinct 
+				 A.DM_NM as dataModelNm
+				,ROUND(COALESCE(B.TOTAL_STND_RATE,0),2) as totalStndRate
+				,COALESCE(B.TERMS_STND_RATE,0) as termsStndRate
+				,COALESCE(B.WORD_STND_RATE,0) as wordStndRate
+				,COALESCE(B.DOMAIN_STND_RATE,0) as domainStndRate
+			from TB_DATA_MODEL A LEFT OUTER JOIN (
+				select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID
+				  ,(S.TERMS_STND_RATE+S.WORD_STND_RATE+S.DOMAIN_STND_RATE)/3::NUMERIC as TOTAL_STND_RATE 
+				  ,S.TERMS_STND_RATE, S.WORD_STND_RATE, S.DOMAIN_STND_RATE, T.CLCT_END_DT as CLCT_DT
+				from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
+				where S.DM_CLCT_ID = T.DM_CLCT_ID and 
+				    T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID)
+				) B on A.DM_ID = B.DM_ID
+			where A.USE_YN = 'Y'
+			order by totalStndRate desc
+			limit 10
+	</select>
+</mapper>
