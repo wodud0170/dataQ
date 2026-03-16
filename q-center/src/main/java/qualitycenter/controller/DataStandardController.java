@@ -14,10 +14,12 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -239,9 +241,10 @@ public class DataStandardController {
 		}
 
 		// 요청된 용어의 형태소 분석을 통해서 단어들을 추출한다.
-		Map<String,String> tokenMap = StringWordAnalyzer.getWordsFromStringByOkt(termsNm, null, false);
-		for(String token : tokenMap.keySet()) {
-			token = token.substring(0, token.contains("#") ? token.indexOf("#") : token.length());//동일한 토큰이 여러개인 경우에 '#' 위치에서 잘라낸다.
+		Map<String, String> tokenMap = StringWordAnalyzer.getWordsFromStringByOkt(termsNm, null, false);
+		for (String token : tokenMap.keySet()) {
+			token = token.substring(0, token.contains("#") ? token.indexOf("#") : token.length());// 동일한 토큰이 여러개인 경우에
+																									// '#' 위치에서 잘라낸다.
 			String pos = tokenMap.get(token);
 			wordVoLst = new ArrayList<StdWordVo>();
 			if (pos.equals("NN")) {// 단어가 명사인 경우
@@ -290,9 +293,10 @@ public class DataStandardController {
 		}
 
 		// 요청된 용어의 형태소 분석을 통해서 단어들을 추출한다.
-		Map<String,String> tokenMap = StringWordAnalyzer.getWordsFromStringByOkt(termsNm, null, false);
-		for(String token : tokenMap.keySet()) {
-			token = token.substring(0, token.contains("#") ? token.indexOf("#") : token.length());//동일한 토큰이 여러개인 경우에 '#' 위치에서 잘라낸다.
+		Map<String, String> tokenMap = StringWordAnalyzer.getWordsFromStringByOkt(termsNm, null, false);
+		for (String token : tokenMap.keySet()) {
+			token = token.substring(0, token.contains("#") ? token.indexOf("#") : token.length());// 동일한 토큰이 여러개인 경우에
+																									// '#' 위치에서 잘라낸다.
 			String pos = tokenMap.get(token);
 			wordVoLst = new ArrayList<StdWordVo>();
 			if (pos.equals("NN")) {// 단어가 명사인 경우
@@ -644,20 +648,57 @@ public class DataStandardController {
 		return sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", clsfNm);
 	}
 
-	// 도메인그룹
 	@RequestMapping(value = "/createDomainGroup", method = RequestMethod.POST)
-	public void createDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
-		dataVo.setId(StringUtils.getUUID());
-		dataVo.setCretUserId(sessionService.getUserId());
-		log.info(">> createDomainGroup : {}", dataVo);
-		sqlSessionTemplate.insert("domain.insertDomainGroup", dataVo);
+	@ResponseBody
+	public Response createDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
+
+		Response result = new Response();
+
+		try {
+
+			dataVo.setId(StringUtils.getUUID());
+			dataVo.setCretUserId(sessionService.getUserId());
+
+			int cnt = sqlSessionTemplate.insert("domain.insertDomainGroup", dataVo);
+
+			if (cnt == 1) {
+				result.setResultInfo(RestResult.CODE_200);
+			} else {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "insert failed");
+			}
+
+		} catch (Exception e) {
+
+			log.error("createDomainGroup error", e);
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return result;
 	}
 
 	@RequestMapping(value = "/updateDomainGroup", method = RequestMethod.POST)
-	public void updateDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
-		dataVo.setUpdtUserId(sessionService.getUserId());
-		log.info(">> updateDomainGroup : {}", dataVo);
-		sqlSessionTemplate.update("domain.updateDomainGroup", dataVo);
+	@ResponseBody
+	public Response updateDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
+
+		Response result = new Response();
+
+		try {
+
+			dataVo.setUpdtUserId(sessionService.getUserId());
+
+			int cnt = sqlSessionTemplate.update("domain.updateDomainGroup", dataVo);
+
+			if (cnt == 1) {
+				result.setResultInfo(RestResult.CODE_200);
+			} else {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "update failed");
+			}
+
+		} catch (Exception e) {
+
+			log.error("updateDomainGroup error", e);
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return result;
 	}
 
 	@RequestMapping(value = "/deleteDomainGroups", method = RequestMethod.POST)
@@ -678,20 +719,52 @@ public class DataStandardController {
 		return sqlSessionTemplate.selectList("domain.selectDomainGroupList");
 	}
 
-	// 도메인분류
 	@RequestMapping(value = "/createDomainClassification", method = RequestMethod.POST)
-	public void createDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
-		dataVo.setId(StringUtils.getUUID());
-		dataVo.setCretUserId(sessionService.getUserId());
-		log.info(">> createDomainClassification : {}", dataVo);
-		sqlSessionTemplate.insert("domain.insertDomainClassification", dataVo);
+	@ResponseBody
+	public Response createDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
+
+		Response result = new Response();
+
+		try {
+
+			dataVo.setId(StringUtils.getUUID());
+			dataVo.setCretUserId(sessionService.getUserId());
+
+			int cnt = sqlSessionTemplate.insert("domain.insertDomainClassification", dataVo);
+
+			if (cnt == 1) {
+				result.setResultInfo(RestResult.CODE_200);
+			} else {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "insert failed");
+			}
+
+		} catch (Exception e) {
+
+			log.error("createDomainClassification error", e);
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+
+		}
+
+		return result;
 	}
 
 	@RequestMapping(value = "/updateDomainClassification", method = RequestMethod.POST)
-	public void updateDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
-		dataVo.setUpdtUserId(sessionService.getUserId());
-		log.info(">> updateDomainClassification : {}", dataVo);
-		sqlSessionTemplate.update("domain.updateDomainClassification", dataVo);
+	@ResponseBody
+	public Response updateDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
+		Response result = new Response();
+		try {
+			dataVo.setUpdtUserId(sessionService.getUserId());
+			int cnt = sqlSessionTemplate.update("domain.updateDomainClassification", dataVo);
+			if (cnt == 1) {
+				result.setResultInfo(RestResult.CODE_200);
+			} else {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "update failed");
+			}
+		} catch (Exception e) {
+			log.error("updateDomainClassification error", e);
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return result;
 	}
 
 	@RequestMapping(value = "/deleteDomainClassifications", method = RequestMethod.POST)
@@ -701,7 +774,6 @@ public class DataStandardController {
 			sqlSessionTemplate.delete("domain.deleteDomainClassifications", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);

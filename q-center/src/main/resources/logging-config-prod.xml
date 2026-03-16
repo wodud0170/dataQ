@@ -31,9 +31,12 @@
         <appender-ref ref="FILE"/>
     </appender>
     -->
-
-    <root level="${LOG_LEVEL}">
-        <!--<appender-ref ref="STDOUT" />-->
+  
+<!-- MyBatis SQL -->
+<logger name="org.apache.ibatis" level="DEBUG"/>
+<logger name="org.mybatis.spring" level="DEBUG"/>
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT" />
         <appender-ref ref="FILE" />
     </root>
 </configuration>

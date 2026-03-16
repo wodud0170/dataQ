@@ -210,12 +210,12 @@
   <select id="selectDomainGroupList" resultType="com.ndata.quality.model.std.StdDomainGroupVo">
 			select 
 				 DOMAIN_GRP_ID		as id
-				,DOMAIN_GRP_NM		as domainGrpNm
-				,COMM_STND_YN		  as coimmStndYn
+				,DOMAIN_GRP_NM		
+				,COMM_STND_YN		  
         ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
-				,CRET_USER_ID	    as cretUserId
+				,CRET_USER_ID	 
 				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
-				,UPDT_USER_ID	    as updtUserId
+				,UPDT_USER_ID	 
 			from TB_DOMAIN_GRP
 			order by DOMAIN_GRP_NM
   </select>
@@ -264,9 +264,9 @@
   <select id="selectDomainClassificationList" resultType="com.ndata.quality.model.std.StdDomainClassificationVo">
 			select 
 				 DOMAIN_CLSF_ID		as id
-				,DOMAIN_CLSF_NM		as domainClsfNm
-				,DOMAIN_GRP_NM		as domainGrpNm
-				,COMM_STND_YN		  as coimmStndYn
+				,DOMAIN_CLSF_NM		
+				,DOMAIN_GRP_NM		
+				,COMM_STND_YN		  
 				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
 				,CRET_USER_ID	    as cretUserId
 				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
@@ -278,13 +278,13 @@
   <select id="selectDomainClassificationListByNm" resultType="com.ndata.quality.model.std.StdDomainClassificationVo">
 			select 
 				 DOMAIN_CLSF_ID		as id
-				,DOMAIN_CLSF_NM		as domainClsfNm
-				,DOMAIN_GRP_NM		as domainGrpNm
-				,COMM_STND_YN		  as coimmStndYn
+				,DOMAIN_CLSF_NM		
+				,DOMAIN_GRP_NM		
+				,COMM_STND_YN		  
 				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
-				,CRET_USER_ID	    as cretUserId
+				,CRET_USER_ID	    
 				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
-				,UPDT_USER_ID	    as updtUserId
+				,UPDT_USER_ID	    
 			from TB_DOMAIN_CLSF
       where DOMAIN_CLSF_NM like #{domainClsfNm}
 			order by DOMAIN_CLSF_NM
@@ -293,13 +293,13 @@
   <select id="selectDomainClassificationListByGrpNm" resultType="com.ndata.quality.model.std.StdDomainClassificationVo">
 			select 
 				 DOMAIN_CLSF_ID		as id
-				,DOMAIN_CLSF_NM		as domainClsfNm
-				,DOMAIN_GRP_NM		as domainGrpNm
-				,COMM_STND_YN		  as coimmStndYn
+				,DOMAIN_CLSF_NM		
+				,DOMAIN_GRP_NM		
+				,COMM_STND_YN		  
 				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
-				,CRET_USER_ID	    as cretUserId
+				,CRET_USER_ID	    
 				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
-				,UPDT_USER_ID	    as updtUserId
+				,UPDT_USER_ID	    
 			from TB_DOMAIN_CLSF
       where DOMAIN_GRP_NM = #{domainGrpNm}
 			order by DOMAIN_CLSF_NM

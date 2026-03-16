@@ -14,7 +14,8 @@
         <v-sheet v-show="selectedItem[0].sysCd !== ''"
           v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 15px', 'margin': '0 0 15px 0', 'display': 'flex', 'align-items': 'center', 'justify-content': 'flex-end' }]">
           <v-btn class="gradient" v-on:click="showModal('add')" title="등록" :style="{ marginRight: '20px' }">등록</v-btn>
-          <v-btn class="gradient" v-on:click="showModal('update')" title="수정" :style="{ marginRight: '20px' }">수정</v-btn>
+          <v-btn class="gradient" v-on:click="showModal('update')" title="수정"
+            :style="{ marginRight: '20px' }">수정</v-btn>
           <v-btn class="gradient" v-on:click="removeSystemData()" title="삭제">삭제</v-btn>
         </v-sheet>
 
@@ -134,13 +135,20 @@
                     </v-list-item>
 
                   </v-sheet>
+
                   <v-sheet class="dsListWrapperStyle">
                     <h3 :style="{ margin: '15px' }">데이터 소스 리스트</h3>
 
-                    <v-data-table id="all_bs_table" :headers="dsHeaders" :items="datasourceItems" 
-                      item-key="id" show-select class="px-4 pb-3" v-model="addSystem_sysDsLst">
-
+                    <v-data-table id="all_bs_table" :headers="dsHeaders" :items="datasourceItems" hide-default-footer
+                      :page.sync="page" :items-per-page="itemsPerPage" item-key="id" show-select class="px-4 pb-3"
+                      v-model="addSystem_sysDsLst">
                     </v-data-table>
+                    <v-sheet class="split_bottom_wrap">
+                      <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="pageCount > 1">
+                        <v-pagination v-model="page" :length="pageCount" prev-icon="mdi-menu-left"
+                          next-icon="mdi-menu-right" color="ndColor" :total-visible="7"></v-pagination>
+                      </div>
+                    </v-sheet>
                   </v-sheet>
                 </v-row>
               </v-col>
@@ -247,10 +255,17 @@
                   <v-sheet class="dsListWrapperStyle">
                     <h3 :style="{ margin: '15px' }">데이터 소스 리스트</h3>
 
-                    <v-data-table id="all_bs_table" :headers="dsHeaders" :items="datasourceItems"
-                      item-key="id" show-select class="px-4 pb-3" v-model="updateSystem_sysDsLst">
+                    <v-data-table id="all_bs_table" :headers="dsHeaders" :items="datasourceItems" hide-default-footer
+                      :page.sync="page" :items-per-page="itemsPerPage" item-key="id" show-select class="px-4 pb-3"
+                      v-model="updateSystem_sysDsLst">
 
                     </v-data-table>
+                    <v-sheet class="split_bottom_wrap">
+                      <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="pageCount > 1">
+                        <v-pagination v-model="page" :length="pageCount" prev-icon="mdi-menu-left"
+                          next-icon="mdi-menu-right" color="ndColor" :total-visible="7"></v-pagination>
+                      </div>
+                    </v-sheet>
                   </v-sheet>
                 </v-row>
               </v-col>
@@ -263,7 +278,7 @@
 
   </v-main>
 </template>
-  
+
 <script>
 import axios from "axios";
 import VJstree from 'vue-jstree'
@@ -337,6 +352,10 @@ export default {
       { text: '데이터베이스타입', value: 'dbmsTp', sortable: false, },
     ],
 
+    page: 1,
+    pageCount: 0,
+    itemsPerPage: 10,
+
   }),
   created() {
     this.getDatasourceData();
@@ -363,9 +382,21 @@ export default {
     },
     treeItems() {
       this.$refs.tree.initializeData(this.treeItems);
+    },
+    //0311 pagination 추가 
+    datasourceItems() {
+      this.setListPage();
+    },
+    itemsPerPage() {
+      this.setListPage();
     }
   },
   methods: {
+    setListPage() {
+      this.pageCount = Math.ceil(
+        this.datasourceItems.length / this.itemsPerPage
+      );
+    },
     async itemClick(data, event) {
       let _dsNm = [];
       for (let i = 0; i < data.model.sysDsLst.length; i++) {
@@ -480,7 +511,7 @@ export default {
           let _data = result.data;
 
           // console 표시
-          console.log("📃 SYSTEM INFO LIST ↓↓↓")
+          console.log(" SYSTEM INFO LIST ↓↓↓")
           console.log(_data);
 
           // parentSysCd가 null이 아니면 상위 시스템이 존재한다는 의미,하지만 parentSysCd는 id값이기 때문에 parentSysNM을 추가로 생성해야한다.
@@ -577,10 +608,10 @@ export default {
       axios.get(this.$APIURL.base + "api/sysinfo/getDataSourceList").then(result => {
         let _data = result.data;
 
-        
+
         // table에서 사용할 dsTp의 한글명 생성하여 dsTpNm에 저장 
         // 조회한 데이터소스 데이터의 dsTp =0 일경우 'DB' 아닌경우 HOST
-        
+
         for (let i = 0; i < _data.length; i++) {
           if (_data[i].dsTp === 0) {
             _data[i].dsTpNm = 'DB';
@@ -894,7 +925,7 @@ export default {
   }
 }
 </script>
-  
+
 <style scoped>
 .containerWrapper {
   display: flex;

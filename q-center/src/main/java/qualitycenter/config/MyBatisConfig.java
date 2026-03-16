@@ -44,6 +44,17 @@ public class MyBatisConfig {
     public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
         final SqlSessionFactoryBean sessionFactory = new SqlSessionFactoryBean();
         sessionFactory.setDataSource(dataSource);
+
+
+        //mybatis 설정(언더스코어 -> 카멜케이스)
+        org.apache.ibatis.session.Configuration configuration =
+                new org.apache.ibatis.session.Configuration();
+
+        configuration.setMapUnderscoreToCamelCase(true);
+        configuration.setLogImpl(org.apache.ibatis.logging.slf4j.Slf4jImpl.class);
+        sessionFactory.setConfiguration(configuration);
+
+
         PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
         sessionFactory.setMapperLocations(resolver.getResources("classpath*:mapper/**/*.xml"));
         // Enum 타입 처리를 위한 TypeHandler 를 등록한다.

@@ -12,4 +12,7 @@ public class StdDomainGroupVo {
     private String cretUserId;
     private String updtDt;
     private String updtUserId;	
+
+
+    
 }
