@@ -34,7 +34,9 @@ export default {
 };
 
 // eventBus
-export const eventBus = new Vue();
+export { eventBus } from './eventBus.js';
+
+import { eventBus } from './eventBus.js'
 
 // websocket vue
 export const wsVue = new Vue({

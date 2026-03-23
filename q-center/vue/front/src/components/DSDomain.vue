@@ -7,20 +7,35 @@
           v-bind:style="[isMobile ? { 'flex-direction': 'column' } : { 'flex-direction': 'row' }]">
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-            <v-row :style="{ alignItems: 'center', margin: '0px' }">
+            <v-row :style="{ alignItems: 'center', margin: '0px 0px 6px 0px' }">
               <span :style="{ fontSize: '.875rem' }">도메인명</span>
-              <!-- 도메인명 입력 필드 -->
               <v-text-field class="pr-4 pl-4" v-model="searchDomain" v-on:keyup.enter="getDomainData"
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
+              </v-text-field>
+              <span :style="{ fontSize: '.875rem' }">도메인 그룹명</span>
+              <v-text-field class="pr-4 pl-4" v-model="searchDomainGrpNm" v-on:keyup.enter="getDomainData"
+                clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
+                color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
+              </v-text-field>
+              <span :style="{ fontSize: '.875rem' }">데이터 타입</span>
+              <v-text-field class="pr-4 pl-4" v-model="searchDataType" v-on:keyup.enter="getDomainData"
+                clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
+                color="ndColor" single-line dense outlined hide-details :style="{ width: '130px' }">
+              </v-text-field>
+              <span :style="{ fontSize: '.875rem' }">데이터 길이</span>
+              <v-text-field class="pr-4 pl-4" v-model="searchDataLen" v-on:keyup.enter="getDomainData"
+                clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
+                color="ndColor" single-line dense outlined hide-details :style="{ width: '100px' }">
               </v-text-field>
               <!-- 승인 여부 추가 -->
               <v-checkbox class="domainSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
               <v-btn class="gradient" title="검색" v-on:click="getDomainData"
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
-              <!-- <v-btn class="gradient" title="도메인 목록 다시 불러오기" v-on:click="resetDomainList" v-show="resetBtnShow"
-                :style="{ width: '40px', padding: '0 5px', minWidth: '45px' }"><v-icon>restart_alt</v-icon></v-btn> -->
+              <!-- 초기화 버튼 -->
+              <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
+                :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
             </v-row>
           </v-sheet>
           <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
@@ -29,6 +44,7 @@
             <v-btn class="gradient" v-on:click="domainExcelFileUpload()" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="domainListDownload()" title="다운로드">다운로드</v-btn>
             <v-btn class="gradient" v-on:click="domainRemoveItem()" title="삭제">삭제</v-btn>
+            <v-btn class="gradient" color="red lighten-4" v-on:click="domainBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
             <input type="file" @change="readExcelFile" ref="file" id="inputDomainUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
@@ -481,6 +497,32 @@
         </template>
       </NdModal>
     </v-dialog>
+
+    <!-- 일괄등록 Modal -->
+    <v-dialog max-width="520" v-model="collectiveDomainModalShow" persistent>
+      <v-card>
+        <v-card-title class="pb-2" :style="{ fontSize: '1rem', fontWeight: 'bold' }">
+          <v-icon left color="ndColor">mdi-upload</v-icon>
+          도메인 일괄등록 진행
+        </v-card-title>
+        <v-progress-linear v-if="isUploading" indeterminate color="ndColor" height="3"></v-progress-linear>
+        <v-card-text class="pt-3 pb-2">
+          <div ref="uploadLogBox"
+            :style="{ maxHeight: '280px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.82rem', background: '#f8f8f8', border: '1px solid #e0e0e0', borderRadius: '4px', padding: '10px 12px' }">
+            <div v-for="(log, i) in uploadLogs" :key="i"
+              :style="{ color: log.level === 'ERROR' ? '#d32f2f' : log.level === 'DONE' ? '#1976d2' : '#333', fontWeight: log.level === 'DONE' ? 'bold' : 'normal', lineHeight: '1.7' }">
+              <span :style="{ color: '#999', marginRight: '8px' }">{{ log.time }}</span>{{ log.msg }}
+            </div>
+            <div v-if="uploadLogs.length === 0" :style="{ color: '#999' }">대기 중...</div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn v-if="!isUploading" color="ndColor" text @click="collectiveDomainModalShow = false">닫기</v-btn>
+          <span v-else :style="{ fontSize: '0.8rem', color: '#999', paddingRight: '12px' }">완료될 때까지 기다려주세요...</span>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-main>
 </template>
 
@@ -489,6 +531,7 @@ import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
+import { eventBus } from './../eventBus.js'
 
 export default {
   name: 'DSDomain',
@@ -516,12 +559,21 @@ export default {
     domainItems: [],
     // 검색 도메인
     searchDomain: '',
+    searchDomainGrpNm: '',
+    searchDataType: '',
+    searchDataLen: '',
     // 검색 승인 여부
     searchApproval: true,
     // 등록 모달 보이기
     addDomainModalShow: false,
     // 수정 모달 보이기
     updateDomainModalShow: false,
+    // 일괄 등록 진행 다이얼로그
+    collectiveDomainModalShow: false,
+    // 일괄 등록 진행 상태
+    isUploading: false,
+    // 일괄 등록 로그
+    uploadLogs: [],
     // 페이지네이션 시작 지정
     page: 1,
     // 총 페이지 수
@@ -632,12 +684,14 @@ export default {
     // 승인 시스템에서 사용할 시스템 네임 리스트
     systemNameList: [],
   }),
-  created() {
-    // 데이터 표준 메뉴의 도메인 선택 시 domain data를 불러온다.
-    this.getDomainData();
-    this.getSystemList();
-  },
   methods: {
+    resetSearch() {
+      this.searchDomain = '';
+      this.searchDomainGrpNm = '';
+      this.searchDataType = '';
+      this.searchDataLen = '';
+      this.searchApproval = true;
+    },
     getSystemList() {
       // 시스템 리스트 가지고 오기
       try {
@@ -741,7 +795,10 @@ export default {
 
         axios.post(_url, {
           'schNm': schNm,
-          'schAprvYn': schAprvYn
+          'schAprvYn': schAprvYn,
+          'schDomainGrpNm': this.searchDomainGrpNm !== '' ? this.searchDomainGrpNm : null,
+          'schDataType': this.searchDataType !== '' ? this.searchDataType : null,
+          'schDataLen': this.searchDataLen !== '' ? this.searchDataLen : null
         }).then(result => {
           let _data = result.data;
           // console.log(_data);
@@ -1289,6 +1346,38 @@ export default {
         }
       })
     },
+    domainBulkRemove() {
+      if (this.domainItems.length === 0) {
+        this.$swal.fire({ title: '삭제할 도메인이 없습니다.', confirmButtonText: '확인', icon: 'warning' });
+        return;
+      }
+      this.$swal.fire({
+        title: `조회된 도메인 ${this.domainItems.length}건을 모두 삭제할까요?`,
+        text: '이 작업은 되돌릴 수 없습니다.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d32f2f',
+        cancelButtonColor: '#909090',
+        confirmButtonText: '일괄 삭제',
+        cancelButtonText: '취소',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const removeItemArr = this.domainItems.map(item => ({ id: item.id }));
+          axios.post(this.$APIURL.base + 'api/std/deleteDomains', removeItemArr)
+            .then(res => {
+              if (res.data.resultCode === 200) {
+                this.$swal.fire({ title: `도메인 ${removeItemArr.length}건이 삭제되었습니다.`, icon: 'success', showConfirmButton: false, timer: 1500 });
+                this.getDomainData();
+                this.resetDetail();
+              } else {
+                this.$swal.fire({ title: '도메인 일괄 삭제 실패', text: res.data.resultMessage, confirmButtonText: '확인', icon: 'error' });
+              }
+            }).catch(() => {
+              this.$swal.fire({ title: '도메인 일괄 삭제 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
+            });
+        }
+      });
+    },
     domainExcelFileUpload() {
       // 일괄 등록 버튼 클릭
       let fileUpload = document.getElementById('inputDomainUpload')
@@ -1307,58 +1396,63 @@ export default {
 
       this.excelFile = this.$refs.file.files[0];
 
-      // API 주소
-      const _url = this.$APIURL.base + "api/std/uploadDomains";
+      // 진행 다이얼로그 열기
+      this.uploadLogs = [];
+      this.isUploading = true;
+      this.collectiveDomainModalShow = true;
 
-      // form data
+      if (this._uploadTimer) clearTimeout(this._uploadTimer);
+      this._uploadTimer = setTimeout(() => {
+        if (this.isUploading) {
+          this._addUploadLog('ERROR', 'WebSocket 응답 없음 - 결과를 직접 확인해주세요.');
+          this.isUploading = false;
+          this.getDomainData();
+        }
+      }, 60000);
+
+      const _url = this.$APIURL.base + "api/std/uploadDomains";
       const formData = new FormData();
       formData.append('file', this.excelFile);
-
-      // form header
       const headers = { 'Content-Type': 'multipart/form-data' };
 
-      // 일괄 등록 시 기존에 이미 등록된 도메인이면 update를 하고 없으면 create를 하는 방식으로 처리
-      try {
-        axios.post(_url, formData, { headers }).then((res) => {
-          console.log(res)
-
-          if (res.data.resultCode === 200) {
-            this.$swal.fire({
-              title: '도메인 일괄 등록이 완료되었습니다.',
-              icon: 'success',
-              showConfirmButton: false,
-              timer: 1500
-            })
-
-            // table update
-            this.getDomainData();
-
-          } else {
-            this.$swal.fire({
-              title: '도메인 일괄 등록 실패',
-              text: res.data.resultMessage,
-              confirmButtonText: '확인',
-              icon: 'error',
-            });
-          }
-
-        }).catch(error => {
-          this.$swal.fire({
-            title: '도메인 일괄 등록 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-        })
-      } catch (error) {
-        this.$swal.fire({
-          title: '도메인 일괄 등록 실패 - params 확인 필요',
-          confirmButtonText: '확인',
-          icon: 'error',
-        });
-      }
+      axios.post(_url, formData, { headers }).catch(() => {
+        this._addUploadLog('ERROR', '서버 연결 오류 - API 확인 필요');
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+      });
 
       // input 초기화
       document.getElementById('inputDomainUpload').value = '';
+    },
+    onUploadNotice(msg) {
+      if (!this.collectiveDomainModalShow) return;
+      if (!msg.data || !msg.data.startsWith('[도메인]')) return;
+      const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
+      this._addUploadLog(level, msg.data);
+      if (msg.data.includes('완료 -')) {
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+        this.getDomainData();
+        const summary = msg.data.replace('[도메인] ', '');
+        const failMatch = summary.match(/실패:\s*(\d+)건/);
+        const failCount = failMatch ? parseInt(failMatch[1]) : 0;
+        this.$swal.fire({
+          title: '도메인 일괄등록 완료',
+          text: summary,
+          icon: failCount > 0 ? 'warning' : 'success',
+          showConfirmButton: false,
+          timer: 3000
+        });
+      }
+    },
+    _addUploadLog(level, msg) {
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 8);
+      this.uploadLogs.push({ level, msg, time });
+      this.$nextTick(() => {
+        const box = this.$refs.uploadLogBox;
+        if (box) box.scrollTop = box.scrollHeight;
+      });
     },
 
     domainListDownload() {
@@ -1576,6 +1670,14 @@ export default {
       this.updatDomain_allowValLst_count = 0;
       this.updateDomain_reqSysCd = null;
     },
+  },
+  created() {
+    this.getDomainData();
+    this.getSystemList();
+    eventBus.$on('NOTICE', this.onUploadNotice);
+  },
+  beforeDestroy() {
+    eventBus.$off('NOTICE', this.onUploadNotice);
   },
   mounted() {
     // 테이블 셀 가로길이 조절

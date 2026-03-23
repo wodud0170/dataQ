@@ -8,20 +8,39 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px' }">
+              <!-- 용어명 검색 타이틀 -->
               <span :style="{ fontSize: '.875rem' }">용어명</span>
               <!-- 용어명 입력 필드 -->
               <v-text-field class="pr-4 pl-4" v-model="searchTerm" v-on:keyup.enter="getTermData"
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
+
+              <!-- 용어영문약어명 검색 타이틀 -->
+              <span :style="{ fontSize: '.875rem' }">용어영문약어명</span>
+              <!-- 용어영문약어명 입력 필드 -->
+              <v-text-field class="pr-4 pl-4" v-model="searchEngTerm" v-on:keyup.enter="getTermData"
+                @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
+                color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
+              </v-text-field>
+
+               <!-- 도메인명 검색 타이틀 -->
+              <span :style="{ fontSize: '.875rem' }">도메인명</span>
+              <!-- 도메인명 입력 필드 -->
+              <v-text-field class="pr-4 pl-4" v-model="searchDomain" v-on:keyup.enter="getTermData"
+                @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
+                color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
+              </v-text-field>
+
               <!-- 승인 여부 추가 -->
               <v-checkbox class="tarmSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
               <!-- 검색 버튼 -->
               <v-btn class="gradient" title="검색" v-on:click="getTermData"
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
-              <!-- <v-btn class="gradient" title="용어 목록 다시 불러오기" v-on:click="resetTermList" v-show="resetBtnShow"
-                :style="{ width: '40px', padding: '0 5px', minWidth: '45px' }"><v-icon>restart_alt</v-icon></v-btn> -->
+              <!-- 초기화 버튼 -->
+              <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
+                :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
             </v-row>
 
           </v-sheet>
@@ -31,6 +50,7 @@
             <v-btn class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="termListDownload()" title="다운로드">다운로드</v-btn>
             <v-btn class="gradient" v-on:click="termRemoveItem()" title="삭제">삭제</v-btn>
+            <v-btn class="gradient" color="red lighten-4" v-on:click="termBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
             <input type="file" @change="readExcelFile" ref="file" id="inputTermUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
@@ -643,6 +663,35 @@
         </template>
       </NdModal>
     </v-dialog>
+
+    <!-- 일괄등록 Modal -->
+    <v-dialog max-width="520" v-model="collectiveTermModalShow" persistent>
+      <v-card>
+        <v-card-title class="pb-2" :style="{ fontSize: '1rem', fontWeight: 'bold' }">
+          <v-icon left color="ndColor">mdi-upload</v-icon>
+          용어 일괄등록 진행
+        </v-card-title>
+        <v-progress-linear v-if="isUploading" indeterminate color="ndColor" height="3"></v-progress-linear>
+        <v-card-text class="pt-3 pb-2">
+          <div ref="uploadLogBox"
+            :style="{ maxHeight: '280px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.82rem', background: '#f8f8f8', border: '1px solid #e0e0e0', borderRadius: '4px', padding: '10px 12px' }">
+            <div v-for="(log, i) in uploadLogs" :key="i"
+              :style="{ color: log.level === 'ERROR' ? '#d32f2f' : log.level === 'DONE' ? '#1976d2' : '#333', fontWeight: log.level === 'DONE' ? 'bold' : 'normal', lineHeight: '1.7' }">
+              <span :style="{ color: '#999', marginRight: '8px' }">{{ log.time }}</span>{{ log.msg }}
+            </div>
+            <div v-if="uploadLogs.length === 0" :style="{ color: '#999' }">대기 중...</div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn v-if="!isUploading" color="ndColor" text @click="collectiveTermModalShow = false">닫기</v-btn>
+          <template v-else>
+            <span :style="{ fontSize: '0.8rem', color: '#999', paddingRight: '8px' }">처리 중...</span>
+            <v-btn color="grey" text @click="forceCloseUploadModal">강제 닫기</v-btn>
+          </template>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-main>
 </template>
 
@@ -651,6 +700,7 @@ import axios from 'axios';
 import NdModal from "./../views/modal/NdModal.vue"
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
+import { eventBus } from './../eventBus.js'
 
 export default {
   name: 'DSTerm',
@@ -743,8 +793,18 @@ export default {
   data: () => ({
     // 용어 목록
     termItems: [],
-    // 검색 용어
+
+    // 검색 조건 시작
+
+    //검색 용어명
     searchTerm: '',
+
+    //검색 용어영문약어명 
+    searchEngTerm: '',
+    //검색 도메인명
+    searchDomain: '',
+
+    
     // 검색 승인 여부
     searchApproval: true,
     // 검색 이후 용어 리스트 다시보기 버튼 보이기
@@ -759,6 +819,12 @@ export default {
     detailTerm: null,
     // 일괄 등록 파일
     excelFile: null,
+    // 일괄 등록 진행 다이얼로그
+    collectiveTermModalShow: false,
+    // 일괄 등록 진행 상태
+    isUploading: false,
+    // 일괄 등록 로그
+    uploadLogs: [],
     // 디테일 메뉴 탭
     detailTab: [
       { title: '용어 상세 보기', name: 'tab1', index: 0 },
@@ -866,21 +932,18 @@ export default {
     // 승인 시스템에서 사용할 시스템 네임 리스트
     systemNameList: [],
   }),
-  created() {
-    // 데이터 표준 메뉴의 용어 선택 시 term data를 불러온다.
-    this.getTermData();
-    this.getSystemList();
-  },
   methods: {
+    resetSearch() {
+      this.searchTerm = '';
+      this.searchEngTerm = '';
+      this.searchDomain = '';
+      this.searchApproval = true;
+    },
     getSystemList() {
       // 시스템 리스트 가지고 오기
       try {
         axios.get(this.$APIURL.base + 'api/sysinfo/getSysInfoList')
           .then((res) => {
-            // console 표시
-            console.log("📃 SYSTEM INFO LIST ↓↓↓")
-            console.log(res.data);
-
             let _list = res.data;
 
             const treeData = []
@@ -920,9 +983,19 @@ export default {
           })
           .catch((err) => {
             console.log(err);
+            this.$swal.fire({
+              title: '시스템 목록 조회 실패 - API 확인 필요',
+              confirmButtonText: '확인',
+              icon: 'error',
+            });
           })
       } catch (error) {
-        console.log(err);
+        console.log(error);
+        this.$swal.fire({
+          title: '시스템 목록 조회 실패 - params 확인 필요',
+          confirmButtonText: '확인',
+          icon: 'error',
+        });
       }
     },
     setListPage() {
@@ -934,12 +1007,21 @@ export default {
       // 용어 리스트 불러오기
       try {
 
+        //검색 조건 세팅
         let schNm = null;
-
+        let searchEngTerm = null;
+        let searchDomain = null;
+        let schAprvYn = ''
         if (this.searchTerm !== '') {
           schNm = this.searchTerm
         }
-        let schAprvYn = ''
+
+            if (this.searchEngTerm !== '') {
+          searchEngTerm = this.searchEngTerm
+        }
+    if (this.searchDomain !== '') {
+          searchDomain = this.searchDomain
+        }
         if (this.searchApproval === true) {
           schAprvYn = 'Y'
         } else {
@@ -950,6 +1032,8 @@ export default {
 
         axios.post(_url, {
           'schNm': schNm,
+          'searchEngTerm': searchEngTerm,
+          'searchDomain': searchDomain,
           'schAprvYn': schAprvYn
         }).then((res) => {
           // console.log(res.data)
@@ -988,59 +1072,79 @@ export default {
 
       this.excelFile = this.$refs.file.files[0];
 
-      // API 주소
-      const _url = this.$APIURL.base + "api/std/uploadTermsList";
+      // 진행 다이얼로그 열기
+      this.uploadLogs = [];
+      this.isUploading = true;
+      this.collectiveTermModalShow = true;
 
-      // form data
+      // 60초 타임아웃 폴백 (WebSocket 메시지 미수신 시 자동 해제)
+      if (this._uploadTimer) clearTimeout(this._uploadTimer);
+      this._uploadTimer = setTimeout(() => {
+        if (this.isUploading) {
+          this._addUploadLog('ERROR', 'WebSocket 응답 없음 - 결과를 직접 확인해주세요.');
+          this.isUploading = false;
+          this.getTermData();
+        }
+      }, 60000);
+
+      const _url = this.$APIURL.base + "api/std/uploadTermsList";
       const formData = new FormData();
       formData.append('file', this.excelFile);
-
-      // form header
       const headers = { 'Content-Type': 'multipart/form-data' };
 
-      // 일괄 등록 시 기존에 이미 등록된 용어라면 update를 하고 없으면 create를 하는 방식으로 처리
-      try {
-        axios.post(_url, formData, { headers }).then((res) => {
-          // console.log(res)
-
-          if (res.data.resultCode === 200) {
-            this.$swal.fire({
-              title: '용어 일괄 등록이 완료되었습니다.',
-              icon: 'success',
-              showConfirmButton: false,
-              timer: 1500
-            })
-
-            // table update
-            this.getTermData();
-
-          } else {
-
-            this.$swal.fire({
-              title: '용어 일괄 등록 실패',
-              text: res.data.resultMessage,
-              confirmButtonText: '확인',
-              icon: 'error',
-            });
-          }
-
-        }).catch(error => {
-          this.$swal.fire({
-            title: '용어 일괄 등록 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-        })
-      } catch (error) {
-        this.$swal.fire({
-          title: '용어 일괄 등록 실패 - params 확인 필요',
-          confirmButtonText: '확인',
-          icon: 'error',
-        });
-      }
+      axios.post(_url, formData, { headers }).then((res) => {
+        if (res.data && res.data.resultCode === 200) {
+          this._addUploadLog('INFO', '처리 중... WebSocket 결과를 기다립니다.');
+        } else {
+          this._addUploadLog('ERROR', '요청 실패: ' + (res.data && res.data.resultMessage));
+          this.isUploading = false;
+          clearTimeout(this._uploadTimer);
+        }
+      }).catch(() => {
+        this._addUploadLog('ERROR', '서버 연결 오류 - API 확인 필요');
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+      });
 
       // input 초기화
       document.getElementById('inputTermUpload').value = '';
+    },
+    onUploadNotice(msg) {
+      if (!this.collectiveTermModalShow) return;
+      if (!msg.data || !msg.data.startsWith('[용어]')) return;
+      const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
+      this._addUploadLog(level, msg.data);
+      if (msg.data.includes('완료 -')) {
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+        this.getTermData();
+        // 완료 메시지에서 건수 파싱 후 팝업
+        const summary = msg.data.replace('[용어] ', '');
+        const failMatch = summary.match(/실패:\s*(\d+)건/);
+        const failCount = failMatch ? parseInt(failMatch[1]) : 0;
+        this.$swal.fire({
+          title: '용어 일괄등록 완료',
+          text: summary,
+          icon: failCount > 0 ? 'warning' : 'success',
+          showConfirmButton: false,
+          timer: 3000
+        });
+      }
+    },
+    forceCloseUploadModal() {
+      this.isUploading = false;
+      clearTimeout(this._uploadTimer);
+      this.collectiveTermModalShow = false;
+      this.getTermData();
+    },
+    _addUploadLog(level, msg) {
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 8);
+      this.uploadLogs.push({ level, msg, time });
+      this.$nextTick(() => {
+        const box = this.$refs.uploadLogBox;
+        if (box) box.scrollTop = box.scrollHeight;
+      });
     },
     resetDetail() {
       // 선택한 용어 정보를 리셋
@@ -1051,6 +1155,8 @@ export default {
     clearMessage() {
       // 검색어 지워주기
       this.searchTerm = ''
+      this.searchEngTerm = ''
+      this.searchDomain = ''
     },
     enterSelect() {
       // 용어명 클릭 시 하단에 보여지는 상세 보기를 체크 해제 시 초기화 해주기
@@ -1460,6 +1566,38 @@ export default {
           }
         }
       })
+    },
+    termBulkRemove() {
+      if (this.termItems.length === 0) {
+        this.$swal.fire({ title: '삭제할 용어가 없습니다.', confirmButtonText: '확인', icon: 'warning' });
+        return;
+      }
+      this.$swal.fire({
+        title: `조회된 용어 ${this.termItems.length}건을 모두 삭제할까요?`,
+        text: '이 작업은 되돌릴 수 없습니다.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d32f2f',
+        cancelButtonColor: '#909090',
+        confirmButtonText: '일괄 삭제',
+        cancelButtonText: '취소',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const removeItemArr = this.termItems.map(item => ({ id: item.id }));
+          axios.post(this.$APIURL.base + 'api/std/deleteTermsList', removeItemArr)
+            .then(res => {
+              if (res.data.resultCode === 200) {
+                this.$swal.fire({ title: `용어 ${removeItemArr.length}건이 삭제되었습니다.`, icon: 'success', showConfirmButton: false, timer: 1500 });
+                this.getTermData();
+                this.resetDetail();
+              } else {
+                this.$swal.fire({ title: '용어 일괄 삭제 실패', text: res.data.resultMessage, confirmButtonText: '확인', icon: 'error' });
+              }
+            }).catch(() => {
+              this.$swal.fire({ title: '용어 일괄 삭제 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
+            });
+        }
+      });
     },
     showDetail(item) {
       // 용어명 클릭 시 보여지는 하단 리스트
@@ -2000,6 +2138,14 @@ export default {
       this.updateTerm_allophSynmLst_arr = [{ id: 'alloph_0', value: '', addBtnView: true, removeBtnView: false }];
       this.updateTerm_allophSynmLst_count = 0;
     },
+  },
+  created() {
+    this.getTermData();
+    this.getSystemList();
+    eventBus.$on('NOTICE', this.onUploadNotice);
+  },
+  beforeDestroy() {
+    eventBus.$off('NOTICE', this.onUploadNotice);
   },
   mounted() {
     // 테이블 셀 가로길이 조절

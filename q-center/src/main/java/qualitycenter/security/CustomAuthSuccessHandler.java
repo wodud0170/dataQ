@@ -38,11 +38,11 @@ public class CustomAuthSuccessHandler extends SavedRequestAwareAuthenticationSuc
         
         String jsonString = om.writeValueAsString(map);
 
-        OutputStream out = httpServletResponse.getOutputStream();
+        httpServletResponse.setContentType("application/json;charset=UTF-8");
         httpServletResponse.setHeader("Access-Control-Allow-Origin", httpServletRequest.getHeader("Origin"));
         httpServletResponse.setHeader("Access-Control-Allow-Credentials","true");
-        
-        out.write(jsonString.getBytes());
+        OutputStream out = httpServletResponse.getOutputStream();
+        out.write(jsonString.getBytes("UTF-8"));
         out.flush();
         out.close();
     }

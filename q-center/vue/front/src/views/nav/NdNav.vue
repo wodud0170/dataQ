@@ -13,77 +13,63 @@
                     <v-list-item-title>대시보드</v-list-item-title>
                 </v-list-item>
 
-                <!-- 데이터 표준 -->
+                <!-- 데이터 표준 사전 -->
                 <v-list-group link v-cloak :value=" navDsGroup " prepend-icon="task" active-class="ndColor--text"
-                    id="dsGroup" title="데이터 표준" v-on:click.stop=" addNavGroupData('dsGroup'); ">
+                    id="dsGroup" title="데이터 표준 사전" v-on:click.stop=" addNavGroupData('dsGroup'); ">
                     <template v-slot:activator>
                         <v-list-item-content>
-                            <v-list-item-title :ripple=" false ">데이터 표준</v-list-item-title>
+                            <v-list-item-title :ripple=" false ">데이터 표준 사전</v-list-item-title>
                         </v-list-item-content>
                     </template>
 
-                    <v-list-group id="navDsSub2" link sub-group :value=" navDsSub2 " active-class="ndColor--text"
-                        v-on:click.stop=" addNavSubGroupData('navDsSub2'); ">
-                        <template v-slot:activator>
-                            <v-list-item-title :ripple=" false " title="용어 사전">용어 사전</v-list-item-title>
-                        </template>
+                    <v-list-item link id="nav_term" href="#tab_term" active-class="ndColor--text" title="용어"
+                        v-on:click.stop=" addTabItem('용어', 'term'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>용어</v-list-item-title>
+                    </v-list-item>
 
-                        <v-list-item link id="nav_term" href="#tab_term" active-class="ndColor--text" title="용어"
-                            v-on:click.stop=" addTabItem('용어', 'term'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>용어</v-list-item-title>
-                        </v-list-item>
+                    <v-list-item link id="nav_word" href="#tab_word" active-class="ndColor--text" title="단어"
+                        v-on:click.stop=" addTabItem('단어', 'word'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>단어</v-list-item-title>
+                    </v-list-item>
 
-                        <v-list-item link id="nav_word" href="#tab_word" active-class="ndColor--text" title="단어"
-                            v-on:click.stop=" addTabItem('단어', 'word'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>단어</v-list-item-title>
-                        </v-list-item>
+                    <v-list-item link id="nav_dsCode" href="#tab_dsCode" active-class="ndColor--text" title="코드"
+                        v-on:click.stop=" addTabItem('코드', 'dsCode'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>코드</v-list-item-title>
+                    </v-list-item>
 
-                        <v-list-item link id="nav_dsCode" href="#tab_dsCode" active-class="ndColor--text" title="코드"
-                            v-on:click.stop=" addTabItem('코드', 'dsCode'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>코드</v-list-item-title>
-                        </v-list-item>
-                    </v-list-group>
+                    <v-list-item link id="nav_domain" href="#tab_domain" active-class="ndColor--text" title="도메인"
+                        v-on:click.stop=" addTabItem('도메인', 'domain'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>도메인</v-list-item-title>
+                    </v-list-item>
 
-                    <v-list-group id="navDsSub1" link sub-group :value=" navDsSub1 " active-class="ndColor--text"
-                        v-on:click.stop=" addNavSubGroupData('navDsSub1'); ">
-                        <template v-slot:activator>
-                            <v-list-item-title :ripple=" false " title="도메인">도메인</v-list-item-title>
-                        </template>
+                    <v-list-item link id="nav_domainGroup" href="#tab_domainGroup" active-class="ndColor--text"
+                        title="도메인 그룹" v-on:click.stop=" addTabItem('도메인 그룹', 'domainGroup'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>도메인 그룹</v-list-item-title>
+                    </v-list-item>
 
-                        <v-list-item link id="nav_domain" href="#tab_domain" active-class="ndColor--text" title="도메인"
-                            v-on:click.stop=" addTabItem('도메인', 'domain'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>도메인</v-list-item-title>
-                        </v-list-item>
-
-                        <v-list-item link id="nav_domainGroup" href="#tab_domainGroup" active-class="ndColor--text"
-                            title="도메인 그룹" v-on:click.stop=" addTabItem('도메인 그룹', 'domainGroup'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>도메인 그룹</v-list-item-title>
-                        </v-list-item>
-
-                        <v-list-item link id="nav_domainClassification" href="#tab_domainClassification"
-                            active-class="ndColor--text" title="도메인 분류"
-                            v-on:click.stop=" addTabItem('도메인 분류', 'domainClassification'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>도메인 분류</v-list-item-title>
-                        </v-list-item>
-                    </v-list-group>
+                    <v-list-item link id="nav_domainClassification" href="#tab_domainClassification"
+                        active-class="ndColor--text" title="도메인 분류"
+                        v-on:click.stop=" addTabItem('도메인 분류', 'domainClassification'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>도메인 분류</v-list-item-title>
+                    </v-list-item>
 
                     <!-- <v-list-item link id="nav_datamodel" href="#tab_datamodel" active-class="ndColor--text" title="데이터 모델"
                         v-on:click.stop="addTabItem('데이터 모델', 'datamodel');">
@@ -93,31 +79,86 @@
                         <v-list-item-title>데이터 모델</v-list-item-title>
                     </v-list-item> -->
 
-                    <v-list-group id="navDsSub3" link sub-group :value=" navDsSub3 " active-class="ndColor--text"
-                        v-on:click.stop=" addNavSubGroupData('navDsSub3'); ">
-                        <template v-slot:activator>
-                            <v-list-item-title :ripple=" false " title="데이터 모델">데이터 모델</v-list-item-title>
-                        </template>
+                </v-list-group>
 
-                        <v-list-item link id="nav_datamodelStatus" href="#tab_datamodelStatus" active-class="ndColor--text"
-                            title="데이터 모델 현황" v-on:click.stop=" addTabItem('데이터 모델 현황', 'datamodelStatus'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>데이터 모델 현황</v-list-item-title>
-                        </v-list-item>
+                <!-- 데이터 모델 -->
+                <v-list-group link v-cloak :value="navDmGroup" prepend-icon="storage" active-class="ndColor--text"
+                    id="dmGroup" title="데이터 모델" v-on:click.stop="addNavGroupData('dmGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">데이터 모델</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
 
-                        <v-list-item link id="nav_datamodelCollection" href="#tab_datamodelCollection"
-                            active-class="ndColor--text" title="데이터 모델 수집"
-                            v-on:click.stop=" addTabItem('데이터 모델 수집', 'datamodelCollection'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>데이터 모델 수집</v-list-item-title>
-                        </v-list-item>
+                    <v-list-item link id="nav_datamodelStatusTable" href="#tab_datamodelStatusTable"
+                        active-class="ndColor--text" title="테이블"
+                        v-on:click.stop="addTabItem('테이블', 'datamodelStatusTable');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>테이블</v-list-item-title>
+                    </v-list-item>
 
-                    </v-list-group>
+                    <v-list-item link id="nav_datamodelStatusColumn" href="#tab_datamodelStatusColumn"
+                        active-class="ndColor--text" title="컬럼"
+                        v-on:click.stop="addTabItem('컬럼', 'datamodelStatusColumn');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>컬럼</v-list-item-title>
+                    </v-list-item>
 
+                    <v-list-item link id="nav_datamodelCollection" href="#tab_datamodelCollection"
+                        active-class="ndColor--text" title="데이터 모델 수집"
+                        v-on:click.stop="addTabItem('데이터 모델 수집', 'datamodelCollection');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 모델 수집</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_datamodelHistory" href="#tab_datamodelHistory"
+                        active-class="ndColor--text" title="데이터 모델 수집이력"
+                        v-on:click.stop="addTabItem('데이터 모델 수집이력', 'datamodelHistory');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 모델 수집이력</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_datamodelStatus" href="#tab_datamodelStatus"
+                        active-class="ndColor--text" title="데이터 모델 현황"
+                        v-on:click.stop="addTabItem('데이터 모델 현황', 'datamodelStatus');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 모델 현황</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group>
+
+                <!-- 데이터 표준화 진단 -->
+                <v-list-group link v-cloak :value="navDiagGroup" prepend-icon="search" active-class="ndColor--text"
+                    id="diagGroup" title="데이터 표준화 진단" v-on:click.stop="addNavGroupData('diagGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">데이터 표준화 진단</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_dataDiag" href="#tab_dataDiag"
+                        active-class="ndColor--text" title="진단 실행"
+                        v-on:click.stop="addTabItem('진단 실행', 'dataDiag');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>진단 실행</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_dataDiagResult" href="#tab_dataDiagResult"
+                        active-class="ndColor--text" title="진단 결과"
+                        v-on:click.stop="addTabItem('진단 결과', 'dataDiagResult');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>진단 결과</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
                 <!-- 데이터 품질 -->
@@ -208,6 +249,33 @@
                 </v-list-group> -->
 
 
+                <!-- 진단 -->
+                <!-- <v-list-group link v-cloak :value=" navAndGroup " prepend-icon="assessment" active-class="ndColor--text"
+                    id="andGroup" title="진단" v-on:click.stop=" addNavGroupData('andGroup'); ">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple=" false ">진단</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_scurrent" href="#tab_scurrent" active-class="ndColor--text" title="데이터 표준화 진단"
+                        v-on:click.stop=" addTabItem('데이터 표준화 진단', 'scurrent'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 표준화 진단</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_qcurrent" href="#tab_qcurrent" active-class="ndColor--text" title="데이터 품질 현황"
+                        v-on:click.stop=" addTabItem('데이터 품질 현황', 'qcurrent'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 품질 현황</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group> -->
+
                 <!-- 관리 -->
                 <v-list-group link v-cloak :value=" navMmGroup " prepend-icon="app_registration"
                     active-class="ndColor--text" id="mmGroup" title="관리" v-on:click.stop=" addNavGroupData('mmGroup'); ">
@@ -257,33 +325,6 @@
                         <v-list-item-title>시스템 정보</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
-
-                <!-- 분석 -->
-                <v-list-group link v-cloak :value=" navAndGroup " prepend-icon="assessment" active-class="ndColor--text"
-                    id="andGroup" title="분석" v-on:click.stop=" addNavGroupData('andGroup'); ">
-                    <template v-slot:activator>
-                        <v-list-item-content>
-                            <v-list-item-title :ripple=" false ">분석</v-list-item-title>
-                        </v-list-item-content>
-                    </template>
-
-                    <v-list-item link id="nav_scurrent" href="#tab_scurrent" active-class="ndColor--text" title="데이터 표준 현황"
-                        v-on:click.stop=" addTabItem('데이터 표준 현황', 'scurrent'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>데이터 표준 현황</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item link id="nav_qcurrent" href="#tab_qcurrent" active-class="ndColor--text" title="데이터 품질 현황"
-                        v-on:click.stop=" addTabItem('데이터 품질 현황', 'qcurrent'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>데이터 품질 현황</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group>
             </v-list>
         </v-list-item-group>
         <v-sheet class="wsLogViewer" v-model=" wsLogShow " :class=" { 'active': this.wsLogShow } ">
@@ -311,7 +352,9 @@ export default {
         'navDqSub3',
         'navDsSub1',
         'navDsSub2',
-        'navDsSub3'],
+        'navDsSub3',
+        'navDmGroup',
+        'navDiagGroup'],
     data: () => ({
         selectedList: null,
         wsLogShow: false,

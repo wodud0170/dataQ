@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="diag">
+
+    <!--
+    DDL (PostgreSQL):
+
+    CREATE TABLE TB_DIAG_JOB (
+        DIAG_JOB_ID     VARCHAR(50)     NOT NULL,
+        DM_CLCT_ID      VARCHAR(50)     NOT NULL,
+        DM_ID           VARCHAR(50)     NOT NULL,
+        STATUS          VARCHAR(20)     NOT NULL DEFAULT 'READY',
+        TOTAL_CNT       INTEGER         DEFAULT 0,
+        PROCESS_CNT     INTEGER         DEFAULT 0,
+        RESULT_CNT      INTEGER         DEFAULT 0,
+        CRET_DT         VARCHAR(14),
+        CRET_USER_ID    VARCHAR(50),
+        START_DT        VARCHAR(14),
+        END_DT          VARCHAR(14),
+        CONSTRAINT PK_TB_DIAG_JOB PRIMARY KEY (DIAG_JOB_ID)
+    );
+
+    CREATE TABLE TB_DIAG_RESULT (
+        RESULT_ID       BIGSERIAL       NOT NULL,
+        DIAG_JOB_ID     VARCHAR(50)     NOT NULL,
+        OBJ_NM          VARCHAR(200),
+        ATTR_NM         VARCHAR(200),
+        ATTR_NM_KR      VARCHAR(200),
+        DIAG_TYPE       VARCHAR(50)     NOT NULL,
+        DIAG_DETAIL     TEXT,
+        STD_VALUE       VARCHAR(500),
+        ACTUAL_VALUE    VARCHAR(500),
+        CONSTRAINT PK_TB_DIAG_RESULT PRIMARY KEY (RESULT_ID)
+    );
+    -->
+
+    <resultMap id="diagJobMap" type="com.ndata.quality.model.std.StdDiagJobVo">
+        <result property="diagJobId"    column="DIAG_JOB_ID"/>
+        <result property="clctId"       column="DM_CLCT_ID"/>
+        <result property="dataModelId"  column="DM_ID"/>
+        <result property="dataModelNm"  column="DM_NM"/>
+        <result property="clctDt"       column="CLCT_DT"/>
+        <result property="status"       column="STATUS"/>
+        <result property="totalCnt"     column="TOTAL_CNT"/>
+        <result property="processCnt"   column="PROCESS_CNT"/>
+        <result property="resultCnt"    column="RESULT_CNT"/>
+        <result property="cretDt"       column="CRET_DT"/>
+        <result property="cretUserId"   column="CRET_USER_ID"/>
+        <result property="startDt"      column="START_DT"/>
+        <result property="endDt"        column="END_DT"/>
+    </resultMap>
+
+    <resultMap id="diagResultMap" type="com.ndata.quality.model.std.StdDiagResultVo">
+        <result property="resultId"     column="RESULT_ID"/>
+        <result property="diagJobId"    column="DIAG_JOB_ID"/>
+        <result property="objNm"        column="OBJ_NM"/>
+        <result property="attrNm"       column="ATTR_NM"/>
+        <result property="attrNmKr"     column="ATTR_NM_KR"/>
+        <result property="diagType"     column="DIAG_TYPE"/>
+        <result property="diagDetail"   column="DIAG_DETAIL"/>
+        <result property="stdValue"     column="STD_VALUE"/>
+        <result property="actualValue"  column="ACTUAL_VALUE"/>
+    </resultMap>
+
+    <insert id="insertDiagJob" parameterType="com.ndata.quality.model.std.StdDiagJobVo">
+        INSERT INTO TB_DIAG_JOB (
+            DIAG_JOB_ID, DM_CLCT_ID, DM_ID, STATUS,
+            TOTAL_CNT, PROCESS_CNT, RESULT_CNT,
+            CRET_DT, CRET_USER_ID
+        ) VALUES (
+            #{diagJobId}, #{clctId}, #{dataModelId}, 'READY',
+            0, 0, 0,
+            to_char(now(), 'YYYYMMDDHH24MISS'), #{cretUserId, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <update id="updateDiagJobStatus" parameterType="com.ndata.quality.model.std.StdDiagJobVo">
+        UPDATE TB_DIAG_JOB SET
+            STATUS = #{status}
+            <if test="status == 'RUNNING'">, START_DT = to_char(now(), 'YYYYMMDDHH24MISS')</if>
+            <if test="status == 'DONE' or status == 'STOPPED' or status == 'ERROR'">, END_DT = to_char(now(), 'YYYYMMDDHH24MISS')</if>
+        WHERE DIAG_JOB_ID = #{diagJobId}
+    </update>
+
+    <update id="updateDiagJobProgress" parameterType="com.ndata.quality.model.std.StdDiagJobVo">
+        UPDATE TB_DIAG_JOB SET
+            TOTAL_CNT   = #{totalCnt},
+            PROCESS_CNT = #{processCnt},
+            RESULT_CNT  = #{resultCnt}
+        WHERE DIAG_JOB_ID = #{diagJobId}
+    </update>
+
+    <select id="selectDiagJobList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="diagJobMap">
+        SELECT
+             J.DIAG_JOB_ID
+            ,J.DM_CLCT_ID
+            ,J.DM_ID
+            ,M.DM_NM
+            ,to_char(to_timestamp(C.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
+            ,J.STATUS
+            ,J.TOTAL_CNT
+            ,J.PROCESS_CNT
+            ,J.RESULT_CNT
+            ,to_char(to_timestamp(J.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+            ,J.CRET_USER_ID
+            ,to_char(to_timestamp(J.START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as START_DT
+            ,to_char(to_timestamp(J.END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as END_DT
+        FROM TB_DIAG_JOB J
+        JOIN TB_DATA_MODEL M ON J.DM_ID = M.DM_ID
+        JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
+        WHERE J.STATUS != 'STOPPED'
+        <if test="schNm != null">
+            AND M.DM_NM LIKE '%' || #{schNm} || '%'
+        </if>
+        ORDER BY J.CRET_DT DESC
+    </select>
+
+    <select id="selectDiagJobById" parameterType="String" resultMap="diagJobMap">
+        SELECT
+             J.DIAG_JOB_ID
+            ,J.DM_CLCT_ID
+            ,J.DM_ID
+            ,M.DM_NM
+            ,to_char(to_timestamp(C.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
+            ,J.STATUS
+            ,J.TOTAL_CNT
+            ,J.PROCESS_CNT
+            ,J.RESULT_CNT
+            ,to_char(to_timestamp(J.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+            ,J.CRET_USER_ID
+            ,to_char(to_timestamp(J.START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as START_DT
+            ,to_char(to_timestamp(J.END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as END_DT
+        FROM TB_DIAG_JOB J
+        JOIN TB_DATA_MODEL M ON J.DM_ID = M.DM_ID
+        JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
+        WHERE J.DIAG_JOB_ID = #{diagJobId}
+    </select>
+
+    <insert id="insertDiagResult" parameterType="com.ndata.quality.model.std.StdDiagResultVo">
+        INSERT INTO TB_DIAG_RESULT (
+            DIAG_JOB_ID, OBJ_NM, ATTR_NM, ATTR_NM_KR,
+            DIAG_TYPE, DIAG_DETAIL, STD_VALUE, ACTUAL_VALUE
+        ) VALUES (
+            #{diagJobId}, #{objNm}, #{attrNm}, #{attrNmKr},
+            #{diagType}, #{diagDetail},
+            #{stdValue, jdbcType=VARCHAR}, #{actualValue, jdbcType=VARCHAR}
+        )
+    </insert>
+
+    <delete id="deleteDiagResultsByJobId" parameterType="String">
+        DELETE FROM TB_DIAG_RESULT WHERE DIAG_JOB_ID = #{diagJobId}
+    </delete>
+
+    <select id="selectDiagResultList" parameterType="String" resultMap="diagResultMap">
+        SELECT
+            RESULT_ID, DIAG_JOB_ID, OBJ_NM, ATTR_NM, ATTR_NM_KR,
+            DIAG_TYPE, DIAG_DETAIL, STD_VALUE, ACTUAL_VALUE
+        FROM TB_DIAG_RESULT
+        WHERE DIAG_JOB_ID = #{diagJobId}
+        ORDER BY OBJ_NM, ATTR_NM
+    </select>
+
+    <select id="selectDiagResultSummary" parameterType="String" resultType="map">
+        SELECT
+             OBJ_NM as "objNm"
+            ,COUNT(*) as "issueCnt"
+            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'TERM_NOT_EXIST')      as "termNotExistCnt"
+            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'TERM_KR_NM_MISMATCH') as "termKrNmMismatchCnt"
+            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'TERM_ENG_NM_MISMATCH')as "termEngNmMismatchCnt"
+            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'DATA_TYPE_MISMATCH')  as "dataTypeMismatchCnt"
+            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'DATA_LEN_MISMATCH')   as "dataLenMismatchCnt"
+        FROM TB_DIAG_RESULT
+        WHERE DIAG_JOB_ID = #{diagJobId}
+        GROUP BY OBJ_NM
+        ORDER BY OBJ_NM
+    </select>
+
+</mapper>

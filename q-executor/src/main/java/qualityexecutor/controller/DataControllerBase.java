@@ -14,4 +14,9 @@ public abstract class DataControllerBase {
 		Thread jobThreadEx = new Thread(svc);
 		jobThreadEx.start();
     }
+
+    public void runService(Runnable svc) {
+        appContext.getAutowireCapableBeanFactory().autowireBean(svc);
+        svc.run();
+    }
 }

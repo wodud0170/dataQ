@@ -45,65 +45,53 @@
 	</resultMap>
 
 	<select id="selectDataModelStatsList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDataModelMap">
-			select 		
-				 A.DM_ID
-				,A.DM_NM
-				,A.DM_SYS_CD
-				,(select SYS_NM from TB_SYS_INFO where sys_cd = A.DM_SYS_CD) as DM_SYS_NM	
-				,A.DM_DS_ID
-				,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
-				,A.VER
-				,B.DM_CLCT_ID
-				,COALESCE(B.OBJ_CNT,0) as OBJ_CNT
-				,COALESCE(B.ATTR_CNT,0) as ATTR_CNT
-				,ROUND(COALESCE(B.TOTAL_STND_RATE,0),2) as TOTAL_STND_RATE
-				,COALESCE(B.TERMS_STND_RATE,0) as TERMS_STND_RATE
-				,COALESCE(B.WORD_STND_RATE,0) as WORD_STND_RATE
-				,COALESCE(B.DOMAIN_STND_RATE,0) as DOMAIN_STND_RATE
-				,to_char(to_timestamp(B.CLCT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
-			from TB_DATA_MODEL A LEFT OUTER JOIN (
-				select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID
-				  ,(S.TERMS_STND_RATE+S.WORD_STND_RATE+S.DOMAIN_STND_RATE)/3::NUMERIC as TOTAL_STND_RATE 
-				  ,S.TERMS_STND_RATE, S.WORD_STND_RATE, S.DOMAIN_STND_RATE, T.CLCT_END_DT as CLCT_DT
-				from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
-				where S.DM_CLCT_ID = T.DM_CLCT_ID and 
-				    T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID)
-				) B on A.DM_ID = B.DM_ID
-			where A.USE_YN = 'Y'
-		<if test="schNm != null">
-				AND A.DM_NM like '%' || #{schNm} || '%'
-		</if>
-		<if test="schSysNm != null">
-				AND A.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM like '%' || #{schSysNm} || '%')
-		</if>
-			order by A.DM_NM
-	</select>
+        select
+             A.DM_ID
+            ,A.DM_NM
+            ,A.DM_SYS_CD
+            ,(select SYS_NM from TB_SYS_INFO where sys_cd = A.DM_SYS_CD) as DM_SYS_NM
+            ,A.DM_DS_ID
+            ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
+            ,A.VER
+            ,B.DM_CLCT_ID
+            ,COALESCE(B.OBJ_CNT,0) as OBJ_CNT
+            ,COALESCE(B.ATTR_CNT,0) as ATTR_CNT
+            ,to_char(to_timestamp(B.CLCT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
+        from TB_DATA_MODEL A LEFT OUTER JOIN (
+            select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID, T.CLCT_END_DT as CLCT_DT
+            from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
+            where S.DM_CLCT_ID = T.DM_CLCT_ID and
+                T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID)
+            ) B on A.DM_ID = B.DM_ID
+        where A.USE_YN = 'Y'
+    <if test="schNm != null">
+            AND A.DM_NM like '%' || #{schNm} || '%'
+    </if>
+    <if test="schSysNm != null">
+            AND A.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM like '%' || #{schSysNm} || '%')
+    </if>
+        order by A.DM_NM
+    </select>
 
-	<select id="selectDataModelStatsByClctId" parameterType="String" resultMap="stdDataModelMap">
-			select 	
-				 A.DM_ID
-				,A.DM_NM
-				,A.DM_SYS_CD
-				,(select SYS_NM from TB_SYS_INFO where sys_cd = A.DM_SYS_CD) as DM_SYS_NM	
-				,A.DM_DS_ID
-				,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
-				,A.VER
-				,B.DM_CLCT_ID
-				,COALESCE(B.OBJ_CNT,0) as OBJ_CNT
-				,COALESCE(B.ATTR_CNT,0) as ATTR_CNT
-				,ROUND(COALESCE(B.TOTAL_STND_RATE,0),2) as TOTAL_STND_RATE
-				,COALESCE(B.TERMS_STND_RATE,0) as TERMS_STND_RATE
-				,COALESCE(B.WORD_STND_RATE,0) as WORD_STND_RATE
-				,COALESCE(B.DOMAIN_STND_RATE,0) as DOMAIN_STND_RATE
-				,to_char(to_timestamp(B.CLCT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
-			from TB_DATA_MODEL A INNER JOIN (
-				select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID
-				  ,(S.TERMS_STND_RATE+S.WORD_STND_RATE+S.DOMAIN_STND_RATE)/3::NUMERIC as TOTAL_STND_RATE 
-				  ,S.TERMS_STND_RATE, S.WORD_STND_RATE, S.DOMAIN_STND_RATE, T.CLCT_END_DT as CLCT_DT
-				from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
-				where S.DM_CLCT_ID = T.DM_CLCT_ID) B on A.DM_ID = B.DM_ID
-			where A.USE_YN = 'Y' AND B.DM_CLCT_ID = #{clctId}
-	</select>
+    <select id="selectDataModelStatsByClctId" parameterType="String" resultMap="stdDataModelMap">
+        select
+             A.DM_ID
+            ,A.DM_NM
+            ,A.DM_SYS_CD
+            ,(select SYS_NM from TB_SYS_INFO where sys_cd = A.DM_SYS_CD) as DM_SYS_NM
+            ,A.DM_DS_ID
+            ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
+            ,A.VER
+            ,B.DM_CLCT_ID
+            ,COALESCE(B.OBJ_CNT,0) as OBJ_CNT
+            ,COALESCE(B.ATTR_CNT,0) as ATTR_CNT
+            ,to_char(to_timestamp(B.CLCT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
+        from TB_DATA_MODEL A INNER JOIN (
+            select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID, T.CLCT_END_DT as CLCT_DT
+            from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
+            where S.DM_CLCT_ID = T.DM_CLCT_ID) B on A.DM_ID = B.DM_ID
+        where A.USE_YN = 'Y' AND B.DM_CLCT_ID = #{clctId}
+    </select>
 
 	<select id="selectDataModelList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelCollectVo">
 			select 
@@ -245,6 +233,53 @@
 			order by A.OBJ_NM, A.ATTR_ORD
 	</select>
 
+	<select id="selectDataModelHistoryList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelCollectVo">
+		select
+			 T.DM_CLCT_ID    as clctId
+			,M.DM_ID         as dataModelId
+			,M.DM_NM         as dataModelNm
+			,M.DM_SYS_CD     as dataModelSysCd
+			,(select SYS_NM from TB_SYS_INFO where sys_cd = M.DM_SYS_CD) as dataModelSysNm
+			,M.DM_DS_ID      as dataModelDsId
+			,(select DSN from ndata.TB_DATA_SOURCE where ds_id = M.DM_DS_ID) as dataModelDsNm
+			,M.VER           as dataModelVer
+			,to_char(to_timestamp(T.CLCT_START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as clctStartDt
+			,to_char(to_timestamp(T.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS')   as clctEndDt
+			,T.CLCT_CMPTN_YN as clctCmptnYn
+			,COALESCE(S.OBJ_CNT,0)  as objCnt
+			,COALESCE(S.ATTR_CNT,0) as attrCnt
+			,COALESCE((SELECT ROUND(
+				COUNT(*) FILTER (WHERE TERMS_STND_YN='Y' AND DOMAIN_STND_YN='Y')::NUMERIC
+				/ NULLIF(COUNT(*), 0) * 100, 1)
+			 FROM TB_DATA_MODEL_ATTR WHERE DM_CLCT_ID = T.DM_CLCT_ID), 0) as stndRate
+			,COALESCE((SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+			 WHERE DM_CLCT_ID = T.DM_CLCT_ID
+			 AND NOT (TERMS_STND_YN='Y' AND DOMAIN_STND_YN='Y')), 0) as nonStndCnt
+			,COALESCE((SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+			 WHERE DM_CLCT_ID = T.DM_CLCT_ID
+			 AND TERMS_STND_YN='N'), 0) as noTermsCnt
+			,COALESCE((SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+			 WHERE DM_CLCT_ID = T.DM_CLCT_ID
+			 AND TERMS_STND_YN='Y' AND DOMAIN_STND_YN='N'), 0) as domainMismatchCnt
+		from TB_DATA_MODEL_CLCT T
+		JOIN TB_DATA_MODEL M on T.DM_ID = M.DM_ID
+		LEFT OUTER JOIN TB_DATA_MODEL_STATS S on T.DM_CLCT_ID = S.DM_CLCT_ID
+		where M.USE_YN = 'Y'
+		<if test="schNm != null">
+			AND M.DM_NM like '%' || #{schNm} || '%'
+		</if>
+		<if test="schSysNm != null">
+			AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM like '%' || #{schSysNm} || '%')
+		</if>
+		<if test="from != null">
+			AND T.CLCT_END_DT &gt;= #{from}
+		</if>
+		<if test="to != null">
+			AND T.CLCT_END_DT &lt;= #{to}
+		</if>
+		order by T.CLCT_END_DT DESC
+	</select>
+
 	<insert id="insertDataModel" parameterType="com.ndata.quality.model.std.StdDataModelVo">
            INSERT INTO TB_DATA_MODEL
            (
@@ -374,6 +409,44 @@
 			,#{objDesc, jdbcType=VARCHAR}
 			,#{objAttrCnt, jdbcType=SMALLINT}
 		   )
+	</insert>
+
+	<!-- 데이터모델 스키마 수집 필터 조회 -->
+	<select id="selectDataModelSchemaList" parameterType="String" resultType="com.ndata.quality.model.std.StdDataModelSchemaVo">
+		SELECT
+			 DM_ID      as dataModelId
+			,SCHEMA_NM  as schemaNm
+			,USE_YN     as useYn
+		FROM TB_DATA_MODEL_SCHEMA
+		WHERE DM_ID = #{dataModelId}
+		ORDER BY SCHEMA_NM
+	</select>
+
+	<!-- 데이터모델 스키마 수집 필터 전체 삭제 -->
+	<delete id="deleteDataModelSchemasByDmId" parameterType="String">
+		DELETE FROM TB_DATA_MODEL_SCHEMA WHERE DM_ID = #{dataModelId}
+	</delete>
+
+	<!-- 데이터모델 스키마 수집 필터 저장 (UPSERT) -->
+	<insert id="mergeDataModelSchema" parameterType="com.ndata.quality.model.std.StdDataModelSchemaVo">
+		INSERT INTO TB_DATA_MODEL_SCHEMA
+		(
+			 DM_ID
+			,SCHEMA_NM
+			,USE_YN
+			,CRET_DT
+			,CRET_USER_ID
+		)
+		VALUES
+		(
+			 #{dataModelId}
+			,#{schemaNm}
+			,#{useYn}
+			,to_char(now(), 'YYYYMMDDHH24MISS')
+			,#{cretUserId, jdbcType=VARCHAR}
+		)
+		ON CONFLICT (DM_ID, SCHEMA_NM) DO UPDATE
+		SET USE_YN = #{useYn}
 	</insert>
 
 	<insert id="insertDataModelStats" parameterType="com.ndata.quality.model.std.StdDataModelStatsVo">

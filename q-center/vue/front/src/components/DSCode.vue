@@ -20,8 +20,9 @@
               <!-- 검색 버튼 -->
               <v-btn class="gradient" title="검색" v-on:click="getCodeData"
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
-              <!-- <v-btn class="gradient" title="코드 목록 다시 불러오기" v-on:click="resetCodeList" v-show="resetBtnShow"
-                :style="{ width: '40px', padding: '0 5px', minWidth: '45px' }"><v-icon>restart_alt</v-icon></v-btn> -->
+              <!-- 초기화 버튼 -->
+              <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
+                :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
             </v-row>
           </v-sheet>
           <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
@@ -810,6 +811,32 @@
       </NdModal>
     </v-dialog>
 
+    <!-- 일괄등록 Modal -->
+    <v-dialog max-width="520" v-model="collectiveCodeModalShow" persistent>
+      <v-card>
+        <v-card-title class="pb-2" :style="{ fontSize: '1rem', fontWeight: 'bold' }">
+          <v-icon left color="ndColor">mdi-upload</v-icon>
+          {{ uploadDialogTitle }} 일괄등록 진행
+        </v-card-title>
+        <v-progress-linear v-if="isUploading" indeterminate color="ndColor" height="3"></v-progress-linear>
+        <v-card-text class="pt-3 pb-2">
+          <div ref="uploadLogBox"
+            :style="{ maxHeight: '280px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.82rem', background: '#f8f8f8', border: '1px solid #e0e0e0', borderRadius: '4px', padding: '10px 12px' }">
+            <div v-for="(log, i) in uploadLogs" :key="i"
+              :style="{ color: log.level === 'ERROR' ? '#d32f2f' : log.level === 'DONE' ? '#1976d2' : '#333', fontWeight: log.level === 'DONE' ? 'bold' : 'normal', lineHeight: '1.7' }">
+              <span :style="{ color: '#999', marginRight: '8px' }">{{ log.time }}</span>{{ log.msg }}
+            </div>
+            <div v-if="uploadLogs.length === 0" :style="{ color: '#999' }">대기 중...</div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn v-if="!isUploading" color="ndColor" text @click="collectiveCodeModalShow = false">닫기</v-btn>
+          <span v-else :style="{ fontSize: '0.8rem', color: '#999', paddingRight: '12px' }">완료될 때까지 기다려주세요...</span>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </v-main>
 </template>
 
@@ -818,6 +845,7 @@ import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
+import { eventBus } from './../eventBus.js'
 
 export default {
   name: 'DSCode',
@@ -904,14 +932,6 @@ export default {
       this.createWordToTerm(this.updateTerm_wordList)
       this.createTermEngAbrvNm(this.updateTerm_wordList)
     }
-  },
-  created() {
-    // 데이터 표준 메뉴의 코드 선택 시 code data를 불러온다.
-    this.getCodeData();
-    // 코드 항목 관리에서 사용하는 데이터도 함께 불러온다.
-    this.getCodeDataList();
-    // 요청 시스템 리스트
-    this.getSystemList();
   },
   data: () => ({
     // 코드 목록
@@ -1003,6 +1023,14 @@ export default {
     excelFile: null,
     // 코드 항목(값)일괄 등록 파일
     codeValExcelFile: null,
+    // 일괄 등록 진행 다이얼로그
+    collectiveCodeModalShow: false,
+    // 일괄 등록 진행 다이얼로그 제목
+    uploadDialogTitle: '',
+    // 일괄 등록 진행 상태
+    isUploading: false,
+    // 일괄 등록 로그
+    uploadLogs: [],
     // 디테일 메뉴 탭
     detailTab: [
       { title: '코드 상세 보기', name: 'tab1', index: 0 },
@@ -1091,6 +1119,10 @@ export default {
     systemNameList: [],
   }),
   methods: {
+    resetSearch() {
+      this.searchCode = '';
+      this.searchApproval = true;
+    },
     setListPage() {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.codeItems.length / this.itemsPerPage);
@@ -1239,55 +1271,31 @@ export default {
 
       this.excelFile = this.$refs.file.files[0];
 
-      // API 주소
-      const _url = this.$APIURL.base + "api/std/uploadCodeInfoList";
+      // 진행 다이얼로그 열기
+      this.uploadLogs = [];
+      this.isUploading = true;
+      this.uploadDialogTitle = '코드';
+      this.collectiveCodeModalShow = true;
 
-      // form data
+      if (this._uploadTimer) clearTimeout(this._uploadTimer);
+      this._uploadTimer = setTimeout(() => {
+        if (this.isUploading) {
+          this._addUploadLog('ERROR', 'WebSocket 응답 없음 - 결과를 직접 확인해주세요.');
+          this.isUploading = false;
+          this.getCodeData();
+        }
+      }, 60000);
+
+      const _url = this.$APIURL.base + "api/std/uploadCodeInfoList";
       const formData = new FormData();
       formData.append('file', this.excelFile);
-
-      // form header
       const headers = { 'Content-Type': 'multipart/form-data' };
 
-      // 일괄 등록 시 기존에 이미 등록된 코드라면 update를 하고 없으면 create를 하는 방식으로 처리
-      try {
-        axios.post(_url, formData, { headers }).then((res) => {
-          // console.log(res)
-
-          if (res.data.resultCode === 200) {
-            this.$swal.fire({
-              title: '코드 일괄 등록이 완료되었습니다.',
-              icon: 'success',
-              showConfirmButton: false,
-              timer: 1500
-            })
-
-            // table update
-            // this.getWordData();
-
-          } else {
-            this.$swal.fire({
-              title: '코드 일괄 등록 실패',
-              text: res.data.resultMessage,
-              confirmButtonText: '확인',
-              icon: 'error',
-            });
-          }
-
-        }).catch(error => {
-          this.$swal.fire({
-            title: '코드 일괄 등록 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-        })
-      } catch (error) {
-        this.$swal.fire({
-          title: '코드 일괄 등록 실패 - params 확인 필요',
-          confirmButtonText: '확인',
-          icon: 'error',
-        });
-      }
+      axios.post(_url, formData, { headers }).catch(() => {
+        this._addUploadLog('ERROR', '서버 연결 오류 - API 확인 필요');
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+      });
 
       // input 초기화
       document.getElementById('inputCodeUpload').value = '';
@@ -1303,58 +1311,65 @@ export default {
 
       this.codeValExcelFile = this.$refs.file.files[0];
 
-      // API 주소
-      const _url = this.$APIURL.base + "api/std/uploadCodeDataList";
+      // 진행 다이얼로그 열기
+      this.uploadLogs = [];
+      this.isUploading = true;
+      this.uploadDialogTitle = '코드데이터';
+      this.collectiveCodeModalShow = true;
 
-      // form data
+      if (this._uploadTimer) clearTimeout(this._uploadTimer);
+      this._uploadTimer = setTimeout(() => {
+        if (this.isUploading) {
+          this._addUploadLog('ERROR', 'WebSocket 응답 없음 - 결과를 직접 확인해주세요.');
+          this.isUploading = false;
+          this.getCodeData();
+        }
+      }, 60000);
+
+      const _url = this.$APIURL.base + "api/std/uploadCodeDataList";
       const formData = new FormData();
       formData.append('file', this.codeValExcelFile);
-
-      // form header
       const headers = { 'Content-Type': 'multipart/form-data' };
 
-      // 일괄 등록 시 기존에 이미 등록된 코드라면 update를 하고 없으면 create를 하는 방식으로 처리
-      try {
-        axios.post(_url, formData, { headers }).then((res) => {
-          // console.log(res)
-
-          if (res.data.resultCode === 200) {
-            this.$swal.fire({
-              title: '코드 항목(값) 일괄 등록이 완료되었습니다.',
-              icon: 'success',
-              showConfirmButton: false,
-              timer: 1500
-            })
-
-            // table update
-            // this.getWordData();
-
-          } else {
-            this.$swal.fire({
-              title: '코드 항목(값) 일괄 등록 실패',
-              text: res.data.resultMessage,
-              confirmButtonText: '확인',
-              icon: 'error',
-            });
-          }
-
-        }).catch(error => {
-          this.$swal.fire({
-            title: '코드 항목(값) 일괄 등록 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-        })
-      } catch (error) {
-        this.$swal.fire({
-          title: '코드 항목(값) 일괄 등록 실패 - params 확인 필요',
-          confirmButtonText: '확인',
-          icon: 'error',
-        });
-      }
+      axios.post(_url, formData, { headers }).catch(() => {
+        this._addUploadLog('ERROR', '서버 연결 오류 - API 확인 필요');
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+      });
 
       // input 초기화
       document.getElementById('inputCodeValUpload').value = '';
+    },
+    onUploadNotice(msg) {
+      if (!this.collectiveCodeModalShow) return;
+      const tag = this.uploadDialogTitle === '코드데이터' ? '[코드데이터]' : '[코드]';
+      if (!msg.data || !msg.data.startsWith(tag)) return;
+      const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
+      this._addUploadLog(level, msg.data);
+      if (msg.data.includes('완료 -')) {
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+        this.getCodeData();
+        const summary = msg.data.replace(tag + ' ', '');
+        const failMatch = summary.match(/실패:\s*(\d+)건/);
+        const failCount = failMatch ? parseInt(failMatch[1]) : 0;
+        this.$swal.fire({
+          title: `${this.uploadDialogTitle} 일괄등록 완료`,
+          text: summary,
+          icon: failCount > 0 ? 'warning' : 'success',
+          showConfirmButton: false,
+          timer: 3000
+        });
+      }
+    },
+    _addUploadLog(level, msg) {
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 8);
+      this.uploadLogs.push({ level, msg, time });
+      this.$nextTick(() => {
+        const box = this.$refs.uploadLogBox;
+        if (box) box.scrollTop = box.scrollHeight;
+      });
     },
     executeSearchCodeData() {
       if (this.searchCodeData === null || this.searchCodeData === "") {
@@ -2836,6 +2851,15 @@ export default {
         console.error(error);
       })
     }
+  },
+  created() {
+    this.getCodeData();
+    this.getCodeDataList();
+    this.getSystemList();
+    eventBus.$on('NOTICE', this.onUploadNotice);
+  },
+  beforeDestroy() {
+    eventBus.$off('NOTICE', this.onUploadNotice);
   },
 }
 </script>

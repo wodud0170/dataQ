@@ -1,14 +1,18 @@
 <template>
   <v-main>
-    <!-- 버튼 영역 -->
-    <v-sheet class="btnWrapper pt-4 pb-4">
-      <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
-      <v-sheet class="pr-4 pl-4"
-        v-bind:style="[isMobile ? { width: '100%', display: 'flex', justifyContent: 'space-between' } : {}]">
+    <!-- 검색 + 버튼 영역 -->
+    <v-sheet class="filterWrapper px-4 pt-3 pb-2">
+      <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '6px' }">
+        <span class="filterLabel">도메인 그룹명</span>
+        <v-text-field v-model="searchGrpNm" @click:clear="searchGrpNm=''" clearable
+          clear-icon="mdi-close-circle" type="text" color="ndColor"
+          single-line dense outlined hide-details class="filterInput" :style="{ width: '200px' }">
+        </v-text-field>
+        <v-spacer></v-spacer>
         <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
         <v-btn class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
         <v-btn class="gradient" v-on:click="domainGroupRemoveItem()" title="삭제">삭제</v-btn>
-      </v-sheet>
+      </v-row>
     </v-sheet>
     <v-sheet class="tableSpt">
       <!-- 총 개수와 테이블 표시 개수 변경 영역 -->
@@ -129,7 +133,8 @@ export default {
   props: ['isMobile'],
   data: () => ({
     // 도메인 그룹 목록 리스트
-    domainGroupItems: [],
+    domainGroupAllItems: [],
+    searchGrpNm: '',
     // 삭제 관련
     removeItems: [],
     // 선택한 도메인 그룹의 정보들
@@ -163,12 +168,23 @@ export default {
     // 테이블 편의성 관련
     tableViewLengthList: [10, 20, 30, 40, 50],
   }),
+  computed: {
+    domainGroupItems() {
+      if (!this.searchGrpNm) return this.domainGroupAllItems;
+      return this.domainGroupAllItems.filter(item =>
+        (item.domainGrpNm || '').includes(this.searchGrpNm)
+      );
+    },
+  },
   watch: {
     addDomainGroupModalShow(val) {
       val || this.hideModal('add')
     },
     updateDomainGroupModalShow(val) {
       val || this.hideModal('update')
+    },
+    domainGroupAllItems() {
+      this.setListPage();
     },
     domainGroupItems() {
       this.setListPage();
@@ -260,7 +276,7 @@ export default {
           console.log("📃 Domain Group LIST ↓↓↓")
           console.log(_data);
 
-          this.domainGroupItems = _data;
+          this.domainGroupAllItems = _data;
         }).catch(error => {
           this.$swal.fire({
             title: '도메인 그룹 목록 바인드 실패 - API 확인 필요',
@@ -489,11 +505,9 @@ export default {
 </script>
   
 <style scoped>
-.btnWrapper {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-}
+.filterWrapper { border-bottom: 1px solid rgba(0,0,0,0.1); }
+.filterLabel { font-size: .8rem; white-space: nowrap; }
+.filterInput { flex-grow: 0 !important; flex-shrink: 0 !important; }
 
 #domainGroup_table {
   height: calc(100% - 210px);

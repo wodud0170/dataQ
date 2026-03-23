@@ -61,7 +61,7 @@ public class SysInfoController {
 			sqlSessionTemplate.insert("sysinfo.insertSysInfo", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> createSysInfo failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -79,7 +79,7 @@ public class SysInfoController {
 			sqlSessionTemplate.update("sysinfo.updateSysInfo", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> updateSysInfo failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -93,7 +93,7 @@ public class SysInfoController {
 			sqlSessionTemplate.delete("sysinfo.deleteSysInfos", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> deleteSysInfos failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -122,7 +122,7 @@ public class SysInfoController {
 			sqlSessionTemplate.insert("sysinfo.insertDataSource", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> createDataSource failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -140,7 +140,7 @@ public class SysInfoController {
 			sqlSessionTemplate.update("sysinfo.updateDataSource", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> updateDataSource failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -154,7 +154,7 @@ public class SysInfoController {
 			sqlSessionTemplate.delete("sysinfo.deleteDataSources", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> deleteDataSources failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -199,9 +199,11 @@ public class SysInfoController {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 			log.error("test datasource failed", e);
 		} finally {
-			try {
-				dbConn.close();
-			} catch (Exception se) {
+			if (dbConn != null) {
+				try {
+					dbConn.close();
+				} catch (Exception se) {
+				}
 			}
 		}
 		return Mono.just(result);

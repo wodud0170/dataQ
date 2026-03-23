@@ -16,6 +16,9 @@
           <!-- 검색 버튼 -->
           <v-btn class="gradient" title="검색" v-on:click="executeSearchDomainClassifications"
             :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
+          <!-- 초기화 버튼 -->
+          <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
+            :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
         </v-row>
 
       </v-sheet>
@@ -232,6 +235,9 @@ export default {
     this.getDomainClassificationData();
   },
   methods: {
+    resetSearch() {
+      this.searchDomainClassification = '';
+    },
     setListPage() {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.domainClassificationItems.length / this.itemsPerPage);

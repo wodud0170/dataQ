@@ -23,6 +23,9 @@
               <!-- 검색 버튼 -->
               <v-btn class="gradient" title="검색" v-on:click="getDataModelStatsList"
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
+              <!-- 초기화 버튼 -->
+              <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
+                :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
             </v-row>
           </v-sheet>
         </v-sheet>
@@ -76,30 +79,6 @@
                 <span v-else-if="ci === 'objCnt'" :style="{ margin: '0px 16px' }">{{ c }}</span>
                 <!-- 컬럼 개수 -->
                 <span v-else-if="ci === 'attrCnt'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                <!-- 게이지 표시 아이템들 - 전체 -->
-                <template v-else-if="ci === 'totalStndRate'">
-                  <v-progress-linear :height="48" :value="props.item.totalStndRate" color="blue accent-1">
-                    <p :style="{ width: `${c}` + '!important' }">{{ c }}</p>
-                  </v-progress-linear>
-                </template>
-                <!-- 게이지 표시 아이템들 - 용어 -->
-                <template v-else-if="ci === 'termsStndRate'">
-                  <v-progress-linear :height="48" :value="props.item.termsStndRate" color="amber accent-1">
-                    <p :style="{ width: `${c}` + '!important' }">{{ c }}</p>
-                  </v-progress-linear>
-                </template>
-                <!-- 게이지 표시 아이템들 - 단어 -->
-                <template v-else-if="ci === 'wordStndRate'">
-                  <v-progress-linear :height="48" :value="props.item.wordStndRate" color="cyan accent-1">
-                    <p :style="{ width: `${c}` + '!important' }">{{ c }}</p>
-                  </v-progress-linear>
-                </template>
-                <!-- 게이지 표시 아이템들 - 도메인 -->
-                <template v-else-if="ci === 'domainStndRate'">
-                  <v-progress-linear :height="48" :value="props.item.domainStndRate" color="lime accent-1">
-                    <p :style="{ width: `${c}` + '!important' }">{{ c }}</p>
-                  </v-progress-linear>
-                </template>
                 <!-- 수집일시 셀 - 버튼 추가 -->
                 <template v-else-if="ci === 'clctDt'">
                   <div :style="{ display: 'flex', alignItems: 'center', justifyContent: 'space-around' }">
@@ -588,19 +567,6 @@ export default {
       { text: '데이터소스', sortable: false, align: 'center', value: 'dataModelDsNm' },
       { text: '테이블\n개수', sortable: false, align: 'center', value: 'objCnt' },
       { text: '컬럼\n개수', sortable: false, align: 'center', value: 'attrCnt' },
-      {
-        text: '표준 준수율',
-        sortable: false,
-        align: 'center',
-        value: 'compStd',
-        divider: true,
-        children: [ // 자식 요소 정의
-          { text: '전체', align: 'center', value: 'totalStndRate', sortable: false },
-          { text: '용어', align: 'center', value: 'termsStndRate', sortable: false },
-          { text: '단어', align: 'center', value: 'wordStndRate', sortable: false },
-          { text: '도메인', align: 'center', value: 'domainStndRate', sortable: false }
-        ]
-      },
       { text: '수집일시', sortable: false, align: 'center', value: 'clctDt' },
       { text: '버전', sortable: false, align: 'center', value: 'ver' },
     ],
@@ -703,6 +669,10 @@ export default {
     clearSystemMessage() {
       // 검색어 지워주기
       this.searchSystem = ''
+    },
+    resetSearch() {
+      this.searchSystem = '';
+      this.searchModel = '';
     },
     clearScTableMessage() {
       // 검색어 지워주기
@@ -896,8 +866,8 @@ export default {
           });
         } else {
           // 테이블 헤더에 있는 값만 가져오기
-          if (key === 'dataModelNm' || key === 'dataModelSysNm' || key === 'dataModelDsNm' || key === 'objCnt' || key === 'attrCnt' || key === 'totalStndRate' ||
-            key === 'termsStndRate' || key === 'wordStndRate' || key === 'domainStndRate' || key === 'clctDt' || key === 'ver') {
+          if (key === 'dataModelNm' || key === 'dataModelSysNm' || key === 'dataModelDsNm' || key === 'objCnt' || key === 'attrCnt' ||
+            key === 'clctDt' || key === 'ver') {
             result[key] = i
           } else {
             return;
@@ -1100,16 +1070,12 @@ export default {
             _obj.dataModelNm = _data[i].dataModelNm;
             _obj.dataModelSysNm = _data[i].dataModelSysNm;
             _obj.dataModelDsNm = _data[i].dataModelDsNm;
-            _obj.objCnt = _data[i].dataModelStats.objCnt;
-            _obj.attrCnt = _data[i].dataModelStats.attrCnt;
-            _obj.totalStndRate = _data[i].dataModelStats.totalStndRate;
-            _obj.termsStndRate = _data[i].dataModelStats.termsStndRate;
-            _obj.wordStndRate = _data[i].dataModelStats.wordStndRate;
-            _obj.domainStndRate = _data[i].dataModelStats.domainStndRate;
-            _obj.clctDt = _data[i].dataModelStats.clctDt;
+            _obj.objCnt = _data[i].dataModelStats ? _data[i].dataModelStats.objCnt : 0;
+            _obj.attrCnt = _data[i].dataModelStats ? _data[i].dataModelStats.attrCnt : 0;
+            _obj.clctDt = _data[i].dataModelStats ? _data[i].dataModelStats.clctDt : '';
             _obj.ver = _data[i].ver;
             _obj.dataModelId = _data[i].dataModelId;
-            _obj.clctId = _data[i].dataModelStats.clctId;
+            _obj.clctId = _data[i].dataModelStats ? _data[i].dataModelStats.clctId : '';
 
             _newArr.push(_obj);
           }
@@ -1250,16 +1216,12 @@ export default {
               this.dmStatusItems[i].dataModelNm = _data.dataModelNm;
               this.dmStatusItems[i].dataModelSysNm = _data.dataModelSysNm;
               this.dmStatusItems[i].dataModelDsNm = _data.dataModelDsNm;
-              this.dmStatusItems[i].objCnt = _data.dataModelStats.objCnt;
-              this.dmStatusItems[i].attrCnt = _data.dataModelStats.attrCnt;
-              this.dmStatusItems[i].totalStndRate = _data.dataModelStats.totalStndRate;
-              this.dmStatusItems[i].termsStndRate = _data.dataModelStats.termsStndRate;
-              this.dmStatusItems[i].wordStndRate = _data.dataModelStats.wordStndRate;
-              this.dmStatusItems[i].domainStndRate = _data.dataModelStats.domainStndRate;
-              this.dmStatusItems[i].clctDt = _data.dataModelStats.clctDt;
+              this.dmStatusItems[i].objCnt = _data.dataModelStats ? _data.dataModelStats.objCnt : 0;
+              this.dmStatusItems[i].attrCnt = _data.dataModelStats ? _data.dataModelStats.attrCnt : 0;
+              this.dmStatusItems[i].clctDt = _data.dataModelStats ? _data.dataModelStats.clctDt : '';
               this.dmStatusItems[i].ver = _data.ver;
               this.dmStatusItems[i].dataModelId = _data.dataModelId;
-              this.dmStatusItems[i].clctId = _data.dataModelStats.clctId;
+              this.dmStatusItems[i].clctId = _data.dataModelStats ? _data.dataModelStats.clctId : '';
             }
           }
 

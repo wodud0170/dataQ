@@ -70,8 +70,9 @@ public class CustomAuthFailureHandler implements AuthenticationFailureHandler {
 
         String jsonString = om.writeValueAsString(map);
 
+        httpServletResponse.setContentType("application/json;charset=UTF-8");
         OutputStream out = httpServletResponse.getOutputStream();
-        out.write(jsonString.getBytes());
+        out.write(jsonString.getBytes("UTF-8"));
         out.flush();
         out.close();
     }

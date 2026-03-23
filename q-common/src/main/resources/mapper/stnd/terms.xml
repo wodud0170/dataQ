@@ -73,6 +73,12 @@
 				<if test="schNm != null">
 					AND (A.TERMS_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%')
 				</if>
+				<if test="searchDomain != null">
+					AND A.DOMAIN_NM like '%' || #{searchDomain} || '%' 
+				</if>
+				<if test="searchEngTerm != null">
+					AND (A.TERMS_ENG_ABRV_NM like '%' || #{searchEngTerm} || '%' )
+				</if>
 				<if test="schAprvYn != null">
 					AND A.APRV_YN = #{schAprvYn}
 				</if>
@@ -194,6 +200,21 @@
 			from TB_TERMS A LEFT OUTER JOIN TB_DOMAIN B 
 			     on A.DOMAIN_NM = B.DOMAIN_NM
 			where A.TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
+	</select>
+
+	<!-- 진단용: 전체 용어 + 도메인 데이터 한번에 로드 (UNNEST 없이 1건/용어) -->
+	<select id="selectAllTermsForDiag" resultMap="stdTermsMap">
+		SELECT
+			 T.TERMS_ID
+			,T.TERMS_NM
+			,T.TERMS_ENG_ABRV_NM
+			,T.DOMAIN_NM
+			,T.ALLOPH_SYNM_LST
+			,D.DATA_TYPE
+			,D.DATA_LEN
+			,D.DATA_DECIMAL_LEN
+		FROM TB_TERMS T
+		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM
 	</select>
 
 	<insert id="insertTerms" parameterType="com.ndata.quality.model.std.StdTermsVo">

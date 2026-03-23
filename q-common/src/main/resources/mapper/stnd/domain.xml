@@ -62,6 +62,15 @@
 			<if test="schAprvYn != null">
 				AND APRV_YN = #{schAprvYn}
 			</if>
+			<if test="schDomainGrpNm != null">
+				AND DOMAIN_GRP_NM like '%' || #{schDomainGrpNm} || '%'
+			</if>
+			<if test="schDataType != null">
+				AND DATA_TYPE like '%' || #{schDataType} || '%'
+			</if>
+			<if test="schDataLen != null">
+				AND CAST(DATA_LEN AS TEXT) = #{schDataLen}
+			</if>
 			order by DOMAIN_NM
   </select>
 

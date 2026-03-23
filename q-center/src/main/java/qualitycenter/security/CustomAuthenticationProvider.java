@@ -68,8 +68,8 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
                     sessionService.putAuditLog(NDSeverity.INFO, id, "로그인에 성공했습니다." + "||" + id);
                     return new UsernamePasswordAuthenticationToken(user, user.getPassword(), user.getAuthorities());
                 } else {
-                	sessionService.putAuditLog(NDSeverity.ERROR, id, "로그인에 실패했습니다." + "||" + id);
-                    throw new AuthenticationServiceException("로그인에 실패했습니다." + "||" + id);
+                	sessionService.putAuditLog(NDSeverity.ERROR, id, "비밀번호가 올바르지 않습니다." + "||" + id);
+                    throw new AuthenticationServiceException("비밀번호가 올바르지 않습니다." + "||" + id);
                 }
             } else {
             	sessionService.putAuditLog(NDSeverity.ERROR, id, "관리자 초기설정에 실패했습니다.\n관리자에게 문의하십시오." + "||" + id);

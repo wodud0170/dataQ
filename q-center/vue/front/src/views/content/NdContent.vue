@@ -89,10 +89,40 @@
                     <datamodelStatus :key="datamodelStatusKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'datamodelStatusTable'" id="tab_datamodelStatusTable" class="tab_contents"
+                :class="{ active: this.activeContent === 'datamodelStatusTable' }">
+                <keep-alive>
+                    <datamodelStatusTable :key="datamodelStatusTableKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'datamodelStatusColumn'" id="tab_datamodelStatusColumn" class="tab_contents"
+                :class="{ active: this.activeContent === 'datamodelStatusColumn' }">
+                <keep-alive>
+                    <datamodelStatusColumn :key="datamodelStatusColumnKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'datamodelCollection'" id="tab_datamodelCollection" class="tab_contents"
                 :class="{ active: this.activeContent === 'datamodelCollection' }">
                 <keep-alive>
                     <datamodelCollection :key="datamodelCollectionKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'datamodelHistory'" id="tab_datamodelHistory" class="tab_contents"
+                :class="{ active: this.activeContent === 'datamodelHistory' }">
+                <keep-alive>
+                    <datamodelHistory :key="datamodelHistoryKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'dataDiag'" id="tab_dataDiag" class="tab_contents"
+                :class="{ active: this.activeContent === 'dataDiag' }">
+                <keep-alive>
+                    <dataDiag :key="dataDiagKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'dataDiagResult'" id="tab_dataDiagResult" class="tab_contents"
+                :class="{ active: this.activeContent === 'dataDiagResult' }">
+                <keep-alive>
+                    <dataDiagResult :key="dataDiagResultKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
             <div v-if="this.activeContent === 'dqi'" id="tab_dqi" class="tab_contents"
@@ -201,7 +231,12 @@ import DSDomain from "./../../components/DSDomain.vue"
 import DSDomainGroup from "./../../components/DSDomainGroup.vue"
 import DSDomainClassification from "./../../components/DSDomainClassification.vue"
 import DSDatamodelStatus from "../../components/DSDatamodelStatus.vue"
+import DSDatamodelStatusTable from "../../components/DSDatamodelStatusTable.vue"
+import DSDatamodelStatusColumn from "../../components/DSDatamodelStatusColumn.vue"
 import DSDatamodelCollection from "../../components/DSDatamodelCollection.vue"
+import DSDatamodelHistory from "../../components/DSDatamodelHistory.vue"
+import DSDataDiag from "../../components/DSDataDiag.vue"
+import DSDataDiagResult from "../../components/DSDataDiagResult.vue"
 import DQDQI from "./../../components/DQDQI.vue"
 import DQCTQ from "./../../components/DQCTQ.vue"
 import DQBR from "./../../components/DQBR.vue"
@@ -258,7 +293,12 @@ export default {
             domainGroupKey: this.createUUID(),
             domainClassificationKey: this.createUUID(),
             datamodelStatusKey: this.createUUID(),
+            datamodelStatusTableKey: this.createUUID(),
+            datamodelStatusColumnKey: this.createUUID(),
             datamodelCollectionKey: this.createUUID(),
+            datamodelHistoryKey: this.createUUID(),
+            dataDiagKey: this.createUUID(),
+            dataDiagResultKey: this.createUUID(),
             dqiKey: this.createUUID(),
             ctqKey: this.createUUID(),
             dqbrKey: this.createUUID(),
@@ -285,7 +325,12 @@ export default {
         "domainGroup": DSDomainGroup,
         "domainClassification": DSDomainClassification,
         "datamodelStatus": DSDatamodelStatus,
+        "datamodelStatusTable": DSDatamodelStatusTable,
+        "datamodelStatusColumn": DSDatamodelStatusColumn,
         "datamodelCollection": DSDatamodelCollection,
+        "datamodelHistory": DSDatamodelHistory,
+        "dataDiag": DSDataDiag,
+        "dataDiagResult": DSDataDiagResult,
         "dqi": DQDQI,
         "ctq": DQCTQ,
         "dqbr": DQBR,
@@ -335,8 +380,23 @@ export default {
                 case "datamodelStatus":
                     this.datamodelStatusKey = this.createUUID();
                     break;
+                case "datamodelStatusTable":
+                    this.datamodelStatusTableKey = this.createUUID();
+                    break;
+                case "datamodelStatusColumn":
+                    this.datamodelStatusColumnKey = this.createUUID();
+                    break;
                 case "datamodelCollection":
                     this.datamodelCollectionKey = this.createUUID();
+                    break;
+                case "datamodelHistory":
+                    this.datamodelHistoryKey = this.createUUID();
+                    break;
+                case "dataDiag":
+                    this.dataDiagKey = this.createUUID();
+                    break;
+                case "dataDiagResult":
+                    this.dataDiagResultKey = this.createUUID();
                     break;
                 case "dqi":
                     this.dqiKey = this.createUUID();

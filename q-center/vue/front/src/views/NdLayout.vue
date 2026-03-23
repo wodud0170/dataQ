@@ -10,6 +10,7 @@
                         :tab="tab" :activeContent="activeContent" :tabs="tabs" :navDsGroup="navDsGroup"
                         :navDqGroup="navDqGroup" :navMmGroup="navMmGroup" :navAndGroup="navAndGroup" :navDqSub1="navDqSub1"
                         :navDqSub2="navDqSub2" :navDqSub3="navDqSub3" :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3"
+                        :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                         @addTabItem="addTabItem" @addActiveContent="addActiveContent" @navAllGroupClose="navAllGroupClose"
                         @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                         @addNavSubGroupData="addNavSubGroupData" @resetSplit="resetSplit"
@@ -28,7 +29,8 @@
             <router-view name="aside" v-model="drawer" :isMobile='isMobile' :tab="tab" :activeContent="activeContent"
                 :tabs="tabs" :navDsGroup="navDsGroup" :navDqGroup="navDqGroup" :navMmGroup="navMmGroup"
                 :navAndGroup="navAndGroup" :navDqSub1="navDqSub1" :navDqSub2="navDqSub2" :navDqSub3="navDqSub3"
-                :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
+                :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3"
+                :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
                 @navAllGroupClose="navAllGroupClose" @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                 @addNavSubGroupData="addNavSubGroupData" />
             <router-view name="content" :isMobile="isMobile" :tab="tab" :drawer="drawer" :activeContent="activeContent"
@@ -55,12 +57,15 @@ export default {
         navDqGroup: null,
         navMmGroup: null,
         navAndGroup: null,
+        navDmGroup: null,
         navDqSub1: null,
         navDqSub2: null,
         navDqSub3: null,
         navDsSub1: null,
         navDsSub2: null,
         navDsSub3: null,
+        navDsStatusGroup: null,
+        navDiagGroup: null,
         navApprovalStatus: []// 대시보드에서 승인 페이지 호출 시 승인 상태를 저장하는 변수
     }),
     beforeDestroy() {
@@ -137,7 +142,14 @@ export default {
                 case "domainClassification":
                 case "datamodelStatus":
                 case "datamodelCollection":
+                case "datamodelHistory":
+                case "datamodelStatusTable":
+                case "datamodelStatusColumn":
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    break;
+                case "dataDiag":
+                case "dataDiagResult":
+                    document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
                 case "dqi":
                 case "ctq":
@@ -289,15 +301,13 @@ export default {
                 return;
             } else {
                 // group Active
-                if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'datamodelStatus'|| tabName === 'datamodelCollection') {
+                if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification') {
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
 
-                    if (tabName === 'word' || tabName === 'term' || tabName === 'dsCode') {
-                    } else if (tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification') {
-                        document.getElementById("navDsSub1").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
-                    } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection') {
-                        document.getElementById("navDsSub3").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
-                    }
+                } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
+                    document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn') {
+                    document.getElementById("dmGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
 
                 } else if (tabName === 'dqi' || tabName === 'ctq' || tabName === 'dqbr' || tabName === 'target' || tabName === 'qv' || tabName === 'rvi' || tabName === 'dqqvrt') {
                     document.getElementById("dqGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
@@ -325,12 +335,15 @@ export default {
             this.navDqGroup = null;
             this.navMmGroup = null;
             this.navAndGroup = null;
+            this.navDmGroup = null;
+            this.navDiagGroup = null;
             this.navSubGropClose();
         },
         navSubGropClose() {
             this.navDsSub1 = null;
             this.navDsSub2 = null;
             this.navDsSub3 = null;
+            this.navDsStatusGroup = null;
             this.navDqSub1 = null;
             this.navDqSub2 = null;
             this.navDqSub3 = null;
@@ -377,6 +390,24 @@ export default {
                         this.navAndGroup = !this.navAndGroup;
                     }
                     break;
+
+                case "dmGroup":
+
+                    if (this.navDmGroup === null) {
+                        this.navDmGroup = false;
+                    } else {
+                        this.navDmGroup = !this.navDmGroup;
+                    }
+                    break;
+
+                case "diagGroup":
+
+                    if (this.navDiagGroup === null) {
+                        this.navDiagGroup = false;
+                    } else {
+                        this.navDiagGroup = !this.navDiagGroup;
+                    }
+                    break;
             }
         },
         addNavSubGroupData(target) {
@@ -385,28 +416,21 @@ export default {
             switch (target) {
                 case "navDsSub1":
                     this.navDsSub1 = false;
-
                     break;
                 case "navDsSub2":
                     this.navDsSub2 = false;
-
                     break;
                 case "navDsSub3":
                     this.navDsSub3 = false;
-
                     break;
                 case "navDqSub1":
                     this.navDqSub1 = false;
-
                     break;
                 case "navDqSub2":
-
                     this.navDqSub2 = false;
-
                     break;
                 case "navDqSub3":
                     this.navDqSub3 = false;
-
                     break;
             }
         },
@@ -419,38 +443,14 @@ export default {
 
             this.navAllGroupClose();
 
-            if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection') {
-                this.navDsGroup = true;
-
-                setTimeout(() => {
-                    this.navDsSub1 = false;
-                    this.navDsSub2 = false;
-                    this.navDsSub3 = true;
-                    
-                }, 500);
-
+            if (tabitem === 'dataDiag' || tabitem === 'dataDiagResult') {
+                this.navDiagGroup = true;
                 return;
-            } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode') {
-                this.navDsGroup = true;
-
-                setTimeout(() => {
-                    this.navDsSub1 = false;
-                    this.navDsSub2 = true;
-                    this.navDsSub3 = false;
-
-                }, 500);
-
+            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn') {
+                this.navDmGroup = true;
                 return;
-            } else if (tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification') {
+            } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification') {
                 this.navDsGroup = true;
-
-                setTimeout(() => {
-                    this.navDsSub1 = true;
-                    this.navDsSub2 = false;
-                    this.navDsSub3 = false;
-
-                }, 500);
-
                 return;
             } else if (tabitem === 'dqi' || tabitem === 'ctq' || tabitem === 'dqbr') {
                 this.navDqGroup = true;

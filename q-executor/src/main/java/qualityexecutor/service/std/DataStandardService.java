@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import qualityexecutor.service.stomp.StompSessionService;
 
 import com.ndata.model.ws.WsNoticeLevel;
+import com.ndata.quality.model.std.UploadResult;
 import com.ndata.quality.service.ExcelUploadService;
 
 @Slf4j
@@ -25,6 +26,11 @@ public class DataStandardService implements Runnable {
 	private String userId;
 	private String ssId;
 	private MultipartFile multiPart;
+	private UploadResult lastResult;
+
+	public UploadResult getLastResult() {
+		return lastResult;
+	}
 
 	@Autowired
 	private StompSessionService stompSessionService;
@@ -64,12 +70,15 @@ public class DataStandardService implements Runnable {
 	public void uploadWords(String userId, String ssId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadWords start");
-			excelUploadService.uploadWords(userId, multiPart);
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadWords finished");
-			stompSessionService.sendNotice(WsNoticeLevel.INFO, "단어가 일괄저장되었습니다.");
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[단어] 일괄등록 시작");
+			UploadResult result = excelUploadService.uploadWords(userId, multiPart);
+			sendUploadResult(ssId, "[단어]", result);
+			if (result.getSuccessCount() > 0) {
+				stompSessionService.sendNotice(WsNoticeLevel.INFO, "단어가 일괄저장되었습니다.");
+			}
 		} catch (Exception e) {
-			stompSessionService.sendNotice(WsNoticeLevel.ERROR, "단어 일괄저장에 실패하였습니다. : " + e.getMessage());
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[단어] 일괄등록 시작"); } catch (Exception ignored) {}
+			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[단어] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadWords failed.", e);
 		}
 	}
@@ -78,12 +87,16 @@ public class DataStandardService implements Runnable {
 	public void uploadTermsList(String userId, String ssId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadTermsList start");
-			excelUploadService.uploadTermsList(userId, multiPart);
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadTermsList finished");
-			stompSessionService.sendNotice(WsNoticeLevel.INFO, "용어가 일괄저장되었습니다.");
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[용어] 일괄등록 시작");
+			UploadResult result = excelUploadService.uploadTermsList(userId, multiPart);
+			this.lastResult = result;
+			sendUploadResult(ssId, "[용어]", result);
+			if (result.getSuccessCount() > 0) {
+				stompSessionService.sendNotice(WsNoticeLevel.INFO, "용어가 일괄저장되었습니다.");
+			}
 		} catch (Exception e) {
-			stompSessionService.sendNotice(WsNoticeLevel.ERROR, "용어 일괄저장에 실패하였습니다. : " + e.getMessage());
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[용어] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[용어] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadTermsList failed.", e);
 		}
 	}
@@ -92,12 +105,15 @@ public class DataStandardService implements Runnable {
 	public void uploadCodeInfoList(String userId, String ssId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadCodeInfoList start");
-			excelUploadService.uploadCodeInfoList(userId, multiPart);
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadCodeInfoList finished");
-			stompSessionService.sendNotice(WsNoticeLevel.INFO, "코드정보가 일괄저장되었습니다.");
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[코드] 일괄등록 시작");
+			UploadResult result = excelUploadService.uploadCodeInfoList(userId, multiPart);
+			sendUploadResult(ssId, "[코드]", result);
+			if (result.getSuccessCount() > 0) {
+				stompSessionService.sendNotice(WsNoticeLevel.INFO, "코드정보가 일괄저장되었습니다.");
+			}
 		} catch (Exception e) {
-			stompSessionService.sendNotice(WsNoticeLevel.ERROR, "코드정보 일괄저장에 실패하였습니다. : " + e.getMessage());
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[코드] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[코드] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadCodeInfoList failed.", e);
 		}
 	}
@@ -106,12 +122,15 @@ public class DataStandardService implements Runnable {
 	public void uploadCodeDataList(String userId, String ssId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadCodeDataList start");
-			excelUploadService.uploadCodeDataList(userId, multiPart);
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadCodeDataList finished");
-			stompSessionService.sendNotice(WsNoticeLevel.INFO, "코드데이터(항목값)가 일괄저장되었습니다.");
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[코드데이터] 일괄등록 시작");
+			UploadResult result = excelUploadService.uploadCodeDataList(userId, multiPart);
+			sendUploadResult(ssId, "[코드데이터]", result);
+			if (result.getSuccessCount() > 0) {
+				stompSessionService.sendNotice(WsNoticeLevel.INFO, "코드데이터(항목값)가 일괄저장되었습니다.");
+			}
 		} catch (Exception e) {
-			stompSessionService.sendNotice(WsNoticeLevel.ERROR, "코드데이터 일괄저장에 실패하였습니다. : " + e.getMessage());
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[코드데이터] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[코드데이터] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadCodeDataList failed.", e);
 		}
 	}
@@ -120,13 +139,32 @@ public class DataStandardService implements Runnable {
 	public void uploadDomains(String userId, String ssId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadDomains start");
-			excelUploadService.uploadDomains(userId, multiPart);
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> uploadDomains finished");
-			stompSessionService.sendNotice(WsNoticeLevel.INFO, "도메인이 일괄저장되었습니다.");
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[도메인] 일괄등록 시작");
+			UploadResult result = excelUploadService.uploadDomains(userId, multiPart);
+			sendUploadResult(ssId, "[도메인]", result);
+			if (result.getSuccessCount() > 0) {
+				stompSessionService.sendNotice(WsNoticeLevel.INFO, "도메인이 일괄저장되었습니다.");
+			}
 		} catch (Exception e) {
-			stompSessionService.sendNotice(WsNoticeLevel.ERROR, "도메인 일괄저장에 실패하였습니다. : " + e.getMessage());
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[도메인] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[도메인] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadDomains failed.", e);
 		}
+	}
+
+	private void sendUploadResult(String ssId, String tag, UploadResult result) {
+		for (String detail : result.getFailDetails()) {
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, tag + " 실패: " + detail); } catch (Exception ignored) {}
+		}
+		if (result.getFailCount() > result.getFailDetails().size()) {
+			int remaining = result.getFailCount() - result.getFailDetails().size();
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, tag + " 실패 상세 " + remaining + "건 생략 (최대 100건만 표시)"); } catch (Exception ignored) {}
+		}
+		WsNoticeLevel summaryLevel = result.getFailCount() > 0 ? WsNoticeLevel.ERROR : WsNoticeLevel.INFO;
+		String summary = String.format("%s 완료 - 전체: %d건, 등록: %d건, 중복: %d건, 실패: %d건",
+				tag, result.getTotalCount(), result.getSuccessCount(), result.getSkipCount(), result.getFailCount());
+		// 개인 큐 전송 실패해도 브로드캐스트는 반드시 전송
+		try { stompSessionService.sendMessage(ssId, summaryLevel, summary); } catch (Exception ignored) {}
+		try { stompSessionService.sendNotice(summaryLevel, summary); } catch (Exception ignored) {}
 	}
 }

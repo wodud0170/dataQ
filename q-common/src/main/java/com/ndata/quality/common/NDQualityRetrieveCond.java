@@ -18,4 +18,19 @@ public class NDQualityRetrieveCond {
     private String schUseYn;
     private String from;//YYYYMMDDHH24MISS
 	private String to;	//YYYYMMDDHH24MISS
+
+
+    //용어 검색 조건 추가  - 260316
+    private String searchEngTerm;
+    private String searchDomain;
+
+    //단어 검색 조건 추가
+    private String searchEngWord;
+
+    //도메인 검색 조건 추가
+    private String schDomainGrpNm;
+    private String schDataType;
+    private String schDataLen;
+
 }
+

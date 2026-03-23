@@ -401,23 +401,17 @@ public class SessionService {
 
 		AdminVo admin = sqlSessionTemplate.selectOne("login.getUser", user.getId());
 		if (admin == null) {
-			throw new AuthenticationServiceException("로그인에 실패했습니다." + "||" + user.getId());
+			throw new AuthenticationServiceException("존재하지 않는 아이디입니다." + "||" + user.getId());
 		}
 
 		if (securityManager.validatePassword(securityManager.encryptSHA256(user.getPassword()), admin.getPassword())) {
 			// user role
 			user.setAdmin(admin.isAdmin());
 			user.setName(admin.getName());
-			// user authorities
-			//List<RoleAuthorityVo> authorities = AuthorityManager.getAuthorityOfProj(user.getId());
-			//user.setAuthorities(authorities);
 			// 로그인 실패 횟수 초기화
 			initializeLogin(user.getId());
 		} else {
-			// 로그인 실패 횟수 증가
-			//increaseLoginFailCount();
-			//throw new UsernameNotFoundException(user.getId());
-			throw new AuthenticationServiceException("로그인에 실패했습니다." + "||" + user.getId());
+			throw new AuthenticationServiceException("비밀번호가 올바르지 않습니다." + "||" + user.getId());
 		}
 
 		return user;

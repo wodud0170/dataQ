@@ -62,8 +62,7 @@ public class LoginController {
 			sessionService.createAdmin(password);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> create admin failed : ", e);
+			log.error(">> create admin failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		
@@ -86,8 +85,7 @@ public class LoginController {
 			sessionService.createUser(user);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> create user failed : ", e);
+			log.error(">> create user failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		
@@ -108,8 +106,7 @@ public class LoginController {
 			sessionService.updateUser(user);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> update user failed : ", e);
+			log.error(">> update user failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		

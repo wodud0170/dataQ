@@ -37,7 +37,6 @@ public class DataStandardController extends DataControllerBase {
     	
     	try {
 			startService(new DataStandardService("uploadWords", userId, socketSessionId, multiPart));
-	    	// set result message
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadWords failed : " + e.getMessage());
@@ -58,10 +57,8 @@ public class DataStandardController extends DataControllerBase {
     	
     	try {
 			startService(new DataStandardService("uploadTermsList", userId, socketSessionId, multiPart));
-	    	// set result message
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadTermsList failed : " + e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
     	
@@ -78,7 +75,6 @@ public class DataStandardController extends DataControllerBase {
     	
     	try {
 			startService(new DataStandardService("uploadCodeInfoList", userId, socketSessionId, multiPart));
-	    	// set result message
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadCodeInfoList failed : " + e.getMessage());
@@ -98,7 +94,6 @@ public class DataStandardController extends DataControllerBase {
     	
     	try {
 			startService(new DataStandardService("uploadCodeDataList", userId, socketSessionId, multiPart));
-	    	// set result message
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadCodeDataList failed : " + e.getMessage());
@@ -119,7 +114,6 @@ public class DataStandardController extends DataControllerBase {
     	
     	try {
 			startService(new DataStandardService("uploadDomains", userId, socketSessionId, multiPart));
-	    	// set result message
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadDomains failed : " + e.getMessage());

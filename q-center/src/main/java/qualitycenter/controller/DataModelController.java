@@ -1,6 +1,9 @@
 package qualitycenter.controller;
 
+import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -18,12 +21,16 @@ import com.ndata.bean.SecurityManager;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 import com.ndata.common.handler.WebClientHandler;
+import com.ndata.datasource.dbms.ext.NamedParamStatement;
+import com.ndata.datasource.dbms.handler.DBHandler;
+import com.ndata.model.DataSourceVo;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityConstant;
 import com.ndata.quality.common.NDQualityRetrieveCond;
 import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelCollectVo;
 import com.ndata.quality.model.std.StdDataModelObjVo;
+import com.ndata.quality.model.std.StdDataModelSchemaVo;
 import com.ndata.quality.model.std.StdDataModelVo;
 import com.ndata.quality.service.ExcelDownloadService;
 
@@ -70,7 +77,7 @@ public class DataModelController {
 			sqlSessionTemplate.insert("datamodel.insertDataModel", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> createDataModel failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -88,7 +95,7 @@ public class DataModelController {
 			sqlSessionTemplate.update("datamodel.updateDataModel", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> updateDataModel failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -102,7 +109,7 @@ public class DataModelController {
 			sqlSessionTemplate.delete("datamodel.deleteDataModels", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> deleteDataModels failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -152,8 +159,8 @@ public class DataModelController {
 		try {
 			excelDownloadService.getDMObjsExcel(clctId, request, response);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> download data model objects excel failed : ", e);
+			log.error(">> download data model objects excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -177,9 +184,109 @@ public class DataModelController {
 		try {
 			excelDownloadService.getDMAttrsExcel(clctId, request, response);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> download data model attributes excel failed : ", e);
+			log.error(">> download data model attributes excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
+	}
+
+	// 데이터모델 스키마 목록 조회 (대상 DB에 직접 접속하여 스키마 조회)
+	@RequestMapping(value = "/getSchemaList", method = RequestMethod.POST)
+	public List<String> getSchemaList(@RequestBody StdDataModelVo dataVo) {
+		log.info(">> getSchemaList : dsId={}", dataVo.getDataModelDsId());
+		List<String> schemaList = new ArrayList<>();
+		DBHandler dbHandler = null;
+		try {
+			DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dataVo.getDataModelDsId());
+			dataSource.setPwd(securityUtils.decryptStr(dataSource.getPwd()));
+			dbHandler = DBHandler.getDBHandler(dataSource);
+			String sql = getSchemaListSql(dataSource.getDbmsTp());
+			NamedParamStatement pstmt = dbHandler.namedParamStatement(sql);
+			java.sql.ResultSet rs = dbHandler.executeSql(pstmt);
+			while (rs.next()) {
+				schemaList.add(rs.getString("schemaNm"));
+			}
+			pstmt.close();
+			rs.close();
+		} catch (Exception e) {
+			log.error(">> getSchemaList failed : {}", e.getMessage());
+		} finally {
+			if (dbHandler != null) {
+				try { dbHandler.close(); } catch (Exception e) {}
+			}
+		}
+		return schemaList;
+	}
+
+	private String getSchemaListSql(String dbmsTp) {
+		if (dbmsTp == null) {
+			return "SELECT schema_name AS schemaNm FROM information_schema.schemata"
+				+ " WHERE schema_owner = current_user ORDER BY schema_name";
+		}
+		switch (dbmsTp) {
+			case "Oracle":
+				// 현재 접속 유저가 소유한 스키마만 반환
+				return "SELECT USER AS schemaNm FROM DUAL";
+			case "MariaDB":
+				// 현재 접속 유저가 접근 가능한 DB만 반환
+				return "SELECT SCHEMA_NAME AS schemaNm FROM information_schema.SCHEMATA"
+					+ " WHERE SCHEMA_NAME NOT IN ('information_schema','mysql','performance_schema','sys')"
+					+ " AND SCHEMA_NAME = DATABASE()"
+					+ " ORDER BY SCHEMA_NAME";
+			case "Cubrid":
+				// 현재 접속 유저가 소유한 오브젝트의 owner만 반환
+				return "SELECT DISTINCT OWNER_NAME AS schemaNm FROM DB_CLASS"
+					+ " WHERE is_system_class = 'NO' AND CLASS_TYPE = 'CLASS'"
+					+ " AND OWNER_NAME = CURRENT_USER ORDER BY OWNER_NAME";
+			case "MSSQL":
+				// 현재 접속 유저가 소유한 스키마만 반환
+				return "SELECT name AS schemaNm FROM sys.schemas WHERE principal_id = USER_ID() ORDER BY name";
+			case "PostgreSQL":
+			default:
+				// 현재 접속 유저가 소유한 스키마만 반환
+				return "SELECT schema_name AS schemaNm FROM information_schema.schemata"
+					+ " WHERE schema_owner = current_user"
+					+ " ORDER BY schema_name";
+		}
+	}
+
+	// 데이터모델 스키마 수집 필터 조회
+	@RequestMapping(value = "/getDataModelSchemas", method = { RequestMethod.GET, RequestMethod.POST })
+	public List<StdDataModelSchemaVo> getDataModelSchemas(String dataModelId) {
+		return sqlSessionTemplate.selectList("datamodel.selectDataModelSchemaList", dataModelId);
+	}
+
+	// 데이터모델 스키마 수집 필터 저장 (기존 전체 삭제 후 재저장)
+	@RequestMapping(value = "/saveDataModelSchemas", method = RequestMethod.POST)
+	public Mono<Response> saveDataModelSchemas(@RequestBody List<StdDataModelSchemaVo> schemas) {
+		Response result = new Response();
+		if (schemas == null || schemas.isEmpty()) {
+			result.setResultInfo(RestResult.CODE_200);
+			return Mono.just(result);
+		}
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String dataModelId = schemas.get(0).getDataModelId();
+			session.delete("datamodel.deleteDataModelSchemasByDmId", dataModelId);
+			for (StdDataModelSchemaVo schema : schemas) {
+				schema.setCretUserId(sessionService.getUserId());
+				session.insert("datamodel.mergeDataModelSchema", schema);
+			}
+			session.commit();
+			result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> saveDataModelSchemas failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(result);
+	}
+
+	//데이터모델 수집이력 목록 조회
+	@RequestMapping(value = "/getDataModelHistoryList", method = { RequestMethod.GET, RequestMethod.POST })
+	public List<StdDataModelCollectVo> getDataModelHistoryList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
+		return sqlSessionTemplate.selectList("datamodel.selectDataModelHistoryList", retCond);
 	}
 
 	//데이터모델 수집
@@ -190,7 +297,7 @@ public class DataModelController {
 		WebClientHandler webClientHandler = new WebClientHandler(
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/dm/collectDataModel");
 		Mono<Response> mResponse = webClientHandler.postData(sessionService.getUserId(),
-				String.valueOf(request.getSession().getAttribute("SSID")), dataVo);
+				Objects.toString(request.getSession().getAttribute("SSID"), null), dataVo);
 
 		log.info(">> finished collect data model : {}", dataVo);
 		return mResponse;

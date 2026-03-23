@@ -1,7 +1,6 @@
 package qualitycenter.security;
 
 import java.util.Arrays;
-import java.util.Collections;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +42,9 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 	@Value("${server.port}")
     String serverPort;
 
+    @Value("${server.http.port:0}")
+    String httpPort;
+
     @Autowired
     CustomAuthenticationProvider customAuthenticationProvider;
 
@@ -78,6 +80,7 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
             .antMatchers("/api/std/**").permitAll()
             .antMatchers("/api/dm/**").permitAll()
             .antMatchers("/api/sysinfo/**").permitAll()
+            .antMatchers("/api/diag/**").permitAll()
             //.antMatchers("/dashboard").hasAnyAuthority(NDConstant.ROLE_ADMIN) // 어드민 대시보드
             //.antMatchers("/userDashboard").hasAnyAuthority(NDConstant.ROLE_MEMBER) // 사용자 대시보드
             //.antMatchers("/api/admin/**").hasAnyAuthority(NDConstant.ROLE_ADMIN) // 관리
@@ -87,7 +90,12 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
         
         // port mapping for preventing https redirect to serverPort
         PortMapperImpl portMapper = new PortMapperImpl();
-    	portMapper.setPortMappings(Collections.singletonMap(serverPort,serverPort));
+        java.util.Map<String, String> portMappings = new java.util.HashMap<>();
+        portMappings.put(serverPort, serverPort);
+        if (!"0".equals(httpPort)) {
+            portMappings.put(httpPort, httpPort);
+        }
+    	portMapper.setPortMappings(portMappings);
     	PortResolverImpl portResolver = new PortResolverImpl();
     	portResolver.setPortMapper(portMapper);
     	

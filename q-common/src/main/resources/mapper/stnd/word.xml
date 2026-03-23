@@ -76,7 +76,10 @@
 				from TB_WORD ) A
 			where 1=1
 			<if test="schNm != null">
-				AND A.WORD_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%'
+				AND (A.WORD_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%')
+			</if>
+			<if test="searchEngWord != null">
+				AND A.WORD_ENG_ABRV_NM like '%' || #{searchEngWord} || '%'
 			</if>
 			<if test="schAprvYn != null">
 				AND A.APRV_YN = #{schAprvYn}
@@ -301,6 +304,16 @@
             WHERE
               WORD_ID = #{id}
 	</update>
+
+	<select id="selectTermsUsingWords" parameterType="java.util.List" resultType="String">
+		SELECT DISTINCT t.TERMS_NM
+		FROM TB_TERMS_WORDS tw
+		JOIN TB_TERMS t ON tw.TERMS_ID = t.TERMS_ID
+		WHERE tw.WORD_ID IN
+		<foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+			#{item.id}
+		</foreach>
+	</select>
 
 	<delete id="deleteWords" parameterType="java.util.List">
             DELETE FROM TB_WORD

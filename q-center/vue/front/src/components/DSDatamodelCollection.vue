@@ -23,6 +23,9 @@
               <!-- 검색 버튼 -->
               <v-btn class="gradient" title="검색" v-on:click="getDataModel"
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
+              <!-- 초기화 버튼 -->
+              <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
+                :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
             </v-row>
           </v-sheet>
           <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
@@ -30,7 +33,6 @@
             <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
             <!-- <v-btn class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn> -->
             <v-btn class="gradient" v-on:click="removeItemAction()" title="삭제">삭제</v-btn>
-            <v-btn class="gradient" v-on:click="collectionAction()" title="수집">수집</v-btn>
           </v-sheet>
         </v-sheet>
         <!-- 총 개수와 테이블 표시 개수 변경 영역 -->
@@ -84,10 +86,11 @@
                 }}'</span>
               <span class="splitBottomSpan" :style="{ minWidth: '20%' }"> &nbsp;상세 보기</span>
             </v-sheet>
-            <!-- 수정 / 삭제 버튼 -->
+            <!-- 수정 / 수집 버튼 -->
             <v-sheet class="pr-4 pl-4">
               <v-btn class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
-              </v-sheet>
+              <v-btn class="gradient" v-on:click="collectionAction()" title="수집">수집</v-btn>
+            </v-sheet>
           </v-sheet>
           <!-- 테이블 -->
           <v-data-table id="dataModel_detail_table" :items="selectedItem" hide-default-footer class="px-4 pb-3">
@@ -111,12 +114,90 @@
                     </div>
                   </td>
                 </tr>
+                <!-- 스키마 수집 범위 -->
+                <tr>
+                  <td :style="{ backgroundColor: 'rgba(24, 127, 196, 0.1)', width: '15%', verticalAlign: 'top', paddingTop: '10px' }">
+                    스키마 수집 범위
+                  </td>
+                  <td>
+                    <div v-if="schemaLoading" class="py-2 grey--text">불러오는 중...</div>
+                    <div v-else-if="schemaTree.length === 0" class="py-2 grey--text">스키마 정보가 없습니다.</div>
+                    <div v-else>
+                      <div v-for="dbGroup in schemaTree" :key="dbGroup.dbNm" class="py-1">
+                        <!-- DB명 (root node) -->
+                        <div :style="{ fontWeight: 'bold', padding: '6px 0 2px 0' }">
+                          <v-icon small color="ndColor">mdi-database</v-icon>
+                          {{ dbGroup.dbNm }}
+                        </div>
+                        <!-- 스키마 목록 (checkbox) -->
+                        <div v-for="schema in dbGroup.schemas" :key="schema.schemaNm"
+                          :style="{ paddingLeft: '24px' }">
+                          <v-checkbox
+                            v-model="schema.useYn"
+                            :label="schema.schemaNm"
+                            true-value="Y"
+                            false-value="N"
+                            dense
+                            hide-details
+                            color="ndColor"
+                            class="mt-0"
+                            @change="saveSchemas"
+                          ></v-checkbox>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </template>
           </v-data-table>
         </div>
       </SplitArea>
     </Split>
+
+    <!-- 수집 진행 상태 다이얼로그 -->
+    <v-dialog v-model="showCollectionDialog" max-width="520" persistent>
+      <v-card>
+        <v-card-title class="pb-2" :style="{ fontSize: '1rem', fontWeight: 'bold' }">
+          <v-icon left color="ndColor">mdi-database-sync</v-icon>
+          데이터 모델 수집 진행
+        </v-card-title>
+        <v-progress-linear v-if="isCollecting" indeterminate color="ndColor" height="3"></v-progress-linear>
+        <v-card-text class="pt-3 pb-2">
+          <div
+            ref="collectionLogBox"
+            :style="{
+              maxHeight: '280px',
+              overflowY: 'auto',
+              fontFamily: 'monospace',
+              fontSize: '0.82rem',
+              background: '#f8f8f8',
+              border: '1px solid #e0e0e0',
+              borderRadius: '4px',
+              padding: '10px 12px',
+            }"
+          >
+            <div
+              v-for="(log, i) in collectionLogs"
+              :key="i"
+              :style="{
+                color: log.level === 'ERROR' ? '#d32f2f' : log.level === 'DONE' ? '#1976d2' : '#333',
+                fontWeight: log.level === 'DONE' ? 'bold' : 'normal',
+                lineHeight: '1.7',
+              }"
+            >
+              <span :style="{ color: '#999', marginRight: '8px' }">{{ log.time }}</span>{{ log.msg }}
+            </div>
+            <div v-if="collectionLogs.length === 0" :style="{ color: '#999' }">대기 중...</div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn v-if="!isCollecting" color="ndColor" text @click="showCollectionDialog = false">닫기</v-btn>
+          <span v-else :style="{ fontSize: '0.8rem', color: '#999', paddingRight: '12px' }">수집이 완료될 때까지 기다려주세요...</span>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Add dataModel Modal -->
     <v-dialog max-width="600" v-model="addDataModelModal" id="addDataModelModal">
@@ -244,6 +325,7 @@ import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
+import { eventBus } from './../eventBus.js'
 
 export default {
   name: 'DSDatamodelCollection',
@@ -324,8 +406,20 @@ export default {
     ],
     // 테이블 편의성 관련
     tableViewLengthList: [10, 20, 30, 40, 50],
+    // 스키마 트리
+    schemaTree: [],
+    // 스키마 로딩 상태
+    schemaLoading: false,
+    // 수집 진행 상태
+    showCollectionDialog: false,
+    isCollecting: false,
+    collectionLogs: [],
   }),
   methods: {
+    resetSearch() {
+      this.searchSystem = '';
+      this.searchModel = '';
+    },
     async showModal(value) {
       // 모달 보여주기
       if (value === 'add') {
@@ -363,14 +457,17 @@ export default {
       this.selectedItem = [item];
       // remove item에 단독으로 넣어주기
       this.removeItems = [item];
-      // 선택한 데이터 모델명 타이틀에 보이기 위해 추가가 
+      // 선택한 데이터 모델명 타이틀에 보이기 위해 추가가
       this.detailDataModelNm = item.dataModelNm;
+      // 스키마 목록 로드
+      this.loadSchemas(item);
     },
     resetDetail() {
       // 선택한 데이터 모델 정보를 리셋
       this.selectedItem = [];
       this.removeItems = [];
       this.detailDataModelNm = null;
+      this.schemaTree = [];
     },
     removeItemAction() {
       if (this.removeItems.length === 0) {
@@ -456,75 +553,84 @@ export default {
       })
     },
     collectionAction() {
-      // console.log(this.removeItems)
-      // 수집
-      if (this.removeItems.length === 0) {
+      if (this.selectedItem.length === 0) {
         this.$swal.fire({
-          title: '수집을 진행할 데이터를 선택해주세요.',
-          confirmButtonText: '확인',
-          icon: 'error',
-        });
-        return;
-      } else if (this.removeItems.length > 1) {
-        this.$swal.fire({
-          title: '수집을 진행할 데이터를 하나만 선택해주세요.',
+          title: '수집을 진행할 데이터 모델을 선택해주세요.',
           confirmButtonText: '확인',
           icon: 'error',
         });
         return;
       }
 
+      const selectedSchemas = this.schemaTree.length > 0
+        ? this.schemaTree[0].schemas.filter(s => s.useYn === 'Y')
+        : [];
+      if (selectedSchemas.length === 0) {
+        this.$swal.fire({
+          title: '수집할 스키마를 하나 이상 선택해주세요.',
+          confirmButtonText: '확인',
+          icon: 'warning',
+        });
+        return;
+      }
+
       try {
         let _params = {
-          "dataModelId": this.removeItems[0].dataModelId,
-          "dataModelNm": this.removeItems[0].dataModelNm,
-          "dataModelSysCd": this.removeItems[0].dataModelSysCd,
-          "dataModelSysNm": this.removeItems[0].dataModelSysNm,
-          "dataModelDsId": this.removeItems[0].dataModelDsId,
-          "dataModelDsNm": this.removeItems[0].dataModelDsNm,
-          "dataModelVer": this.removeItems[0].dataModelVer,
+          "dataModelId": this.selectedItem[0].dataModelId,
+          "dataModelNm": this.selectedItem[0].dataModelNm,
+          "dataModelSysCd": this.selectedItem[0].dataModelSysCd,
+          "dataModelSysNm": this.selectedItem[0].dataModelSysNm,
+          "dataModelDsId": this.selectedItem[0].dataModelDsId,
+          "dataModelDsNm": this.selectedItem[0].dataModelDsNm,
+          "dataModelVer": this.selectedItem[0].dataModelVer,
         }
 
-        // console.log(_params)
+        // 수집 진행 다이얼로그 초기화 및 표시
+        this.collectionLogs = [];
+        this.isCollecting = true;
+        this.showCollectionDialog = true;
 
         axios.post(this.$APIURL.base + "api/dm/collectDataModel", _params)
           .then(res => {
-            console.log(res)
-
-            if (res.data.resultCode === 200) {
-
-              this.$swal.fire({
-                title: '데이터 모델 수집이 시작되었습니다.',
-                icon: 'success',
-                showConfirmButton: false,
-                timer: 1500
-              });
-
-              this.getDataModel();
-              this.resetDetail();
-            } else {
-              this.$swal.fire({
-                title: '데이터 모델 수집 실패',
-                text: res.data.resultMessage,
-                confirmButtonText: '확인',
-                icon: 'error',
-              });
+            if (res.data.resultCode !== 200) {
+              this.isCollecting = false;
+              this._addCollectionLog('ERROR', '수집 요청 실패: ' + res.data.resultMessage);
             }
-
           }).catch(error => {
-            this.$swal.fire({
-              title: '데이터 모델 수집 실패 - API 확인 필요',
-              confirmButtonText: '확인',
-              icon: 'error',
-            });
+            this.isCollecting = false;
+            this._addCollectionLog('ERROR', '수집 요청 실패 - API 확인 필요');
           });
 
       } catch (error) {
+        this.isCollecting = false;
+        this.showCollectionDialog = false;
         this.$swal.fire({
           title: '데이터 모델 수집 실패 - params 확인 필요',
           confirmButtonText: '확인',
           icon: 'error',
         });
+      }
+    },
+    _addCollectionLog(level, msg) {
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 8);
+      this.collectionLogs.push({ level, msg, time });
+      // 자동 스크롤
+      this.$nextTick(() => {
+        const box = this.$refs.collectionLogBox;
+        if (box) box.scrollTop = box.scrollHeight;
+      });
+    },
+    onCollectionNotice(msg) {
+      if (!this.isCollecting && !this.showCollectionDialog) return;
+      const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
+      this._addCollectionLog(level, msg.data);
+    },
+    onCollectionReload(msg) {
+      if (msg.data === 'DATA_MODEL_ATTR_RELOAD') {
+        this.isCollecting = false;
+        this._addCollectionLog('DONE', '✔ 수집이 완료되었습니다.');
+        this.getDataModel();
       }
     },
     resetDataModelList() {
@@ -556,12 +662,7 @@ export default {
           'schSysNm': schSysNm,
         })
           .then((res) => {
-            // console.log(res)
             this.dataModelItems = res.data;
-
-            // console 표시
-            console.log("📃 DATA MODEL LIST ↓↓↓")
-            console.log(res.data);
 
             // 하단 상세보기 초기화
             this.resetDetail();
@@ -569,43 +670,49 @@ export default {
           })
           .catch((err) => {
             console.log(err);
+            this.$swal.fire({
+              title: '데이터 모델 목록 조회 실패 - API 확인 필요',
+              confirmButtonText: '확인',
+              icon: 'error',
+            });
           })
+          .finally(() => {
+            this.loadTable = false;
+          });
       } catch (error) {
-        console.log(err);
+        console.log(error);
+        this.loadTable = false;
+        this.$swal.fire({
+          title: '데이터 모델 목록 조회 실패 - params 확인 필요',
+          confirmButtonText: '확인',
+          icon: 'error',
+        });
       }
-
-      this.loadTable = false;
     },
     getSystemList() {
       // 시스템 리스트 가지고 오기
       try {
         axios.get(this.$APIURL.base + 'api/sysinfo/getSysInfoList')
           .then((res) => {
-            // console 표시
-            console.log("📃 SYSTEM INFO LIST ↓↓↓")
-            console.log(res.data);
-
             this.dataModelSysDataList = res.data;
-
-            // 시스템명만 추출하여 시스템명 리스트에 넣기 - 모달에서 selecte에 사용
-            // let systemList = [];
-            // for (let i = 0; i < res.data.length; i++) {
-            //   let _obj = {
-            //     sysCd: res.data[i].sysCd,
-            //     sysNm: res.data[i].sysNm,
-            //   }
-            //   systemList.push(_obj);
-            // }
-            // // console.log(systemList);
-            // this.dataModelSysList = systemList;
 
             this.createTreeItem(res.data);
           })
           .catch((err) => {
             console.log(err);
+            this.$swal.fire({
+              title: '시스템 목록 조회 실패 - API 확인 필요',
+              confirmButtonText: '확인',
+              icon: 'error',
+            });
           })
       } catch (error) {
-        console.log(err);
+        console.log(error);
+        this.$swal.fire({
+          title: '시스템 목록 조회 실패 - params 확인 필요',
+          confirmButtonText: '확인',
+          icon: 'error',
+        });
       }
     },
     // getSystemList method를 활용하여 tree Item 생성
@@ -646,28 +753,37 @@ export default {
       this.dataModelSysList = treeData;
     },
     async updateModalSetData() {
-      const result = await axios.get(this.$APIURL.base + "api/sysinfo/getDataSourceListBySysCd", {
-        params: {
-          'sysCd': this.selectedItem[0].dataModelSysCd
-        }
-      });
-      let _data = result.data;
-      let _dataSourceList = [];
+      try {
+        const result = await axios.get(this.$APIURL.base + "api/sysinfo/getDataSourceListBySysCd", {
+          params: {
+            'sysCd': this.selectedItem[0].dataModelSysCd
+          }
+        });
+        let _data = result.data || [];
+        let _dataSourceList = [];
 
-      for (let i = 0; i < _data.length; i++) {
-        let _obj = {};
-        _obj = {
-          'id': _data[i].id,
-          'dsn': _data[i].dsn,
+        for (let i = 0; i < _data.length; i++) {
+          let _obj = {};
+          _obj = {
+            'id': _data[i].id,
+            'dsn': _data[i].dsn,
+          }
+          _dataSourceList.push(_obj);
         }
-        _dataSourceList.push(_obj);
+
+        this.dataSourceList = _dataSourceList;
+
+        setTimeout(() => {
+          this.update_dataSource = this.selectedItem[0].dataModelDsId;
+        }, 100);
+      } catch (error) {
+        console.log(error);
+        this.$swal.fire({
+          title: '데이터 소스 목록 조회 실패 - API 확인 필요',
+          confirmButtonText: '확인',
+          icon: 'error',
+        });
       }
-
-      this.dataSourceList = _dataSourceList;
-
-      setTimeout(() => {
-        this.update_dataSource = this.selectedItem[0].dataModelDsId;
-      }, 100);
     },
 
     resetDataSourceItems() {
@@ -717,6 +833,11 @@ export default {
 
       }).catch((err) => {
         console.log(err);
+        this.$swal.fire({
+          title: '데이터 소스 목록 조회 실패 - API 확인 필요',
+          confirmButtonText: '확인',
+          icon: 'error',
+        });
       })
     },
     submitDialog(value) {
@@ -900,6 +1021,56 @@ export default {
         });
       }
     },
+    async loadSchemas(item) {
+      this.schemaLoading = true;
+      this.schemaTree = [];
+      try {
+        // 1. 대상 DB에서 스키마 목록 조회
+        const schemaRes = await axios.post(this.$APIURL.base + 'api/dm/getSchemaList', {
+          dataModelDsId: item.dataModelDsId
+        });
+        const allSchemas = schemaRes.data || [];
+
+        // 2. 저장된 스키마 수집 필터 조회
+        const filterRes = await axios.get(this.$APIURL.base + 'api/dm/getDataModelSchemas', {
+          params: { dataModelId: item.dataModelId }
+        });
+        const savedFilter = filterRes.data || [];
+        const savedMap = {};
+        savedFilter.forEach(f => { savedMap[f.schemaNm] = f.useYn; });
+
+        // 3. 트리 구성: DB명(dataModelDsNm) → 스키마 목록
+        this.schemaTree = [{
+          dbNm: item.dataModelDsNm,
+          schemas: allSchemas.map(schemaNm => ({
+            schemaNm,
+            useYn: savedMap[schemaNm] !== undefined ? savedMap[schemaNm] : 'N'
+          }))
+        }];
+
+        // 4. 현재 스키마 목록 기준으로 저장 정리 (stale 데이터 제거)
+        if (allSchemas.length > 0) {
+          await this.saveSchemas();
+        }
+      } catch (e) {
+        console.error('loadSchemas error:', e);
+      }
+      this.schemaLoading = false;
+    },
+    async saveSchemas() {
+      if (this.selectedItem.length === 0 || this.schemaTree.length === 0) return;
+      const dataModelId = this.selectedItem[0].dataModelId;
+      const schemas = this.schemaTree[0].schemas.map(s => ({
+        dataModelId,
+        schemaNm: s.schemaNm,
+        useYn: s.useYn
+      }));
+      try {
+        await axios.post(this.$APIURL.base + 'api/dm/saveDataModelSchemas', schemas);
+      } catch (e) {
+        console.error('saveSchemas error:', e);
+      }
+    },
     addModalReset() {
       this.add_dataModelNm = null;
       this.add_ver = null;
@@ -918,6 +1089,13 @@ export default {
     // 데이터 표준 - 데이터 모델 - 데이터 모델 수집 메뉴 클릭 시 데이터 모델 목록 조회
     this.getDataModel();
     this.getSystemList();
+    // WebSocket 수집 진행 메시지 구독
+    eventBus.$on('NOTICE', this.onCollectionNotice);
+    eventBus.$on('RELOAD', this.onCollectionReload);
+  },
+  beforeDestroy() {
+    eventBus.$off('NOTICE', this.onCollectionNotice);
+    eventBus.$off('RELOAD', this.onCollectionReload);
   },
   mounted() {
     // 테이블 셀 가로길이 조절

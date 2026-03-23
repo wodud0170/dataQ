@@ -21,6 +21,7 @@ import com.ndata.module.StringUtils;
 import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelCollectVo;
 import com.ndata.quality.model.std.StdDataModelObjVo;
+import com.ndata.quality.model.std.StdDataModelSchemaVo;
 import com.ndata.quality.model.std.StdDataModelStatsVo;
 import com.ndata.quality.model.std.StdDataModelVo;
 import com.ndata.quality.model.std.StdTermsVo;
@@ -88,9 +89,10 @@ public class DataModelService implements Runnable {
 			// 데이터소스 조회
 			DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dataVo.getDataModelDsId());
 			log.info(">> get dataSource={}", dataSource);
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "데이터소스 연결 중...");
 			// DB Handler 생성
 			dbHandler = dataSourceUtils.getDBHandler(dataSource);
-			//log.info(">> get dbHandler={}", dbHandler);
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "데이터소스 연결 완료");
 			// 1. 수집테이블(TB_DATA_MODEL_CLCT) 입력
 			String clctId = StringUtils.getUUID();
 			String dataModelId = dataVo.getDataModelId();
@@ -98,80 +100,101 @@ public class DataModelService implements Runnable {
 			stdDataModelCollectVo.setDataModelId(dataModelId);
 			stdDataModelCollectVo.setCretUserId(userId);
 			session.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
+			// 수집 대상 스키마 목록 조회 (TB_DATA_MODEL_SCHEMA 필터 사용, 없으면 기본 스키마)
+			List<StdDataModelSchemaVo> schemaFilter = sqlSessionTemplate.selectList("datamodel.selectDataModelSchemaList", dataModelId);
+			List<String> schemas = new ArrayList<String>();
+			for (StdDataModelSchemaVo sf : schemaFilter) {
+				if ("Y".equals(sf.getUseYn())) {
+					schemas.add(sf.getSchemaNm());
+				}
+			}
+			if (schemas.isEmpty()) {
+				schemas.add(dbHandler.getSchema());
+			}
+			log.info(">> collect schemas={}", schemas);
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "수집 대상 스키마: " + String.join(", ", schemas));
 			// 2. OBJ 모델 수집
-			String query = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetObjs");//DBMS타입별 쿼리 조회
-			//log.info(">> get dm-objs query={}", query);
-			// OBJ 모델을 데이터베이스에 저장
-			NamedParamStatement pstmt = dbHandler.namedParamStatement(query);
-			pstmt.setString("owner", StringUtils.upperCase(dbHandler.getSchema()));
-			ResultSet rs = dbHandler.executeSql(pstmt);
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "테이블 목록 수집 중...");
+			String objQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetObjs");
 			stdDataModelObjVo.setClctId(clctId);
-			while (rs.next()) {
-				stdDataModelObjVo.setDataModelId(dataModelId);
-				stdDataModelObjVo.setObjNm(rs.getString("objNm"));
-				stdDataModelObjVo.setObjNmKr(rs.getString("objNmKr"));
-				stdDataModelObjVo.setObjOwner(rs.getString("objOwner"));
-				stdDataModelObjVo.setObjAttrCnt(rs.getShort("objAttrCnt"));
-				stdDataModelObjVo.setObjCretDt(rs.getString("objCretDt"));
-				stdDataModelObjVo.setObjUpdtDt(rs.getString("objUpdtDt"));
-				session.insert("datamodel.insertDataModelObj", stdDataModelObjVo);
+			int totalObjCnt = 0;
+			for (String schemaNm : schemas) {
+				NamedParamStatement pstmt = dbHandler.namedParamStatement(objQuery);
+				pstmt.setString("owner", StringUtils.upperCase(schemaNm));
+				ResultSet rs = dbHandler.executeSql(pstmt);
+				while (rs.next()) {
+					stdDataModelObjVo.setDataModelId(dataModelId);
+					stdDataModelObjVo.setObjNm(rs.getString("objNm"));
+					stdDataModelObjVo.setObjNmKr(rs.getString("objNmKr"));
+					stdDataModelObjVo.setObjOwner(rs.getString("objOwner"));
+					stdDataModelObjVo.setObjAttrCnt(rs.getShort("objAttrCnt"));
+					stdDataModelObjVo.setObjCretDt(rs.getString("objCretDt"));
+					stdDataModelObjVo.setObjUpdtDt(rs.getString("objUpdtDt"));
+					session.insert("datamodel.insertDataModelObj", stdDataModelObjVo);
+					totalObjCnt++;
+				}
+				pstmt.close();
+				rs.close();
 			}
-			pstmt.close();
-			rs.close();
 			session.commit();
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "테이블 목록 수집 완료 (" + totalObjCnt + "개)");
 			// 3. ATTR 모델 수집
-			query = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetAttrs");//DBMS타입별 쿼리 조회
-			//log.info(">> get dm-attrs query={}", query);
-			// ATTR 모델을 데이터베이스에 저장
-			pstmt = dbHandler.namedParamStatement(query);
-			pstmt.setString("owner", StringUtils.upperCase(dbHandler.getSchema()));
-			rs = dbHandler.executeSql(pstmt);
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "컬럼 정보 수집 중...");
+			String attrQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetAttrs");
 			stdDataModelAttrVo.setClctId(clctId);
-			while (rs.next()) {
-				stdDataModelAttrVo.setDataModelId(dataModelId);
-				stdDataModelAttrVo.setObjNm(rs.getString("objNm"));
-				stdDataModelAttrVo.setAttrNm(rs.getString("attrNm"));
-				stdDataModelAttrVo.setAttrNmKr(rs.getString("attrNmKr"));
-				stdDataModelAttrVo.setDataType(rs.getString("dataType"));
-				stdDataModelAttrVo.setDataLen(rs.getLong("dataLen"));
-				stdDataModelAttrVo.setDataDecimalLen(rs.getShort("dataDecimalLen"));
-				stdDataModelAttrVo.setNullableYn(rs.getString("nullableYn"));
-				stdDataModelAttrVo.setPkYn(rs.getString("pkYn"));
-				stdDataModelAttrVo.setFkYn(rs.getString("fkYn"));
-				stdDataModelAttrVo.setDefaultVal(rs.getString("defaultVal"));
-				stdDataModelAttrVo.setAttrOrder(rs.getShort("attrOrder"));
-				//표준여부 체크 - 용어,도메인
-				StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByEngNm", stdDataModelAttrVo.getAttrNm().toUpperCase());
-				if (stdTermsVo != null) {
-					stdDataModelAttrVo.setTermsStndYn("Y");
-					stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");
-				} else {
-					stdDataModelAttrVo.setTermsStndYn("N");
-					stdDataModelAttrVo.setDomainStndYn("N");
-				}
-				//표준여부 체크 - 단어
-				String[] words = stdDataModelAttrVo.getAttrNm().toUpperCase().split("_");	//단어로 분리
-				List<String> wordLst = new ArrayList<String>();
-				List<String> wordStndLst = new ArrayList<String>();
-				for (String word : words) {
-					StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", word);
-					if (stdWordVo != null) {
-						wordLst.add(word + "(" + stdWordVo.getWordNm() + ")");
-						wordStndLst.add("Y");
-
+			int totalAttrCnt = 0;
+			for (String schemaNm : schemas) {
+				NamedParamStatement pstmt = dbHandler.namedParamStatement(attrQuery);
+				pstmt.setString("owner", StringUtils.upperCase(schemaNm));
+				ResultSet rs = dbHandler.executeSql(pstmt);
+				while (rs.next()) {
+					stdDataModelAttrVo.setDataModelId(dataModelId);
+					stdDataModelAttrVo.setObjNm(rs.getString("objNm"));
+					stdDataModelAttrVo.setAttrNm(rs.getString("attrNm"));
+					stdDataModelAttrVo.setAttrNmKr(rs.getString("attrNmKr"));
+					stdDataModelAttrVo.setDataType(rs.getString("dataType"));
+					stdDataModelAttrVo.setDataLen(rs.getLong("dataLen"));
+					stdDataModelAttrVo.setDataDecimalLen(rs.getShort("dataDecimalLen"));
+					stdDataModelAttrVo.setNullableYn(rs.getString("nullableYn"));
+					stdDataModelAttrVo.setPkYn(rs.getString("pkYn"));
+					stdDataModelAttrVo.setFkYn(rs.getString("fkYn"));
+					stdDataModelAttrVo.setDefaultVal(rs.getString("defaultVal"));
+					stdDataModelAttrVo.setAttrOrder(rs.getShort("attrOrder"));
+					//표준여부 체크 - 용어,도메인
+					StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByEngNm", stdDataModelAttrVo.getAttrNm().toUpperCase());
+					if (stdTermsVo != null) {
+						stdDataModelAttrVo.setTermsStndYn("Y");
+						stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");
 					} else {
-						wordLst.add(word);
-						wordStndLst.add("N");
+						stdDataModelAttrVo.setTermsStndYn("N");
+						stdDataModelAttrVo.setDomainStndYn("N");
 					}
+					//표준여부 체크 - 단어
+					String[] words = stdDataModelAttrVo.getAttrNm().toUpperCase().split("_");
+					List<String> wordLst = new ArrayList<String>();
+					List<String> wordStndLst = new ArrayList<String>();
+					for (String word : words) {
+						StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", word);
+						if (stdWordVo != null) {
+							wordLst.add(word + "(" + stdWordVo.getWordNm() + ")");
+							wordStndLst.add("Y");
+						} else {
+							wordLst.add(word);
+							wordStndLst.add("N");
+						}
+					}
+					stdDataModelAttrVo.setWordLst(wordLst.toArray(new String[0]));
+					stdDataModelAttrVo.setWordStndLst(wordStndLst.toArray(new String[0]));
+					session.insert("datamodel.insertDataModelAttr", stdDataModelAttrVo);
+					totalAttrCnt++;
 				}
-				stdDataModelAttrVo.setWordLst(wordLst.toArray(new String[0]));
-				stdDataModelAttrVo.setWordStndLst(wordStndLst.toArray(new String[0]));
-				session.insert("datamodel.insertDataModelAttr", stdDataModelAttrVo);
+				pstmt.close();
+				rs.close();
 			}
-			pstmt.close();
-			rs.close();
 			session.commit();
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "컬럼 정보 수집 완료 (" + totalAttrCnt + "개)");
 			// 4. 데이터 모델 통계 저장
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "통계 처리 중...");
 			stdDataModelStatsVo.setClctId(clctId);
 			stdDataModelStatsVo.setDataModelId(dataModelId);
 			session.insert("datamodel.insertDataModelStats", stdDataModelStatsVo);
@@ -181,8 +204,8 @@ public class DataModelService implements Runnable {
 			stdDataModelCollectVo.setClctCmptnYn("Y");
 			session.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
 			session.commit();
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "수집 완료!");
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			session.rollback();
 			log.error("collect data model : {}", e.getMessage());
 			stompSessionService.sendNotice(WsNoticeLevel.ERROR, "데이터모델 수집에 실패하였습니다. : model=[" + dataVo.getDataModelNm() + "],error=" + e.getMessage());

@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -90,7 +91,7 @@ public class DataStandardController {
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> createWord failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -108,7 +109,7 @@ public class DataStandardController {
 			sqlSessionTemplate.update("word.updateWord", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> updateWord failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -119,11 +120,21 @@ public class DataStandardController {
 	public Mono<Response> deleteWords(@RequestBody List<StdWordVo> dataVos) {
 		Response result = new Response();
 		try {
+			// 삭제 전 참조 중인 용어 확인
+			List<String> usingTerms = sqlSessionTemplate.selectList("word.selectTermsUsingWords", dataVos);
+			if (usingTerms != null && !usingTerms.isEmpty()) {
+				String termList = usingTerms.size() <= 3
+						? String.join(", ", usingTerms)
+						: String.join(", ", usingTerms.subList(0, 3)) + " 외 " + (usingTerms.size() - 3) + "건";
+				result.setResultInfo(RestResult.CODE_500.getCode(),
+						"다음 용어에서 사용 중이므로 삭제할 수 없습니다: " + termList);
+				return Mono.just(result);
+			}
 			sqlSessionTemplate.delete("word.deleteWords", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			log.error(">> deleteWords failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), "단어 삭제 중 오류가 발생했습니다.");
 		}
 		return Mono.just(result);
 	}
@@ -148,7 +159,7 @@ public class DataStandardController {
 	// public Response uploadWords(MultipartHttpServletRequest request) {
 	public Mono<Response> uploadWords(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
 
-		// websocketService.sendMessage(String.valueOf(request.getSession().getAttribute("SSID")),
+		// websocketService.sendMessage(Objects.toString(request.getSession().getAttribute("SSID"), null),
 		// WsNoticeLevel.INFO, ">> uploadWords start");
 		// String fileName = request.getFileNames().next();
 		// log.info(">>> fileName : {}", fileName);
@@ -159,7 +170,7 @@ public class DataStandardController {
 		WebClientHandler webClientHandler = new WebClientHandler(
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadWords", MediaType.MULTIPART_FORM_DATA_VALUE);
 		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				String.valueOf(request.getSession().getAttribute("SSID")), excelFile);
+				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
 
 		log.info(">> finished uploadWords file : {}", excelFile.getOriginalFilename());
 
@@ -173,8 +184,8 @@ public class DataStandardController {
 		try {
 			excelDownloadService.getWordsExcel(searchKey, request, response);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> download words excel failed : ", e);
+			log.error(">> download words excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -212,7 +223,6 @@ public class DataStandardController {
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			session.rollback();
 			log.error("create terms : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -354,7 +364,6 @@ public class DataStandardController {
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			session.rollback();
 			log.error("update terms : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -372,7 +381,7 @@ public class DataStandardController {
 			sqlSessionTemplate.delete("terms.deleteTermsList", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> deleteTermsList failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -409,7 +418,7 @@ public class DataStandardController {
 		WebClientHandler webClientHandler = new WebClientHandler(
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadTermsList", MediaType.MULTIPART_FORM_DATA_VALUE);
 		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				String.valueOf(request.getSession().getAttribute("SSID")), excelFile);
+				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
 
 		log.info(">> finished uploadTermsList file : {}", excelFile.getOriginalFilename());
 
@@ -423,8 +432,8 @@ public class DataStandardController {
 		try {
 			excelDownloadService.getTermsListExcel(searchKey, request, response);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> download terms excel failed : ", e);
+			log.error(">> download terms excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -465,7 +474,7 @@ public class DataStandardController {
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadCodeInfoList",
 				MediaType.MULTIPART_FORM_DATA_VALUE);
 		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				String.valueOf(request.getSession().getAttribute("SSID")), excelFile);
+				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
 
 		log.info(">> finished uploadCodeInfoList file : {}", excelFile.getOriginalFilename());
 
@@ -479,8 +488,8 @@ public class DataStandardController {
 		try {
 			excelDownloadService.getCodeInfoListExcel(searchKey, request, response);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> download code infos excel failed : ", e);
+			log.error(">> download code infos excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -506,8 +515,7 @@ public class DataStandardController {
 			sqlSessionTemplate.insert("codedata.insertCodeData", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> createCodeData failed : ", e);
+			log.error(">> createCodeData failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -524,8 +532,7 @@ public class DataStandardController {
 			sqlSessionTemplate.update("codedata.updateCodeData", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> updateCodeData failed : ", e);
+			log.error(">> updateCodeData failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -539,7 +546,7 @@ public class DataStandardController {
 			sqlSessionTemplate.delete("codedata.deleteCodeDatas", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> deleteCodeDatas failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -555,7 +562,7 @@ public class DataStandardController {
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadCodeDataList",
 				MediaType.MULTIPART_FORM_DATA_VALUE);
 		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				String.valueOf(request.getSession().getAttribute("SSID")), excelFile);
+				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
 
 		log.info(">> finished uploadCodeDataList file : {}", excelFile.getOriginalFilename());
 
@@ -569,8 +576,8 @@ public class DataStandardController {
 		try {
 			excelDownloadService.getCodeDataListExcel(searchKey, request, response);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> download code infos excel failed : ", e);
+			log.error(">> download code datas excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -593,8 +600,7 @@ public class DataStandardController {
 			sqlSessionTemplate.insert("domain.insertDomain", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> create domain failed : ", e);
+			log.error(">> createDomain failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -611,8 +617,7 @@ public class DataStandardController {
 			sqlSessionTemplate.update("domain.updateDomain", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> update domain failed : ", e);
+			log.error(">> updateDomain failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 
@@ -626,7 +631,7 @@ public class DataStandardController {
 			sqlSessionTemplate.delete("domain.deleteDomains", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> deleteDomains failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -708,7 +713,7 @@ public class DataStandardController {
 			sqlSessionTemplate.delete("domain.deleteDomainGroups", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			log.error(">> deleteDomainGroups failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -802,7 +807,7 @@ public class DataStandardController {
 		WebClientHandler webClientHandler = new WebClientHandler(
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadDomains", MediaType.MULTIPART_FORM_DATA_VALUE);
 		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				String.valueOf(request.getSession().getAttribute("SSID")), excelFile);
+				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
 
 		log.info(">> finished uploadDomains file : {}", excelFile.getOriginalFilename());
 
@@ -816,8 +821,8 @@ public class DataStandardController {
 		try {
 			excelDownloadService.getDomainsExcel(searchKey, request, response);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			log.error(">> download domains excel failed : ", e);
+			log.error(">> download domains excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		}
 	}
 
@@ -861,7 +866,6 @@ public class DataStandardController {
 				session.commit();
 				result.setResultInfo(RestResult.CODE_200);
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				session.rollback();
 				log.error("update standard approve stat : {}", e.getMessage());
 				result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());

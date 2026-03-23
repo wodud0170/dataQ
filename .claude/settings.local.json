@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find c:UsersnaraedataDesktopdataQ -name *.java -path *com/ndata/model*)",
+      "Bash(find c:UsersnaraedataDesktopdataQ -name *.jar)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}
