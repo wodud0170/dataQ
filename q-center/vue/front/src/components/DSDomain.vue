@@ -654,7 +654,7 @@ export default {
       { text: '도메인 분류명', sortable: false, align: 'center', value: 'domainClsfNm', width: '10%' },
       { text: '도메인 설명', sortable: false, align: 'center', value: 'domainDesc' },
       { text: '데이터 타입', sortable: false, align: 'center', value: 'dataType', width: '10%' },
-      { text: '데이터 길이', sortable: false, align: 'center', value: 'dataLen', width: '10%' },
+      { text: '데이터 길이', sortable: false, align: 'center', value: 'dataLenDisplay', width: '10%' },
     ],
     // 하단 테이블 헤더
     detaileHeaders: [
@@ -663,8 +663,7 @@ export default {
       { text: '도메인 분류명', sortable: false, align: 'center', value: 'domainClsfNm' },
       { text: '도메인 설명', sortable: false, align: 'center', value: 'domainDesc' },
       { text: '데이터 타입', sortable: false, align: 'center', value: 'dataType', width: '15%' },
-      { text: '데이터 길이', sortable: false, align: 'center', value: 'dataLen' },
-      { text: '데이터 소숫점 길이', sortable: false, align: 'center', value: 'dataDecimalLen', width: '15%' },
+      { text: '데이터 길이', sortable: false, align: 'center', value: 'dataLenDisplay' },
       { text: '데이터 단위', sortable: false, align: 'center', value: 'dataUnit', width: '15%' },
       { text: '요청시스템', sortable: false, align: 'center', value: 'reqSysNm', width: '15%' },
       { text: '저장형식', sortable: false, align: 'center', value: 'storFmt', width: '15%' },
@@ -815,6 +814,7 @@ export default {
               'dataType': _data[i].dataType,
               'dataLen': _data[i].dataLen,
               'dataDecimalLen': _data[i].dataDecimalLen,
+              'dataLenDisplay': _data[i].dataDecimalLen > 0 ? _data[i].dataLen + ',' + _data[i].dataDecimalLen : (_data[i].dataLen != null ? String(_data[i].dataLen) : ''),
               'dataUnit': _data[i].dataUnit,
               'storFmt': _data[i].storFmt,
               'reqSysCd': _data[i].reqSysCd,

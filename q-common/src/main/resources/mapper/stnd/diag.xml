@@ -111,7 +111,7 @@
         JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
         WHERE J.STATUS != 'STOPPED'
         <if test="schNm != null">
-            AND M.DM_NM LIKE '%' || #{schNm} || '%'
+            AND M.DM_NM ILIKE '%' || #{schNm} || '%'
         </if>
         ORDER BY J.CRET_DT DESC
     </select>
@@ -164,16 +164,55 @@
     <select id="selectDiagResultSummary" parameterType="String" resultType="map">
         SELECT
              OBJ_NM as "objNm"
+            ,COUNT(DISTINCT ATTR_NM) as "issueColCnt"
             ,COUNT(*) as "issueCnt"
             ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'TERM_NOT_EXIST')      as "termNotExistCnt"
             ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'TERM_KR_NM_MISMATCH') as "termKrNmMismatchCnt"
-            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'TERM_ENG_NM_MISMATCH')as "termEngNmMismatchCnt"
             ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'DATA_TYPE_MISMATCH')  as "dataTypeMismatchCnt"
             ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'DATA_LEN_MISMATCH')   as "dataLenMismatchCnt"
         FROM TB_DIAG_RESULT
         WHERE DIAG_JOB_ID = #{diagJobId}
         GROUP BY OBJ_NM
         ORDER BY OBJ_NM
+    </select>
+
+    <!--
+        컬럼 상세: 전체 컬럼 기준 1건=1행
+        - TB_DATA_MODEL_ATTR 기반 (이슈 없는 컬럼 포함)
+        - 용어/도메인 LEFT JOIN으로 표준 정보 포함
+        - TB_DIAG_RESULT LEFT JOIN + STRING_AGG로 이슈유형 집계
+        - 테이블 한글명(OBJ_NM_KR) 포함
+    -->
+    <select id="selectDiagResultDetail" parameterType="String" resultType="map">
+        SELECT
+             A.OBJ_NM                                       as "objNm"
+            ,(SELECT O.OBJ_NM_KR FROM TB_DATA_MODEL_OBJ O
+              WHERE O.DM_CLCT_ID = A.DM_CLCT_ID AND O.OBJ_NM = A.OBJ_NM
+              LIMIT 1)                                      as "objNmKr"
+            ,A.ATTR_NM                                      as "attrNm"
+            ,A.ATTR_NM_KR                                   as "attrNmKr"
+            ,A.DATA_TYPE                                    as "actualDataType"
+            ,A.DATA_LEN                                     as "actualDataLen"
+            ,A.DATA_DECIMAL_LEN                             as "actualDataDecimalLen"
+            ,T.TERMS_NM                                     as "stdTermsNm"
+            ,D.DATA_TYPE                                    as "stdDataType"
+            ,D.DATA_LEN                                     as "stdDataLen"
+            ,D.DATA_DECIMAL_LEN                             as "stdDataDecimalLen"
+            ,STRING_AGG(DISTINCT R.DIAG_TYPE, ',' ORDER BY R.DIAG_TYPE) as "diagTypes"
+        FROM TB_DATA_MODEL_ATTR A
+        LEFT JOIN TB_DIAG_RESULT R
+            ON R.DIAG_JOB_ID = #{diagJobId}
+            AND R.OBJ_NM  = A.OBJ_NM
+            AND R.ATTR_NM  = A.ATTR_NM
+        LEFT JOIN TB_TERMS T
+            ON T.TERMS_ENG_ABRV_NM = A.ATTR_NM
+        LEFT JOIN TB_DOMAIN D
+            ON D.DOMAIN_NM = T.DOMAIN_NM
+        WHERE A.DM_CLCT_ID = (SELECT DM_CLCT_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
+        GROUP BY A.OBJ_NM, A.DM_CLCT_ID, A.ATTR_NM, A.ATTR_NM_KR,
+                 A.DATA_TYPE, A.DATA_LEN, A.DATA_DECIMAL_LEN,
+                 T.TERMS_NM, D.DATA_TYPE, D.DATA_LEN, D.DATA_DECIMAL_LEN
+        ORDER BY A.OBJ_NM, A.ATTR_NM
     </select>
 
 </mapper>

@@ -65,10 +65,10 @@
             ) B on A.DM_ID = B.DM_ID
         where A.USE_YN = 'Y'
     <if test="schNm != null">
-            AND A.DM_NM like '%' || #{schNm} || '%'
+            AND A.DM_NM ILIKE '%' || #{schNm} || '%'
     </if>
     <if test="schSysNm != null">
-            AND A.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM like '%' || #{schSysNm} || '%')
+            AND A.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM ILIKE '%' || #{schSysNm} || '%')
     </if>
         order by A.DM_NM
     </select>
@@ -113,10 +113,10 @@
 			    AND M.DM_ID = #{schId}
 		</if>
 		<if test="schNm != null">
-				AND M.DM_NM like '%' || #{schNm} || '%'
+				AND M.DM_NM ILIKE '%' || #{schNm} || '%'
 		</if>
 		<if test="schSysNm != null">
-				AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM like '%' || #{schSysNm} || '%')
+				AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM ILIKE '%' || #{schSysNm} || '%')
 		</if>
 			order by T.CLCT_END_DT DESC
 	</select>
@@ -140,10 +140,10 @@
 			    AND M.DM_ID = #{schId}
 		</if>
 		<if test="schNm != null">
-				AND M.DM_NM like '%' || #{schNm} || '%'
+				AND M.DM_NM ILIKE '%' || #{schNm} || '%'
 		</if>
 		<if test="schSysNm != null">
-				AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM like '%' || #{schSysNm} || '%')
+				AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM ILIKE '%' || #{schSysNm} || '%')
 		</if>
 		<if test="from != null">
 				AND T.CLCT_END_DT &gt;= #{from}
@@ -176,7 +176,7 @@
 			from TB_DATA_MODEL_OBJ
 			where DM_CLCT_ID = #{schId} 
 			<if test="schObjNm != null">
-				AND OBJ_NM like '%'||#{schObjNm}||'%'
+				AND OBJ_NM ILIKE '%'||#{schObjNm}||'%'
 			</if>
 			order by OBJ_NM
 	</select>
@@ -225,7 +225,7 @@
 			from TB_DATA_MODEL_ATTR	A
 			where A.DM_CLCT_ID = #{schId} 
 			<if test="schObjNm != null or schAttrNm != null">
-				AND (A.OBJ_NM like '%'||#{schObjNm}||'%' OR A.ATTR_NM like '%'||#{schAttrNm}||'%')
+				AND (A.OBJ_NM ILIKE '%'||#{schObjNm}||'%' OR A.ATTR_NM ILIKE '%'||#{schAttrNm}||'%')
 			</if>
 			<if test="schStndYn != null">
 				AND A.TERMS_STND_YN = #{schStndYn}
@@ -266,10 +266,10 @@
 		LEFT OUTER JOIN TB_DATA_MODEL_STATS S on T.DM_CLCT_ID = S.DM_CLCT_ID
 		where M.USE_YN = 'Y'
 		<if test="schNm != null">
-			AND M.DM_NM like '%' || #{schNm} || '%'
+			AND M.DM_NM ILIKE '%' || #{schNm} || '%'
 		</if>
 		<if test="schSysNm != null">
-			AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM like '%' || #{schSysNm} || '%')
+			AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM ILIKE '%' || #{schSysNm} || '%')
 		</if>
 		<if test="from != null">
 			AND T.CLCT_END_DT &gt;= #{from}

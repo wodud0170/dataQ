@@ -68,9 +68,10 @@
       <v-data-table
         :headers="jobHeaders"
         :items="jobList"
+        :page.sync="page"
+        :items-per-page="itemsPerPage"
+        hide-default-footer
         dense
-        :items-per-page="20"
-        :footer-props="{ 'items-per-page-options': [10, 20, 50] }"
         class="elevation-0"
       >
         <template v-slot:item.status="{ item }">
@@ -82,7 +83,22 @@
           <span v-if="item.totalCnt > 0">{{ item.processCnt }} / {{ item.totalCnt }}</span>
           <span v-else>-</span>
         </template>
+        <!-- 결과 보기 버튼: 완료(DONE) 상태인 Job만 표시, 클릭 시 진단 결과 탭으로 이동 -->
+        <template v-slot:item.actions="{ item }">
+          <v-btn v-if="item.status === 'DONE'" x-small color="teal" dark @click="goToResult(item)"
+            class="btn-sm">
+            결과보기
+          </v-btn>
+        </template>
       </v-data-table>
+      <div class="d-flex align-center px-4 pt-2 pb-2">
+        <v-spacer />
+        <v-pagination v-if="pageCount > 1" v-model="page" :length="pageCount" prev-icon="mdi-menu-left" next-icon="mdi-menu-right"
+          color="ndColor" :total-visible="10" />
+        <v-spacer />
+        <v-select v-model="itemsPerPage" :items="[10,20,30,50]" dense outlined hide-details
+          style="max-width:100px; font-size:.75rem;" suffix="건" />
+      </div>
     </v-sheet>
 
     <v-snackbar v-model="snackbar" :color="snackbarColor" top right :timeout="3000">
@@ -93,6 +109,7 @@
 
 <script>
 import axios from 'axios';
+import { eventBus } from '../eventBus';
 
 export default {
   name: 'DSDataDiag',
@@ -105,6 +122,8 @@ export default {
       jobList: [],
       currentJob: null,
       pollTimer: null,
+      page: 1,
+      itemsPerPage: 20,
       snackbar: false,
       snackbarMsg: '',
       snackbarColor: 'info',
@@ -117,6 +136,7 @@ export default {
         { text: '시작일시',      value: 'startDt',      width: '160px' },
         { text: '완료일시',      value: 'endDt',        width: '160px' },
         { text: '실행자',        value: 'cretUserId',   width: '100px' },
+        { text: '',             value: 'actions',      width: '55px', sortable: false, align: 'center' },
       ],
     };
   },
@@ -127,6 +147,9 @@ export default {
     progressValue() {
       if (!this.currentJob || !this.currentJob.totalCnt) return 0;
       return Math.round((this.currentJob.processCnt / this.currentJob.totalCnt) * 100);
+    },
+    pageCount() {
+      return Math.ceil(this.jobList.length / this.itemsPerPage);
     },
   },
   mounted() {
@@ -236,6 +259,15 @@ export default {
       const map = { READY: '대기', RUNNING: '진행중', DONE: '완료', STOPPED: '중지', ERROR: '오류' };
       return map[status] || status;
     },
+    /**
+     * 결과 보기 버튼 클릭 핸들러
+     * - eventBus에 diagJobId를 저장하여 진단 결과 화면에서 참조할 수 있게 함
+     * - 'openDiagResult' 이벤트를 발행하여 NdNav에서 진단 결과 탭을 열도록 함
+     */
+    goToResult(item) {
+      eventBus.pendingDiagJobId = item.diagJobId;
+      eventBus.$emit('openDiagResult');
+    },
     showSnackbar(msg, color = 'info') {
       this.snackbarMsg = msg;
       this.snackbarColor = color;
@@ -249,5 +281,13 @@ export default {
 .filterLabel {
   font-size: .8rem;
   white-space: nowrap;
+}
+.btn-sm.v-btn {
+  height: 22px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  padding: 0 6px !important;
+  font-size: .65rem;
+  letter-spacing: 0;
 }
 </style>

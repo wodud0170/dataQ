@@ -70,6 +70,12 @@ public class DiagController {
         return sqlSessionTemplate.selectList("diag.selectDiagResultSummary", diagJobId);
     }
 
+    /** 진단 결과 상세 조회 (컬럼 1행 기준, 용어/도메인 JOIN) */
+    @GetMapping("/getDiagResultDetail")
+    public List<Map<String, Object>> getDiagResultDetail(@RequestParam String diagJobId) {
+        return sqlSessionTemplate.selectList("diag.selectDiagResultDetail", diagJobId);
+    }
+
     /** 진단 시작: Job 생성 후 q-executor에 실행 요청 */
     @PostMapping("/startDiag")
     public Mono<Response> startDiag(HttpServletRequest request, @RequestBody StdDiagJobVo jobVo) {

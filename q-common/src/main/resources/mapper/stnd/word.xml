@@ -76,10 +76,10 @@
 				from TB_WORD ) A
 			where 1=1
 			<if test="schNm != null">
-				AND (A.WORD_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%')
+				AND (A.WORD_NM ILIKE '%' || #{schNm} || '%' OR A.ALLOPH_SYNM ILIKE '%' || #{schNm} || '%')
 			</if>
 			<if test="searchEngWord != null">
-				AND A.WORD_ENG_ABRV_NM like '%' || #{searchEngWord} || '%'
+				AND A.WORD_ENG_ABRV_NM ILIKE '%' || #{searchEngWord} || '%'
 			</if>
 			<if test="schAprvYn != null">
 				AND A.APRV_YN = #{schAprvYn}

@@ -35,7 +35,7 @@
         FROM
             TB_CODE_DATA
         WHERE 
-            CODE_NM like '%' || #{codeNm} || '%'
+            CODE_NM ILIKE '%' || #{codeNm} || '%'
         ORDER BY CODE_NM, CODE_VAL
   </select>
 

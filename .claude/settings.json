@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(grep -r \"RequestMapping\\\\|PostMapping\\\\|GetMapping\\\\|PutMapping\\\\|DeleteMapping\" /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center/src/main/java/qualitycenter/controller/*.java)",
-      "Bash(winget install:*)"
+      "Bash(winget install:*)",
+      "Bash(mvn test:*)",
+      "Bash(grep -l \"CREATE TABLE\" C:/Users/naraedata/.claude/projects/c--Users-naraedata-Desktop-dataQ-ndata-quality-master/*.jsonl)"
     ],
     "additionalDirectories": [
       "c:\\Users\\naraedata\\Desktop\\dataQ\\ndata-quality-master"

@@ -337,6 +337,7 @@
 </template>
 
 <script>
+import { eventBus } from '../../eventBus';
 export default {
     name: 'NdNav',
     props: ['isMobile',
@@ -407,6 +408,17 @@ export default {
         },
     },
     mounted() {
+        /**
+         * DSDataDiag '결과 보기' 버튼 클릭 시 진단 결과 탭을 열기 위한 이벤트 수신
+         * - eventBus 'openDiagResult' 이벤트를 받으면 진단 결과 탭을 추가/활성화
+         * - diagJobId는 eventBus.pendingDiagJobId에 저장되어 DSDataDiagResult에서 참조
+         */
+        eventBus.$on('openDiagResult', () => {
+            this.addTabItem('진단 결과', 'dataDiagResult');
+        });
+    },
+    beforeDestroy() {
+        eventBus.$off('openDiagResult');
     }
 }
 </script>

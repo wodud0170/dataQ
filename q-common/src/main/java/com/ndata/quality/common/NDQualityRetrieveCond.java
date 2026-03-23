@@ -24,6 +24,10 @@ public class NDQualityRetrieveCond {
     private String searchEngTerm;
     private String searchDomain;
 
+    // 검색 모드: "contains"(기본), "start", "end"
+    private String schNmMode;
+    private String searchEngTermMode;
+
     //단어 검색 조건 추가
     private String searchEngWord;
 

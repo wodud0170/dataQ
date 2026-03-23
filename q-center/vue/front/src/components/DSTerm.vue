@@ -8,18 +8,20 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px' }">
-              <!-- 용어명 검색 타이틀 -->
+              <!-- 용어명 검색 -->
               <span :style="{ fontSize: '.875rem' }">용어명</span>
-              <!-- 용어명 입력 필드 -->
-              <v-text-field class="pr-4 pl-4" v-model="searchTerm" v-on:keyup.enter="getTermData"
+              <v-select v-model="searchTermMode" :items="searchModeOptions" item-text="label" item-value="value"
+                dense outlined hide-details :style="{ width: '100px', flexGrow: 0 }" class="ml-2" />
+              <v-text-field class="pr-4 pl-2" v-model="searchTerm" v-on:keyup.enter="getTermData"
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
 
-              <!-- 용어영문약어명 검색 타이틀 -->
+              <!-- 용어영문약어명 검색 -->
               <span :style="{ fontSize: '.875rem' }">용어영문약어명</span>
-              <!-- 용어영문약어명 입력 필드 -->
-              <v-text-field class="pr-4 pl-4" v-model="searchEngTerm" v-on:keyup.enter="getTermData"
+              <v-select v-model="searchEngTermMode" :items="searchModeOptions" item-text="label" item-value="value"
+                dense outlined hide-details :style="{ width: '100px', flexGrow: 0 }" class="ml-2" />
+              <v-text-field class="pr-4 pl-2" v-model="searchEngTerm" v-on:keyup.enter="getTermData"
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
@@ -796,11 +798,20 @@ export default {
 
     // 검색 조건 시작
 
+    // 검색 모드 옵션 (포함/앞/뒤)
+    searchModeOptions: [
+      { value: 'contains', label: '포함' },
+      { value: 'start',   label: '앞' },
+      { value: 'end',     label: '뒤' },
+    ],
+
     //검색 용어명
     searchTerm: '',
+    searchTermMode: 'contains',
 
-    //검색 용어영문약어명 
+    //검색 용어영문약어명
     searchEngTerm: '',
+    searchEngTermMode: 'contains',
     //검색 도메인명
     searchDomain: '',
 
@@ -935,7 +946,9 @@ export default {
   methods: {
     resetSearch() {
       this.searchTerm = '';
+      this.searchTermMode = 'contains';
       this.searchEngTerm = '';
+      this.searchEngTermMode = 'contains';
       this.searchDomain = '';
       this.searchApproval = true;
     },
@@ -1032,7 +1045,9 @@ export default {
 
         axios.post(_url, {
           'schNm': schNm,
+          'schNmMode': this.searchTermMode,
           'searchEngTerm': searchEngTerm,
+          'searchEngTermMode': this.searchEngTermMode,
           'searchDomain': searchDomain,
           'schAprvYn': schAprvYn
         }).then((res) => {

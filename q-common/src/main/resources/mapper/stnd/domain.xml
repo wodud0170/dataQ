@@ -57,16 +57,16 @@
 			from TB_DOMAIN
       where 1=1
 			<if test="schNm != null">
-				AND DOMAIN_NM like '%' || #{schNm} || '%'
+				AND DOMAIN_NM ILIKE '%' || #{schNm} || '%'
 			</if>
 			<if test="schAprvYn != null">
 				AND APRV_YN = #{schAprvYn}
 			</if>
 			<if test="schDomainGrpNm != null">
-				AND DOMAIN_GRP_NM like '%' || #{schDomainGrpNm} || '%'
+				AND DOMAIN_GRP_NM ILIKE '%' || #{schDomainGrpNm} || '%'
 			</if>
 			<if test="schDataType != null">
-				AND DATA_TYPE like '%' || #{schDataType} || '%'
+				AND DATA_TYPE ILIKE '%' || #{schDataType} || '%'
 			</if>
 			<if test="schDataLen != null">
 				AND CAST(DATA_LEN AS TEXT) = #{schDataLen}
@@ -295,7 +295,7 @@
 				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
 				,UPDT_USER_ID	    
 			from TB_DOMAIN_CLSF
-      where DOMAIN_CLSF_NM like #{domainClsfNm}
+      where DOMAIN_CLSF_NM ILIKE #{domainClsfNm}
 			order by DOMAIN_CLSF_NM
   </select>
 

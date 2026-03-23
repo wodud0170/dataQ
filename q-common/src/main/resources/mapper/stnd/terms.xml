@@ -71,13 +71,33 @@
 						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM) A
 				where 1=1
 				<if test="schNm != null">
-					AND (A.TERMS_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%')
+					<choose>
+						<when test="schNmMode == 'start'">
+							AND (A.TERMS_NM ILIKE #{schNm} || '%' OR A.ALLOPH_SYNM ILIKE #{schNm} || '%')
+						</when>
+						<when test="schNmMode == 'end'">
+							AND (A.TERMS_NM ILIKE '%' || #{schNm} OR A.ALLOPH_SYNM ILIKE '%' || #{schNm})
+						</when>
+						<otherwise>
+							AND (A.TERMS_NM ILIKE '%' || #{schNm} || '%' OR A.ALLOPH_SYNM ILIKE '%' || #{schNm} || '%')
+						</otherwise>
+					</choose>
 				</if>
 				<if test="searchDomain != null">
-					AND A.DOMAIN_NM like '%' || #{searchDomain} || '%' 
+					AND A.DOMAIN_NM ILIKE '%' || #{searchDomain} || '%'
 				</if>
 				<if test="searchEngTerm != null">
-					AND (A.TERMS_ENG_ABRV_NM like '%' || #{searchEngTerm} || '%' )
+					<choose>
+						<when test="searchEngTermMode == 'start'">
+							AND (A.TERMS_ENG_ABRV_NM ILIKE #{searchEngTerm} || '%')
+						</when>
+						<when test="searchEngTermMode == 'end'">
+							AND (A.TERMS_ENG_ABRV_NM ILIKE '%' || #{searchEngTerm})
+						</when>
+						<otherwise>
+							AND (A.TERMS_ENG_ABRV_NM ILIKE '%' || #{searchEngTerm} || '%')
+						</otherwise>
+					</choose>
 				</if>
 				<if test="schAprvYn != null">
 					AND A.APRV_YN = #{schAprvYn}
@@ -375,7 +395,7 @@
 						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM) A
       		where A.CODE_GRP is not null 
 			<if test="schNm != null">
-				AND (A.TERMS_NM like '%' || #{schNm} || '%' OR A.ALLOPH_SYNM like '%' || #{schNm} || '%')
+				AND (A.TERMS_NM ILIKE '%' || #{schNm} || '%' OR A.ALLOPH_SYNM ILIKE '%' || #{schNm} || '%')
 			</if>
 			<if test="schAprvYn != null">
 				AND A.APRV_YN = #{schAprvYn}
@@ -418,7 +438,7 @@
 						ELSE '{null}'::text[] END
 					) as ALLOPH_SYNM from TB_TERMS) A LEFT OUTER JOIN TB_DOMAIN B 
 					on A.DOMAIN_NM = B.DOMAIN_NM
-			where A.CODE_GRP is not null AND (A.TERMS_NM like #{codeNm} OR A.ALLOPH_SYNM like #{codeNm})
+			where A.CODE_GRP is not null AND (A.TERMS_NM ILIKE #{codeNm} OR A.ALLOPH_SYNM ILIKE #{codeNm})
 	</select>
 
 	<select id="selectCodeInfoByNm" parameterType="String" resultMap="stdCodeMap">

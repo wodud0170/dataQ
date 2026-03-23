@@ -28,7 +28,6 @@ public class DiagService implements Runnable {
     // 진단 유형 코드
     public static final String TERM_NOT_EXIST       = "TERM_NOT_EXIST";
     public static final String TERM_KR_NM_MISMATCH  = "TERM_KR_NM_MISMATCH";
-    public static final String TERM_ENG_NM_MISMATCH = "TERM_ENG_NM_MISMATCH";
     public static final String DATA_TYPE_MISMATCH   = "DATA_TYPE_MISMATCH";
     public static final String DATA_LEN_MISMATCH    = "DATA_LEN_MISMATCH";
 
@@ -71,20 +70,11 @@ public class DiagService implements Runnable {
             // 1. 상태 RUNNING으로 변경
             updateStatus("RUNNING");
 
-            // 2. 전체 용어 메모리 로드
+            // 2. 전체 용어 메모리 로드 (영문명 기준 매칭)
             List<StdTermsVo> allTerms = sqlSessionTemplate.selectList("terms.selectAllTermsForDiag");
-            // KR 한글명 → 용어, ENG 영문명 → 용어
-            Map<String, StdTermsVo> termsByKr  = new HashMap<>();
             Map<String, StdTermsVo> termsByEng = new HashMap<>();
             for (StdTermsVo t : allTerms) {
-                if (t.getTermsNm() != null)        termsByKr.put(t.getTermsNm(), t);
                 if (t.getTermsEngAbrvNm() != null) termsByEng.put(t.getTermsEngAbrvNm(), t);
-                // 이형동의어도 KR 맵에 등록
-                if (t.getAllophSynmLst() != null) {
-                    for (String syn : t.getAllophSynmLst()) {
-                        if (syn != null && !syn.isEmpty()) termsByKr.putIfAbsent(syn, t);
-                    }
-                }
             }
 
             // 3. 진단 대상 컬럼 목록 로드
@@ -105,35 +95,35 @@ public class DiagService implements Runnable {
                     break;
                 }
 
-                String attrNmKr = attr.getAttrNmKr();  // 컬럼 한글명
+                String attrNmKr = attr.getAttrNmKr();  // 컬럼 한글명 (COMMENTS)
                 String attrNm   = attr.getAttrNm();    // 컬럼 영문명
                 String dataType = attr.getDataType();
                 long   dataLen  = attr.getDataLen();
+                int    dataDecimalLen = attr.getDataDecimalLen();
 
-                StdTermsVo termByKr  = attrNmKr != null ? termsByKr.get(attrNmKr.trim())  : null;
-                StdTermsVo termByEng = attrNm   != null ? termsByEng.get(attrNm.trim())   : null;
+                // STEP 1. 영문명 기준 용어 존재 확인
+                StdTermsVo termByEng = attrNm != null ? termsByEng.get(attrNm.trim()) : null;
 
-                if (termByKr == null && termByEng == null) {
-                    // 한글명, 영문명 모두 용어 미존재
-                    batch.add(buildResult(attr, TERM_NOT_EXIST, "용어 미존재", null, null));
+                if (termByEng == null) {
+                    // 영문명 기준 용어 미존재 → 진단 종료
+                    batch.add(buildResult(attr, TERM_NOT_EXIST, "용어 미존재", null, attrNm));
                     resultCnt++;
-                } else if (termByKr != null && termByEng == null) {
-                    // 한글명은 용어에 있으나 영문명 불일치
-                    batch.add(buildResult(attr, TERM_ENG_NM_MISMATCH, "영문명 불일치",
-                            termByKr.getTermsEngAbrvNm(), attrNm));
-                    resultCnt++;
-                    // 도메인 비교도 수행 (한글명 기준 용어 사용)
-                    resultCnt += checkDomain(attr, termByKr, dataType, dataLen, batch);
-                } else if (termByKr == null) {
-                    // 영문명은 용어에 있으나 한글명 불일치
-                    batch.add(buildResult(attr, TERM_KR_NM_MISMATCH, "한글명 불일치",
-                            termByEng.getTermsNm(), attrNmKr));
-                    resultCnt++;
-                    // 도메인 비교도 수행 (영문명 기준 용어 사용)
-                    resultCnt += checkDomain(attr, termByEng, dataType, dataLen, batch);
                 } else {
-                    // 둘 다 일치 → 도메인 비교
-                    resultCnt += checkDomain(attr, termByKr, dataType, dataLen, batch);
+                    // STEP 2. 한글명 일치 확인
+                    // - 표준 용어에 한글명이 있는 경우, 실제 한글명이 null/빈값이면 불일치로 판정
+                    // - 표준 용어에 한글명이 없으면 비교 스킵
+                    String stdTermsNm = termByEng.getTermsNm();
+                    if (stdTermsNm != null && !stdTermsNm.trim().isEmpty()) {
+                        String actualKr = (attrNmKr != null) ? attrNmKr.trim() : "";
+                        if (!stdTermsNm.trim().equals(actualKr)) {
+                            batch.add(buildResult(attr, TERM_KR_NM_MISMATCH, "한글명 불일치",
+                                    stdTermsNm, attrNmKr));
+                            resultCnt++;
+                        }
+                    }
+
+                    // STEP 3. 도메인 검증 (타입·길이)
+                    resultCnt += checkDomain(attr, termByEng, dataType, dataLen, dataDecimalLen, batch);
                 }
 
                 processCnt++;
@@ -165,19 +155,26 @@ public class DiagService implements Runnable {
         }
     }
 
-    private int checkDomain(StdDataModelAttrVo attr, StdTermsVo term, String dataType, long dataLen, List<StdDiagResultVo> batch) {
+    private int checkDomain(StdDataModelAttrVo attr, StdTermsVo term, String dataType, long dataLen, int dataDecimalLen, List<StdDiagResultVo> batch) {
         if (term.getDomainNm() == null) return 0;
         int cnt = 0;
-        String stdType = term.getDataType();
-        long   stdLen  = term.getDataLen();
+        String stdType       = term.getDataType();
+        long   stdLen        = term.getDataLen();
+        int    stdDecimalLen = term.getDataDecimalLen();
 
+        // 타입 비교 (case-insensitive)
         if (stdType != null && dataType != null && !stdType.equalsIgnoreCase(dataType)) {
             batch.add(buildResult(attr, DATA_TYPE_MISMATCH, "데이터 타입 불일치", stdType, dataType));
             cnt++;
         }
-        if (stdLen > 0 && dataLen > stdLen) {
-            batch.add(buildResult(attr, DATA_LEN_MISMATCH, "데이터 길이 초과",
+        // 길이 비교 (길이 또는 소수점 자릿수가 다르면 불일치)
+        if (stdLen > 0 && dataLen != stdLen) {
+            batch.add(buildResult(attr, DATA_LEN_MISMATCH, "데이터 길이 불일치",
                     String.valueOf(stdLen), String.valueOf(dataLen)));
+            cnt++;
+        } else if (stdDecimalLen > 0 && dataDecimalLen != stdDecimalLen) {
+            batch.add(buildResult(attr, DATA_LEN_MISMATCH, "소수점 자릿수 불일치",
+                    String.valueOf(stdDecimalLen), String.valueOf(dataDecimalLen)));
             cnt++;
         }
         return cnt;
