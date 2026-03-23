@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"RequestMapping\\\\|PostMapping\\\\|GetMapping\\\\|PutMapping\\\\|DeleteMapping\" /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center/src/main/java/qualitycenter/controller/*.java)",
+      "Bash(winget install:*)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\naraedata\\Desktop\\dataQ\\ndata-quality-master"
+    ]
+  }
+}

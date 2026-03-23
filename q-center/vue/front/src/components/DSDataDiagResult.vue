@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="pa-2">
+  <v-container fluid class="pa-2" style="height: 100%; overflow: auto;">
     <!-- 필터 바 -->
     <v-sheet class="d-flex align-center flex-wrap pa-2 mb-2" style="gap:8px; border:1px solid #e0e0e0; border-radius:4px;">
       <span class="filterLabel">진단 이력</span>
