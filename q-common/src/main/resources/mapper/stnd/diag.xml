@@ -163,17 +163,21 @@
 
     <select id="selectDiagResultSummary" parameterType="String" resultType="map">
         SELECT
-             OBJ_NM as "objNm"
-            ,COUNT(DISTINCT ATTR_NM) as "issueColCnt"
+             R.OBJ_NM as "objNm"
+            ,(SELECT O.OBJ_NM_KR FROM TB_DATA_MODEL_OBJ O
+              WHERE O.DM_CLCT_ID = (SELECT DM_CLCT_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
+              AND O.OBJ_NM = R.OBJ_NM
+              LIMIT 1) as "objNmKr"
+            ,COUNT(DISTINCT R.ATTR_NM) as "issueColCnt"
             ,COUNT(*) as "issueCnt"
-            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'TERM_NOT_EXIST')      as "termNotExistCnt"
-            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'TERM_KR_NM_MISMATCH') as "termKrNmMismatchCnt"
-            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'DATA_TYPE_MISMATCH')  as "dataTypeMismatchCnt"
-            ,COUNT(*) FILTER (WHERE DIAG_TYPE = 'DATA_LEN_MISMATCH')   as "dataLenMismatchCnt"
-        FROM TB_DIAG_RESULT
-        WHERE DIAG_JOB_ID = #{diagJobId}
-        GROUP BY OBJ_NM
-        ORDER BY OBJ_NM
+            ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'TERM_NOT_EXIST')      as "termNotExistCnt"
+            ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'TERM_KR_NM_MISMATCH') as "termKrNmMismatchCnt"
+            ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'DATA_TYPE_MISMATCH')  as "dataTypeMismatchCnt"
+            ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'DATA_LEN_MISMATCH')   as "dataLenMismatchCnt"
+        FROM TB_DIAG_RESULT R
+        WHERE R.DIAG_JOB_ID = #{diagJobId}
+        GROUP BY R.OBJ_NM
+        ORDER BY R.OBJ_NM
     </select>
 
     <!--

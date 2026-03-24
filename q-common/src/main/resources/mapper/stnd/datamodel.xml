@@ -118,7 +118,7 @@
 		<if test="schSysNm != null">
 				AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM ILIKE '%' || #{schSysNm} || '%')
 		</if>
-			order by T.CLCT_END_DT DESC
+			order by T.CLCT_END_DT DESC NULLS LAST
 	</select>
 
 	<select id="selectDataModelClctList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelCollectVo">
@@ -151,7 +151,7 @@
 		<if test="to != null">
 				AND T.CLCT_END_DT &lt;= #{to}
 		</if>
-			order by T.CLCT_END_DT DESC
+			order by T.CLCT_END_DT DESC NULLS LAST
 	</select>
 
 	<select id="selectDataModelObjListByClctId" parameterType="String" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
@@ -277,7 +277,7 @@
 		<if test="to != null">
 			AND T.CLCT_END_DT &lt;= #{to}
 		</if>
-		order by T.CLCT_END_DT DESC
+		order by T.CLCT_END_DT DESC NULLS LAST
 	</select>
 
 	<insert id="insertDataModel" parameterType="com.ndata.quality.model.std.StdDataModelVo">
@@ -449,27 +449,53 @@
 		SET USE_YN = #{useYn}
 	</insert>
 
+	<!-- [수정] 수집 시 표준검사 제거에 따라 표준화율 0으로 처리 — 원복 시 아래 주석의 원본 쿼리 사용 -->
 	<insert id="insertDataModelStats" parameterType="com.ndata.quality.model.std.StdDataModelStatsVo">
            INSERT INTO TB_DATA_MODEL_STATS
            (
              DM_CLCT_ID
-            ,DM_ID		
+            ,DM_ID
 			,OBJ_CNT
 			,ATTR_CNT
 			,TERMS_STND_RATE
 			,DOMAIN_STND_RATE
 			,WORD_STND_RATE
            )
-           SELECT 
+           SELECT
 				A.DM_CLCT_ID
 				,A.DM_ID
 				,COUNT(A.OBJ_NM)
 				,SUM(A.OBJ_ATTR_CNT)
-				,(SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR 
-				WHERE DM_CLCT_ID = A.DM_CLCT_ID AND DM_ID = A.DM_ID 
+				,0
+				,0
+				,0
+			FROM TB_DATA_MODEL_OBJ A
+			WHERE A.DM_CLCT_ID = #{clctId}
+				AND A.DM_ID = #{dataModelId}
+			GROUP BY A.DM_CLCT_ID, A.DM_ID
+	</insert>
+	<!-- [원본] 표준검사 원복 시 위 쿼리 대신 아래 사용
+	<insert id="insertDataModelStats" parameterType="com.ndata.quality.model.std.StdDataModelStatsVo">
+           INSERT INTO TB_DATA_MODEL_STATS
+           (
+             DM_CLCT_ID
+            ,DM_ID
+			,OBJ_CNT
+			,ATTR_CNT
+			,TERMS_STND_RATE
+			,DOMAIN_STND_RATE
+			,WORD_STND_RATE
+           )
+           SELECT
+				A.DM_CLCT_ID
+				,A.DM_ID
+				,COUNT(A.OBJ_NM)
+				,SUM(A.OBJ_ATTR_CNT)
+				,(SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+				WHERE DM_CLCT_ID = A.DM_CLCT_ID AND DM_ID = A.DM_ID
 				AND TERMS_STND_YN = 'Y') / SUM(A.OBJ_ATTR_CNT) * 100
-				,(SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR 
-				WHERE DM_CLCT_ID = A.DM_CLCT_ID AND DM_ID = A.DM_ID 
+				,(SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+				WHERE DM_CLCT_ID = A.DM_CLCT_ID AND DM_ID = A.DM_ID
 				AND DOMAIN_STND_YN = 'Y')/ SUM(A.OBJ_ATTR_CNT) * 100::NUMERIC(5,2) AS DOMAINSTNDRATE
 				,(SELECT COUNT(B.WORD_STND) FILTER (WHERE WORD_STND = 'Y')::NUMERIC / COUNT(B.WORD_STND) * 100
 					FROM (SELECT DM_CLCT_ID, UNNEST(CASE WHEN ARRAY_LENGTH(WORD_STND_LST, 1) >= 1
@@ -482,4 +508,5 @@
 				AND A.DM_ID = #{dataModelId}
 			GROUP BY A.DM_CLCT_ID, A.DM_ID
 	</insert>
+	-->
 </mapper>

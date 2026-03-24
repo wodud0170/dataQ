@@ -45,9 +45,10 @@
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '80px' }">
         </v-text-field>
-        <span class="filterLabel" :style="{ paddingLeft: '4px' }">표준여부</span>
+        <!-- [숨김] 수집 시 표준검사 제거에 따라 표준여부 필터 비활성화 — 원복 시 주석 해제 -->
+        <!-- <span class="filterLabel" :style="{ paddingLeft: '4px' }">표준여부</span>
         <v-checkbox class="checkboxStyle" hide-details v-model="statusListArray" label="표준" color="ndColor" value="Y"></v-checkbox>
-        <v-checkbox class="checkboxStyle" hide-details v-model="statusListArray" label="비표준" color="ndColor" value="N"></v-checkbox>
+        <v-checkbox class="checkboxStyle" hide-details v-model="statusListArray" label="비표준" color="ndColor" value="N"></v-checkbox> -->
         <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
         <v-btn class="gradient" v-on:click="columnDataDownload" :disabled="dmColumnAllItems.length === 0">다운로드</v-btn>
       </v-row>
@@ -99,7 +100,8 @@
             <span v-else-if="ci === 'dataLen'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'dataDecimalLen'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <p v-else-if="ci === 'nullableYn'" :style="{ textAlign: 'center', margin: '0px 16px' }">{{ c }}</p>
-            <template v-else-if="ci === 'termsStndYn'">
+            <!-- [숨김] 수집 시 표준검사 제거에 따라 표준여부 셀 비활성화 — 원복 시 주석 해제 -->
+            <!-- <template v-else-if="ci === 'termsStndYn'">
               <p :style="{ textAlign: 'center', margin: '0px 5px' }">{{ c }}</p>
             </template>
             <template v-else-if="ci === 'domainStndYn'">
@@ -107,7 +109,7 @@
             </template>
             <template v-else-if="ci === 'wordLst'">
               <p v-for="(line, index) in c" :key="index" :style="{ textAlign: 'center', margin: '0px 5px' }">{{ line }}</p>
-            </template>
+            </template> -->
             <p v-else-if="ci === 'pkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
             <p v-else-if="ci === 'fkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
             <span v-else-if="ci === 'defaultVal'" :style="{ margin: '0px 16px' }">{{ c }}</span>
@@ -210,14 +212,15 @@ export default {
       { text: '데이터\n길이', sortable: false, align: 'center', value: 'dataLen' },
       { text: '데이터\n소수점\n길이', sortable: false, align: 'center', value: 'dataDecimalLen' },
       { text: 'NULL\n여부', sortable: false, align: 'center', value: 'nullableYn' },
-      {
-        text: '표준 여부', sortable: false, align: 'center', value: 'termsStndYn', divider: true,
-        children: [
-          { text: '용어', align: 'center', value: 'termsStndYn', sortable: false },
-          { text: '도메인', align: 'center', value: 'domainStndYn', sortable: false },
-          { text: '단어', align: 'center', value: 'wordLst', sortable: false }
-        ]
-      },
+      // [숨김] 수집 시 표준검사 제거에 따라 표준여부 헤더 비활성화 — 원복 시 주석 해제
+      // {
+      //   text: '표준 여부', sortable: false, align: 'center', value: 'termsStndYn', divider: true,
+      //   children: [
+      //     { text: '용어', align: 'center', value: 'termsStndYn', sortable: false },
+      //     { text: '도메인', align: 'center', value: 'domainStndYn', sortable: false },
+      //     { text: '단어', align: 'center', value: 'wordLst', sortable: false }
+      //   ]
+      // },
       { text: 'PK 여부', sortable: false, align: 'center', value: 'pkYn' },
       { text: 'FK 여부', sortable: false, align: 'center', value: 'fkYn' },
       { text: '디폴트 값', sortable: false, align: 'center', value: 'defaultVal' },
@@ -249,9 +252,10 @@ export default {
         const cKr = !this.searchColumnKr|| (item.attrNmKr  || '').includes(this.searchColumnKr);
         const dt  = !this.searchDataType|| (item.dataType  || '').toUpperCase().includes(this.searchDataType.toUpperCase());
         const dl  = !this.searchDataLen || String(item.dataLen || '').includes(this.searchDataLen);
-        const stnd = this.statusListArray.length === 2 || this.statusListArray.length === 0 ||
-                     this.statusListArray.includes(item.termsStndYn);
-        return t && c && cKr && dt && dl && stnd;
+        // [숨김] 표준여부 필터 비활성화
+        // const stnd = this.statusListArray.length === 2 || this.statusListArray.length === 0 ||
+        //              this.statusListArray.includes(item.termsStndYn);
+        return t && c && cKr && dt && dl;
       });
     },
   },
@@ -363,7 +367,7 @@ export default {
       _.forEach(rows, (i, key) => {
         if (i === null) i = '';
         if (['objNm','objNmKr','attrNm','attrNmKr','dataType','dataLen','dataDecimalLen',
-             'nullableYn','termsStndYn','domainStndYn','wordLst','pkYn','fkYn','defaultVal'].includes(key)) {
+             'nullableYn',/* 'termsStndYn','domainStndYn','wordLst', */ 'pkYn','fkYn','defaultVal'].includes(key)) {
           result[key] = i;
         }
       });

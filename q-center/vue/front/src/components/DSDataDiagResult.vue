@@ -20,8 +20,9 @@
       <v-select v-model="selectedDiagTypes" :items="diagTypeOptions" item-text="label" item-value="value"
         dense outlined hide-details multiple chips small-chips deletable-chips
         style="width:260px; flex-grow:0;" />
-              <v-checkbox v-model="onlyIssue" dense hide-details class="mt-0 pt-0"
-        label="이슈" style="flex-grow:0;" />
+      <span class="filterLabel">이슈 여부</span>
+      <v-select v-model="issueFilter" :items="issueFilterOptions" item-text="label" item-value="value"
+        dense outlined hide-details style="width:130px; flex-grow:0;" />
     </v-sheet>
 
     <!-- 필터 바 2행: 명칭 검색 (각각 모드 셀렉트 + 입력) -->
@@ -77,11 +78,178 @@
 
     <!-- 요약 + 상세 탭 -->
     <v-tabs v-model="activeTab" dense class="mb-0">
-      <v-tab>테이블 집계</v-tab>
+      <v-tab>진단 결과</v-tab>
+      <v-tab>테이블 상세</v-tab>
       <v-tab>컬럼 상세</v-tab>
     </v-tabs>
 
     <v-tabs-items v-model="activeTab">
+      <!-- 진단 결과 요약 -->
+      <v-tab-item>
+        <v-sheet v-if="!selectedJobId" class="pa-8 text-center grey--text">
+          진단 이력을 선택해주세요.
+        </v-sheet>
+        <v-sheet v-else class="pa-4">
+          <!-- 상단: 진단 정보 + 표준 준수율 -->
+          <v-row>
+            <!-- 진단 정보 카드 -->
+            <v-col cols="4">
+              <v-card outlined class="pa-4" style="height:100%;">
+                <div class="subtitle-2 font-weight-bold mb-3" style="border-bottom:2px solid #1976D2; padding-bottom:6px;">
+                  진단 정보
+                </div>
+                <v-simple-table dense>
+                  <tbody>
+                    <tr>
+                      <td class="grey--text text--darken-1" style="width:120px;">데이터모델</td>
+                      <td class="font-weight-medium">{{ selectedJobInfo.dataModelNm || '-' }}</td>
+                    </tr>
+                    <tr>
+                      <td class="grey--text text--darken-1">수집일시</td>
+                      <td>{{ selectedJobInfo.clctDt || '-' }}</td>
+                    </tr>
+                    <tr>
+                      <td class="grey--text text--darken-1">진단일시</td>
+                      <td>{{ selectedJobInfo.startDt || '-' }} ~ {{ selectedJobInfo.endDt || '-' }}</td>
+                    </tr>
+                    <tr>
+                      <td class="grey--text text--darken-1">실행자</td>
+                      <td>{{ selectedJobInfo.cretUserId || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </v-simple-table>
+              </v-card>
+            </v-col>
+
+            <!-- 표준 준수율 카드 -->
+            <v-col cols="4">
+              <v-card outlined class="pa-4 text-center" style="height:100%;">
+                <div class="subtitle-2 font-weight-bold mb-3" style="border-bottom:2px solid #4CAF50; padding-bottom:6px;">
+                  표준 준수율
+                </div>
+                <v-progress-circular
+                  :value="overviewStats.complianceRate"
+                  :size="120"
+                  :width="12"
+                  :color="complianceColor"
+                  rotate="-90"
+                >
+                  <span class="text-h5 font-weight-bold">{{ overviewStats.complianceRate }}%</span>
+                </v-progress-circular>
+                <div class="mt-2 text-caption grey--text">
+                  전체 {{ overviewStats.totalColCnt }}개 컬럼 중 {{ overviewStats.okColCnt }}개 준수
+                </div>
+              </v-card>
+            </v-col>
+
+            <!-- 전체 현황 카드 -->
+            <v-col cols="4">
+              <v-card outlined class="pa-4" style="height:100%;">
+                <div class="subtitle-2 font-weight-bold mb-3" style="border-bottom:2px solid #FF9800; padding-bottom:6px;">
+                  전체 현황
+                </div>
+                <v-simple-table dense>
+                  <tbody>
+                    <tr>
+                      <td class="grey--text text--darken-1" style="width:120px;">전체 테이블</td>
+                      <td class="font-weight-medium text-right">{{ overviewStats.totalTableCnt }}개</td>
+                    </tr>
+                    <tr>
+                      <td class="grey--text text--darken-1">이슈 테이블</td>
+                      <td class="font-weight-medium text-right red--text">{{ overviewStats.issueTableCnt }}개</td>
+                    </tr>
+                    <tr>
+                      <td class="grey--text text--darken-1">전체 컬럼</td>
+                      <td class="font-weight-medium text-right">{{ overviewStats.totalColCnt }}개</td>
+                    </tr>
+                    <tr>
+                      <td class="grey--text text--darken-1">이슈 컬럼</td>
+                      <td class="font-weight-medium text-right red--text">{{ overviewStats.issueColCnt }}개</td>
+                    </tr>
+                    <tr>
+                      <td class="grey--text text--darken-1">총 이슈 건수</td>
+                      <td class="font-weight-medium text-right red--text">{{ overviewStats.totalIssueCnt }}건</td>
+                    </tr>
+                  </tbody>
+                </v-simple-table>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <!-- 하단: 이슈 유형별 분석 + 이슈 TOP 5 테이블 -->
+          <v-row class="mt-2">
+            <!-- 이슈 유형별 분석 -->
+            <v-col cols="6">
+              <v-card outlined class="pa-4" style="height:100%;">
+                <div class="subtitle-2 font-weight-bold mb-3" style="border-bottom:2px solid #F44336; padding-bottom:6px;">
+                  이슈 유형별 분석
+                </div>
+                <v-simple-table dense>
+                  <thead>
+                    <tr>
+                      <th>이슈 유형</th>
+                      <th class="text-right">건수</th>
+                      <th class="text-right">비율</th>
+                      <th style="width:40%;">분포</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="t in issueTypeStats" :key="t.type">
+                      <td>
+                        <v-chip x-small :color="diagTypeColor(t.type)" text-color="white">{{ t.label }}</v-chip>
+                      </td>
+                      <td class="text-right font-weight-medium">{{ t.count }}건</td>
+                      <td class="text-right">{{ t.percent }}%</td>
+                      <td>
+                        <v-progress-linear :value="t.percent" :color="diagTypeColor(t.type)" height="16" rounded>
+                          <template v-slot:default>
+                            <span style="font-size:.65rem; color:#fff;">{{ t.percent }}%</span>
+                          </template>
+                        </v-progress-linear>
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-simple-table>
+              </v-card>
+            </v-col>
+
+            <!-- 이슈 TOP 5 테이블 -->
+            <v-col cols="6">
+              <v-card outlined class="pa-4" style="height:100%;">
+                <div class="subtitle-2 font-weight-bold mb-3" style="border-bottom:2px solid #9C27B0; padding-bottom:6px;">
+                  이슈 TOP 5 테이블
+                </div>
+                <v-simple-table dense>
+                  <thead>
+                    <tr>
+                      <th style="width:30px;">순위</th>
+                      <th>테이블명</th>
+                      <th class="text-right">이슈 컬럼</th>
+                      <th class="text-right">총 이슈</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(t, idx) in top5Tables" :key="t.objNm">
+                      <td class="text-center font-weight-bold">{{ idx + 1 }}</td>
+                      <td>
+                        <span class="ndColor--text" style="cursor:pointer;" @click="drillToDetail(t.objNm)">{{ t.objNm }}</span>
+                      </td>
+                      <td class="text-right">{{ t.issueColCnt }}</td>
+                      <td class="text-right">
+                        <v-chip x-small color="red" text-color="white">{{ t.issueCnt }}</v-chip>
+                      </td>
+                    </tr>
+                    <tr v-if="top5Tables.length === 0">
+                      <td colspan="4" class="text-center grey--text">이슈 없음</td>
+                    </tr>
+                  </tbody>
+                </v-simple-table>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-sheet>
+      </v-tab-item>
+
       <!-- 테이블 집계 -->
       <v-tab-item>
         <v-data-table
@@ -126,7 +294,7 @@
           <!-- 테이블 한글명 -->
           <template v-slot:item.objNmKr="{ item }">
             <span v-if="item.objNmKr" class="text-caption">{{ item.objNmKr }}</span>
-            <span v-else class="text-caption grey--text">-</span>
+            <span v-else class="text-caption grey--text empty-val">-</span>
           </template>
           <!-- 컬럼 영문명 -->
           <template v-slot:item.attrNm="{ item }">
@@ -134,9 +302,10 @@
           </template>
           <!-- 컬럼 한글명 -->
           <template v-slot:item.attrNmKr="{ item }">
-            <span :class="['text-caption', { 'diag-highlight': isHighlighted(item, 'attrNmKr') }]">
-              {{ item.attrNmKr || '-' }}
+            <span v-if="item.attrNmKr" :class="['text-caption', { 'diag-highlight': isHighlighted(item, 'attrNmKr') }]">
+              {{ item.attrNmKr }}
             </span>
+            <span v-else :class="['text-caption grey--text empty-val', { 'diag-highlight': isHighlighted(item, 'attrNmKr') }]">-</span>
           </template>
           <!-- 컬럼 데이터 타입 -->
           <template v-slot:item.actualDataType="{ item }">
@@ -144,25 +313,29 @@
           </template>
           <!-- 컬럼 길이 (소수점 있으면 10,2 형태) -->
           <template v-slot:item.actualDataLen="{ item }">
-            <span class="text-caption" :class="{ 'diag-highlight': isHighlighted(item, 'actualDataLen') }">{{ formatLen(item.actualDataLen, item.actualDataDecimalLen) }}</span>
+            <span v-if="item.actualDataLen != null" class="text-caption" :class="{ 'diag-highlight': isHighlighted(item, 'actualDataLen') }">{{ formatLen(item.actualDataLen, item.actualDataDecimalLen) }}</span>
+            <span v-else class="text-caption grey--text empty-val" :class="{ 'diag-highlight': isHighlighted(item, 'actualDataLen') }">-</span>
           </template>
           <!-- 표준 한글명 -->
           <template v-slot:item.stdTermsNm="{ item }">
-            <span :class="['text-caption', { 'diag-highlight': isHighlighted(item, 'stdTermsNm') }]">
-              {{ item.stdTermsNm || '-' }}
+            <span v-if="item.stdTermsNm" :class="['text-caption', { 'diag-highlight': isHighlighted(item, 'stdTermsNm') }]">
+              {{ item.stdTermsNm }}
             </span>
+            <span v-else :class="['text-caption grey--text empty-val', { 'diag-highlight': isHighlighted(item, 'stdTermsNm') }]">-</span>
           </template>
           <!-- 표준 타입 -->
           <template v-slot:item.stdDataType="{ item }">
-            <span :class="['text-caption', { 'diag-highlight': isHighlighted(item, 'stdDataType') }]">
-              {{ item.stdDataType || '-' }}
+            <span v-if="item.stdDataType" :class="['text-caption', { 'diag-highlight': isHighlighted(item, 'stdDataType') }]">
+              {{ item.stdDataType }}
             </span>
+            <span v-else :class="['text-caption grey--text empty-val', { 'diag-highlight': isHighlighted(item, 'stdDataType') }]">-</span>
           </template>
           <!-- 표준 길이 (소수점 있으면 10,2 형태) -->
           <template v-slot:item.stdDataLen="{ item }">
-            <span :class="['text-caption', { 'diag-highlight': isHighlighted(item, 'stdDataLen') }]">
+            <span v-if="item.stdDataLen != null" :class="['text-caption', { 'diag-highlight': isHighlighted(item, 'stdDataLen') }]">
               {{ formatLen(item.stdDataLen, item.stdDataDecimalLen) }}
             </span>
+            <span v-else :class="['text-caption grey--text empty-val', { 'diag-highlight': isHighlighted(item, 'stdDataLen') }]">-</span>
           </template>
           <!-- 진단결과: 이슈 유형을 칩으로 복수 표시, mouseover 시 관련 셀 하이라이트 -->
           <template v-slot:item.diagTypes="{ item }">
@@ -214,7 +387,12 @@ export default {
       detailPage: 1,
       detailItemsPerPage: 50,
       // 이슈 여부 필터 (체크 시 이슈 있는 컬럼만 표시)
-      onlyIssue: true,
+      issueFilter: 'issue',   // 'all' | 'issue' | 'noIssue'
+      issueFilterOptions: [
+        { value: 'all',     label: '전체' },
+        { value: 'issue',   label: '이슈 있음' },
+        { value: 'noIssue', label: '이슈 없음' },
+      ],
       // 검색 모드 옵션 (포함/앞/뒤)
       searchModeOptions: [
         { value: 'contains', label: '포함' },
@@ -248,7 +426,8 @@ export default {
         { value: 'DATA_LEN_MISMATCH',    label: '길이 불일치' },
       ],
       summaryHeaders: [
-        { text: '테이블명',     value: 'objNm',                width: '200px' },
+        { text: '테이블명',     value: 'objNm',                width: '180px' },
+        { text: '테이블 한글명', value: 'objNmKr',             width: '180px' },
         { text: '이슈 컬럼',    value: 'issueColCnt',          width: '80px',  align: 'end' },
         { text: '총 이슈',      value: 'issueCnt',             width: '80px',  align: 'end' },
         { text: '용어 미존재',  value: 'termNotExistCnt',      width: '100px', align: 'end' },
@@ -287,12 +466,59 @@ export default {
         this.searchDataType,
         this.searchDataLen,
         this.selectedDiagTypes.join(','),
-        this.onlyIssue,
+        this.issueFilter,
       ].join('|');
     },
+    /** 선택된 진단 Job 정보 */
+    selectedJobInfo() {
+      if (!this.selectedJobId) return {};
+      return this.jobList.find(j => j.diagJobId === this.selectedJobId) || {};
+    },
+    /** 진단 결과 요약 통계 */
+    overviewStats() {
+      const detail = this.detailList;
+      const summary = this.summaryList;
+      const totalColCnt = detail.length;
+      const issueColCnt = detail.filter(d => d.diagTypeList && d.diagTypeList.length > 0).length;
+      const okColCnt = totalColCnt - issueColCnt;
+      const complianceRate = totalColCnt > 0 ? Math.round((okColCnt / totalColCnt) * 100) : 0;
+      const totalTableCnt = new Set(detail.map(d => d.objNm)).size;
+      const issueTableCnt = summary.filter(s => s.issueCnt > 0).length;
+      const totalIssueCnt = summary.reduce((sum, s) => sum + (s.issueCnt || 0), 0);
+      return { totalColCnt, issueColCnt, okColCnt, complianceRate, totalTableCnt, issueTableCnt, totalIssueCnt };
+    },
+    /** 준수율 색상 */
+    complianceColor() {
+      const r = this.overviewStats.complianceRate;
+      if (r >= 80) return 'green';
+      if (r >= 50) return 'orange';
+      return 'red';
+    },
+    /** 이슈 유형별 통계 */
+    issueTypeStats() {
+      const detail = this.detailList;
+      const types = [
+        { type: 'TERM_NOT_EXIST',      label: '용어 미존재' },
+        { type: 'TERM_KR_NM_MISMATCH', label: '한글명 불일치' },
+        { type: 'DATA_TYPE_MISMATCH',  label: '타입 불일치' },
+        { type: 'DATA_LEN_MISMATCH',   label: '길이 불일치' },
+      ];
+      const total = this.overviewStats.totalIssueCnt;
+      return types.map(t => {
+        const count = detail.reduce((sum, d) => sum + ((d.diagTypeList || []).includes(t.type) ? 1 : 0), 0);
+        return { ...t, count, percent: total > 0 ? Math.round((count / total) * 100) : 0 };
+      });
+    },
+    /** 이슈 TOP 5 테이블 */
+    top5Tables() {
+      return this.summaryList
+        .filter(s => s.issueCnt > 0)
+        .sort((a, b) => b.issueCnt - a.issueCnt)
+        .slice(0, 5);
+    },
     filteredSummary() {
-      // 이슈 체크 해제 시 테이블 집계는 이슈 기반이므로 빈 결과
-      if (!this.onlyIssue) return [];
+      // 이슈 없음 선택 시 테이블 집계는 이슈 기반이므로 빈 결과
+      if (this.issueFilter === 'noIssue') return [];
 
       return this.summaryList.filter(item => {
         // 테이블명 검색
@@ -313,10 +539,10 @@ export default {
     },
     filteredDetail() {
       return this.detailList.filter(item => {
-        // 이슈 여부 필터: 체크=이슈 있는 컬럼만, 해제=이슈 없는 컬럼만
+        // 이슈 여부 필터
         const hasIssue = item.diagTypeList && item.diagTypeList.length > 0;
-        if (this.onlyIssue && !hasIssue) return false;
-        if (!this.onlyIssue && hasIssue) return false;
+        if (this.issueFilter === 'issue' && !hasIssue) return false;
+        if (this.issueFilter === 'noIssue' && hasIssue) return false;
 
         // 명칭 검색 (모드별)
         if (!this.matchName(item.objNm,    this.searchTable,   this.searchTableMode))   return false;
@@ -425,7 +651,7 @@ export default {
     drillToDetail(objNm) {
       this.searchTable = objNm;
       this.searchTableMode = 'contains';
-      this.activeTab = 1;
+      this.activeTab = 2;
     },
     diagTypeColor(type) {
       const map = {
@@ -503,6 +729,11 @@ export default {
 .filterLabel {
   font-size: .8rem;
   white-space: nowrap;
+}
+/* 빈 값(-) 가운데 정렬 */
+.empty-val {
+  display: block;
+  text-align: center;
 }
 /* 진단 칩 mouseover 시 관련 셀 빨간 배경 하이라이트 */
 .diag-highlight {

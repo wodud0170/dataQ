@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "소스분석/03_표준화진단.md",
+                "file": "04_표준준수율개선기능.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "03_표준화진단"
+              "title": "04_표준준수율개선기능"
             }
           }
         ]
@@ -185,9 +185,13 @@
   },
   "active": "6ca628928cc5fad9",
   "lastOpenFiles": [
+    "04_표준준수율개선기능.md.tmp.30436.1774334360821",
+    "Vue_학습가이드_3가지핵심.md",
+    "04_표준준수율개선기능.md",
+    "test_oracle_tables.sql",
+    "소스분석/03_표준화진단.md",
     "DDL_claude_generated.sql",
     "소스분석/02_데이터모델.md",
-    "소스분석/03_표준화진단.md",
     "소스분석/04_승인관리.md",
     "소스분석/05_시스템관리.md",
     "소스분석/06_죽은기능.md",

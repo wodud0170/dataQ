@@ -167,14 +167,10 @@ public class DiagService implements Runnable {
             batch.add(buildResult(attr, DATA_TYPE_MISMATCH, "데이터 타입 불일치", stdType, dataType));
             cnt++;
         }
-        // 길이 비교 (길이 또는 소수점 자릿수가 다르면 불일치)
+        // 길이 비교 (소수점 자릿수는 비교하지 않음)
         if (stdLen > 0 && dataLen != stdLen) {
             batch.add(buildResult(attr, DATA_LEN_MISMATCH, "데이터 길이 불일치",
                     String.valueOf(stdLen), String.valueOf(dataLen)));
-            cnt++;
-        } else if (stdDecimalLen > 0 && dataDecimalLen != stdDecimalLen) {
-            batch.add(buildResult(attr, DATA_LEN_MISMATCH, "소수점 자릿수 불일치",
-                    String.valueOf(stdDecimalLen), String.valueOf(dataDecimalLen)));
             cnt++;
         }
         return cnt;

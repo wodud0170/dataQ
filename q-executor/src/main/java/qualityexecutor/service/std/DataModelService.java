@@ -160,31 +160,33 @@ public class DataModelService implements Runnable {
 					stdDataModelAttrVo.setFkYn(rs.getString("fkYn"));
 					stdDataModelAttrVo.setDefaultVal(rs.getString("defaultVal"));
 					stdDataModelAttrVo.setAttrOrder(rs.getShort("attrOrder"));
-					//표준여부 체크 - 용어,도메인
-					StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByEngNm", stdDataModelAttrVo.getAttrNm().toUpperCase());
-					if (stdTermsVo != null) {
-						stdDataModelAttrVo.setTermsStndYn("Y");
-						stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");
-					} else {
-						stdDataModelAttrVo.setTermsStndYn("N");
-						stdDataModelAttrVo.setDomainStndYn("N");
-					}
-					//표준여부 체크 - 단어
-					String[] words = stdDataModelAttrVo.getAttrNm().toUpperCase().split("_");
-					List<String> wordLst = new ArrayList<String>();
-					List<String> wordStndLst = new ArrayList<String>();
-					for (String word : words) {
-						StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", word);
-						if (stdWordVo != null) {
-							wordLst.add(word + "(" + stdWordVo.getWordNm() + ")");
-							wordStndLst.add("Y");
-						} else {
-							wordLst.add(word);
-							wordStndLst.add("N");
-						}
-					}
-					stdDataModelAttrVo.setWordLst(wordLst.toArray(new String[0]));
-					stdDataModelAttrVo.setWordStndLst(wordStndLst.toArray(new String[0]));
+					// [주석처리] 수집 시 표준여부 검사 제거 — 표준 검사는 진단(DiagService)에서 수행
+					// 원복 시 아래 주석을 해제하면 됩니다.
+					// //표준여부 체크 - 용어,도메인
+					// StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByEngNm", stdDataModelAttrVo.getAttrNm().toUpperCase());
+					// if (stdTermsVo != null) {
+					// 	stdDataModelAttrVo.setTermsStndYn("Y");
+					// 	stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");
+					// } else {
+					// 	stdDataModelAttrVo.setTermsStndYn("N");
+					// 	stdDataModelAttrVo.setDomainStndYn("N");
+					// }
+					// //표준여부 체크 - 단어
+					// String[] words = stdDataModelAttrVo.getAttrNm().toUpperCase().split("_");
+					// List<String> wordLst = new ArrayList<String>();
+					// List<String> wordStndLst = new ArrayList<String>();
+					// for (String word : words) {
+					// 	StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", word);
+					// 	if (stdWordVo != null) {
+					// 		wordLst.add(word + "(" + stdWordVo.getWordNm() + ")");
+					// 		wordStndLst.add("Y");
+					// 	} else {
+					// 		wordLst.add(word);
+					// 		wordStndLst.add("N");
+					// 	}
+					// }
+					// stdDataModelAttrVo.setWordLst(wordLst.toArray(new String[0]));
+					// stdDataModelAttrVo.setWordStndLst(wordStndLst.toArray(new String[0]));
 					session.insert("datamodel.insertDataModelAttr", stdDataModelAttrVo);
 					totalAttrCnt++;
 				}

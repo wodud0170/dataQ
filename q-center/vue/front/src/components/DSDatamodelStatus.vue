@@ -293,23 +293,18 @@
                       <!-- Null 여부 -->
                       <p v-else-if="ci === 'nullableYn'" :style="{ textAlign: 'center', margin: '0px 16px' }">{{ c }}</p>
 
-                      <!-- 서브 헤더 표시 아이템들 - 용어 -->
-                      <template v-else-if="ci === 'termsStndYn'">
+                      <!-- [숨김] 수집 시 표준검사 제거에 따라 표준여부 셀 비활성화 — 원복 시 주석 해제 -->
+                      <!-- <template v-else-if="ci === 'termsStndYn'">
                         <p :style="{ textAlign: 'center', margin: '0px 5px' }">{{ c }}</p>
                       </template>
-
-                      <!-- 서브 헤더 표시 아이템들 - 도메인 -->
                       <template v-else-if="ci === 'domainStndYn'">
                         <p :style="{ textAlign: 'center', margin: '0px 5px' }">{{ c }}</p>
                       </template>
-
-                      <!-- 서브 헤더 표시 아이템들 - 단어 -->
                       <template v-else-if="ci === 'wordLst'">
-                        <!-- <pre :style="{ width: `${c}` + '!important' }">{{ c }}</pre> -->
                         <p v-for="(line, index) in c" :key="index" :style="{ textAlign: 'center', margin: '0px 5px' }">
                           {{ line }}
                         </p>
-                      </template>
+                      </template> -->
 
                       <!-- PK 여부 -->
                       <p v-else-if="ci === 'pkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
@@ -579,11 +574,11 @@ export default {
     ],
     // 하단 테이블 탭 헤더
     dmTabledetaileHeaders: [
-      { text: '테이블명', align: 'center', sortable: false, value: 'objNm' },
-      { text: '테이블 한글명', sortable: false, align: 'center', value: 'objNmKr' },
-      { text: '소유자', sortable: false, align: 'center', value: 'objOwner' },
+      { text: '테이블명', align: 'start', sortable: false, value: 'objNm' },
+      { text: '테이블 한글명', sortable: false, align: 'start', value: 'objNmKr' },
+      { text: '소유자', sortable: false, align: 'start', value: 'objOwner' },
       { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
-      { text: '테이블 설명', sortable: false, align: 'center', value: 'objDesc' },
+      { text: '테이블 설명', sortable: false, align: 'start', value: 'objDesc' },
     ],
     // 하단 컬럼 탭 헤더
     dmColumnDetaileHeaders: [
@@ -595,14 +590,15 @@ export default {
       { text: '데이터\n길이', sortable: false, align: 'center', value: 'dataLen' },
       { text: '데이터\n소수점\n길이', sortable: false, align: 'center', value: 'dataDecimalLen' },
       { text: 'NULL\n여부', sortable: false, align: 'center', value: 'nullableYn' },
-      {
-        text: '표준 여부', sortable: false, align: 'center', value: 'termsStndYn', divider: true,
-        children: [ // 자식 요소 정의
-          { text: '용어', align: 'center', value: 'termsStndYn', sortable: false },
-          { text: '도메인', align: 'center', value: 'domainStndYn', sortable: false },
-          { text: '단어', align: 'center', value: 'wordLst', sortable: false }
-        ]
-      },
+      // [숨김] 수집 시 표준검사 제거에 따라 표준여부 헤더 비활성화 — 원복 시 주석 해제
+      // {
+      //   text: '표준 여부', sortable: false, align: 'center', value: 'termsStndYn', divider: true,
+      //   children: [
+      //     { text: '용어', align: 'center', value: 'termsStndYn', sortable: false },
+      //     { text: '도메인', align: 'center', value: 'domainStndYn', sortable: false },
+      //     { text: '단어', align: 'center', value: 'wordLst', sortable: false }
+      //   ]
+      // },
       { text: 'PK 여부', sortable: false, align: 'center', value: 'pkYn' },
       { text: 'FK 여부', sortable: false, align: 'center', value: 'fkYn' },
       { text: '디폴트 값', sortable: false, align: 'center', value: 'defaultVal' },
@@ -890,7 +886,7 @@ export default {
         } else {
           // 테이블 헤더에 있는 값만 가져오기
           if (key === 'objNm' || key === 'objNmKr' || key === 'attrNm' || key === 'attrNmKr' || key === 'dataType' || key === 'dataLen' ||
-            key === 'dataDecimalLen' || key === 'nullableYn' || key === 'termsStndYn' || key === 'domainStndYn' || key === 'wordLst' || key === 'pkYn' || key === 'fkYn' || key === 'defaultVal') {
+            key === 'dataDecimalLen' || key === 'nullableYn' || /* key === 'termsStndYn' || key === 'domainStndYn' || key === 'wordLst' || */ key === 'pkYn' || key === 'fkYn' || key === 'defaultVal') {
             result[key] = i
           } else {
             return;
@@ -1350,6 +1346,15 @@ export default {
 }
 </script>
 
+<style>
+/* unscoped: 테이블 탭 데이터 좌측정렬 */
+#dmTable_table td {
+  text-align: left !important;
+}
+#dmTable_table td:nth-child(4) {
+  text-align: center !important;
+}
+</style>
 <style scoped>
 .splitTopWrapper {
   display: flex;

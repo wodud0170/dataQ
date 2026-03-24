@@ -4,7 +4,10 @@
       "Bash(grep -r \"RequestMapping\\\\|PostMapping\\\\|GetMapping\\\\|PutMapping\\\\|DeleteMapping\" /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center/src/main/java/qualitycenter/controller/*.java)",
       "Bash(winget install:*)",
       "Bash(mvn test:*)",
-      "Bash(grep -l \"CREATE TABLE\" C:/Users/naraedata/.claude/projects/c--Users-naraedata-Desktop-dataQ-ndata-quality-master/*.jsonl)"
+      "Bash(grep -l \"CREATE TABLE\" C:/Users/naraedata/.claude/projects/c--Users-naraedata-Desktop-dataQ-ndata-quality-master/*.jsonl)",
+      "Bash(git pull:*)",
+      "Bash(grep -n \"selectTermsByEngNm\\\\|selectWordByEngAbrvNm\" /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-common/src/main/resources/mapper/stnd/*.xml)",
+      "Bash(find /c/Users/naraedata/Desktop/dataQ/ndata-quality-master -type f \\\\\\(-name *seed* -o -name *sample* -o -name *data*.sql \\\\\\))"
     ],
     "additionalDirectories": [
       "c:\\Users\\naraedata\\Desktop\\dataQ\\ndata-quality-master"

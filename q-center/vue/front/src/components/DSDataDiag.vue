@@ -136,7 +136,7 @@ export default {
         { text: '시작일시',      value: 'startDt',      width: '160px' },
         { text: '완료일시',      value: 'endDt',        width: '160px' },
         { text: '실행자',        value: 'cretUserId',   width: '100px' },
-        { text: '',             value: 'actions',      width: '55px', sortable: false, align: 'center' },
+        { text: '결과 보기',             value: 'actions',      width: '55px', sortable: false, align: 'center' },
       ],
     };
   },
