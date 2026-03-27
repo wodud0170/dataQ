@@ -51,9 +51,10 @@
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
             <v-btn class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
+            <v-btn class="gradient" v-on:click="downloadTermTemplate()" title="템플릿 다운로드">템플릿 다운로드</v-btn>
             <v-btn class="gradient" v-on:click="termListDownload()" title="다운로드">다운로드</v-btn>
-            <v-btn class="gradient" v-on:click="termRemoveItem()" title="삭제">삭제</v-btn>
-            <v-btn class="gradient" color="red lighten-4" v-on:click="termBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
+            <v-btn class="gradient" v-on:click="termRemoveItem()" title="선택 삭제" :disabled="removeItems.length === 0">선택 삭제</v-btn>
+            <v-btn class="gradient" color="red lighten-4" v-on:click="termBulkRemove()" title="전체 삭제">전체 삭제</v-btn>
             <input type="file" @change="readExcelFile" ref="file" id="inputTermUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
@@ -62,6 +63,7 @@
           <!-- 총 개수와 테이블 표시 개수 변경 영역 -->
           <v-sheet>
             <span class="ndColor--text">총 {{ termItems.length }}건</span>
+            <span v-if="removeItems.length > 0" class="ml-3" :style="{ color: '#d32f2f', fontWeight: 'bold' }">{{ removeItems.length }}건 선택됨</span>
           </v-sheet>
           <v-sheet>
             <v-select :style="{ width: '90px' }" v-model.lazy="itemsPerPage" :items="tableViewLengthList" color="ndColor"
@@ -185,40 +187,8 @@
             </v-sheet>
             <!-- 테이블 -->
             <v-sheet class="tabContents">
-              <v-data-table id="term_wordItemsList_table" :items="wordItemsList" hide-default-footer class="px-4 pb-3">
-                <template v-slot:body="{ items }">
-                  <tbody>
-                    <!-- 상세 테이블 왼쪽  -->
-                    <tr v-for="header in items.wordNm" :key="header.value">
-                      <td :style="{ backgroundColor: 'rgba(24, 127, 196, 0.1)', width: '15%' }">
-                        {{ header.text }}
-                      </td>
-                      <!-- 상세 테이블 오른쪽  -->
-                      <td v-for="item in items" :key="item.wordNm">
-                        <div v-if="Array.isArray(item[header.value])">
-                          <!-- 값이 배열이라면 줄바꿈으로 표시 -->
-                          <div v-for="item2 in item[header.value]" :key="item2">
-                            {{ item2 }}
-                          </div>
-                        </div>
-                        <div v-else>
-                          <!-- 값이 배열이 아닌 문자열이라면 한 줄로 표시 -->
-                          {{ item[header.value] }}
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </template>
-                <!-- 데이터 없음 -->
-                <template v-slot:no-data>
-                  <v-alert>
-                    데이터가 존재하지 않습니다.
-                  </v-alert>
-                </template>
-              </v-data-table>
-
               <v-data-table id="term_wordItemsList_table" :headers="wordItemsListHeaders" :items="wordItemsList"
-                hide-default-footer item-key="id" class="px-4 pb-3" v-model="wordItemsList">
+                hide-default-footer class="px-4 pb-3">
                 <!-- 데이터 없음 -->
                 <template v-slot:no-data>
                   <v-alert>
@@ -839,8 +809,9 @@ export default {
     termItems() {
       this.setListPage();
     },
-    itemsPerPage() {
+    itemsPerPage(val) {
       this.setListPage();
+      localStorage.setItem('DSTerm_itemsPerPage', val);
     },
     addModalStep() {
       if (this.addModalStep === 1) {
@@ -976,7 +947,7 @@ export default {
     // 총 페이지 수
     pageCount: null,
     // 한 페이지에 보여지는 용어의 수
-    itemsPerPage: 10,
+    itemsPerPage: parseInt(localStorage.getItem('DSTerm_itemsPerPage')) || 10,
     // 등록 관련
     addModalStep: 1, // 용어 등록 스테퍼 카운트
     addTerm_termNm: null, // 용어 등록 용어명
@@ -999,6 +970,7 @@ export default {
     // addTerm_word_length: 0,
     addTerm_wordList: [],
     addTerm_user_selected_word: '',
+    addTerm_lastCheckedNm: null,
     // 수정 관련
     updateModalStep: 1, // 용어 수정 스테퍼 카운트
     updateTerm_id: null,
@@ -1284,10 +1256,18 @@ export default {
       if (level === 'ERROR' && msg.data.includes('실패:')) {
         var failText = msg.data.replace('[용어] 실패: ', '');
         var termMatch = failText.match(/^용어\(([^)]*)\):\s*(.*)/);
+        // 행번호 추출: "[용어] 실패: [N행] 용어(...)" 또는 순차 번호
+        var rowIdx = this.uploadFailList.length + 1;
+        var rowMatch = failText.match(/^\[(\d+)행\]\s*/);
+        if (rowMatch) {
+          rowIdx = parseInt(rowMatch[1]);
+          failText = failText.replace(rowMatch[0], '');
+          termMatch = failText.match(/^용어\(([^)]*)\):\s*(.*)/);
+        }
         if (termMatch) {
-          this.uploadFailList.push({ termsNm: termMatch[1], reason: termMatch[2] });
+          this.uploadFailList.push({ rowNo: rowIdx, termsNm: termMatch[1], reason: termMatch[2] });
         } else {
-          this.uploadFailList.push({ termsNm: '-', reason: failText });
+          this.uploadFailList.push({ rowNo: rowIdx, termsNm: '-', reason: failText });
         }
       }
       if (msg.data.includes('완료 -')) {
@@ -1316,12 +1296,13 @@ export default {
     downloadFailList() {
       if (this.uploadFailList.length === 0) return;
       // BOM + CSV 생성
-      var csvContent = '\uFEFF용어명,실패 사유\n';
+      var csvContent = '\uFEFFNo,용어명,실패 사유\n';
       for (var i = 0; i < this.uploadFailList.length; i++) {
         var row = this.uploadFailList[i];
+        var rowNo = row.rowNo || (i + 1);
         var termsNm = (row.termsNm || '').replace(/"/g, '""');
         var reason = (row.reason || '').replace(/"/g, '""');
-        csvContent += '"' + termsNm + '","' + reason + '"\n';
+        csvContent += rowNo + ',"' + termsNm + '","' + reason + '"\n';
       }
       var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       var url = window.URL.createObjectURL(blob);
@@ -1341,6 +1322,19 @@ export default {
         const box = this.$refs.uploadLogBox;
         if (box) box.scrollTop = box.scrollHeight;
       });
+    },
+    downloadTermTemplate() {
+      var headers = ['No', '제정차수', '용어명', '용어설명', '용어영문약어명', '도메인명', '허용값', '저장형식', '표현형식', '코드그룹명', '소관기관명', '이음동의어목록', '요청시스템', '표준여부'];
+      var csvContent = '\uFEFF' + headers.join(',') + '\n';
+      var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      var url = window.URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', '용어_일괄등록_템플릿.csv');
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      link.remove();
     },
     resetDetail() {
       // 선택한 용어 정보를 리셋
@@ -1464,6 +1458,7 @@ export default {
       this.addTerm_reqSysCd = null;
       this.addTerm_selected_word_list = [];
       this.addTerm_wordList = [];
+      this.addTerm_lastCheckedNm = null;
     },
     updateFormReset() {
       // 용어 수정 모달 초기화
@@ -2100,6 +2095,12 @@ export default {
       }
 
       if (step === 1) {
+        // 용어명이 이전 체크와 동일하면 API 호출 생략
+        if (this.addTerm_lastCheckedNm === this.addTerm_termNm) {
+          this.getWordListByNm();
+          this.addModalStep = 2;
+          return;
+        }
         // 용어명 중복 체크 후 다음 단계
         var self = this;
         axios.get(this.$APIURL.base + 'api/std/getTermsInfoByNm', {
@@ -2114,10 +2115,12 @@ export default {
             });
             return;
           }
+          self.addTerm_lastCheckedNm = self.addTerm_termNm;
           self.getWordListByNm();
           self.addModalStep = 2;
         }).catch(function() {
           // 중복 체크 실패해도 진행 허용
+          self.addTerm_lastCheckedNm = self.addTerm_termNm;
           self.getWordListByNm();
           self.addModalStep = 2;
         });
@@ -2209,6 +2212,11 @@ export default {
           // 테이블 생성하는 목록 Data에 전달
           this.addTerm_domainNmItems = _new_arr;
           this.updateTerm_domainNmItems = _new_arr;
+          // 도메인이 1개뿐이면 자동 선택
+          if (_new_arr.length === 1) {
+            if (this.addTermModalShow) this.addTerm_domainNm = _new_arr[0];
+            if (this.updateTermModalShow) this.updateTerm_domainNm = _new_arr[0];
+          }
 
         }).catch(error => {
           console.error(error);
@@ -2236,6 +2244,11 @@ export default {
           // 테이블 생성하는 목록 Data에 전달
           this.addTerm_domainNmItems = _new_arr;
           this.updateTerm_domainNmItems = _new_arr;
+          // 도메인이 1개뿐이면 자동 선택
+          if (_new_arr.length === 1) {
+            if (this.addTermModalShow) this.addTerm_domainNm = _new_arr[0];
+            if (this.updateTermModalShow) this.updateTerm_domainNm = _new_arr[0];
+          }
 
         }).catch(error => {
           console.error(error);
@@ -2249,11 +2262,11 @@ export default {
       var arr = this.addTermModalShow ? this.addTerm_wordListArr : this.updateTerm_wordListArr;
       var item = arr[index];
       if (!item.inlineWordNm) {
-        alert('단어 한글명을 입력해주세요.');
+        this.$swal.fire({ title: '단어 한글명을 입력해주세요.', confirmButtonText: '확인', icon: 'warning' });
         return;
       }
       if (!item.inlineWordEngAbrvNm) {
-        alert('영문약어를 입력해주세요.');
+        this.$swal.fire({ title: '영문약어를 입력해주세요.', confirmButtonText: '확인', icon: 'warning' });
         return;
       }
       item.inlineSaving = true;
@@ -2289,7 +2302,7 @@ export default {
       }).catch(function(err) {
         item.inlineSaving = false;
         self.$set(arr, index, Object.assign({}, item));
-        alert('단어 등록 실패: ' + ((err.response && err.response.data && err.response.data.message) || err.message));
+        self.$swal.fire({ title: '단어 등록 실패', text: (err.response && err.response.data && err.response.data.message) || err.message, confirmButtonText: '확인', icon: 'error' });
       });
     },
     /** 도메인 유형 변경 시 (등록) */

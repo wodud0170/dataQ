@@ -74,6 +74,12 @@
       <span class="filterLabel">컬럼 길이</span>
       <v-text-field v-model="searchDataLen" dense outlined hide-details clearable
         placeholder="ex) 10" style="width:100px; flex-grow:0;" />
+
+      <v-divider vertical class="mx-1" />
+
+      <v-btn small color="grey" outlined @click="resetSearch">
+        <v-icon small left>mdi-refresh</v-icon>초기화
+      </v-btn>
     </v-sheet>
 
     <!-- 요약 + 상세 탭 -->
@@ -196,7 +202,7 @@
                   <tbody>
                     <tr v-for="t in issueTypeStats" :key="t.type" style="cursor:pointer;" @click="drillToIssueType(t.type)">
                       <td class="text-center">
-                        <v-chip x-small :color="diagTypeColor(t.type)" text-color="white">{{ t.label }}</v-chip>
+                        <v-chip x-small :color="diagTypeColor(t.type)" text-color="white">{{ t.label }} ({{ t.count }})</v-chip>
                       </td>
                       <td class="text-center font-weight-medium">{{ t.count }}건</td>
                       <td class="text-center">{{ t.percent }}%</td>
@@ -281,14 +287,30 @@
 
       <!-- 컬럼 상세: 전체 컬럼 1건=1행, 실제값/표준값 병렬 표시 -->
       <v-tab-item>
+        <!-- 일괄 액션 버튼 -->
+        <div class="d-flex align-center pa-2" style="gap:8px;">
+          <v-btn small color="primary" outlined
+            :disabled="selectedDetailItems.length === 0"
+            @click="bulkTermRegister">
+            <v-icon small left>mdi-book-plus</v-icon>일괄 용어등록 ({{ selectedDetailItems.length }})
+          </v-btn>
+          <v-btn small color="orange darken-2" outlined
+            :disabled="selectedDetailItems.length === 0"
+            @click="bulkCommentGenerate">
+            <v-icon small left>mdi-comment-text-multiple</v-icon>일괄 코멘트 생성 ({{ selectedDetailItems.length }})
+          </v-btn>
+        </div>
         <v-data-table
           :key="`detail-${filterKey}`"
+          v-model="selectedDetailItems"
           :headers="detailHeaders"
           :items="filteredDetail"
           :page.sync="detailPage"
           :items-per-page="detailItemsPerPage"
           hide-default-footer
           dense
+          show-select
+          item-key="objNm_attrNm"
           class="elevation-1"
         >
           <!-- 테이블 한글명 -->
@@ -569,6 +591,30 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <!-- ===== 일괄 코멘트 스크립트 모달 ===== -->
+    <v-dialog v-model="bulkCommentDialog" max-width="700">
+      <v-card>
+        <v-card-title class="subtitle-1 font-weight-bold pb-1">
+          일괄 COMMENT 변경 스크립트
+          <v-spacer />
+          <v-btn icon small @click="bulkCommentDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pt-3">
+          <pre style="background:#263238; color:#EEFFFF; padding:16px; border-radius:4px; font-size:.85rem; overflow-x:auto; white-space:pre-wrap; max-height:400px; overflow-y:auto;">{{ bulkCommentScript }}</pre>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions>
+          <v-spacer />
+          <v-chip v-if="bulkCommentCopied" small color="green" text-color="white" class="mr-2">
+            <v-icon small left>mdi-check</v-icon>복사되었습니다
+          </v-chip>
+          <v-btn color="primary" @click="copyBulkComment()">
+            <v-icon left small>mdi-content-copy</v-icon>복사
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -675,6 +721,12 @@ export default {
       modifyDialog: false,
       modifyScript: '',
       modifyCopied: false,
+      // 컬럼 상세 일괄 선택
+      selectedDetailItems: [],
+      // 일괄 코멘트 모달
+      bulkCommentDialog: false,
+      bulkCommentScript: '',
+      bulkCommentCopied: false,
     };
   },
   computed: {
@@ -887,6 +939,7 @@ export default {
         this.detailList = (detailRes.data || []).map(item => ({
           ...item,
           diagTypeList: item.diagTypes ? item.diagTypes.split(',') : [],
+          objNm_attrNm: item.objNm + '|' + item.attrNm,
         }));
       });
     },
@@ -1112,7 +1165,7 @@ export default {
     /** 미등록 단어 인라인 등록 */
     registerWord(idx) {
       const w = this.termRegWords[idx];
-      if (!w.wordNm) { alert('한글명을 입력해주세요.'); return; }
+      if (!w.wordNm) { this.$swal.fire({ icon: 'warning', title: '입력 필요', text: '한글명을 입력해주세요.', confirmButtonText: '확인' }); return; }
       w.saving = true;
       this.$set(this.termRegWords, idx, { ...w });
       axios.post(this.$APIURL.base + 'api/std/createWord', {
@@ -1143,18 +1196,21 @@ export default {
       }).catch(err => {
         w.saving = false;
         this.$set(this.termRegWords, idx, { ...w });
-        alert('단어 등록 실패: ' + ((err.response && err.response.data && err.response.data.message) || err.message));
+        this.$swal.fire({ icon: 'error', title: '단어 등록 실패', text: (err.response && err.response.data && err.response.data.message) || err.message, confirmButtonText: '확인' });
       });
     },
     /** 용어 등록 */
     registerTerm() {
+      var self = this;
       this.termRegLoading = true;
-      const wordList = this.termRegWords.map((w, i) => ({
-        termsId: '',
-        wordId: w.wordId,
-        wordNm: w.wordNm,
-        wordOrd: i + 1,
-      }));
+      var wordList = this.termRegWords.map(function(w, i) {
+        return {
+          termsId: '',
+          wordId: w.wordId,
+          wordNm: w.wordNm,
+          wordOrd: i + 1,
+        };
+      });
       var engAbrvNm = this.termRegWords.map(function(w) { return w.abrv; }).join('_');
       var domainNm = '';
       var codeGrp = '';
@@ -1176,22 +1232,37 @@ export default {
         reqSysCd: '',
         wordList: wordList,
         allophSynmLst: [],
-      }).then(() => {
-        this.termRegLoading = false;
-        this.termRegDialog = false;
-        alert('용어가 등록되었습니다. 재진단 시 반영됩니다.');
-      }).catch(err => {
-        this.termRegLoading = false;
-        alert('용어 등록 실패: ' + ((err.response && err.response.data && err.response.data.message) || err.message));
+      }).then(function() {
+        self.termRegLoading = false;
+        self.termRegDialog = false;
+        self.$swal.fire({
+          icon: 'success',
+          title: '용어 등록 완료',
+          text: '용어가 등록되었습니다. 재진단 시 반영됩니다.',
+          confirmButtonText: '확인',
+        });
+        // 진단 결과 데이터 새로고침
+        self.loadResults(self.selectedJobId);
+      }).catch(function(err) {
+        self.termRegLoading = false;
+        var detail = (err.response && err.response.data && err.response.data.message) || '';
+        var errMsg = detail || err.message || '알 수 없는 오류가 발생했습니다.';
+        self.$swal.fire({
+          icon: 'error',
+          title: '용어 등록 실패',
+          text: errMsg,
+          confirmButtonText: '확인',
+        });
       });
     },
     /** 클립보드 복사 공통 (navigator.clipboard 우선, fallback으로 execCommand) */
     copyToClipboard(text, onSuccess) {
+      var self = this;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(function() {
           if (onSuccess) onSuccess();
         }).catch(function() {
-          alert('복사에 실패했습니다.');
+          self.$swal.fire({ icon: 'error', title: '복사 실패', text: '클립보드 복사에 실패했습니다.', confirmButtonText: '확인' });
         });
       } else {
         var textArea = document.createElement('textarea');
@@ -1206,10 +1277,90 @@ export default {
           document.execCommand('copy');
           if (onSuccess) onSuccess();
         } catch (e) {
-          alert('복사에 실패했습니다.');
+          self.$swal.fire({ icon: 'error', title: '복사 실패', text: '클립보드 복사에 실패했습니다.', confirmButtonText: '확인' });
         }
         document.body.removeChild(textArea);
       }
+    },
+    /** 검색 조건 초기화 + 데이터 새로고침 */
+    resetSearch() {
+      this.searchTable = '';
+      this.searchTableMode = 'contains';
+      this.searchTableKr = '';
+      this.searchTableKrMode = 'contains';
+      this.searchAttr = '';
+      this.searchAttrMode = 'contains';
+      this.searchAttrKr = '';
+      this.searchAttrKrMode = 'contains';
+      this.searchDataType = '';
+      this.searchDataLen = '';
+      this.selectedDiagTypes = [];
+      this.issueFilter = 'all';
+      this.selectedDetailItems = [];
+      // 데이터 새로고침
+      this.loadResults(this.selectedJobId);
+    },
+    /** 일괄 용어 등록: 선택된 항목 중 TERM_NOT_EXIST 이슈가 있는 것만 순차 등록 */
+    bulkTermRegister() {
+      var targets = this.selectedDetailItems.filter(function(item) {
+        return item.diagTypeList && item.diagTypeList.indexOf('TERM_NOT_EXIST') >= 0;
+      });
+      if (targets.length === 0) {
+        this.$swal.fire({ icon: 'info', title: '대상 없음', text: '선택된 항목 중 용어 미존재 이슈가 있는 컬럼이 없습니다.', confirmButtonText: '확인' });
+        return;
+      }
+      // 첫 번째 대상을 용어 등록 모달로 열기
+      this.openTermRegDialog(targets[0]);
+      if (targets.length > 1) {
+        this.$swal.fire({ icon: 'info', title: '일괄 용어등록', text: '대상 ' + targets.length + '건 중 첫 번째 항목의 등록 모달을 열었습니다. 순차적으로 등록해주세요.', confirmButtonText: '확인' });
+      }
+    },
+    /** 일괄 코멘트 생성: 선택된 모든 항목에 대해 COMMENT 스크립트 생성 */
+    bulkCommentGenerate() {
+      var self = this;
+      if (this.selectedDetailItems.length === 0) return;
+      var scripts = [];
+      this.selectedDetailItems.forEach(function(item) {
+        var script = self.generateCommentScript(item);
+        if (script) scripts.push(script);
+      });
+      if (scripts.length === 0) {
+        this.$swal.fire({ icon: 'info', title: '대상 없음', text: '선택된 항목에서 코멘트 스크립트를 생성할 수 없습니다.', confirmButtonText: '확인' });
+        return;
+      }
+      this.bulkCommentScript = '-- 일괄 COMMENT 변경 스크립트 (' + scripts.length + '건)\n' + scripts.join('\n');
+      this.bulkCommentCopied = false;
+      this.bulkCommentDialog = true;
+    },
+    /** 단일 항목에 대한 COMMENT 스크립트 생성 (문자열 반환) */
+    generateCommentScript(item) {
+      var dbmsTp = (this.selectedJobInfo.dbmsTp || '').toLowerCase();
+      var schema = item.objSchema || '';
+      var table = item.objNm;
+      var column = item.attrNm;
+      var stdNm = item.stdTermsNm || item.attrNmKr || '';
+      if (!stdNm) return '';
+
+      if (dbmsTp.indexOf('oracle') >= 0) {
+        var target = schema ? schema + '.' + table + '.' + column : table + '.' + column;
+        return 'COMMENT ON COLUMN ' + target + " IS '" + stdNm + "';";
+      } else if (dbmsTp.indexOf('mysql') >= 0 || dbmsTp.indexOf('maria') >= 0) {
+        var colType = (item.actualDataType || 'VARCHAR') + '(' + (item.actualDataLen || 255) + ')';
+        return 'ALTER TABLE ' + table + ' MODIFY COLUMN ' + column + ' ' + colType + " COMMENT '" + stdNm + "';";
+      } else if (dbmsTp.indexOf('mssql') >= 0 || dbmsTp.indexOf('sqlserver') >= 0) {
+        return "EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'" + stdNm + "', @level0type = N'SCHEMA', @level0name = N'" + (schema || 'dbo') + "', @level1type = N'TABLE', @level1name = N'" + table + "', @level2type = N'COLUMN', @level2name = N'" + column + "';";
+      } else {
+        var pgTarget = schema ? schema + '.' + table + '.' + column : table + '.' + column;
+        return 'COMMENT ON COLUMN ' + pgTarget + " IS '" + stdNm + "';";
+      }
+    },
+    /** 일괄 코멘트 스크립트 클립보드 복사 */
+    copyBulkComment() {
+      var self = this;
+      this.copyToClipboard(this.bulkCommentScript, function() {
+        self.bulkCommentCopied = true;
+        setTimeout(function() { self.bulkCommentCopied = false; }, 2000);
+      });
     },
     isHighlighted(item, field) {
       const h = this.highlightRow;

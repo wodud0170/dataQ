@@ -199,9 +199,9 @@
                   <v-subheader class="reqText">데이터 타입</v-subheader>
                 </v-col>
                 <v-col cols="8">
-                  <v-select dense required color="ndColor" v-model="addDomain_dataType" :items="dataTypeItems"
+                  <v-autocomplete dense required color="ndColor" v-model="addDomain_dataType" :items="dataTypeItems"
                     :placeholder="'선택'" :rules="[v => !!v || '데이터 타입은 필수 입력값입니다.']"
-                    :menu-props="{ top: false, offsetY: true }"></v-select>
+                    :menu-props="{ top: false, offsetY: true }"></v-autocomplete>
                 </v-col>
               </v-row>
 
@@ -370,9 +370,9 @@
                 <v-subheader class="reqText">데이터 타입</v-subheader>
               </v-col>
               <v-col cols="8">
-                <v-select dense required color="ndColor" v-model="updateDomain_dataType" :items="dataTypeItems"
+                <v-autocomplete dense required color="ndColor" v-model="updateDomain_dataType" :items="dataTypeItems"
                   :placeholder="'선택'" :rules="[v => !!v || '데이터 타입은 필수 입력값입니다.']"
-                  :menu-props="{ top: false, offsetY: true }"></v-select>
+                  :menu-props="{ top: false, offsetY: true }"></v-autocomplete>
               </v-col>
             </v-row>
 
@@ -549,8 +549,9 @@ export default {
     domainItems() {
       this.setListPage();
     },
-    itemsPerPage() {
+    itemsPerPage(val) {
       this.setListPage();
+      localStorage.setItem('dsdomain_itemsPerPage', val);
     }
   },
   props: ['isMobile'],
@@ -579,7 +580,7 @@ export default {
     // 총 페이지 수
     pageCount: null,
     // 한 페이지에 보여지는 도메인의 수
-    itemsPerPage: 10,
+    itemsPerPage: parseInt(localStorage.getItem('dsdomain_itemsPerPage')) || 10,
     // 테이블 로딩
     loadTable: true,
     // 검색 이후 도메인 리스트 다시보기 버튼 보이기
@@ -593,7 +594,7 @@ export default {
     // 도메인 분류명 선택 리스트
     domainClassificationNameItems: [],
     // 데이터 타입 선택 리스트
-    dataTypeItems: ['CHAR', 'VARCHAR', 'NUMERIC', 'DATE', 'DATETIME', 'TIME', 'BOOLEAN'],
+    dataTypeItems: ['VARCHAR', 'VARCHAR2', 'CHAR', 'NUMBER', 'NUMERIC', 'DECIMAL', 'DATE', 'DATETIME', 'TIMESTAMP', 'CLOB', 'BLOB', 'TEXT', 'INTEGER', 'BIGINT', 'FLOAT', 'DOUBLE', 'TIME', 'BOOLEAN'],
     // 등록 관련
     addDomain_domainNm: null,
     addDomain_domainGrpNm: null,

@@ -157,7 +157,11 @@
                   <v-text-field v-model="addWord_wordEngAbrvNm" ref="addWord_wordEngAbrvNm"
                     :rules="[() => !!addWord_wordEngAbrvNm || '단어 영문 약어명은 필수 입력값입니다.']" clearable required dense
                     placeholder="PSBLTY" color="ndColor"
-                    @input="addWord_wordEngAbrvNm = (addWord_wordEngAbrvNm || '').toUpperCase()"></v-text-field>
+                    @input="addWord_wordEngAbrvNm = (addWord_wordEngAbrvNm || '').toUpperCase()"
+                    @blur="checkEngAbrvDuplicate"></v-text-field>
+                  <div v-if="addWord_engAbrvDuplicate" :style="{ color: '#d32f2f', fontSize: '0.75rem', marginTop: '-8px' }">
+                    {{ addWord_engAbrvDuplicate }}
+                  </div>
                 </v-col>
               </v-row>
 
@@ -461,6 +465,9 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
+          <v-btn v-if="!isUploading && uploadFailList.length > 0" color="red" text @click="downloadFailList">
+            <v-icon left small>mdi-download</v-icon>실패 목록 다운로드 ({{ uploadFailList.length }}건)
+          </v-btn>
           <v-btn v-if="!isUploading" color="ndColor" text @click="collectiveWordModalShow = false">닫기</v-btn>
           <span v-else :style="{ fontSize: '0.8rem', color: '#999', paddingRight: '12px' }">완료될 때까지 기다려주세요...</span>
         </v-card-actions>
@@ -492,8 +499,9 @@ export default {
     wordItems() {
       this.setListPage();
     },
-    itemsPerPage() {
+    itemsPerPage(val) {
       this.setListPage();
+      localStorage.setItem('dsword_itemsPerPage', val);
     }
   },
   props: ['isMobile'],
@@ -518,6 +526,8 @@ export default {
     isUploading: false,
     // 일괄 등록 로그
     uploadLogs: [],
+    // 일괄 등록 실패 목록
+    uploadFailList: [],
     // 일괄 등록 파일
     excelFile: null,
     // 페이지네이션 시작 지정
@@ -525,7 +535,7 @@ export default {
     // 총 페이지 수
     pageCount: null,
     // 한 페이지에 보여지는 단어의 수
-    itemsPerPage: 10,
+    itemsPerPage: parseInt(localStorage.getItem('dsword_itemsPerPage')) || 10,
     // 테이블 로딩
     loadTable: true,
     // 검색 이후 단어 리스트 다시보기 버튼 보이기
@@ -535,6 +545,7 @@ export default {
     // 선택한 단어 이름
     detailWord: null,
     // 등록 관련
+    addWord_engAbrvDuplicate: '',
     addWord_wordNm: null,
     addWord_wordEngAbrvNm: null,
     addWord_wordEngNm: null,
@@ -611,6 +622,54 @@ export default {
       this.searchWord = '';
       this.searchEngWord = '';
       this.searchApproval = true;
+    },
+    checkEngAbrvDuplicate() {
+      var vm = this;
+      var abrvNm = vm.addWord_wordEngAbrvNm;
+      if (!abrvNm || abrvNm.trim() === '') {
+        vm.addWord_engAbrvDuplicate = '';
+        return;
+      }
+      axios.post(vm.$APIURL.base + 'api/std/getWordList', {
+        'searchEngWord': abrvNm.trim(),
+        'schAprvYn': ''
+      }).then(function (res) {
+        var found = false;
+        if (res.data && res.data.length > 0) {
+          for (var i = 0; i < res.data.length; i++) {
+            if (res.data[i].wordEngAbrvNm === abrvNm.trim()) {
+              found = true;
+              break;
+            }
+          }
+        }
+        if (found) {
+          vm.addWord_engAbrvDuplicate = '이미 동일한 영문약어명(' + abrvNm.trim() + ')이 등록되어 있습니다.';
+        } else {
+          vm.addWord_engAbrvDuplicate = '';
+        }
+      }).catch(function () {
+        vm.addWord_engAbrvDuplicate = '';
+      });
+    },
+    downloadFailList() {
+      if (this.uploadFailList.length === 0) return;
+      var csvContent = '\uFEFF단어명,실패 사유\n';
+      for (var i = 0; i < this.uploadFailList.length; i++) {
+        var row = this.uploadFailList[i];
+        var wordNm = (row.wordNm || '').replace(/"/g, '""');
+        var reason = (row.reason || '').replace(/"/g, '""');
+        csvContent += '"' + wordNm + '","' + reason + '"\n';
+      }
+      var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      var url = window.URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', '단어_일괄등록_실패목록_' + this.$getToday() + '.csv');
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      link.remove();
     },
     getSystemList() {
       // 시스템 리스트 가지고 오기
@@ -759,6 +818,7 @@ export default {
       this.addWord_forbdnWordLst_arr = [{ id: 'forbdnWord_0', value: '', addBtnView: true, removeBtnView: false }];
       this.addWord_forbdnWordLst_count = 0;
       this.addWord_reqSysCd = null;
+      this.addWord_engAbrvDuplicate = '';
     },
     addForbdnWordLst() {
       if (this.addWordModalShow) {
@@ -864,6 +924,7 @@ export default {
 
       // 진행 다이얼로그 열기
       this.uploadLogs = [];
+      this.uploadFailList = [];
       this.isUploading = true;
       this.collectiveWordModalShow = true;
 
@@ -895,6 +956,16 @@ export default {
       if (!msg.data || !msg.data.startsWith('[단어]')) return;
       const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
       this._addUploadLog(level, msg.data);
+      // 실패 항목 수집
+      if (level === 'ERROR' && msg.data.includes('실패:')) {
+        var failText = msg.data.replace('[단어] 실패: ', '');
+        var wordMatch = failText.match(/^단어\(([^)]*)\):\s*(.*)/);
+        if (wordMatch) {
+          this.uploadFailList.push({ wordNm: wordMatch[1], reason: wordMatch[2] });
+        } else {
+          this.uploadFailList.push({ wordNm: '-', reason: failText });
+        }
+      }
       if (msg.data.includes('완료 -')) {
         this.isUploading = false;
         clearTimeout(this._uploadTimer);
