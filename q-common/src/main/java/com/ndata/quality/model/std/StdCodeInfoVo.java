@@ -9,6 +9,8 @@ public class StdCodeInfoVo {
 	private String codeEngAbrvNm;
 	private String codeDesc;
 	private String domainNm;
+	private String dataType;
+	private long dataLen;
 	private String[] allowValLst;
 	private String storFmt;
 	private String[] exprFmtLst;

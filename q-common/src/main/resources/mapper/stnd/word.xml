@@ -216,6 +216,23 @@
 			where WORD_ENG_ABRV_NM = #{wordEngAbrvNm}
 	</select>
 
+	<!-- 영문약어 목록으로 단어 일괄 조회 (용어 빠른 등록용) -->
+	<select id="selectWordsByEngAbrvNms" parameterType="java.util.List" resultMap="stdWordMap">
+			select
+				WORD_ID
+				,WORD_NM
+				,WORD_ENG_ABRV_NM
+				,WORD_ENG_NM
+				,WORD_DESC
+				,WORD_CLSF_YN
+				,DOMAIN_CLSF_NM
+			from TB_WORD
+			where WORD_ENG_ABRV_NM IN
+			<foreach collection="list" item="item" open="(" separator="," close=")">
+				#{item}
+			</foreach>
+	</select>
+
 	<select id="selectTermsWordInfoList" parameterType="String" resultMap="stdWordMap">
 			select 
 				A.WORD_ID

@@ -17,6 +17,7 @@
               <!-- 단어영문약어명 입력 필드 -->
               <span :style="{ fontSize: '.875rem' }">단어영문약어명</span>
               <v-text-field class="pr-4 pl-4" v-model="searchEngWord" v-on:keyup.enter="getWordData"
+                @input="searchEngWord = (searchEngWord || '').toUpperCase()"
                 clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
@@ -155,7 +156,8 @@
                 <v-col cols="8">
                   <v-text-field v-model="addWord_wordEngAbrvNm" ref="addWord_wordEngAbrvNm"
                     :rules="[() => !!addWord_wordEngAbrvNm || '단어 영문 약어명은 필수 입력값입니다.']" clearable required dense
-                    placeholder="PSBLTY" color="ndColor"></v-text-field>
+                    placeholder="PSBLTY" color="ndColor"
+                    @input="addWord_wordEngAbrvNm = (addWord_wordEngAbrvNm || '').toUpperCase()"></v-text-field>
                 </v-col>
               </v-row>
 
@@ -166,7 +168,8 @@
                 <v-col cols="8">
                   <v-text-field ref="addWord_wordEngNm" v-model="addWord_wordEngNm"
                     :rules="[() => !!addWord_wordEngNm || '단어 영문명은 필수 입력값입니다.']" clearable required dense
-                    placeholder="Possibility" color="ndColor"></v-text-field>
+                    placeholder="POSSIBILITY" color="ndColor"
+                    @input="addWord_wordEngNm = (addWord_wordEngNm || '').toUpperCase()"></v-text-field>
                 </v-col>
               </v-row>
 
@@ -307,7 +310,8 @@
               <v-col cols="8">
                 <v-text-field v-model="updateWord_wordEngAbrvNm" ref="updateWord_wordEngAbrvNm"
                   :rules="[() => !!updateWord_wordEngAbrvNm || '단어 영문 약어명은 필수 입력값입니다.']" clearable required dense
-                  placeholder="PSBLTY" color="ndColor"></v-text-field>
+                  placeholder="PSBLTY" color="ndColor"
+                  @input="updateWord_wordEngAbrvNm = (updateWord_wordEngAbrvNm || '').toUpperCase()"></v-text-field>
               </v-col>
             </v-row>
 
@@ -318,7 +322,8 @@
               <v-col cols="8">
                 <v-text-field ref="updateWord_wordEngNm" v-model="updateWord_wordEngNm"
                   :rules="[() => !!updateWord_wordEngNm || '단어 영문명은 필수 입력값입니다.']" clearable required dense
-                  placeholder="Possibility" color="ndColor"></v-text-field>
+                  placeholder="POSSIBILITY" color="ndColor"
+                  @input="updateWord_wordEngNm = (updateWord_wordEngNm || '').toUpperCase()"></v-text-field>
               </v-col>
             </v-row>
 

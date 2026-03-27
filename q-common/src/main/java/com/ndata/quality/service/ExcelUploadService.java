@@ -131,16 +131,34 @@ public class ExcelUploadService {
 					stdTermsVo.setCretUserId(userId);
 					stdTermsVo.setUpdtUserId(userId);
 					stdTermsVo.setAprvYn("Y");
+
+					// 도메인 유효성 검증
+					if (stdTermsVo.getDomainNm() != null) {
+						Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", stdTermsVo.getDomainNm());
+						if (domainCheck == null) {
+							throw new Exception(String.format("도메인(%s)이 유효하지 않음", stdTermsVo.getDomainNm()));
+						}
+					}
+
+					// 구성단어 유효성 검증 (insert 전에 먼저 확인)
+					String[] wordEngAbrvNms = stdTermsVo.getTermsEngAbrvNm().split("_");
+					List<String> invalidWords = new ArrayList<>();
+					for (String wordEngAbrvNm : wordEngAbrvNms) {
+						StdWordVo wordVo = session.selectOne("word.selectWordByEngAbrvNm", wordEngAbrvNm);
+						if (wordVo == null) {
+							invalidWords.add(wordEngAbrvNm);
+						}
+					}
+					if (!invalidWords.isEmpty()) {
+						throw new Exception(String.format("단어(%s)가 유효하지 않음", String.join(", ", invalidWords)));
+					}
+
 					session.insert("terms.insertTerms", stdTermsVo);
 
-					String[] wordEngAbrvNms = stdTermsVo.getTermsEngAbrvNm().split("_");
 					List<StdTermsVo.Word> wordList = new ArrayList<StdTermsVo.Word>();
 					short loop = 0;
 					for (String wordEngAbrvNm : wordEngAbrvNms) {
 						StdWordVo wordVo = session.selectOne("word.selectWordByEngAbrvNm", wordEngAbrvNm);
-						if (wordVo == null) {
-							throw new Exception(String.format("구성단어(%s) 미등록", wordEngAbrvNm));
-						}
 						StdTermsVo.Word word = new StdTermsVo.Word();
 						word.setTermsId(stdTermsVo.getId());
 						word.setWordId(wordVo.getId());

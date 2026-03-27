@@ -187,19 +187,19 @@
                 <v-simple-table dense>
                   <thead>
                     <tr>
-                      <th>이슈 유형</th>
-                      <th class="text-right">건수</th>
-                      <th class="text-right">비율</th>
-                      <th style="width:40%;">분포</th>
+                      <th class="text-center">이슈 유형</th>
+                      <th class="text-center">건수</th>
+                      <th class="text-center">비율</th>
+                      <th class="text-center" style="width:40%;">분포</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="t in issueTypeStats" :key="t.type">
-                      <td>
+                    <tr v-for="t in issueTypeStats" :key="t.type" style="cursor:pointer;" @click="drillToIssueType(t.type)">
+                      <td class="text-center">
                         <v-chip x-small :color="diagTypeColor(t.type)" text-color="white">{{ t.label }}</v-chip>
                       </td>
-                      <td class="text-right font-weight-medium">{{ t.count }}건</td>
-                      <td class="text-right">{{ t.percent }}%</td>
+                      <td class="text-center font-weight-medium">{{ t.count }}건</td>
+                      <td class="text-center">{{ t.percent }}%</td>
                       <td>
                         <v-progress-linear :value="t.percent" :color="diagTypeColor(t.type)" height="16" rounded>
                           <template v-slot:default>
@@ -353,6 +353,23 @@
             </template>
             <span v-else class="text-caption green--text">OK</span>
           </template>
+          <!-- 액션: 이슈 유형별 버튼 -->
+          <template v-slot:item.actions="{ item }">
+            <div class="d-flex flex-column align-center" style="gap:2px;">
+              <v-btn v-if="item.diagTypeList && item.diagTypeList.includes('TERM_NOT_EXIST')"
+                x-small color="primary" outlined @click="openTermRegDialog(item)">
+                용어 등록
+              </v-btn>
+              <v-btn v-if="item.diagTypeList && item.diagTypeList.includes('TERM_KR_NM_MISMATCH')"
+                x-small color="orange darken-2" outlined @click="openCommentDialog(item)">
+                코맨트 변경
+              </v-btn>
+              <v-btn v-if="item.diagTypeList && (item.diagTypeList.includes('DATA_TYPE_MISMATCH') || item.diagTypeList.includes('DATA_LEN_MISMATCH'))"
+                x-small color="purple darken-1" outlined @click="openModifyDialog(item)">
+                컬럼 변경
+              </v-btn>
+            </div>
+          </template>
         </v-data-table>
         <div class="d-flex align-center px-4 pt-2 pb-2">
           <v-spacer />
@@ -364,6 +381,194 @@
         </div>
       </v-tab-item>
     </v-tabs-items>
+
+    <!-- ===== 용어 빠른 등록 모달 ===== -->
+    <v-dialog v-model="termRegDialog" max-width="720" persistent>
+      <v-card>
+        <v-card-title class="subtitle-1 font-weight-bold pb-1">
+          용어 빠른 등록
+          <v-spacer />
+          <v-btn icon small @click="termRegDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pt-3" v-if="termRegItem">
+          <!-- 컬럼 정보 -->
+          <v-sheet outlined rounded class="pa-3 mb-3" style="background:#FAFAFA;">
+            <div class="d-flex" style="gap:24px;">
+              <div><span class="caption grey--text">테이블</span><br/><b>{{ termRegItem.objNm }}</b></div>
+              <div><span class="caption grey--text">컬럼</span><br/><b>{{ termRegItem.attrNm }}</b></div>
+              <div><span class="caption grey--text">한글명</span><br/><b>{{ termRegItem.attrNmKr || '-' }}</b></div>
+              <div><span class="caption grey--text">타입</span><br/><b>{{ termRegItem.actualDataType }}({{ termRegItem.actualDataLen }})</b></div>
+            </div>
+          </v-sheet>
+
+          <!-- Step 1: 단어 분석 -->
+          <div class="subtitle-2 font-weight-bold mb-2">1. 단어 분석</div>
+          <v-simple-table dense class="mb-3">
+            <thead>
+              <tr>
+                <th style="width:80px;">영문약어</th>
+                <th style="width:100px;">한글명</th>
+                <th style="width:100px;">영문명</th>
+                <th style="width:80px;">상태</th>
+                <th style="width:120px;">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(w, idx) in termRegWords" :key="idx">
+                <td><code>{{ w.abrv }}</code></td>
+                <td>
+                  <span v-if="w.exists">{{ w.wordNm }}</span>
+                  <v-text-field v-else v-model="w.wordNm" dense hide-details outlined
+                    style="max-width:100px; font-size:.8rem;" placeholder="한글명" />
+                </td>
+                <td>
+                  <span v-if="w.exists">{{ w.wordEngNm }}</span>
+                  <v-text-field v-else v-model="w.wordEngNm" dense hide-details outlined
+                    style="max-width:100px; font-size:.8rem;" placeholder="영문명"
+                    @input="w.wordEngNm = (w.wordEngNm || '').toUpperCase()" />
+                </td>
+                <td>
+                  <v-chip v-if="w.exists" x-small color="green" text-color="white">등록됨</v-chip>
+                  <v-chip v-else x-small color="red" text-color="white">미등록</v-chip>
+                </td>
+                <td>
+                  <v-btn v-if="!w.exists" x-small color="primary" :loading="w.saving"
+                    @click="registerWord(idx)">단어 등록</v-btn>
+                  <span v-else class="caption green--text">OK</span>
+                </td>
+              </tr>
+            </tbody>
+          </v-simple-table>
+
+          <!-- Step 2: 도메인 유형 선택 -->
+          <div class="subtitle-2 font-weight-bold mb-2">2. 도메인 선택</div>
+          <v-radio-group v-if="termRegLastWordIsCode" v-model="termRegDomainType" row dense hide-details class="mt-0 mb-2">
+            <v-radio label="일반 도메인" value="domain" />
+            <v-radio label="코드" value="code" />
+          </v-radio-group>
+
+          <!-- 일반 도메인 선택 -->
+          <template v-if="termRegDomainType === 'domain'">
+            <v-autocomplete
+              v-model="termRegDomain"
+              :items="termRegDomainList"
+              item-text="domainNm"
+              return-object
+              dense outlined hide-details
+              placeholder="도메인 검색 (타입/길이 기반 추천)"
+              class="mb-1"
+            >
+              <template v-slot:item="{ item }">
+                <span>{{ item.domainNm }} <span class="caption grey--text">({{ item.dataType }}, {{ item.dataLen }})</span></span>
+              </template>
+              <template v-slot:selection="{ item }">
+                {{ item.domainNm }} ({{ item.dataType }}, {{ item.dataLen }})
+              </template>
+            </v-autocomplete>
+            <div v-if="termRegDomain" class="caption grey--text mb-3">
+              표준 타입: {{ termRegDomain.dataType }} / 길이: {{ termRegDomain.dataLen }}
+            </div>
+          </template>
+
+          <!-- 코드 선택 -->
+          <template v-if="termRegDomainType === 'code'">
+            <v-autocomplete
+              v-model="termRegCode"
+              :items="termRegCodeList"
+              :item-text="codeDisplayText"
+              return-object
+              dense outlined hide-details
+              placeholder="코드 검색"
+              class="mb-1"
+              @change="onCodeSelected"
+            >
+              <template v-slot:item="{ item }">
+                <span>{{ item.codeNm }} <span class="caption grey--text">[{{ item.codeGrp }}] ({{ item.domainNm || '-' }})</span></span>
+              </template>
+              <template v-slot:selection="{ item }">
+                {{ item.codeNm }} [{{ item.codeGrp }}]
+              </template>
+            </v-autocomplete>
+            <div v-if="termRegCode && termRegCode.domainNm" class="caption grey--text mb-3">
+              코드 도메인: {{ termRegCode.domainNm }} / 타입: {{ termRegCode.dataType || '-' }} / 길이: {{ termRegCode.dataLen || '-' }}
+            </div>
+          </template>
+
+          <!-- Step 3: 용어 정보 -->
+          <div class="subtitle-2 font-weight-bold mb-2">3. 용어 정보</div>
+          <v-row dense>
+            <v-col cols="6">
+              <v-text-field v-model="termRegTermsNm" label="용어 한글명" dense outlined hide-details />
+            </v-col>
+            <v-col cols="6">
+              <v-text-field :value="termRegItem.attrNm" label="영문약어 (자동)" dense outlined hide-details readonly disabled />
+            </v-col>
+          </v-row>
+          <v-row dense class="mt-1">
+            <v-col cols="12">
+              <v-textarea v-model="termRegTermsDesc" label="용어 설명" dense outlined hide-details rows="2" />
+            </v-col>
+          </v-row>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="termRegDialog = false">취소</v-btn>
+          <v-btn color="primary" :loading="termRegLoading" :disabled="!canRegisterTerm"
+            @click="registerTerm()">용어 등록</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <!-- ===== 컬럼 변경(MODIFY) 스크립트 모달 ===== -->
+    <v-dialog v-model="modifyDialog" max-width="600">
+      <v-card>
+        <v-card-title class="subtitle-1 font-weight-bold pb-1">
+          컬럼 변경 스크립트
+          <v-spacer />
+          <v-btn icon small @click="modifyDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pt-3">
+          <pre style="background:#263238; color:#EEFFFF; padding:16px; border-radius:4px; font-size:.85rem; overflow-x:auto; white-space:pre-wrap;">{{ modifyScript }}</pre>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions>
+          <v-spacer />
+          <v-chip v-if="modifyCopied" small color="green" text-color="white" class="mr-2">
+            <v-icon small left>mdi-check</v-icon>복사되었습니다
+          </v-chip>
+          <v-btn color="primary" @click="copyModify()">
+            <v-icon left small>mdi-content-copy</v-icon>복사
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- ===== 코맨트 변경 스크립트 모달 ===== -->
+    <v-dialog v-model="commentDialog" max-width="600">
+      <v-card>
+        <v-card-title class="subtitle-1 font-weight-bold pb-1">
+          COMMENT 변경 스크립트
+          <v-spacer />
+          <v-btn icon small @click="commentDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pt-3">
+          <pre style="background:#263238; color:#EEFFFF; padding:16px; border-radius:4px; font-size:.85rem; overflow-x:auto; white-space:pre-wrap;">{{ commentScript }}</pre>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions>
+          <v-spacer />
+          <v-chip v-if="commentCopied" small color="green" text-color="white" class="mr-2">
+            <v-icon small left>mdi-check</v-icon>복사되었습니다
+          </v-chip>
+          <v-btn color="primary" @click="copyComment()">
+            <v-icon left small>mdi-content-copy</v-icon>복사
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -387,7 +592,7 @@ export default {
       detailPage: 1,
       detailItemsPerPage: 50,
       // 이슈 여부 필터 (체크 시 이슈 있는 컬럼만 표시)
-      issueFilter: 'issue',   // 'all' | 'issue' | 'noIssue'
+      issueFilter: 'all',   // 'all' | 'issue' | 'noIssue'
       issueFilterOptions: [
         { value: 'all',     label: '전체' },
         { value: 'issue',   label: '이슈 있음' },
@@ -446,7 +651,30 @@ export default {
         { text: '표준 타입',      value: 'stdDataType',   width: '80px',  class: 'std-header', align: 'center' },
         { text: '표준 길이',      value: 'stdDataLen',    width: '70px',  class: 'std-header', align: 'end' },
         { text: '진단결과',       value: 'diagTypes',     width: '200px', sortable: false, align: 'center' },
+        { text: '액션',           value: 'actions',       width: '80px',  sortable: false, align: 'center' },
       ],
+      // 용어 빠른 등록 모달
+      termRegDialog: false,
+      termRegLoading: false,
+      termRegItem: null,         // 선택된 컬럼 정보
+      termRegWords: [],          // 분석된 단어 목록 [{ abrv, wordNm, wordEngNm, wordDesc, exists, wordId, domainClsfNm }]
+      termRegDomainType: 'domain', // 'domain' | 'code'
+      termRegDomain: null,       // 추천 도메인 { domainNm, dataType, dataLen }
+      termRegDomainList: [],     // 도메인 후보 목록
+      termRegCode: null,         // 선택된 코드 { codeNm, codeGrp, domainNm, dataType, dataLen }
+      termRegCodeList: [],       // 코드 목록
+      termRegTermsNm: '',        // 용어 한글명
+      termRegTermsDesc: '',      // 용어 설명
+      // 단어 인라인 등록
+      wordRegIdx: -1,            // 현재 편집중인 단어 인덱스 (-1이면 없음)
+      // 코맨트 변경 모달
+      commentDialog: false,
+      commentScript: '',
+      commentCopied: false,
+      // 컬럼 변경(MODIFY) 모달
+      modifyDialog: false,
+      modifyScript: '',
+      modifyCopied: false,
     };
   },
   computed: {
@@ -515,6 +743,21 @@ export default {
         .filter(s => s.issueCnt > 0)
         .sort((a, b) => b.issueCnt - a.issueCnt)
         .slice(0, 5);
+    },
+    /** 용어 등록 가능 여부: 모든 단어 등록됨 + 도메인 선택 + 한글명 입력 */
+    /** 마지막 단어가 CD(코드)인지 여부 */
+    termRegLastWordIsCode() {
+      if (!this.termRegWords || this.termRegWords.length === 0) return false;
+      var last = this.termRegWords[this.termRegWords.length - 1];
+      return last.abrv && last.abrv.toUpperCase() === 'CD';
+    },
+    canRegisterTerm() {
+      if (!this.termRegItem) return false;
+      if (!this.termRegTermsNm) return false;
+      if (this.termRegDomainType === 'domain' && !this.termRegDomain) return false;
+      if (this.termRegDomainType === 'code' && !this.termRegCode) return false;
+      if (this.termRegWords.some(w => !w.exists)) return false;
+      return true;
     },
     filteredSummary() {
       // 이슈 없음 선택 시 테이블 집계는 이슈 기반이므로 빈 결과
@@ -653,6 +896,12 @@ export default {
       this.searchTableMode = 'contains';
       this.activeTab = 2;
     },
+    /** 이슈 유형별 분석에서 클릭 → 진단유형 필터 세팅 + 컬럼 상세 탭 이동 */
+    drillToIssueType(diagType) {
+      this.selectedDiagTypes = [diagType];
+      this.issueFilter = 'issue';
+      this.activeTab = 2;
+    },
     diagTypeColor(type) {
       const map = {
         TERM_NOT_EXIST:       'red darken-2',
@@ -708,6 +957,260 @@ export default {
      * - DATA_TYPE_MISMATCH   → actualDataType, stdDataType
      * - DATA_LEN_MISMATCH    → actualDataLen, stdDataLen
      */
+    /** 컬럼 변경(MODIFY) 스크립트 모달 열기 */
+    openModifyDialog(item) {
+      var dbmsTp = (this.selectedJobInfo.dbmsTp || '').toLowerCase();
+      var table = item.objNm;
+      var column = item.attrNm;
+      var stdType = item.stdDataType || item.actualDataType || 'VARCHAR2';
+      var stdLen = item.stdDataLen;
+      var typeSpec = stdLen ? stdType + '(' + stdLen + ')' : stdType;
+
+      var script = '';
+      if (dbmsTp.indexOf('oracle') >= 0) {
+        script = 'ALTER TABLE ' + table + ' MODIFY (' + column + ' ' + typeSpec + ');';
+      } else if (dbmsTp.indexOf('mysql') >= 0 || dbmsTp.indexOf('maria') >= 0) {
+        script = 'ALTER TABLE ' + table + ' MODIFY COLUMN ' + column + ' ' + typeSpec + ';';
+      } else if (dbmsTp.indexOf('mssql') >= 0 || dbmsTp.indexOf('sqlserver') >= 0) {
+        script = 'ALTER TABLE ' + table + ' ALTER COLUMN ' + column + ' ' + typeSpec + ';';
+      } else {
+        // PostgreSQL
+        script = 'ALTER TABLE ' + table + ' ALTER COLUMN ' + column + ' TYPE ' + typeSpec + ';';
+      }
+
+      this.modifyScript = '-- [주의] 실행 전 반드시 데이터 백업을 권장합니다.\n' + script;
+      this.modifyCopied = false;
+      this.modifyDialog = true;
+    },
+    /** 컬럼 변경 스크립트 클립보드 복사 */
+    copyModify() {
+      var self = this;
+      this.copyToClipboard(this.modifyScript, function() {
+        self.modifyCopied = true;
+        setTimeout(function() { self.modifyCopied = false; }, 2000);
+      });
+    },
+    /** 코맨트 변경 스크립트 모달 열기 */
+    openCommentDialog(item) {
+      var dbmsTp = (this.selectedJobInfo.dbmsTp || '').toLowerCase();
+      var schema = item.objSchema || '';
+      var table = item.objNm;
+      var column = item.attrNm;
+      var stdNm = item.stdTermsNm || '';
+
+      var script = '';
+      if (dbmsTp.indexOf('oracle') >= 0) {
+        var target = schema ? schema + '.' + table + '.' + column : table + '.' + column;
+        script = 'COMMENT ON COLUMN ' + target + " IS '" + stdNm + "';";
+      } else if (dbmsTp.indexOf('mysql') >= 0 || dbmsTp.indexOf('maria') >= 0) {
+        var colType = (item.actualDataType || 'VARCHAR') + '(' + (item.actualDataLen || 255) + ')';
+        script = 'ALTER TABLE ' + table + ' MODIFY COLUMN ' + column + ' ' + colType + " COMMENT '" + stdNm + "';";
+      } else if (dbmsTp.indexOf('mssql') >= 0 || dbmsTp.indexOf('sqlserver') >= 0) {
+        script = "EXEC sp_addextendedproperty\n  @name = N'MS_Description',\n  @value = N'" + stdNm + "',\n  @level0type = N'SCHEMA', @level0name = N'" + (schema || 'dbo') + "',\n  @level1type = N'TABLE',  @level1name = N'" + table + "',\n  @level2type = N'COLUMN', @level2name = N'" + column + "';";
+      } else {
+        // PostgreSQL (기본)
+        var pgTarget = schema ? schema + '.' + table + '.' + column : table + '.' + column;
+        script = 'COMMENT ON COLUMN ' + pgTarget + " IS '" + stdNm + "';";
+      }
+
+      this.commentScript = script;
+      this.commentCopied = false;
+      this.commentDialog = true;
+    },
+    /** 코맨트 스크립트 클립보드 복사 */
+    copyComment() {
+      var self = this;
+      this.copyToClipboard(this.commentScript, function() {
+        self.commentCopied = true;
+        setTimeout(function() { self.commentCopied = false; }, 2000);
+      });
+    },
+    /** 용어 빠른 등록 모달 열기 */
+    openTermRegDialog(item) {
+      this.termRegItem = item;
+      this.termRegTermsNm = item.attrNmKr || '';
+      this.termRegTermsDesc = '';
+      this.termRegDomainType = 'domain';
+      this.termRegDomain = null;
+      this.termRegDomainList = [];
+      this.termRegCode = null;
+      this.termRegCodeList = [];
+      this.termRegWords = [];
+      this.termRegDialog = true;
+      this.analyzeWords(item.attrNm);
+      this.loadDomainCandidates(item.actualDataType, item.actualDataLen);
+      this.loadCodeList();
+    },
+    /** 컬럼 영문명을 _ 로 분리하여 단어 존재 여부 일괄 확인 */
+    analyzeWords(attrNm) {
+      const parts = attrNm.split('_').filter(p => p);
+      this.termRegWords = parts.map(p => ({
+        abrv: p, wordNm: '', wordEngNm: '', wordDesc: '', exists: false, wordId: null, domainClsfNm: '', saving: false,
+      }));
+      // 일괄 조회
+      axios.post(this.$APIURL.base + 'api/std/getWordsByEngAbrvNms', parts).then(res => {
+        const wordMap = {};
+        (res.data || []).forEach(w => { wordMap[w.wordEngAbrvNm] = w; });
+        this.termRegWords.forEach(tw => {
+          const found = wordMap[tw.abrv];
+          if (found) {
+            tw.exists = true;
+            tw.wordId = found.wordId;
+            tw.wordNm = found.wordNm;
+            tw.wordEngNm = found.wordEngNm || '';
+            tw.domainClsfNm = found.domainClsfNm || '';
+          }
+        });
+        // 미등록 단어 한글명 자동 추출 시도 (한글명에서 등록된 단어 제거)
+        this.guessWordNames();
+      });
+    },
+    /** 한글명에서 등록된 단어를 제외하여 미등록 단어의 한글명을 추측 */
+    guessWordNames() {
+      let remaining = this.termRegTermsNm || '';
+      // 등록된 단어의 한글명을 순서대로 제거
+      this.termRegWords.forEach(w => {
+        if (w.exists && w.wordNm && remaining.includes(w.wordNm)) {
+          remaining = remaining.replace(w.wordNm, '');
+        }
+      });
+      // 미등록 단어가 1개면 나머지 전체를 한글명으로 설정
+      const unregistered = this.termRegWords.filter(w => !w.exists);
+      if (unregistered.length === 1 && remaining.trim()) {
+        unregistered[0].wordNm = remaining.trim();
+      }
+    },
+    /** 타입+길이 기반으로 도메인 후보 조회 */
+    loadDomainCandidates(dataType, dataLen) {
+      axios.post(this.$APIURL.base + 'api/std/getDomainList', {
+        schDataType: dataType || '',
+      }).then(res => {
+        this.termRegDomainList = res.data || [];
+        // 타입+길이 정확 매치가 있으면 자동 선택
+        const exact = this.termRegDomainList.find(d =>
+          d.dataType && d.dataType.toUpperCase() === (dataType || '').toUpperCase()
+          && d.dataLen === dataLen
+        );
+        if (exact) this.termRegDomain = exact;
+      });
+    },
+    /** 등록된 코드 목록 조회 */
+    loadCodeList() {
+      var self = this;
+      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', {}).then(function(res) {
+        self.termRegCodeList = res.data || [];
+      });
+    },
+    /** 코드 선택 시 도메인 정보 표시용 */
+    codeDisplayText(item) {
+      return item.codeNm + ' [' + item.codeGrp + ']';
+    },
+    /** 코드 선택 시 */
+    onCodeSelected(code) {
+      this.termRegCode = code;
+    },
+    /** 미등록 단어 인라인 등록 */
+    registerWord(idx) {
+      const w = this.termRegWords[idx];
+      if (!w.wordNm) { alert('한글명을 입력해주세요.'); return; }
+      w.saving = true;
+      this.$set(this.termRegWords, idx, { ...w });
+      axios.post(this.$APIURL.base + 'api/std/createWord', {
+        wordNm: w.wordNm,
+        wordEngAbrvNm: w.abrv,
+        wordEngNm: w.wordEngNm || '',
+        wordDesc: w.wordNm,
+        wordClsfYn: 'N',
+        domainClsfNm: '',
+        allophSynmLst: [],
+        forbdnWordLst: [],
+        commStndYn: 'N',
+        magntdOrd: '',
+        reqSysCd: '',
+      }).then(res => {
+        // 등록 성공 → 단어 ID 받아서 상태 갱신
+        w.exists = true;
+        w.saving = false;
+        w.wordId = res.data.wordId || res.data;
+        this.$set(this.termRegWords, idx, { ...w });
+        // wordId를 다시 조회 (createWord 응답에 ID가 없을 수 있으므로)
+        axios.get(this.$APIURL.base + 'api/std/getWordByEngAbrvNm', { params: { wordEngAbrvNm: w.abrv } }).then(r2 => {
+          if (r2.data) {
+            w.wordId = r2.data.wordId;
+            this.$set(this.termRegWords, idx, { ...w });
+          }
+        });
+      }).catch(err => {
+        w.saving = false;
+        this.$set(this.termRegWords, idx, { ...w });
+        alert('단어 등록 실패: ' + ((err.response && err.response.data && err.response.data.message) || err.message));
+      });
+    },
+    /** 용어 등록 */
+    registerTerm() {
+      this.termRegLoading = true;
+      const wordList = this.termRegWords.map((w, i) => ({
+        termsId: '',
+        wordId: w.wordId,
+        wordNm: w.wordNm,
+        wordOrd: i + 1,
+      }));
+      var engAbrvNm = this.termRegWords.map(function(w) { return w.abrv; }).join('_');
+      var domainNm = '';
+      var codeGrp = '';
+      if (this.termRegDomainType === 'code' && this.termRegCode) {
+        domainNm = this.termRegCode.domainNm || '';
+        codeGrp = this.termRegCode.codeGrp || '';
+      } else if (this.termRegDomain) {
+        domainNm = this.termRegDomain.domainNm;
+      }
+      axios.post(this.$APIURL.base + 'api/std/createTerms', {
+        termsNm: this.termRegTermsNm,
+        termsEngAbrvNm: engAbrvNm,
+        termsDesc: this.termRegTermsDesc || this.termRegTermsNm,
+        domainNm: domainNm,
+        codeGrp: codeGrp,
+        chrgOrg: '',
+        commStndYn: 'N',
+        magntdOrd: '',
+        reqSysCd: '',
+        wordList: wordList,
+        allophSynmLst: [],
+      }).then(() => {
+        this.termRegLoading = false;
+        this.termRegDialog = false;
+        alert('용어가 등록되었습니다. 재진단 시 반영됩니다.');
+      }).catch(err => {
+        this.termRegLoading = false;
+        alert('용어 등록 실패: ' + ((err.response && err.response.data && err.response.data.message) || err.message));
+      });
+    },
+    /** 클립보드 복사 공통 (navigator.clipboard 우선, fallback으로 execCommand) */
+    copyToClipboard(text, onSuccess) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          if (onSuccess) onSuccess();
+        }).catch(function() {
+          alert('복사에 실패했습니다.');
+        });
+      } else {
+        var textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          if (onSuccess) onSuccess();
+        } catch (e) {
+          alert('복사에 실패했습니다.');
+        }
+        document.body.removeChild(textArea);
+      }
+    },
     isHighlighted(item, field) {
       const h = this.highlightRow;
       if (!h.itemKey || !h.diagType) return false;

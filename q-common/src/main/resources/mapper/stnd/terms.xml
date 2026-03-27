@@ -339,6 +339,8 @@
 		<result property="codeEngAbrvNm" column="TERMS_ENG_ABRV_NM"/>
 		<result property="codeDesc" column="TERMS_DESC"/>
 		<result property="domainNm" column="DOMAIN_NM"/>
+		<result property="dataType" column="DATA_TYPE"/>
+		<result property="dataLen" column="DATA_LEN"/>
 		<result property="allowValLst" column="ALLOW_VAL_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
 		<result property="storFmt" column="STOR_FMT"/>
 		<result property="exprFmtLst" column="EXPR_FMT_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
@@ -361,10 +363,12 @@
 	<select id="selectCodeInfoList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdCodeMap">
             select distinct
 					 A.TERMS_ID
-					,A.TERMS_NM			
+					,A.TERMS_NM
 					,A.TERMS_ENG_ABRV_NM
-					,A.TERMS_DESC		
-					,A.DOMAIN_NM	
+					,A.TERMS_DESC
+					,A.DOMAIN_NM
+					,A.DATA_TYPE
+					,A.DATA_LEN
 					,A.ALLOW_VAL_LST	
 					,CASE
 						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'VARCHAR'	-- VARCHAR

@@ -17,4 +17,5 @@ public class StdDiagJobVo {
     private String cretUserId;
     private String startDt;
     private String endDt;
+    private String dbmsTp;        // joined (데이터소스 DBMS 타입)
 }

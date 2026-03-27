@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -160,10 +160,9 @@ public class DiagService implements Runnable {
         int cnt = 0;
         String stdType       = term.getDataType();
         long   stdLen        = term.getDataLen();
-        int    stdDecimalLen = term.getDataDecimalLen();
 
-        // 타입 비교 (case-insensitive)
-        if (stdType != null && dataType != null && !stdType.equalsIgnoreCase(dataType)) {
+        // 타입 비교 (case-insensitive, 동의어 처리: DATE=DATETIME 등)
+        if (stdType != null && dataType != null && !isTypeEquivalent(stdType, dataType)) {
             batch.add(buildResult(attr, DATA_TYPE_MISMATCH, "데이터 타입 불일치", stdType, dataType));
             cnt++;
         }
@@ -174,6 +173,28 @@ public class DiagService implements Runnable {
             cnt++;
         }
         return cnt;
+    }
+
+    /** 데이터 타입 동의어 비교 (Oracle DATE = DATETIME 등) */
+    private boolean isTypeEquivalent(String stdType, String actualType) {
+        if (stdType.equalsIgnoreCase(actualType)) return true;
+        String s = stdType.toUpperCase();
+        String a = actualType.toUpperCase();
+        // DATE ↔ DATETIME
+        if ((s.equals("DATE") && a.equals("DATETIME")) || (s.equals("DATETIME") && a.equals("DATE"))) return true;
+        // CHAR ↔ VARCHAR ↔ VARCHAR2 (문자열 계열)
+        if (isStringFamily(s) && isStringFamily(a)) return true;
+        // NUMBER ↔ NUMERIC ↔ DECIMAL
+        if (isNumericFamily(s) && isNumericFamily(a)) return true;
+        return false;
+    }
+
+    private boolean isStringFamily(String type) {
+        return type.equals("CHAR") || type.equals("VARCHAR") || type.equals("VARCHAR2");
+    }
+
+    private boolean isNumericFamily(String type) {
+        return type.equals("NUMBER") || type.equals("NUMERIC") || type.equals("DECIMAL");
     }
 
     private StdDiagResultVo buildResult(StdDataModelAttrVo attr, String diagType, String diagDetail, String stdValue, String actualValue) {

@@ -49,6 +49,7 @@
         <result property="cretUserId"   column="CRET_USER_ID"/>
         <result property="startDt"      column="START_DT"/>
         <result property="endDt"        column="END_DT"/>
+        <result property="dbmsTp"       column="DBMS_TP"/>
     </resultMap>
 
     <resultMap id="diagResultMap" type="com.ndata.quality.model.std.StdDiagResultVo">
@@ -106,6 +107,7 @@
             ,J.CRET_USER_ID
             ,to_char(to_timestamp(J.START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as START_DT
             ,to_char(to_timestamp(J.END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as END_DT
+            ,(SELECT DS.DBMS_TP FROM ndata.TB_DATA_SOURCE DS WHERE DS.DS_ID = M.DM_DS_ID) as DBMS_TP
         FROM TB_DIAG_JOB J
         JOIN TB_DATA_MODEL M ON J.DM_ID = M.DM_ID
         JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID

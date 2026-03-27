@@ -155,6 +155,20 @@ public class DataStandardController {
 		return sqlSessionTemplate.selectList("word.selectWordInfoById", wordId);
 	}
 
+	/** 영문약어로 단어 조회 (용어 빠른 등록용) */
+	@RequestMapping(value = "/getWordByEngAbrvNm", method = RequestMethod.GET)
+	public StdWordVo getWordByEngAbrvNm(String wordEngAbrvNm) {
+		List<StdWordVo> list = sqlSessionTemplate.selectList("word.selectWordByEngAbrvNm", wordEngAbrvNm);
+		return list.isEmpty() ? null : list.get(0);
+	}
+
+	/** 영문약어 목록으로 단어 일괄 조회 (용어 빠른 등록용) */
+	@RequestMapping(value = "/getWordsByEngAbrvNms", method = RequestMethod.POST)
+	public List<StdWordVo> getWordsByEngAbrvNms(@RequestBody List<String> engAbrvNms) {
+		if (engAbrvNms == null || engAbrvNms.isEmpty()) return java.util.Collections.emptyList();
+		return sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", engAbrvNms);
+	}
+
 	@RequestMapping(value = "/uploadWords", method = RequestMethod.POST)
 	// public Response uploadWords(MultipartHttpServletRequest request) {
 	public Mono<Response> uploadWords(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {

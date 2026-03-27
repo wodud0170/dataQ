@@ -22,6 +22,7 @@
               <v-select v-model="searchEngTermMode" :items="searchModeOptions" item-text="label" item-value="value"
                 dense outlined hide-details :style="{ width: '100px', flexGrow: 0 }" class="ml-2" />
               <v-text-field class="pr-4 pl-2" v-model="searchEngTerm" v-on:keyup.enter="getTermData"
+                @input="searchEngTerm = (searchEngTerm || '').toUpperCase()"
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
@@ -270,12 +271,38 @@
               <v-stepper-content step="2">
 
                 <v-row v-for="(item, index) in addTerm_wordListArr" :key="index" :style="{ margin: '0px 0px 20px 0px' }">
-                  <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}</h3>
+                  <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}
+                    <v-chip v-if="item.wordLst && item.wordLst.length > 0" x-small color="green" text-color="white" class="ml-2">등록됨</v-chip>
+                    <v-chip v-else x-small color="red" text-color="white" class="ml-2">미등록</v-chip>
+                  </h3>
                   <v-col cols="12" :style="{ padding: '0px' }">
-                    <v-data-table id="addTerm_wordList_table" class="px-4 pb-3" :headers="wordListHeader"
+                    <!-- 단어가 존재하면 기존 선택 테이블 -->
+                    <v-data-table v-if="item.wordLst && item.wordLst.length > 0"
+                      id="addTerm_wordList_table" class="px-4 pb-3" :headers="wordListHeader"
                       :items="item.wordLst" item-key="index" v-model="addTerm_selected_word_list[index]"
                       :value="addTerm_selected_word_list[index]" hide-default-footer show-select>
                     </v-data-table>
+                    <!-- 단어가 없으면 인라인 등록 폼 -->
+                    <v-sheet v-else outlined rounded class="pa-3 mx-4">
+                      <v-row dense>
+                        <v-col cols="3">
+                          <v-text-field v-model="item.inlineWordNm" dense outlined hide-details
+                            label="단어 한글명" :placeholder="item.wordNm" />
+                        </v-col>
+                        <v-col cols="3">
+                          <v-text-field v-model="item.inlineWordEngAbrvNm" dense outlined hide-details
+                            label="영문약어" @input="item.inlineWordEngAbrvNm = (item.inlineWordEngAbrvNm || '').toUpperCase()" />
+                        </v-col>
+                        <v-col cols="3">
+                          <v-text-field v-model="item.inlineWordEngNm" dense outlined hide-details
+                            label="영문명" @input="item.inlineWordEngNm = (item.inlineWordEngNm || '').toUpperCase()" />
+                        </v-col>
+                        <v-col cols="3" class="d-flex align-center">
+                          <v-btn small color="primary" :loading="item.inlineSaving"
+                            @click="inlineRegisterWord(index)">단어 등록</v-btn>
+                        </v-col>
+                      </v-row>
+                    </v-sheet>
                   </v-col>
                 </v-row>
 
@@ -334,7 +361,20 @@
                   </v-col>
                 </v-row>
 
-                <v-row>
+                <v-row v-if="addTerm_lastWordIsCode">
+                  <v-col cols="4">
+                    <v-subheader class="reqText">도메인 유형</v-subheader>
+                  </v-col>
+                  <v-col cols="8">
+                    <v-radio-group v-model="addTerm_domainType" row dense hide-details class="mt-0"
+                      @change="onAddDomainTypeChange">
+                      <v-radio color="ndColor" label="일반 도메인" value="domain"></v-radio>
+                      <v-radio color="ndColor" label="코드" value="code"></v-radio>
+                    </v-radio-group>
+                  </v-col>
+                </v-row>
+
+                <v-row v-if="addTerm_domainType === 'domain'">
                   <v-col cols="4">
                     <v-subheader class="reqText">도메인명</v-subheader>
                   </v-col>
@@ -345,11 +385,32 @@
                       <template v-slot:no-data>
                         <v-list-item>
                           <v-list-item-title>
-
                           </v-list-item-title>
                         </v-list-item>
                       </template>
                     </v-autocomplete>
+                  </v-col>
+                </v-row>
+
+                <v-row v-if="addTerm_domainType === 'code'">
+                  <v-col cols="4">
+                    <v-subheader class="reqText">코드 선택</v-subheader>
+                  </v-col>
+                  <v-col cols="8">
+                    <v-autocomplete dense required color="ndColor" v-model="addTerm_selectedCode"
+                      :items="addTerm_codeInfoList" item-text="codeNm" return-object
+                      :placeholder="'코드 검색'" :menu-props="{ top: false, offsetY: true }"
+                      @change="onAddCodeSelected">
+                      <template v-slot:item="{ item }">
+                        <span>{{ item.codeNm }} <span class="caption grey--text">[{{ item.codeGrp }}] ({{ item.domainNm || '-' }})</span></span>
+                      </template>
+                      <template v-slot:selection="{ item }">
+                        {{ item.codeNm }} [{{ item.codeGrp }}]
+                      </template>
+                    </v-autocomplete>
+                    <div v-if="addTerm_selectedCode && addTerm_selectedCode.domainNm" class="caption grey--text mt-1">
+                      도메인: {{ addTerm_selectedCode.domainNm }} / 타입: {{ addTerm_selectedCode.dataType || '-' }} / 길이: {{ addTerm_selectedCode.dataLen || '-' }}
+                    </div>
                   </v-col>
                 </v-row>
 
@@ -393,12 +454,13 @@
                   </v-col>
                 </v-row>
 
-                <v-row>
+                <v-row v-if="addTerm_domainType !== 'code'">
                   <v-col cols="4">
                     <v-subheader>코드그룹</v-subheader>
                   </v-col>
                   <v-col cols="8">
-                    <v-text-field v-model="addTerm_codeGrp" dense color="ndColor" placeholder=""></v-text-field>
+                    <v-text-field v-model="addTerm_codeGrp" dense color="ndColor" placeholder=""
+                      @input="addTerm_codeGrp = (addTerm_codeGrp || '').toUpperCase()"></v-text-field>
                   </v-col>
                 </v-row>
 
@@ -486,12 +548,36 @@
                 <v-stepper-content step="2">
                   <v-row v-for="(item, index) in updateTerm_wordListArr" :key="index"
                     :style="{ margin: '0px 0px 20px 0px' }">
-                    <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}</h3>
+                    <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}
+                      <v-chip v-if="item.wordLst && item.wordLst.length > 0" x-small color="green" text-color="white" class="ml-2">등록됨</v-chip>
+                      <v-chip v-else x-small color="red" text-color="white" class="ml-2">미등록</v-chip>
+                    </h3>
                     <v-col cols="12" :style="{ padding: '0px' }">
-                      <v-data-table id="updateTerm_wordList_table" class="px-4 pb-3" :headers="wordListHeader"
+                      <v-data-table v-if="item.wordLst && item.wordLst.length > 0"
+                        id="updateTerm_wordList_table" class="px-4 pb-3" :headers="wordListHeader"
                         :items="item.wordLst" item-key="index" v-model="updateTerm_selected_word_list[index]"
                         :value="updateTerm_selected_word_list[index]" hide-default-footer show-select>
                       </v-data-table>
+                      <v-sheet v-else outlined rounded class="pa-3 mx-4">
+                        <v-row dense>
+                          <v-col cols="3">
+                            <v-text-field v-model="item.inlineWordNm" dense outlined hide-details
+                              label="단어 한글명" :placeholder="item.wordNm" />
+                          </v-col>
+                          <v-col cols="3">
+                            <v-text-field v-model="item.inlineWordEngAbrvNm" dense outlined hide-details
+                              label="영문약어" @input="item.inlineWordEngAbrvNm = (item.inlineWordEngAbrvNm || '').toUpperCase()" />
+                          </v-col>
+                          <v-col cols="3">
+                            <v-text-field v-model="item.inlineWordEngNm" dense outlined hide-details
+                              label="영문명" @input="item.inlineWordEngNm = (item.inlineWordEngNm || '').toUpperCase()" />
+                          </v-col>
+                          <v-col cols="3" class="d-flex align-center">
+                            <v-btn small color="primary" :loading="item.inlineSaving"
+                              @click="inlineRegisterWord(index)">단어 등록</v-btn>
+                          </v-col>
+                        </v-row>
+                      </v-sheet>
                     </v-col>
                   </v-row>
 
@@ -552,7 +638,20 @@
                     </v-col>
                   </v-row>
 
-                  <v-row>
+                  <v-row v-if="updateTerm_lastWordIsCode">
+                    <v-col cols="4">
+                      <v-subheader class="reqText">도메인 유형</v-subheader>
+                    </v-col>
+                    <v-col cols="8">
+                      <v-radio-group v-model="updateTerm_domainType" row dense hide-details class="mt-0"
+                        @change="onUpdateDomainTypeChange">
+                        <v-radio color="ndColor" label="일반 도메인" value="domain"></v-radio>
+                        <v-radio color="ndColor" label="코드" value="code"></v-radio>
+                      </v-radio-group>
+                    </v-col>
+                  </v-row>
+
+                  <v-row v-if="updateTerm_domainType === 'domain'">
                     <v-col cols="4">
                       <v-subheader class="reqText">도메인명</v-subheader>
                     </v-col>
@@ -563,11 +662,32 @@
                         <template v-slot:no-data>
                           <v-list-item>
                             <v-list-item-title>
-
                             </v-list-item-title>
                           </v-list-item>
                         </template>
                       </v-autocomplete>
+                    </v-col>
+                  </v-row>
+
+                  <v-row v-if="updateTerm_domainType === 'code'">
+                    <v-col cols="4">
+                      <v-subheader class="reqText">코드 선택</v-subheader>
+                    </v-col>
+                    <v-col cols="8">
+                      <v-autocomplete dense required color="ndColor" v-model="updateTerm_selectedCode"
+                        :items="updateTerm_codeInfoList" item-text="codeNm" return-object
+                        :placeholder="'코드 검색'" :menu-props="{ top: false, offsetY: true }"
+                        @change="onUpdateCodeSelected">
+                        <template v-slot:item="{ item }">
+                          <span>{{ item.codeNm }} <span class="caption grey--text">[{{ item.codeGrp }}] ({{ item.domainNm || '-' }})</span></span>
+                        </template>
+                        <template v-slot:selection="{ item }">
+                          {{ item.codeNm }} [{{ item.codeGrp }}]
+                        </template>
+                      </v-autocomplete>
+                      <div v-if="updateTerm_selectedCode && updateTerm_selectedCode.domainNm" class="caption grey--text mt-1">
+                        도메인: {{ updateTerm_selectedCode.domainNm }} / 타입: {{ updateTerm_selectedCode.dataType || '-' }} / 길이: {{ updateTerm_selectedCode.dataLen || '-' }}
+                      </div>
                     </v-col>
                   </v-row>
 
@@ -612,12 +732,13 @@
                     </v-col>
                   </v-row>
 
-                  <v-row>
+                  <v-row v-if="updateTerm_domainType !== 'code'">
                     <v-col cols="4">
                       <v-subheader>코드그룹</v-subheader>
                     </v-col>
                     <v-col cols="8">
-                      <v-text-field v-model="updateTerm_codeGrp" dense color="ndColor" placeholder=""></v-text-field>
+                      <v-text-field v-model="updateTerm_codeGrp" dense color="ndColor" placeholder=""
+                        @input="updateTerm_codeGrp = (updateTerm_codeGrp || '').toUpperCase()"></v-text-field>
                     </v-col>
                   </v-row>
 
@@ -686,6 +807,9 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
+          <v-btn v-if="!isUploading && uploadFailList.length > 0" color="red" text @click="downloadFailList">
+            <v-icon left small>mdi-download</v-icon>실패 목록 다운로드 ({{ uploadFailList.length }}건)
+          </v-btn>
           <v-btn v-if="!isUploading" color="ndColor" text @click="collectiveTermModalShow = false">닫기</v-btn>
           <template v-else>
             <span :style="{ fontSize: '0.8rem', color: '#999', paddingRight: '8px' }">처리 중...</span>
@@ -836,6 +960,8 @@ export default {
     isUploading: false,
     // 일괄 등록 로그
     uploadLogs: [],
+    // 일괄 등록 실패 목록
+    uploadFailList: [],
     // 디테일 메뉴 탭
     detailTab: [
       { title: '용어 상세 보기', name: 'tab1', index: 0 },
@@ -857,8 +983,11 @@ export default {
     addTerm_wordListArr: [], // 용어 등록 단어 목록 배열
     addTerm_termEngAbrvNm: null, // 용어 등록 용어영문명 (자동 생성하여 보여줌)
     addTerm_termDesc: null,
+    addTerm_domainType: 'domain', // 'domain' | 'code'
     addTerm_domainNm: null,
     addTerm_domainNmItems: [],
+    addTerm_selectedCode: null,   // 코드 선택 시 선택된 코드 객체
+    addTerm_codeInfoList: [],     // 코드 목록
     addTerm_allophSynmLst_arr: [{ id: 'alloph_0', value: '', addBtnView: true, removeBtnView: false }],
     addTerm_allophSynmLst_count: 0,
     addTerm_codeGrp: null,
@@ -878,8 +1007,11 @@ export default {
     updateTerm_termNm: null,
     updateTerm_termEngAbrvNm: null,
     updateTerm_termDesc: null,
+    updateTerm_domainType: 'domain', // 'domain' | 'code'
     updateTerm_domainNm: null,
     updateTerm_domainNmItems: [],
+    updateTerm_selectedCode: null,
+    updateTerm_codeInfoList: [],
     updateTerm_allophSynmLst_arr: [{ id: 'alloph_0', value: '', addBtnView: true, removeBtnView: false }],
     updateTerm_allophSynmLst_count: 0,
     updateTerm_codeGrp: null,
@@ -943,6 +1075,24 @@ export default {
     // 승인 시스템에서 사용할 시스템 네임 리스트
     systemNameList: [],
   }),
+  computed: {
+    /** 마지막 단어가 CD(코드)인지 여부 - 등록 */
+    addTerm_lastWordIsCode() {
+      var list = this.addTerm_wordList;
+      if (!list || list.length === 0) return false;
+      var last = list[list.length - 1];
+      var abrv = (last.wordEngAbrvNm || last.wordNm || '').toUpperCase();
+      return abrv === 'CD';
+    },
+    /** 마지막 단어가 CD(코드)인지 여부 - 수정 */
+    updateTerm_lastWordIsCode() {
+      var list = this.updateTerm_wordList;
+      if (!list || list.length === 0) return false;
+      var last = list[list.length - 1];
+      var abrv = (last.wordEngAbrvNm || last.wordNm || '').toUpperCase();
+      return abrv === 'CD';
+    },
+  },
   methods: {
     resetSearch() {
       this.searchTerm = '';
@@ -1089,6 +1239,7 @@ export default {
 
       // 진행 다이얼로그 열기
       this.uploadLogs = [];
+      this.uploadFailList = [];
       this.isUploading = true;
       this.collectiveTermModalShow = true;
 
@@ -1129,6 +1280,16 @@ export default {
       if (!msg.data || !msg.data.startsWith('[용어]')) return;
       const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
       this._addUploadLog(level, msg.data);
+      // 실패 항목 수집: "[용어] 실패: 용어(기준일자): 구성단어(BASS) 미등록" 형태
+      if (level === 'ERROR' && msg.data.includes('실패:')) {
+        var failText = msg.data.replace('[용어] 실패: ', '');
+        var termMatch = failText.match(/^용어\(([^)]*)\):\s*(.*)/);
+        if (termMatch) {
+          this.uploadFailList.push({ termsNm: termMatch[1], reason: termMatch[2] });
+        } else {
+          this.uploadFailList.push({ termsNm: '-', reason: failText });
+        }
+      }
       if (msg.data.includes('완료 -')) {
         this.isUploading = false;
         clearTimeout(this._uploadTimer);
@@ -1151,6 +1312,26 @@ export default {
       clearTimeout(this._uploadTimer);
       this.collectiveTermModalShow = false;
       this.getTermData();
+    },
+    downloadFailList() {
+      if (this.uploadFailList.length === 0) return;
+      // BOM + CSV 생성
+      var csvContent = '\uFEFF용어명,실패 사유\n';
+      for (var i = 0; i < this.uploadFailList.length; i++) {
+        var row = this.uploadFailList[i];
+        var termsNm = (row.termsNm || '').replace(/"/g, '""');
+        var reason = (row.reason || '').replace(/"/g, '""');
+        csvContent += '"' + termsNm + '","' + reason + '"\n';
+      }
+      var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      var url = window.URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', '용어_일괄등록_실패목록_' + this.$getToday() + '.csv');
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      link.remove();
     },
     _addUploadLog(level, msg) {
       const now = new Date();
@@ -1215,6 +1396,15 @@ export default {
       this.updateTerm_domainNm = this.selectedItem[0].domainNm;
       this.updateTerm_codeGrp = this.selectedItem[0].codeGrp;
       this.updateTerm_chrgOrg = this.selectedItem[0].chrgOrg;
+
+      // 기존 codeGrp가 있으면 코드 도메인 모드로 설정
+      if (this.selectedItem[0].codeGrp) {
+        this.updateTerm_domainType = 'code';
+        this.loadUpdateCodeInfoList(this.selectedItem[0].codeGrp);
+      } else {
+        this.updateTerm_domainType = 'domain';
+        this.updateTerm_selectedCode = null;
+      }
       this.updateTerm_commStndYn = this.selectedItem[0].commStndYn;
       this.updateTerm_magntdOrd = this.selectedItem[0].magntdOrd;
       this.updateTerm_reqSysCd = this.selectedItem[0].reqSysCd;
@@ -1262,8 +1452,11 @@ export default {
       this.addTerm_wordListArr = [];
       this.addTerm_termEngAbrvNm = null;
       this.addTerm_termDesc = null;
+      this.addTerm_domainType = 'domain';
       this.addTerm_domainNm = null;
       this.addTerm_domainNmItems = [];
+      this.addTerm_selectedCode = null;
+      this.addTerm_codeInfoList = [];
       this.addTerm_codeGrp = null;
       this.addTerm_chrgOrg = null;
       this.addTerm_commStndYn = 'N';
@@ -1276,7 +1469,10 @@ export default {
       // 용어 수정 모달 초기화
       this.updateModalStep = 1;
       this.updateTerm_wordListArr = [];
+      this.updateTerm_domainType = 'domain';
       this.updateTerm_domainNmItems = [];
+      this.updateTerm_selectedCode = null;
+      this.updateTerm_codeInfoList = [];
       this.updateTerm_selected_word_list = [];
       this.updateTerm_wordList = [];
     },
@@ -1290,9 +1486,11 @@ export default {
         } else if (this.addTerm_termDesc === null) {
           _attr = '용어 설명은'
           this.$refs.addTerm_termDesc.focus()
-        } else if (this.addTerm_domainNm === null) {
+        } else if (this.addTerm_domainType === 'domain' && (this.addTerm_domainNm === null || this.addTerm_domainNm === '')) {
           _attr = '도메인명은'
           this.$refs.addTerm_domainNm.focus()
+        } else if (this.addTerm_domainType === 'code' && !this.addTerm_selectedCode) {
+          _attr = '코드는'
         }
 
         if (_attr !== null) {
@@ -1313,9 +1511,11 @@ export default {
         } else if (this.updateTerm_termDesc === null) {
           _attr = '용어 설명은'
           this.$refs.updateTerm_termDesc.focus()
-        } else if (this.updateTerm_domainNm === null) {
+        } else if (this.updateTerm_domainType === 'domain' && (this.updateTerm_domainNm === null || this.updateTerm_domainNm === '')) {
           _attr = '도메인명은'
           this.$refs.updateTerm_domainNm.focus()
+        } else if (this.updateTerm_domainType === 'code' && !this.updateTerm_selectedCode) {
+          _attr = '코드는'
         }
 
         if (_attr !== null) {
@@ -1342,12 +1542,18 @@ export default {
         //   _term_name = this.addTerm_user_selected_word;
         // }
 
+        var _domainNm = this.addTerm_domainNm;
+        var _codeGrp = this.addTerm_codeGrp;
+        if (this.addTerm_domainType === 'code' && this.addTerm_selectedCode) {
+          _domainNm = this.addTerm_selectedCode.domainNm || '';
+          _codeGrp = this.addTerm_selectedCode.codeGrp || '';
+        }
         let termData = {
           'termsNm': _term_name,
           'termsEngAbrvNm': this.addTerm_termEngAbrvNm,
           'termsDesc': this.addTerm_termDesc,
-          'domainNm': this.addTerm_domainNm,
-          'codeGrp': this.addTerm_codeGrp,
+          'domainNm': _domainNm,
+          'codeGrp': _codeGrp,
           'chrgOrg': this.addTerm_chrgOrg,
           'commStndYn': this.addTerm_commStndYn,
           'magntdOrd': this.addTerm_magntdOrd,
@@ -1405,13 +1611,20 @@ export default {
         //   _term_name = this.updateTerm_user_selected_word;
         // }
 
+        var _domainNm = this.updateTerm_domainNm;
+        var _codeGrp = this.updateTerm_codeGrp;
+        if (this.updateTerm_domainType === 'code' && this.updateTerm_selectedCode) {
+          _domainNm = this.updateTerm_selectedCode.domainNm || '';
+          _codeGrp = this.updateTerm_selectedCode.codeGrp || '';
+        }
+
         let termData = {
           'id': this.updateTerm_id,
           'termsNm': _term_name,
           'termsEngAbrvNm': this.updateTerm_termEngAbrvNm,
           'termsDesc': this.updateTerm_termDesc,
-          'domainNm': this.updateTerm_domainNm,
-          'codeGrp': this.updateTerm_codeGrp,
+          'domainNm': _domainNm,
+          'codeGrp': _codeGrp,
           'chrgOrg': this.updateTerm_chrgOrg,
           'commStndYn': this.updateTerm_commStndYn,
           'magntdOrd': this.updateTerm_magntdOrd,
@@ -1887,8 +2100,27 @@ export default {
       }
 
       if (step === 1) {
-        this.getWordListByNm();
-        this.addModalStep = 2;
+        // 용어명 중복 체크 후 다음 단계
+        var self = this;
+        axios.get(this.$APIURL.base + 'api/std/getTermsInfoByNm', {
+          params: { termsNm: this.addTerm_termNm }
+        }).then(function(res) {
+          if (res.data && res.data.length > 0) {
+            self.$swal.fire({
+              title: '이미 등록된 용어입니다.',
+              text: '"' + self.addTerm_termNm + '" 용어가 이미 존재합니다.',
+              confirmButtonText: '확인',
+              icon: 'warning',
+            });
+            return;
+          }
+          self.getWordListByNm();
+          self.addModalStep = 2;
+        }).catch(function() {
+          // 중복 체크 실패해도 진행 허용
+          self.getWordListByNm();
+          self.addModalStep = 2;
+        });
       } else if (step === 2) {
         if (this.selectedWordName()) {
           this.addModalStep = 3;
@@ -1931,9 +2163,18 @@ export default {
       }).then((res) => {
         // console.log(res.data)
 
-        // index 추가
+        // index 추가 + 인라인 등록 필드 초기화
         for (let i = 0; i < res.data.length; i++) {
-          res.data[i].wordLst[0].index = i;
+          if (res.data[i].wordLst && res.data[i].wordLst.length > 0) {
+            res.data[i].wordLst[0].index = i;
+          } else {
+            // 미등록 단어: 인라인 등록용 초기값
+            res.data[i].wordLst = [];
+            res.data[i].inlineWordNm = res.data[i].wordNm || '';
+            res.data[i].inlineWordEngAbrvNm = '';
+            res.data[i].inlineWordEngNm = '';
+            res.data[i].inlineSaving = false;
+          }
         }
 
         if (this.addTermModalShow) {
@@ -2002,6 +2243,97 @@ export default {
       } catch (error) {
         console.error(error);
       }
+    },
+    /** Step 2: 미등록 단어 인라인 등록 */
+    inlineRegisterWord(index) {
+      var arr = this.addTermModalShow ? this.addTerm_wordListArr : this.updateTerm_wordListArr;
+      var item = arr[index];
+      if (!item.inlineWordNm) {
+        alert('단어 한글명을 입력해주세요.');
+        return;
+      }
+      if (!item.inlineWordEngAbrvNm) {
+        alert('영문약어를 입력해주세요.');
+        return;
+      }
+      item.inlineSaving = true;
+      this.$set(arr, index, Object.assign({}, item));
+      var self = this;
+      axios.post(this.$APIURL.base + 'api/std/createWord', {
+        wordNm: item.inlineWordNm,
+        wordEngAbrvNm: item.inlineWordEngAbrvNm,
+        wordEngNm: item.inlineWordEngNm || '',
+        wordDesc: item.inlineWordNm,
+        wordClsfYn: 'N',
+        domainClsfNm: '',
+        allophSynmLst: [],
+        forbdnWordLst: [],
+        commStndYn: 'N',
+        magntdOrd: '',
+        reqSysCd: '',
+      }).then(function() {
+        // 등록 성공 → 단어 목록 다시 조회하여 갱신
+        axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', {
+          params: { wordNm: item.inlineWordNm }
+        }).then(function(res2) {
+          var words = res2.data || [];
+          if (words.length > 0) {
+            for (var w = 0; w < words.length; w++) {
+              words[w].index = index;
+            }
+            item.wordLst = words;
+            item.inlineSaving = false;
+            self.$set(arr, index, Object.assign({}, item));
+          }
+        });
+      }).catch(function(err) {
+        item.inlineSaving = false;
+        self.$set(arr, index, Object.assign({}, item));
+        alert('단어 등록 실패: ' + ((err.response && err.response.data && err.response.data.message) || err.message));
+      });
+    },
+    /** 도메인 유형 변경 시 (등록) */
+    onAddDomainTypeChange(val) {
+      if (val === 'code' && this.addTerm_codeInfoList.length === 0) {
+        this.loadCodeInfoList();
+      }
+    },
+    /** 코드 목록 로드 (등록) */
+    loadCodeInfoList() {
+      var self = this;
+      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', {}).then(function(res) {
+        self.addTerm_codeInfoList = res.data || [];
+      });
+    },
+    /** 코드 선택 시 (등록) */
+    onAddCodeSelected(code) {
+      this.addTerm_selectedCode = code;
+    },
+    /** 도메인 유형 변경 시 (수정) */
+    onUpdateDomainTypeChange(val) {
+      if (val === 'code' && this.updateTerm_codeInfoList.length === 0) {
+        this.loadUpdateCodeInfoList();
+      }
+    },
+    /** 코드 목록 로드 (수정) - codeGrp가 있으면 기존 코드 자동 선택 */
+    loadUpdateCodeInfoList(existingCodeGrp) {
+      var self = this;
+      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', {}).then(function(res) {
+        self.updateTerm_codeInfoList = res.data || [];
+        // 기존 codeGrp에 해당하는 코드 자동 선택
+        if (existingCodeGrp) {
+          for (var i = 0; i < self.updateTerm_codeInfoList.length; i++) {
+            if (self.updateTerm_codeInfoList[i].codeGrp === existingCodeGrp) {
+              self.updateTerm_selectedCode = self.updateTerm_codeInfoList[i];
+              break;
+            }
+          }
+        }
+      });
+    },
+    /** 코드 선택 시 (수정) */
+    onUpdateCodeSelected(code) {
+      this.updateTerm_selectedCode = code;
     },
     moveItemUp(index, state) {
       if (state === 'add') {
