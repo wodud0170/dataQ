@@ -340,4 +340,38 @@
                 #{item.id}
 		</foreach>
 	</delete>
+
+	<!-- 전체 단어 조회 (추천 서비스용, 파라미터 없음) -->
+	<select id="selectAllWords" resultMap="stdWordMap">
+		SELECT
+			 WORD_ID
+			,WORD_NM
+			,WORD_ENG_ABRV_NM
+			,WORD_ENG_NM
+			,WORD_DESC
+			,WORD_CLSF_YN
+			,DOMAIN_CLSF_NM
+			,ALLOPH_SYNM_LST
+			,FORBDN_WORD_LST
+			,COMM_STND_YN
+			,MAGNTD_ORD
+			,APRV_YN
+			,APRV_USER_ID
+			,CRET_DT
+			,CRET_USER_ID
+			,UPDT_DT
+			,UPDT_USER_ID
+			,APRV_STAT_UPDT_DT
+			,REQ_SYS_CD
+		FROM TB_WORD
+		ORDER BY WORD_NM
+	</select>
+
+	<!-- 단어 사용빈도 조회 -->
+	<select id="selectWordUsageCounts" resultType="java.util.HashMap">
+		SELECT W.WORD_NM AS "wordNm", COUNT(*) AS "cnt"
+		FROM TB_WORD W
+		INNER JOIN TB_TERMS_WORDS TW ON W.WORD_ID = TW.WORD_ID
+		GROUP BY W.WORD_NM
+	</select>
 </mapper>

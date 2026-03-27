@@ -133,6 +133,35 @@
       order by DOMAIN_NM
   </select>
 
+  <!-- 전체 도메인 조회 (추천 서비스용, 파라미터 없음) -->
+  <select id="selectAllDomains" resultMap="stdDomainMap">
+    SELECT
+       DOMAIN_ID
+      ,DOMAIN_NM
+      ,DOMAIN_GRP_NM
+      ,DOMAIN_CLSF_NM
+      ,DOMAIN_DESC
+      ,DATA_TYPE
+      ,DATA_LEN
+      ,DATA_DECIMAL_LEN
+      ,DATA_UNIT
+      ,STOR_FMT
+      ,EXPR_FMT_LST
+      ,ALLOW_VAL_LST
+      ,COMM_STND_YN
+      ,MAGNTD_ORD
+      ,APRV_YN
+      ,APRV_USER_ID
+      ,CRET_DT
+      ,CRET_USER_ID
+      ,UPDT_DT
+      ,UPDT_USER_ID
+      ,APRV_STAT_UPDT_DT
+      ,REQ_SYS_CD
+    FROM TB_DOMAIN
+    ORDER BY DOMAIN_NM
+  </select>
+
   <insert id="insertDomain" parameterType="com.ndata.quality.model.std.StdDomainVo">
            INSERT INTO TB_DOMAIN
            (

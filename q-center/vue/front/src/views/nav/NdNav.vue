@@ -159,6 +159,13 @@
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>진단 결과</v-list-item-title>
                     </v-list-item>
+
+                    <v-list-item link id="nav_termRecommend" href="#tab_termRecommend"
+                        active-class="ndColor--text" title="표준화 추천"
+                        v-on:click.stop="addTabItem('표준화 추천', 'termRecommend');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>표준화 추천</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
                 <!-- 데이터 품질 -->

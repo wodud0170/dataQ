@@ -237,6 +237,22 @@
 		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM
 	</select>
 
+	<!-- 전체 용어 한글명 기준 조회 (추천 서비스용, 파라미터 없음) -->
+	<select id="selectAllTermsByNm" resultMap="stdTermsMap">
+		SELECT
+			 T.TERMS_ID
+			,T.TERMS_NM
+			,T.TERMS_ENG_ABRV_NM
+			,T.TERMS_DESC
+			,T.DOMAIN_NM
+			,T.ALLOPH_SYNM_LST
+			,D.DATA_TYPE
+			,D.DATA_LEN
+			,D.DATA_DECIMAL_LEN
+		FROM TB_TERMS T
+		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM
+	</select>
+
 	<insert id="insertTerms" parameterType="com.ndata.quality.model.std.StdTermsVo">
            INSERT INTO TB_TERMS
            (

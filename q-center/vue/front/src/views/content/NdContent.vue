@@ -125,6 +125,12 @@
                     <dataDiagResult :key="dataDiagResultKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'termRecommend'" id="tab_termRecommend" class="tab_contents"
+                :class="{ active: this.activeContent === 'termRecommend' }">
+                <keep-alive>
+                    <termRecommend :key="termRecommendKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'dqi'" id="tab_dqi" class="tab_contents"
                 :class="{ active: this.activeContent === 'dqi' }">
                 <keep-alive>
@@ -237,6 +243,7 @@ import DSDatamodelCollection from "../../components/DSDatamodelCollection.vue"
 import DSDatamodelHistory from "../../components/DSDatamodelHistory.vue"
 import DSDataDiag from "../../components/DSDataDiag.vue"
 import DSDataDiagResult from "../../components/DSDataDiagResult.vue"
+import DSTermRecommend from "../../components/DSTermRecommend.vue"
 import DQDQI from "./../../components/DQDQI.vue"
 import DQCTQ from "./../../components/DQCTQ.vue"
 import DQBR from "./../../components/DQBR.vue"
@@ -299,6 +306,7 @@ export default {
             datamodelHistoryKey: this.createUUID(),
             dataDiagKey: this.createUUID(),
             dataDiagResultKey: this.createUUID(),
+            termRecommendKey: this.createUUID(),
             dqiKey: this.createUUID(),
             ctqKey: this.createUUID(),
             dqbrKey: this.createUUID(),
@@ -331,6 +339,7 @@ export default {
         "datamodelHistory": DSDatamodelHistory,
         "dataDiag": DSDataDiag,
         "dataDiagResult": DSDataDiagResult,
+        "termRecommend": DSTermRecommend,
         "dqi": DQDQI,
         "ctq": DQCTQ,
         "dqbr": DQBR,
@@ -397,6 +406,9 @@ export default {
                     break;
                 case "dataDiagResult":
                     this.dataDiagResultKey = this.createUUID();
+                    break;
+                case "termRecommend":
+                    this.termRecommendKey = this.createUUID();
                     break;
                 case "dqi":
                     this.dqiKey = this.createUUID();

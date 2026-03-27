@@ -890,4 +890,16 @@ public class DataStandardController {
 
 		return Mono.just(result);
 	}
+
+	// 표준화 추천 - 분석
+	@RequestMapping(value = "/analyzeTermsBatch", method = RequestMethod.POST)
+	public Mono<Response> analyzeTermsBatch(HttpServletRequest request, @RequestBody Map<String, List<String>> body) {
+		log.info(">> analyzeTermsBatch started, count: {}", body.get("termNames") != null ? body.get("termNames").size() : 0);
+		WebClientHandler webClientHandler = new WebClientHandler(
+				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/analyzeTermsBatch");
+		return webClientHandler.postData(
+				sessionService.getUserId(),
+				Objects.toString(request.getSession().getAttribute("SSID"), null),
+				body);
+	}
 }
