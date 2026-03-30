@@ -1,16 +1,37 @@
 {
   "permissions": {
     "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Bash",
+      "Agent",
       "Bash(grep -r \"RequestMapping\\\\|PostMapping\\\\|GetMapping\\\\|PutMapping\\\\|DeleteMapping\" /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center/src/main/java/qualitycenter/controller/*.java)",
       "Bash(winget install:*)",
       "Bash(mvn test:*)",
       "Bash(grep -l \"CREATE TABLE\" C:/Users/naraedata/.claude/projects/c--Users-naraedata-Desktop-dataQ-ndata-quality-master/*.jsonl)",
       "Bash(git pull:*)",
       "Bash(grep -n \"selectTermsByEngNm\\\\|selectWordByEngAbrvNm\" /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-common/src/main/resources/mapper/stnd/*.xml)",
-      "Bash(find /c/Users/naraedata/Desktop/dataQ/ndata-quality-master -type f \\\\\\(-name *seed* -o -name *sample* -o -name *data*.sql \\\\\\))"
+      "Bash(find /c/Users/naraedata/Desktop/dataQ/ndata-quality-master -type f \\\\\\(-name *seed* -o -name *sample* -o -name *data*.sql \\\\\\))",
+      "Bash(find /c/Users/naraedata/Desktop/dataQ/ndata-quality-master -name *.sql -type f)",
+      "Bash(grep -r \"CREATE TABLE TB_TERMS\\\\|CREATE TABLE TB_WORD\\\\|CREATE TABLE TB_DOMAIN\" /c/Users/naraedata/Desktop/dataQ/ndata-quality-master --include=*.sql)",
+      "Bash(find /c/Users/naraedata/Desktop/dataQ/ndata-quality-master -type f \\\\\\(-name *.md -o -name *.txt -o -name *.doc* \\\\\\))",
+      "Bash(PGPASSWORD=\"admin!123\" psql -h 127.0.0.1 -p 25433 -U admin -d postgres -c \"SET search_path TO quality;\" -f /tmp/word_dict_inserts.sql)",
+      "Bash(PGPASSWORD=\"admin!123\" psql -h 127.0.0.1 -p 25433 -U admin -d postgres -c \"SET search_path TO quality; SELECT COUNT\\(*\\) as total FROM TB_WORD_DICT;\")",
+      "Bash(PGPASSWORD=\"admin!123\" psql -h 127.0.0.1 -p 25433 -U admin -d postgres -c \"SET search_path TO quality; SELECT * FROM TB_WORD_DICT WHERE WORD_KOR IN \\(''핸드폰'', ''지갑'', ''운전면허'', ''커피'', ''노트북''\\);\")",
+      "Bash(PGPASSWORD='admin!123' psql -h 127.0.0.1 -p 25433 -U admin -d postgres -c \"SET search_path TO quality; SELECT * FROM TB_WORD_DICT WHERE WORD_KOR IN \\(''핸드폰'',''지갑'',''운전면허'',''커피'',''노트북''\\);\")",
+      "Bash(mvn test-compile:*)",
+      "Bash(mvn clean:*)",
+      "Bash(mvn surefire:test -Dtest=\"qualitycenter.controller.TermRecommendTest\")",
+      "Bash(mvn dependency:tree -Dscope=test)",
+      "Bash(mvn surefire:test -Dtest=\"TermRecommendTest\" -DfailIfNoTests=false)",
+      "Bash(mvn surefire:test -Dincludes=\"**/TermRecommendTest.java\" -DfailIfNoTests=false)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\naraedata\\Desktop\\dataQ\\ndata-quality-master"
+      "c:\\Users\\naraedata\\Desktop\\dataQ\\ndata-quality-master",
+      "\\tmp"
     ]
   }
 }

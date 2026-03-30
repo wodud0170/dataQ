@@ -1,9 +1,13 @@
 package qualitycenter.controller;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.Objects;
 
@@ -37,11 +41,19 @@ import com.ndata.quality.model.std.StdCodeInfoVo;
 import com.ndata.quality.model.std.StdDomainClassificationVo;
 import com.ndata.quality.model.std.StdDomainGroupVo;
 import com.ndata.quality.model.std.StdDomainVo;
+import com.ndata.quality.model.std.TermAnalysisResult;
 import com.ndata.quality.model.std.StdTermsVo;
 import com.ndata.quality.model.std.StdWordVo;
 import com.ndata.quality.service.ExcelDownloadService;
 import com.ndata.quality.service.ExcelUploadService;
 import com.ndata.quality.tool.StringWordAnalyzer;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -893,13 +905,594 @@ public class DataStandardController {
 
 	// 표준화 추천 - 분석
 	@RequestMapping(value = "/analyzeTermsBatch", method = RequestMethod.POST)
-	public Mono<Response> analyzeTermsBatch(HttpServletRequest request, @RequestBody Map<String, List<String>> body) {
-		log.info(">> analyzeTermsBatch started, count: {}", body.get("termNames") != null ? body.get("termNames").size() : 0);
-		WebClientHandler webClientHandler = new WebClientHandler(
-				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/analyzeTermsBatch");
-		return webClientHandler.postData(
-				sessionService.getUserId(),
-				Objects.toString(request.getSession().getAttribute("SSID"), null),
-				body);
+	public List<TermAnalysisResult> analyzeTermsBatch(@RequestBody Map<String, List<String>> body) {
+		List<String> termNames = body.get("termNames");
+		if (termNames == null) termNames = new ArrayList<>();
+		log.info(">> analyzeTermsBatch started, count: {}", termNames.size());
+
+		// 캐시: 전체 용어/단어/도메인 로드
+		List<StdTermsVo> allTerms = sqlSessionTemplate.selectList("terms.selectAllTermsByNm");
+		Map<String, StdTermsVo> termsByNm = new HashMap<>();
+		for (StdTermsVo t : allTerms) { termsByNm.put(t.getTermsNm(), t); }
+
+		List<StdWordVo> allWords = sqlSessionTemplate.selectList("word.selectAllWords");
+		Map<String, List<StdWordVo>> wordsByNm = new HashMap<>();
+		for (StdWordVo w : allWords) {
+			wordsByNm.computeIfAbsent(w.getWordNm(), k -> new ArrayList<>()).add(w);
+		}
+
+		List<Map<String, Object>> usageCounts = sqlSessionTemplate.selectList("word.selectWordUsageCounts");
+		Map<String, Integer> usageMap = new HashMap<>();
+		for (Map<String, Object> row : usageCounts) {
+			String nm = (String) row.get("wordNm");
+			Number cnt = (Number) row.get("cnt");
+			if (nm != null && cnt != null) usageMap.put(nm, cnt.intValue());
+		}
+
+		List<StdDomainVo> allDomains = sqlSessionTemplate.selectList("domain.selectAllDomains");
+		Map<String, List<StdDomainVo>> domainsByClsf = new HashMap<>();
+		for (StdDomainVo d : allDomains) {
+			String clsf = d.getDomainClsfNm() != null ? d.getDomainClsfNm() : "";
+			domainsByClsf.computeIfAbsent(clsf, k -> new ArrayList<>()).add(d);
+		}
+
+		// 추천 사전 로드 (TB_WORD_DICT)
+		List<Map<String, Object>> dictRows = sqlSessionTemplate.selectList("word.selectAllWordDict");
+		Map<String, Map<String, Object>> wordDict = new HashMap<>();
+		for (Map<String, Object> row : dictRows) {
+			String kor = (String) row.get("wordKor");
+			if (kor != null) wordDict.put(kor, row);
+		}
+		log.info("[TermAnalysis] wordDict loaded: {} entries, wordsByNm: {} entries", wordDict.size(), wordsByNm.size());
+
+		List<TermAnalysisResult> results = new ArrayList<>();
+
+		for (String name : termNames) {
+			String cleanName = name.replaceAll("\\s", "");
+			if (cleanName.isEmpty()) continue;
+
+			TermAnalysisResult result = new TermAnalysisResult();
+			result.setInputNm(cleanName);
+
+			// 기등록 체크
+			if (termsByNm.containsKey(cleanName)) {
+				result.setStatus("REGISTERED");
+				result.setExistingTerm(termsByNm.get(cleanName));
+				results.add(result);
+				continue;
+			}
+
+			// 형태소 분석
+			Map<String, String> tokens;
+			try {
+				tokens = StringWordAnalyzer.getWordsFromStringByOkt(cleanName, null, false);
+			} catch (Exception e) {
+				log.error("Tokenization failed for: {}", cleanName, e);
+				result.setStatus("FAILED");
+				result.setWords(new ArrayList<>());
+				results.add(result);
+				continue;
+			}
+
+			if (tokens == null || tokens.isEmpty()) {
+				log.info("[TermAnalysis] OKT returned empty for: {}", cleanName);
+				result.setStatus("FAILED");
+				result.setWords(new ArrayList<>());
+				results.add(result);
+				continue;
+			}
+
+			log.info("[TermAnalysis] OKT tokens for '{}': {}", cleanName, tokens);
+
+			// NN 토큰만 추출 (중복 제거, #번호 제거)
+			List<String> nnTokens = new ArrayList<>();
+			for (Map.Entry<String, String> entry : tokens.entrySet()) {
+				if ("NN".equals(entry.getValue())) {
+					String t = entry.getKey().replaceAll("#\\d+$", "");
+					if (!nnTokens.contains(t)) nnTokens.add(t);
+				}
+			}
+
+			log.info("[TermAnalysis] NN tokens for '{}': {}", cleanName, nnTokens);
+
+			// 후보 토큰 세트 구성 (OKT + TB_WORD에서 입력에 포함된 단어)
+			Set<String> candidateSet = new LinkedHashSet<>(nnTokens);
+			for (String wordNm : wordsByNm.keySet()) {
+				if (wordNm.length() >= 2 && cleanName.contains(wordNm)) {
+					candidateSet.add(wordNm);
+				}
+			}
+
+			// 1순위: TB_WORD > DICT > OKT longest
+			List<String> primaryTokens = greedySplit(cleanName, candidateSet, wordsByNm, wordDict);
+			log.info("[TermAnalysis] 1순위 for '{}': {}", cleanName, primaryTokens);
+
+			// 2순위: 1순위에서 미등록 단어를 추가 분리
+			List<String> altTokens = generateAlternativeSplit(primaryTokens, candidateSet, wordsByNm);
+			log.info("[TermAnalysis] 2순위 for '{}': {}", cleanName, altTokens);
+
+			// 1순위 토큰 → WordAnalysis 변환
+			List<TermAnalysisResult.WordAnalysis> wordAnalyses = buildWordAnalyses(primaryTokens, wordsByNm, wordDict, usageMap);
+			result.setWords(wordAnalyses);
+			result.setRecommendedEngAbrvNm(composeEngAbrv(wordAnalyses));
+
+			// 2순위가 1순위와 다르면 세팅
+			if (!primaryTokens.equals(altTokens)) {
+				List<TermAnalysisResult.WordAnalysis> altAnalyses = buildWordAnalyses(altTokens, wordsByNm, wordDict, usageMap);
+				result.setAlternativeWords(altAnalyses);
+				result.setAlternativeEngAbrvNm(composeEngAbrv(altAnalyses));
+			}
+
+			// 도메인 추천 (마지막 단어 기준)
+			if (!wordAnalyses.isEmpty()) {
+				TermAnalysisResult.WordAnalysis lastWord = wordAnalyses.get(wordAnalyses.size() - 1);
+				String clsfNm = null;
+				if ("MATCHED".equals(lastWord.getStatus()) && lastWord.getSelected() != null) {
+					clsfNm = lastWord.getSelected().getDomainClsfNm();
+				}
+				if (clsfNm != null && domainsByClsf.containsKey(clsfNm)) {
+					List<StdDomainVo> domCandidates = domainsByClsf.get(clsfNm);
+					result.setDomainCandidates(domCandidates);
+					if (!domCandidates.isEmpty()) {
+						StdDomainVo first = domCandidates.get(0);
+						result.setRecommendedDomainNm(first.getDomainNm());
+						result.setRecommendedDataType(first.getDataType());
+						result.setRecommendedDataLen(first.getDataLen());
+					}
+				}
+			}
+
+			// 상태 판정
+			result.setStatus(judgeStatus(wordAnalyses));
+			results.add(result);
+		}
+
+		return results;
+	}
+
+	/**
+	 * 단어 단건 등록 API (표준화 추천에서 NEW 단어 선등록용)
+	 */
+	@RequestMapping(value = "/registerWord", method = RequestMethod.POST)
+	public Map<String, Object> registerWord(@RequestBody Map<String, Object> body) {
+		Map<String, Object> res = new HashMap<>();
+		String wordNm = (String) body.get("wordNm");
+		String wordEngAbrvNm = (String) body.get("wordEngAbrvNm");
+		String wordEngNm = (String) body.get("wordEngNm");
+		String wordDesc = (String) body.get("wordDesc");
+		String domainClsfNm = (String) body.get("domainClsfNm");
+
+		if (wordNm == null || wordNm.trim().isEmpty()
+				|| wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
+				|| wordEngNm == null || wordEngNm.trim().isEmpty()) {
+			res.put("success", false);
+			res.put("message", "한글명, 영문약어, 영문명은 필수입니다.");
+			return res;
+		}
+
+		// 중복 체크
+		List<StdWordVo> existing = sqlSessionTemplate.selectList("word.selectWordInfoByNm", wordNm.trim());
+		if (existing != null && !existing.isEmpty()) {
+			// 이미 등록된 단어 → 기존 정보 반환
+			StdWordVo existWord = existing.get(0);
+			res.put("success", true);
+			res.put("alreadyExists", true);
+			res.put("wordId", existWord.getId());
+			res.put("wordNm", existWord.getWordNm());
+			res.put("wordEngAbrvNm", existWord.getWordEngAbrvNm());
+			res.put("wordEngNm", existWord.getWordEngNm());
+			res.put("domainClsfNm", existWord.getDomainClsfNm());
+			return res;
+		}
+
+		String userId = sessionService.getUserId();
+		boolean isAdmin = sessionService.isAdmin();
+
+		StdWordVo wordVo = new StdWordVo();
+		String wordId = StringUtils.getUUID();
+		wordVo.setId(wordId);
+		wordVo.setWordNm(wordNm.trim());
+		wordVo.setWordEngAbrvNm(wordEngAbrvNm.trim().toUpperCase());
+		wordVo.setWordEngNm(wordEngNm.trim());
+		wordVo.setWordDesc(wordDesc != null ? wordDesc.trim() : wordNm.trim());
+		wordVo.setDomainClsfNm(domainClsfNm != null ? domainClsfNm.trim() : "");
+		wordVo.setWordClsfYn("N");
+		wordVo.setCommStndYn("N");
+		wordVo.setCretUserId(userId);
+		if (isAdmin) wordVo.setAprvYn("Y");
+
+		sqlSessionTemplate.insert("word.insertWord", wordVo);
+
+		res.put("success", true);
+		res.put("alreadyExists", false);
+		res.put("wordId", wordId);
+		res.put("wordNm", wordVo.getWordNm());
+		res.put("wordEngAbrvNm", wordVo.getWordEngAbrvNm());
+		res.put("wordEngNm", wordVo.getWordEngNm());
+		res.put("domainClsfNm", wordVo.getDomainClsfNm());
+		return res;
+	}
+
+	@RequestMapping(value = "/registerTermsBatch", method = RequestMethod.POST)
+	public Map<String, Object> registerTermsBatch(@RequestBody Map<String, Object> body) {
+		@SuppressWarnings("unchecked")
+		List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+		if (items == null || items.isEmpty()) {
+			Map<String, Object> res = new HashMap<>();
+			res.put("success", 0);
+			res.put("fail", 0);
+			res.put("details", new ArrayList<>());
+			return res;
+		}
+
+		String userId = sessionService.getUserId();
+		boolean isAdmin = sessionService.isAdmin();
+		int registeredTerms = 0;
+		int registeredWords = 0;
+		int skipped = 0;
+		int failed = 0;
+		List<Map<String, Object>> details = new ArrayList<>();
+
+		for (Map<String, Object> item : items) {
+			String termsNm = (String) item.get("termsNm");
+			String termsEngAbrvNm = (String) item.get("termsEngAbrvNm");
+			String termsDesc = (String) item.get("termsDesc");
+			String domainNm = (String) item.get("domainNm");
+			@SuppressWarnings("unchecked")
+			List<Map<String, Object>> words = (List<Map<String, Object>>) item.get("words");
+			@SuppressWarnings("unchecked")
+			List<Map<String, Object>> newWords = (List<Map<String, Object>>) item.get("newWords");
+
+			SqlSession session = sqlSessionFactory.openSession();
+			try {
+				// 중복 체크
+				if (session.selectOne("terms.selectTermsByNm", termsNm) != null) {
+					skipped++;
+					Map<String, Object> detail = new HashMap<>();
+					detail.put("termsNm", termsNm);
+					detail.put("status", "SKIPPED");
+					detail.put("message", "이미 등록된 용어");
+					details.add(detail);
+					continue;
+				}
+
+				// 신규 단어 등록
+				int newWordCount = 0;
+				Map<Integer, String> newWordIdMap = new HashMap<>();
+				if (newWords != null) {
+					for (int i = 0; i < newWords.size(); i++) {
+						Map<String, Object> nw = newWords.get(i);
+						String wordNm = (String) nw.get("wordNm");
+						String wordEngAbrvNm = (String) nw.get("wordEngAbrvNm");
+						String wordEngNm = (String) nw.get("wordEngNm");
+						if (wordNm == null || wordNm.trim().isEmpty()
+								|| wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
+								|| wordEngNm == null || wordEngNm.trim().isEmpty()) {
+							throw new RuntimeException("신규 단어 필수 항목 누락: 한글명, 영문약어, 영문명은 필수입니다. (단어: " + wordNm + ")");
+						}
+						StdWordVo wordVo = new StdWordVo();
+						String wordId = StringUtils.getUUID();
+						wordVo.setId(wordId);
+						wordVo.setWordNm((String) nw.get("wordNm"));
+						wordVo.setWordEngAbrvNm((String) nw.get("wordEngAbrvNm"));
+						wordVo.setWordEngNm((String) nw.get("wordEngNm"));
+						wordVo.setWordDesc((String) nw.get("wordDesc"));
+						wordVo.setDomainClsfNm((String) nw.get("domainClsfNm"));
+						wordVo.setWordClsfYn("N");
+						wordVo.setCommStndYn("N");
+						wordVo.setCretUserId(userId);
+						if (isAdmin) wordVo.setAprvYn("Y");
+						session.insert("word.insertWord", wordVo);
+						newWordIdMap.put(i, wordId);
+						newWordCount++;
+					}
+				}
+
+				// 용어 등록
+				StdTermsVo termsVo = new StdTermsVo();
+				String termsId = StringUtils.getUUID();
+				termsVo.setId(termsId);
+				termsVo.setTermsNm(termsNm);
+				termsVo.setTermsEngAbrvNm(termsEngAbrvNm);
+				termsVo.setTermsDesc(termsDesc != null ? termsDesc : termsNm);
+				termsVo.setDomainNm(domainNm);
+				termsVo.setCommStndYn("N");
+				termsVo.setCretUserId(userId);
+				if (isAdmin) termsVo.setAprvYn("Y");
+				session.insert("terms.insertTerms", termsVo);
+
+				// 용어-단어 관계 등록
+				if (words != null && !words.isEmpty()) {
+					List<StdTermsVo.Word> wordList = new ArrayList<>();
+					for (Map<String, Object> w : words) {
+						StdTermsVo.Word tw = new StdTermsVo.Word();
+						tw.setTermsId(termsId);
+						Number wordOrd = (Number) w.get("wordOrd");
+						tw.setWordOrd(wordOrd != null ? wordOrd.shortValue() : (short) 0);
+
+						String wordId = (String) w.get("wordId");
+						if (wordId != null) {
+							tw.setWordId(wordId);
+						} else {
+							// 신규 단어 매핑
+							Number newWordIndex = (Number) w.get("newWordIndex");
+							if (newWordIndex != null) {
+								tw.setWordId(newWordIdMap.get(newWordIndex.intValue()));
+							}
+						}
+						// wordNm은 selectWordInfoById로 조회하지 않고, 단어 테이블에서 가져와야 하지만
+						// insertTermsWords에 필요하므로 간단히 처리
+						if (tw.getWordId() != null) {
+							List<StdWordVo> wordInfo = session.selectList("word.selectWordInfoById", tw.getWordId());
+							if (!wordInfo.isEmpty()) {
+								tw.setWordNm(wordInfo.get(0).getWordNm());
+							}
+						}
+						wordList.add(tw);
+					}
+					if (!wordList.isEmpty()) {
+						session.insert("terms.insertTermsWords", wordList);
+					}
+				}
+
+				session.commit();
+				registeredTerms++;
+				registeredWords += newWordCount;
+
+				Map<String, Object> detail = new HashMap<>();
+				detail.put("termsNm", termsNm);
+				detail.put("status", "SUCCESS");
+				details.add(detail);
+			} catch (Exception e) {
+				session.rollback();
+				failed++;
+				log.error("registerTermsBatch item failed: {} - {}", termsNm, e.getMessage());
+
+				Map<String, Object> detail = new HashMap<>();
+				detail.put("termsNm", termsNm);
+				detail.put("status", "FAIL");
+				detail.put("message", e.getMessage());
+				details.add(detail);
+			} finally {
+				session.close();
+			}
+		}
+
+		Map<String, Object> result = new HashMap<>();
+		result.put("registeredTerms", registeredTerms);
+		result.put("registeredWords", registeredWords);
+		result.put("skipped", skipped);
+		result.put("failed", failed);
+		result.put("details", details);
+		return result;
+	}
+
+	@PostMapping(value = "/parseExcelColumnNames", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public List<String> parseExcelColumnNames(@RequestParam("file") MultipartFile file) {
+		List<String> columnNames = new ArrayList<>();
+		try (InputStream is = file.getInputStream(); Workbook workbook = WorkbookFactory.create(is)) {
+			Sheet sheet = workbook.getSheetAt(0);
+			// 첫 번째 행이 헤더인지 확인 - 헤더가 있으면 건너뜀
+			int startRow = 0;
+			Row firstRow = sheet.getRow(0);
+			if (firstRow != null) {
+				Cell firstCell = firstRow.getCell(0);
+				if (firstCell != null) {
+					String val = getCellStringValue(firstCell).trim();
+					// 헤더 판별: "컬럼", "용어", "한글명" 등이면 헤더로 간주
+					if (val.contains("컬럼") || val.contains("용어") || val.contains("한글") || val.contains("이름") || val.contains("명칭")) {
+						startRow = 1;
+					}
+				}
+			}
+			for (int i = startRow; i <= sheet.getLastRowNum(); i++) {
+				Row row = sheet.getRow(i);
+				if (row == null) continue;
+				Cell cell = row.getCell(0);
+				if (cell == null) continue;
+				String value = getCellStringValue(cell).trim();
+				if (!value.isEmpty()) {
+					columnNames.add(value);
+				}
+			}
+		} catch (Exception e) {
+			log.error("Excel parsing failed: {}", e.getMessage());
+		}
+		return columnNames;
+	}
+
+	private String getCellStringValue(Cell cell) {
+		if (cell.getCellType() == CellType.STRING) {
+			return cell.getStringCellValue();
+		} else if (cell.getCellType() == CellType.NUMERIC) {
+			return String.valueOf((long) cell.getNumericCellValue());
+		}
+		return "";
+	}
+
+	/**
+	 * 입력 문자열을 순서대로 커버하는 최적 토큰 조합을 선택한다.
+	 * - 등록된 단어(wordsByNm에 존재)를 우선 매칭
+	 * - 같은 조건이면 긴 토큰 우선 (greedy)
+	 * - 예: "API코드" → ["API", "코드"] (등록단어), "API코드"나 "코", "드" 등은 제외
+	 */
+	/**
+	 * 1순위 분리: TB_WORD > DICT > OKT longest 순으로 greedy 매칭
+	 */
+	private List<String> greedySplit(String input, Set<String> candidates,
+			Map<String, List<StdWordVo>> wordsByNm, Map<String, Map<String, Object>> wordDict) {
+		List<String> result = new ArrayList<>();
+		Set<String> dictKeys = wordDict.keySet();
+		String remaining = input;
+		int maxIter = 100;
+
+		while (!remaining.isEmpty() && maxIter-- > 0) {
+			String selected = null;
+
+			// 1. TB_WORD longest match
+			for (String c : candidates) {
+				if (wordsByNm.containsKey(c) && remaining.startsWith(c) && !c.equals(input)) {
+					if (selected == null || c.length() > selected.length()) selected = c;
+				}
+			}
+			if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
+
+			// 2. DICT longest match
+			for (String c : candidates) {
+				if (dictKeys.contains(c) && remaining.startsWith(c) && !c.equals(input)) {
+					if (selected == null || c.length() > selected.length()) selected = c;
+				}
+			}
+			if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
+
+			// 3. remaining 자체가 OKT 토큰이면 사용 (1글자 마지막 토큰 처리)
+			if (candidates.contains(remaining) && !remaining.equals(input)) {
+				result.add(remaining); remaining = ""; continue;
+			}
+
+			// 4. OKT longest 2+ chars
+			for (String c : candidates) {
+				if (c.length() >= 2 && remaining.startsWith(c) && c.length() < remaining.length() && !c.equals(input)) {
+					if (selected == null || c.length() > selected.length()) selected = c;
+				}
+			}
+			if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
+
+			// 5. 매칭 불가 → 다음 매칭점까지 스킵
+			boolean skipped = false;
+			for (int skip = 1; skip < remaining.length(); skip++) {
+				String sub = remaining.substring(skip);
+				for (String c : candidates) {
+					if (sub.startsWith(c) && !c.equals(input)) { skipped = true; break; }
+				}
+				if (skipped) { result.add(remaining.substring(0, skip)); remaining = remaining.substring(skip); break; }
+			}
+			if (!skipped) { result.add(remaining); remaining = ""; }
+		}
+		return result;
+	}
+
+	/**
+	 * 2순위 생성: 1순위에서 미등록(TB_WORD에 없는) 토큰을 추가 분리
+	 */
+	private List<String> generateAlternativeSplit(List<String> primarySplit, Set<String> candidates, Map<String, List<StdWordVo>> wordsByNm) {
+		List<String> alt = new ArrayList<>();
+		for (String token : primarySplit) {
+			if (wordsByNm.containsKey(token) || token.length() < 3) {
+				alt.add(token);
+				continue;
+			}
+			// 미등록 토큰을 shortest 2+ 로 재분리
+			List<String> sub = subSplit(token, candidates);
+			if (sub.size() > 1) {
+				alt.addAll(sub);
+			} else {
+				alt.add(token);
+			}
+		}
+		return alt;
+	}
+
+	private List<String> subSplit(String token, Set<String> candidates) {
+		List<String> result = new ArrayList<>();
+		String remaining = token;
+		int maxIter = 50;
+		while (!remaining.isEmpty() && maxIter-- > 0) {
+			String best = null;
+			for (String c : candidates) {
+				if (c.length() >= 2 && remaining.startsWith(c) && c.length() < remaining.length()) {
+					if (best == null || c.length() < best.length()) best = c;
+				}
+			}
+			if (best != null) { result.add(best); remaining = remaining.substring(best.length()); continue; }
+			if (candidates.contains(remaining)) { result.add(remaining); remaining = ""; continue; }
+			result.add(remaining); remaining = "";
+		}
+		return result;
+	}
+
+	/**
+	 * 토큰 목록 → WordAnalysis 목록 변환
+	 */
+	private List<TermAnalysisResult.WordAnalysis> buildWordAnalyses(List<String> tokens,
+			Map<String, List<StdWordVo>> wordsByNm, Map<String, Map<String, Object>> wordDict,
+			Map<String, Integer> usageMap) {
+		List<TermAnalysisResult.WordAnalysis> list = new ArrayList<>();
+		for (String token : tokens) {
+			TermAnalysisResult.WordAnalysis wa = new TermAnalysisResult.WordAnalysis();
+			wa.setWordNm(token);
+
+			List<StdWordVo> matches = wordsByNm.get(token);
+			if (matches != null && !matches.isEmpty()) {
+				wa.setStatus("MATCHED");
+				List<TermAnalysisResult.WordCandidate> cands = new ArrayList<>();
+				TermAnalysisResult.WordCandidate best = null;
+				int bestScore = -1;
+				for (StdWordVo w : matches) {
+					TermAnalysisResult.WordCandidate c = new TermAnalysisResult.WordCandidate();
+					c.setWordId(w.getId());
+					c.setWordNm(w.getWordNm());
+					c.setWordEngAbrvNm(w.getWordEngAbrvNm());
+					c.setWordEngNm(w.getWordEngNm());
+					c.setDomainClsfNm(w.getDomainClsfNm());
+					int score = 0;
+					Integer usage = usageMap.get(w.getWordNm());
+					if (usage != null) score += usage * 100;
+					if (w.getWordEngAbrvNm() != null) score += Math.min(w.getWordEngAbrvNm().length(), 10) * 10;
+					c.setScore(score);
+					if (score > bestScore) { bestScore = score; best = c; }
+					cands.add(c);
+				}
+				cands.sort((a, b) -> b.getScore() - a.getScore());
+				if (best != null) best.setSelected(true);
+				wa.setCandidates(cands);
+				wa.setSelected(best);
+			} else {
+				Map<String, Object> dictEntry = wordDict.get(token);
+				if (dictEntry != null) {
+					wa.setStatus("NEW");
+					wa.setCandidates(new ArrayList<>());
+					TermAnalysisResult.NewWordSuggestion suggestion = new TermAnalysisResult.NewWordSuggestion();
+					suggestion.setWordEngAbrvNm(dictEntry.get("wordAbrv") != null ? (String) dictEntry.get("wordAbrv") : "");
+					suggestion.setWordEngNm(dictEntry.get("wordEng") != null ? (String) dictEntry.get("wordEng") : "");
+					suggestion.setDomainClsfNm(dictEntry.get("domainClsfNm") != null ? (String) dictEntry.get("domainClsfNm") : "");
+					wa.setNewWord(suggestion);
+				} else {
+					wa.setStatus("UNRECOGNIZED");
+					wa.setCandidates(new ArrayList<>());
+					TermAnalysisResult.NewWordSuggestion suggestion = new TermAnalysisResult.NewWordSuggestion();
+					suggestion.setWordEngAbrvNm("");
+					suggestion.setWordEngNm("");
+					suggestion.setDomainClsfNm("");
+					wa.setNewWord(suggestion);
+				}
+			}
+			list.add(wa);
+		}
+		return list;
+	}
+
+	private String composeEngAbrv(List<TermAnalysisResult.WordAnalysis> wordAnalyses) {
+		StringBuilder sb = new StringBuilder();
+		for (TermAnalysisResult.WordAnalysis wa : wordAnalyses) {
+			if (sb.length() > 0) sb.append("_");
+			if ("MATCHED".equals(wa.getStatus()) && wa.getSelected() != null) {
+				sb.append(wa.getSelected().getWordEngAbrvNm());
+			} else if (wa.getNewWord() != null) {
+				sb.append(wa.getNewWord().getWordEngAbrvNm());
+			}
+		}
+		return sb.toString();
+	}
+
+	private String judgeStatus(List<TermAnalysisResult.WordAnalysis> wordAnalyses) {
+		boolean hasMatched = false, hasNew = false;
+		for (TermAnalysisResult.WordAnalysis wa : wordAnalyses) {
+			if ("MATCHED".equals(wa.getStatus())) hasMatched = true;
+			else hasNew = true;
+		}
+		if (wordAnalyses.isEmpty() || !hasMatched) return "FAILED";
+		if (hasNew) return "PARTIAL";
+		return "AUTO";
 	}
 }

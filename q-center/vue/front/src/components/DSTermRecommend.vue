@@ -71,12 +71,10 @@
 
           <!-- Filter + Action buttons -->
           <v-card-actions class="px-4 pt-0">
-            <v-btn-toggle v-model="filterStatus" mandatory dense>
-              <v-btn small value="all">전체</v-btn>
-              <v-btn small value="AUTO">자동완성</v-btn>
-              <v-btn small value="PARTIAL">이슈</v-btn>
-              <v-btn small value="REGISTERED">기등록</v-btn>
-            </v-btn-toggle>
+            <v-chip class="mr-1" :color="filterStatus === 'all' ? 'primary' : ''" :outlined="filterStatus !== 'all'" small @click="filterStatus = 'all'">전체</v-chip>
+            <v-chip class="mr-1" :color="filterStatus === 'AUTO' ? 'green' : ''" :outlined="filterStatus !== 'AUTO'" :text-color="filterStatus === 'AUTO' ? 'white' : ''" small @click="filterStatus = 'AUTO'">자동완성</v-chip>
+            <v-chip class="mr-1" :color="filterStatus === 'PARTIAL' ? 'orange' : ''" :outlined="filterStatus !== 'PARTIAL'" :text-color="filterStatus === 'PARTIAL' ? 'white' : ''" small @click="filterStatus = 'PARTIAL'">이슈</v-chip>
+            <v-chip class="mr-1" :color="filterStatus === 'REGISTERED' ? 'grey' : ''" :outlined="filterStatus !== 'REGISTERED'" :text-color="filterStatus === 'REGISTERED' ? 'white' : ''" small @click="filterStatus = 'REGISTERED'">기등록</v-chip>
             <v-spacer></v-spacer>
             <v-btn small color="ndColor" class="white--text" @click="approveAll" :disabled="approvableCount === 0">
               <v-icon left small>mdi-check-all</v-icon>전체 승인 ({{ approvableCount }}건)
@@ -150,7 +148,7 @@
             <!-- Action column -->
             <template v-slot:[`item.action`]="{ item }">
               <span v-if="item.status === 'REGISTERED'" class="grey--text text-caption">기등록</span>
-              <v-btn v-else-if="item.status === 'PARTIAL'" x-small color="orange" dark @click="editItem(item)">
+              <v-btn v-else-if="item.status === 'PARTIAL' || item.status === 'FAILED'" x-small color="orange" dark @click="editItem(item)">
                 <v-icon x-small left>mdi-pencil</v-icon>수정
               </v-btn>
               <v-icon v-else-if="item._approved" color="green" small>mdi-check-circle</v-icon>
@@ -208,39 +206,55 @@
     </v-stepper>
 
     <!-- Edit dialog for PARTIAL items -->
-    <v-dialog v-model="editDialog" max-width="700">
+    <v-dialog v-model="editDialog" max-width="750">
       <v-card v-if="editingItem">
         <v-card-title>단어 정보 수정 - {{ editingItem.inputNm }}</v-card-title>
         <v-card-text>
+          <!-- 분리 방법 선택 (2순위가 있을 때만 표시) -->
+          <div v-if="editingItem.alternativeWords && editingItem.alternativeWords.length" class="mb-3">
+            <v-btn-toggle v-model="editSplitMode" mandatory dense color="primary">
+              <v-btn x-small :value="0">추천 1: {{ summarizeSplit(editingItem.words) }}</v-btn>
+              <v-btn x-small :value="1">추천 2: {{ summarizeSplit(editingItem.alternativeWords) }}</v-btn>
+            </v-btn-toggle>
+          </div>
           <v-simple-table dense>
             <thead>
               <tr>
-                <th>한글명</th><th>영문약어</th><th>영문명</th><th>도메인분류</th><th>상태</th>
+                <th>한글명</th><th>영문약어</th><th>영문명</th><th>도메인분류</th><th>상태</th><th>등록</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(w, wi) in editingItem.words" :key="wi">
+              <tr v-for="(w, wi) in currentEditWords" :key="wi">
                 <td>{{ w.wordNm }}</td>
                 <td>
                   <v-text-field v-if="w.status === 'NEW'" v-model="w.newWord.wordEngAbrvNm" dense hide-details
                     @input="w.newWord.wordEngAbrvNm = (w.newWord.wordEngAbrvNm || '').toUpperCase()"
                     style="max-width:120px"></v-text-field>
+                  <span v-else-if="w.status === 'UNRECOGNIZED'" class="grey--text">-</span>
                   <span v-else>{{ w.selected && w.selected.wordEngAbrvNm || '-' }}</span>
                 </td>
                 <td>
                   <v-text-field v-if="w.status === 'NEW'" v-model="w.newWord.wordEngNm" dense hide-details
                     style="max-width:150px"></v-text-field>
+                  <span v-else-if="w.status === 'UNRECOGNIZED'" class="grey--text">-</span>
                   <span v-else>{{ w.selected && w.selected.wordEngNm || '-' }}</span>
                 </td>
                 <td>
                   <v-text-field v-if="w.status === 'NEW'" v-model="w.newWord.domainClsfNm" dense hide-details
                     style="max-width:100px"></v-text-field>
+                  <span v-else-if="w.status === 'UNRECOGNIZED'" class="grey--text">-</span>
                   <span v-else>{{ w.selected && w.selected.domainClsfNm || '-' }}</span>
                 </td>
                 <td>
-                  <v-chip x-small :color="w.status === 'NEW' ? 'orange' : 'green'" text-color="white">
-                    {{ w.status === 'NEW' ? '신규' : '등록됨' }}
-                  </v-chip>
+                  <v-chip v-if="w.status === 'UNRECOGNIZED'" x-small color="red" text-color="white">매칭불가</v-chip>
+                  <v-chip v-else-if="w.status === 'NEW' && !w._registered" x-small color="orange" text-color="white">신규</v-chip>
+                  <v-chip v-else x-small color="green" text-color="white">등록됨</v-chip>
+                </td>
+                <td>
+                  <v-btn v-if="w.status === 'NEW' && !w._registered" x-small color="primary"
+                    :loading="w._registering"
+                    @click="registerSingleWord(w)">단어등록</v-btn>
+                  <v-icon v-if="w._registered" small color="green">mdi-check-circle</v-icon>
                 </td>
               </tr>
             </tbody>
@@ -278,6 +292,7 @@ export default {
       // Edit dialog
       editDialog: false,
       editingItem: null,
+      editSplitMode: 0,  // 0=1순위, 1=2순위
 
       // Step 4
       registerResult: null,
@@ -302,6 +317,13 @@ export default {
       return this.inputText.split('\n')
         .map(function(s) { return s.replace(/\s+/g, '').trim(); })
         .filter(function(s) { return s.length > 0; });
+    },
+    currentEditWords: function() {
+      if (!this.editingItem) return [];
+      if (this.editSplitMode === 1 && this.editingItem.alternativeWords && this.editingItem.alternativeWords.length) {
+        return this.editingItem.alternativeWords;
+      }
+      return this.editingItem.words || [];
     },
     filteredResults: function() {
       var self = this;
@@ -416,13 +438,116 @@ export default {
         }
       }
     },
+    summarizeSplit: function(words) {
+      if (!words) return '';
+      return words.map(function(w) { return w.wordNm; }).join('+');
+    },
     editItem: function(item) {
       this.editingItem = item;
+      this.editSplitMode = 0;
       this.editDialog = true;
+    },
+    registerSingleWord: function(w) {
+      var self = this;
+      if (!w.newWord || !w.newWord.wordEngAbrvNm || !w.newWord.wordEngAbrvNm.trim()) {
+        self.$swal.fire({ title: '입력 오류', text: '영문약어를 먼저 입력해주세요.', icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
+      if (!w.newWord.wordEngNm || !w.newWord.wordEngNm.trim()) {
+        self.$swal.fire({ title: '입력 오류', text: '영문명을 먼저 입력해주세요.', icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
+      self.$set(w, '_registering', true);
+      axios.post(self.$APIURL.base + 'api/std/registerWord', {
+        wordNm: w.wordNm,
+        wordEngAbrvNm: w.newWord.wordEngAbrvNm,
+        wordEngNm: w.newWord.wordEngNm,
+        wordDesc: w.wordNm,
+        domainClsfNm: w.newWord.domainClsfNm || ''
+      }).then(function(res) {
+        self.$set(w, '_registering', false);
+        if (res.data.success) {
+          // 단어 등록 성공 → 상태를 MATCHED로 변경
+          self.$set(w, '_registered', true);
+          w.status = 'MATCHED';
+          w.selected = {
+            wordId: res.data.wordId,
+            wordNm: res.data.wordNm,
+            wordEngAbrvNm: res.data.wordEngAbrvNm,
+            wordEngNm: res.data.wordEngNm,
+            domainClsfNm: res.data.domainClsfNm || ''
+          };
+          w.candidates = [w.selected];
+          // 전체 상태 재판정
+          self.recalcItemStatus(self.editingItem);
+          var msg = res.data.alreadyExists ? '이미 등록된 단어입니다. 기존 정보를 사용합니다.' : '단어가 등록되었습니다.';
+          self.$swal.fire({ title: '완료', text: msg, icon: 'success', confirmButtonText: '확인', timer: 1500 });
+        } else {
+          self.$swal.fire({ title: '등록 실패', text: res.data.message, icon: 'error', confirmButtonText: '확인' });
+        }
+      }).catch(function(err) {
+        self.$set(w, '_registering', false);
+        self.$swal.fire({ title: '등록 실패', text: '서버 오류가 발생했습니다.', icon: 'error', confirmButtonText: '확인' });
+      });
+    },
+    recalcItemStatus: function(item) {
+      if (!item || !item.words) return;
+      var hasMatched = false;
+      var hasNew = false;
+      for (var i = 0; i < item.words.length; i++) {
+        if (item.words[i].status === 'MATCHED') hasMatched = true;
+        if (item.words[i].status === 'NEW') hasNew = true;
+      }
+      if (!hasMatched) {
+        item.status = 'FAILED';
+      } else if (hasNew) {
+        item.status = 'PARTIAL';
+      } else {
+        item.status = 'AUTO';
+      }
+      // 영문약어 재조합
+      var parts = [];
+      for (var j = 0; j < item.words.length; j++) {
+        var w = item.words[j];
+        if (w.status === 'MATCHED' && w.selected) {
+          parts.push(w.selected.wordEngAbrvNm);
+        } else if (w.status === 'NEW' && w.newWord) {
+          parts.push(w.newWord.wordEngAbrvNm);
+        }
+      }
+      item.recommendedEngAbrvNm = parts.join('_');
     },
     confirmEdit: function() {
       var item = this.editingItem;
+      var activeWords = this.currentEditWords;
+
+      // 2순위 선택 시 item.words를 alternativeWords로 교체
+      if (this.editSplitMode === 1 && item.alternativeWords && item.alternativeWords.length) {
+        item.words = item.alternativeWords;
+        item.alternativeWords = null;
+      }
+
       if (item && item.words) {
+        // UNRECOGNIZED 단어가 있는지 체크
+        var unrecognized = [];
+        var unregistered = [];
+        for (var j = 0; j < item.words.length; j++) {
+          var nw = item.words[j];
+          if (nw.status === 'UNRECOGNIZED') {
+            unrecognized.push(nw.wordNm);
+          } else if (nw.status === 'NEW' && !nw._registered) {
+            unregistered.push(nw.wordNm);
+          }
+        }
+        if (unregistered.length > 0) {
+          this.$swal.fire({
+            title: '미등록 단어 있음',
+            text: '다음 단어를 먼저 등록해주세요: ' + unregistered.join(', '),
+            icon: 'warning',
+            confirmButtonText: '확인'
+          });
+          return;
+        }
         var parts = [];
         for (var i = 0; i < item.words.length; i++) {
           var w = item.words[i];

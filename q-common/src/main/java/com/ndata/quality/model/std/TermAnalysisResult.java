@@ -25,10 +25,14 @@ public class TermAnalysisResult {
     // 도메인 후보 목록
     private List<StdDomainVo> domainCandidates;
 
+    // 2순위 분리 결과 (1순위 미등록 단어를 추가 분리)
+    private List<WordAnalysis> alternativeWords;
+    private String alternativeEngAbrvNm;
+
     @Data
     public static class WordAnalysis {
         private String wordNm;         // 한글명
-        private String status;         // MATCHED, NEW
+        private String status;         // MATCHED, NEW, UNRECOGNIZED
         private List<WordCandidate> candidates;  // 매칭된 후보들
         private WordCandidate selected;          // 자동 선택된 후보
         private NewWordSuggestion newWord;       // status=NEW일 때 추천값

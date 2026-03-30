@@ -374,4 +374,10 @@
 		INNER JOIN TB_TERMS_WORDS TW ON W.WORD_ID = TW.WORD_ID
 		GROUP BY W.WORD_NM
 	</select>
+
+	<!-- 추천 사전 전체 조회 (TB_WORD_DICT) -->
+	<select id="selectAllWordDict" resultType="java.util.HashMap">
+		SELECT WORD_KOR AS "wordKor", WORD_ENG AS "wordEng", WORD_ABRV AS "wordAbrv", DOMAIN_CLSF_NM AS "domainClsfNm"
+		FROM TB_WORD_DICT
+	</select>
 </mapper>
