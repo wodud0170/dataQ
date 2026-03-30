@@ -431,7 +431,7 @@ export default {
           this.$swal.fire({
             title: `비밀번호는 대소문자 및 숫자, 특수문자를 포함한 9~16자만 가능합니다.`,
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
 
@@ -443,7 +443,7 @@ export default {
           this.$swal.fire({
             title: `${_attr} 필수 입력값입니다.`,
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
 
@@ -481,7 +481,7 @@ export default {
           this.$swal.fire({
             title: `비밀번호는 대소문자 및 숫자, 특수문자를 포함한 9~16자만 가능합니다.`,
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
 
@@ -493,7 +493,7 @@ export default {
           this.$swal.fire({
             title: `${_attr} 필수 입력값입니다.`,
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
 
@@ -561,7 +561,7 @@ export default {
         this.$swal.fire({
           title: `현재 비밀번호는 필수 입력값입니다.`,
           confirmButtonText: '확인',
-          confirmButtonColor: '#187fc4',
+          confirmButtonColor: '#3F51B5',
           icon: 'error',
         });
 
@@ -571,7 +571,7 @@ export default {
         this.$swal.fire({
           title: `새 비밀번호는 필수 입력값입니다.`,
           confirmButtonText: '확인',
-          confirmButtonColor: '#187fc4',
+          confirmButtonColor: '#3F51B5',
           icon: 'error',
         });
 
@@ -581,7 +581,7 @@ export default {
         this.$swal.fire({
           title: `새 비밀번호 확인은 필수 입력값입니다.`,
           confirmButtonText: '확인',
-          confirmButtonColor: '#187fc4',
+          confirmButtonColor: '#3F51B5',
           icon: 'error',
         });
 
@@ -591,7 +591,7 @@ export default {
         this.$swal.fire({
           title: `새 비밀번호와 새 비밀번호 확인이 일치하지 않습니다.`,
           confirmButtonText: '확인',
-          confirmButtonColor: '#187fc4',
+          confirmButtonColor: '#3F51B5',
           icon: 'error',
         });
 
@@ -601,7 +601,7 @@ export default {
         this.$swal.fire({
           title: `비밀번호는 대소문자 및 숫자, 특수문자를 포함한 9~16자만 가능합니다.`,
           confirmButtonText: '확인',
-          confirmButtonColor: '#187fc4',
+          confirmButtonColor: '#3F51B5',
           icon: 'error',
         });
 
@@ -880,11 +880,14 @@ export default {
 }
 
 .tabsStyle .v-tab {
-  /* border-top-right-radius: 10px !important;
-  border-top-left-radius: 10px !important; */
   border-top-right-radius: 0px !important;
-  color: rgba(0, 0, 0, 0.8);
+  color: #455A64;
   font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.tabsStyle .v-tab--active {
+  color: #283593 !important;
 }
 
 .tabContentsWrapper {
@@ -898,6 +901,8 @@ export default {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #E8EAF6;
 }
 
 .passwordChangeWrapper {
@@ -914,6 +919,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
+  background: #FAFBFF;
 }
 </style>
 

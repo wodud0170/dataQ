@@ -459,7 +459,7 @@ export default {
     //       this.$swal.fire({
     //         title: '데이터 소스명은 필수 입력값입니다.',
     //         confirmButtonText: '확인',
-    //         confirmButtonColor: '#187fc4',
+    //         confirmButtonColor: '#3F51B5',
     //         icon: 'error',
     //       });
     //       this.$refs.addDomainGroup_domainGrpNm.focus()
@@ -470,7 +470,7 @@ export default {
     //       this.$swal.fire({
     //         title: '데이터 소스명은 필수 입력값입니다.',
     //         confirmButtonText: '확인',
-    //         confirmButtonColor: '#187fc4',
+    //         confirmButtonColor: '#3F51B5',
     //         icon: 'error',
     //       });
     //       this.$refs.updateDomainGroup_domainGrpNm.focus()
@@ -892,7 +892,7 @@ export default {
         this.$swal.fire({
           title: `${_attr} 값이 유효하지 않습니다.`,
           confirmButtonText: '확인',
-          confirmButtonColor: '#187fc4',
+          confirmButtonColor: '#3F51B5',
           icon: 'error',
         });
 
@@ -1015,7 +1015,8 @@ export default {
   width: 100%;
   max-height: 76px;
   bottom: 0px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #E8EAF6;
+  background: #FAFBFF;
 }
 
 .tableSpt {
@@ -1023,5 +1024,6 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
+  background: #FAFBFF;
 }
 </style>

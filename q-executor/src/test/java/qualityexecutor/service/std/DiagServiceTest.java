@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.ndata.quality.model.std.StdDataModelAttrVo;
@@ -137,8 +138,8 @@ class DiagServiceTest {
     @Test
     @DisplayName("타입도 다르고 길이도 다르면 2건 발생")
     void 타입_길이_둘다_불일치() {
-        // USER_ID: CHAR(16) vs 표준 VARCHAR(20) → 타입 불일치 + 길이 불일치
-        StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "사용자ID", "CHAR", 16, 0);
+        // USER_ID: INTEGER(16) vs 표준 VARCHAR(20) → 타입 불일치 + 길이 불일치
+        StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "사용자ID", "INTEGER", 16, 0);
         List<StdDiagResultVo> results = diagnose(attr);
 
         assertEquals(2, results.size(), "타입·길이 둘 다 다르면 결과 2건이어야 함");
@@ -189,10 +190,264 @@ class DiagServiceTest {
         assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_LEN_MISMATCH")));
     }
 
+    // ========== STEP 4: 타입 동의어 비교 (isTypeEquivalent) ==========
+
+    @Nested
+    @DisplayName("타입 동의어 비교")
+    class TypeEquivalenceTest {
+
+        @Test
+        @DisplayName("동일 타입 (대소문자 무시) → 동등")
+        void sameTypeCaseInsensitive() {
+            assertTrue(isTypeEquivalent("VARCHAR", "varchar"));
+            assertTrue(isTypeEquivalent("varchar", "VARCHAR"));
+            assertTrue(isTypeEquivalent("Numeric", "numeric"));
+        }
+
+        @Test
+        @DisplayName("DATE ↔ DATETIME 동등")
+        void dateEquivalence() {
+            assertTrue(isTypeEquivalent("DATE", "DATETIME"));
+            assertTrue(isTypeEquivalent("DATETIME", "DATE"));
+        }
+
+        @Test
+        @DisplayName("문자열 계열 (CHAR ↔ VARCHAR ↔ VARCHAR2) 동등")
+        void stringFamilyEquivalence() {
+            assertTrue(isTypeEquivalent("CHAR", "VARCHAR"));
+            assertTrue(isTypeEquivalent("VARCHAR", "CHAR"));
+            assertTrue(isTypeEquivalent("CHAR", "VARCHAR2"));
+            assertTrue(isTypeEquivalent("VARCHAR2", "CHAR"));
+            assertTrue(isTypeEquivalent("VARCHAR", "VARCHAR2"));
+            assertTrue(isTypeEquivalent("VARCHAR2", "VARCHAR"));
+        }
+
+        @Test
+        @DisplayName("숫자 계열 (NUMBER ↔ NUMERIC ↔ DECIMAL) 동등")
+        void numericFamilyEquivalence() {
+            assertTrue(isTypeEquivalent("NUMBER", "NUMERIC"));
+            assertTrue(isTypeEquivalent("NUMERIC", "NUMBER"));
+            assertTrue(isTypeEquivalent("NUMBER", "DECIMAL"));
+            assertTrue(isTypeEquivalent("DECIMAL", "NUMBER"));
+            assertTrue(isTypeEquivalent("NUMERIC", "DECIMAL"));
+            assertTrue(isTypeEquivalent("DECIMAL", "NUMERIC"));
+        }
+
+        @Test
+        @DisplayName("다른 계열 간 비동등")
+        void differentFamilies() {
+            assertFalse(isTypeEquivalent("VARCHAR", "NUMBER"));
+            assertFalse(isTypeEquivalent("CHAR", "NUMERIC"));
+            assertFalse(isTypeEquivalent("DATE", "VARCHAR"));
+            assertFalse(isTypeEquivalent("NUMBER", "DATE"));
+            assertFalse(isTypeEquivalent("CLOB", "BLOB"));
+        }
+
+        @Test
+        @DisplayName("VARCHAR과 INTEGER → 비동등")
+        void varcharVsInteger() {
+            assertFalse(isTypeEquivalent("VARCHAR", "INTEGER"));
+        }
+
+        @Test
+        @DisplayName("DATE ↔ TIMESTAMP → 비동등 (범위 외)")
+        void dateVsTimestamp() {
+            assertFalse(isTypeEquivalent("DATE", "TIMESTAMP"));
+        }
+    }
+
+    // ========== STEP 5: checkDomain 로직 확장 테스트 ==========
+
+    @Nested
+    @DisplayName("checkDomain 확장")
+    class CheckDomainExtendedTest {
+
+        @Test
+        @DisplayName("도메인 null → 진단 결과 없음")
+        void noDomain() {
+            StdTermsVo term = new StdTermsVo();
+            term.setTermsNm("테스트용어");
+            term.setTermsEngAbrvNm("TEST_TERM");
+            term.setDomainNm(null);
+            term.setDataType("VARCHAR");
+            term.setDataLen((short) 20);
+            term.setDataDecimalLen((short) 0);
+            termsByEng.put("TEST_TERM", term);
+
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", "TEST_TERM", "테스트용어", "CHAR", 10, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+            // 도메인이 null이면 도메인 검증 스킵, 한글명도 일치 → 0건
+            assertTrue(results.isEmpty());
+        }
+
+        @Test
+        @DisplayName("타입 동의어 (VARCHAR↔VARCHAR2) → 타입 불일치 없음")
+        void typeEquivalentNoMismatch() {
+            StdTermsVo term = new StdTermsVo();
+            term.setTermsNm("주소");
+            term.setTermsEngAbrvNm("ADDR");
+            term.setDomainNm("V100");
+            term.setDataType("VARCHAR");
+            term.setDataLen((short) 100);
+            term.setDataDecimalLen((short) 0);
+            termsByEng.put("ADDR", term);
+
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", "ADDR", "주소", "VARCHAR2", 100, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+            // VARCHAR ↔ VARCHAR2 동의어 → 타입 불일치 없음, 길이도 동일
+            assertTrue(results.isEmpty());
+        }
+
+        @Test
+        @DisplayName("NUMBER ↔ NUMERIC 동의어 → 타입 불일치 없음, 길이만 진단")
+        void numericEquivalentLenMismatch() {
+            StdTermsVo term = new StdTermsVo();
+            term.setTermsNm("금액");
+            term.setTermsEngAbrvNm("AMT2");
+            term.setDomainNm("N10");
+            term.setDataType("NUMBER");
+            term.setDataLen((short) 10);
+            term.setDataDecimalLen((short) 0);
+            termsByEng.put("AMT2", term);
+
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", "AMT2", "금액", "NUMERIC", 12, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+            // NUMBER ↔ NUMERIC → 타입 동등, 길이 10 vs 12 → DATA_LEN_MISMATCH만 1건
+            assertEquals(1, results.size());
+            assertEquals("DATA_LEN_MISMATCH", results.get(0).getDiagType());
+        }
+
+        @Test
+        @DisplayName("stdLen이 0이면 길이 비교 스킵")
+        void stdLenZeroSkip() {
+            StdTermsVo term = new StdTermsVo();
+            term.setTermsNm("메모");
+            term.setTermsEngAbrvNm("MEMO");
+            term.setDomainNm("CLOB");
+            term.setDataType("CLOB");
+            term.setDataLen((short) 0);
+            term.setDataDecimalLen((short) 0);
+            termsByEng.put("MEMO", term);
+
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", "MEMO", "메모", "CLOB", 0, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+            assertTrue(results.isEmpty(), "stdLen=0이면 길이 비교 스킵");
+        }
+
+        @Test
+        @DisplayName("stdType/dataType 중 하나가 null → 타입 비교 스킵")
+        void nullTypeSkip() {
+            StdTermsVo term = new StdTermsVo();
+            term.setTermsNm("특이용어");
+            term.setTermsEngAbrvNm("SPECIAL");
+            term.setDomainNm("SPECIAL_DOM");
+            term.setDataType(null);
+            term.setDataLen((short) 20);
+            term.setDataDecimalLen((short) 0);
+            termsByEng.put("SPECIAL", term);
+
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", "SPECIAL", "특이용어", "VARCHAR", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+            assertTrue(results.isEmpty(), "stdType이 null이면 타입 비교 스킵");
+        }
+
+        @Test
+        @DisplayName("한글명+타입+길이 모두 불일치 → 3건")
+        void tripleFailure() {
+            // INTEGER는 VARCHAR과 다른 계열이므로 타입 불일치 발생
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "유저아이디", "INTEGER", 16, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(3, results.size(), "한글명+타입+길이 = 3건");
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("TERM_KR_NM_MISMATCH")));
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_TYPE_MISMATCH")));
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_LEN_MISMATCH")));
+        }
+    }
+
+    // ========== STEP 6: 엣지 케이스 테스트 ==========
+
+    @Nested
+    @DisplayName("엣지 케이스")
+    class EdgeCaseTest {
+
+        @Test
+        @DisplayName("attrNm이 null이면 TERM_NOT_EXIST")
+        void nullAttrNm() {
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", null, "테스트", "VARCHAR", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(1, results.size());
+            assertEquals("TERM_NOT_EXIST", results.get(0).getDiagType());
+        }
+
+        @Test
+        @DisplayName("attrNm 앞뒤 공백 trim 처리")
+        void attrNmTrimmed() {
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "  USER_ID  ", "사용자ID", "VARCHAR", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertTrue(results.isEmpty(), "앞뒤 공백 trim 후 매칭되어야 함");
+        }
+
+        @Test
+        @DisplayName("표준 한글명이 빈값이면 한글명 비교 스킵")
+        void emptyStdTermsNm() {
+            StdTermsVo emptyNmTerm = new StdTermsVo();
+            emptyNmTerm.setTermsNm("");
+            emptyNmTerm.setTermsEngAbrvNm("EMPTY_NM");
+            emptyNmTerm.setDomainNm("V20");
+            emptyNmTerm.setDataType("VARCHAR");
+            emptyNmTerm.setDataLen((short) 20);
+            emptyNmTerm.setDataDecimalLen((short) 0);
+            termsByEng.put("EMPTY_NM", emptyNmTerm);
+
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", "EMPTY_NM", "아무거나", "VARCHAR", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertTrue(results.stream().noneMatch(r -> r.getDiagType().equals("TERM_KR_NM_MISMATCH")),
+                "표준 한글명이 빈값이면 비교 스킵");
+        }
+
+        @Test
+        @DisplayName("diagResult에 objNm, attrNm 정확히 세팅되는지 확인")
+        void resultFieldsPopulated() {
+            StdDataModelAttrVo attr = createAttr("MY_TABLE", "UNKNOWN_COL", "미지컬럼", "VARCHAR", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(1, results.size());
+            StdDiagResultVo r = results.get(0);
+            assertEquals("MY_TABLE", r.getObjNm());
+            assertEquals("UNKNOWN_COL", r.getAttrNm());
+            assertEquals("미지컬럼", r.getAttrNmKr());
+            assertEquals("TEST_JOB", r.getDiagJobId());
+        }
+    }
+
     // ========== 헬퍼 메서드 ==========
+
+    /** isTypeEquivalent 로직 재현 */
+    private boolean isTypeEquivalent(String stdType, String actualType) {
+        if (stdType.equalsIgnoreCase(actualType)) return true;
+        String s = stdType.toUpperCase();
+        String a = actualType.toUpperCase();
+        if ((s.equals("DATE") && a.equals("DATETIME")) || (s.equals("DATETIME") && a.equals("DATE"))) return true;
+        if (isStringFamily(s) && isStringFamily(a)) return true;
+        if (isNumericFamily(s) && isNumericFamily(a)) return true;
+        return false;
+    }
+
+    private boolean isStringFamily(String type) {
+        return type.equals("CHAR") || type.equals("VARCHAR") || type.equals("VARCHAR2");
+    }
+
+    private boolean isNumericFamily(String type) {
+        return type.equals("NUMBER") || type.equals("NUMERIC") || type.equals("DECIMAL");
+    }
 
     /**
      * DiagService의 진단 로직을 재현 (DB 의존성 제거)
+     * isTypeEquivalent 반영 버전
      */
     private List<StdDiagResultVo> diagnose(StdDataModelAttrVo attr) {
         List<StdDiagResultVo> results = new ArrayList<>();
@@ -228,7 +483,7 @@ class DiagServiceTest {
             long   dataLen       = attr.getDataLen();
             int    dataDecimalLen= attr.getDataDecimalLen();
 
-            if (stdType != null && dataType != null && !stdType.equalsIgnoreCase(dataType)) {
+            if (stdType != null && dataType != null && !isTypeEquivalent(stdType, dataType)) {
                 results.add(buildResult(attr, "DATA_TYPE_MISMATCH", "데이터 타입 불일치", stdType, dataType));
             }
             if (stdLen > 0 && dataLen != stdLen) {

@@ -1,15 +1,12 @@
 <template>
     <v-sheet id="tabList" v-bind:style="[isMobile ? { 'height': 'calc(100vh - 56px)', 'top': '0px' } : {}]">
         <v-sheet class="tabsWrapper" v-show="!isMobile">
-            <v-tabs :value="this.tab" class="tabsStyle" background-color="neutralgray">
+            <v-tabs :value="this.tab" class="tabsStyle" background-color="transparent">
                 <draggable v-model="addTabs" :list="addTabs" @start="(event) => onStart(event)"
                     @end="(event) => onEnd(event)" class="draggableWrap">
-                    <!-- <draggable v-model="addTabs" :list="addTabs" @start="drag = true" @end="drag = false"
-                    :component-data="getComponentData()" class="draggableWrap"> -->
-                    <v-tab v-for="item in tabs" :tabindex="item.index" :key="item.index" class="white--text ndColor"
-                        active-class="activeNdColor"
-                        v-on:click.stop="addActiveContent(item.name, item.index); navAndTabSync(item.name)"
-                        :style="{ borderRight: '1px solid rgba(255,255,255, 0.4) !important' }">
+                    <v-tab v-for="item in tabs" :tabindex="item.index" :key="item.index" class="modern-tab"
+                        active-class="modern-tab-active"
+                        v-on:click.stop="addActiveContent(item.name, item.index); navAndTabSync(item.name)">
                         {{ item.title }}
                         <v-icon small class="tabCloseIcon" title="삭제"
                             v-on:click.stop="removeTabItem(item.index, item.title, item.name)">close</v-icon>
@@ -495,6 +492,7 @@ export default {
     width: 100%;
     height: calc(100vh - 64px - 48px);
     top: 48px;
+    background-color: #F5F7FA;
 }
 
 .contents_wrap.mobileContent {
@@ -502,7 +500,7 @@ export default {
     top: 0px !important;
 }
 
-.contents_wrap>div {
+.contents_wrap > div {
     position: relative;
     width: 100%;
     height: calc(100vh - 64px - 48px);
@@ -519,18 +517,43 @@ export default {
 .tabsWrapper {
     width: 100%;
     height: 48px;
-    background-color: #9BA6C1 !important;
+    background-color: #E8EAF6 !important;
     display: flex;
     justify-content: space-between;
+    border-bottom: 1px solid #C5CAE9;
+}
+
+.modern-tab {
+    color: #546E7A !important;
+    background-color: transparent !important;
+    border-right: 1px solid #C5CAE9 !important;
+    text-transform: none;
+    font-weight: 500;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    transition: all 0.2s ease;
+    min-width: 120px;
+}
+
+.modern-tab:hover {
+    background-color: #C5CAE9 !important;
+}
+
+.modern-tab-active {
+    color: #1A237E !important;
+    background-color: #ffffff !important;
+    font-weight: 600;
+    border-bottom: 2px solid #3F51B5 !important;
 }
 
 .tabCloseIcon {
-    margin: 10px 0px 10px 16px;
-    color: #ffffff !important;
+    margin: 10px 0px 10px 12px;
+    color: #90A4AE !important;
+    transition: color 0.15s ease;
 }
 
 .tabCloseIcon:hover {
-    color: #FF8657 !important;
+    color: #EF5350 !important;
 }
 
 .tabListViewIcon {
@@ -548,7 +571,7 @@ export default {
     padding: 0px;
 }
 
-.tabListBtnWrapper>button {
+.tabListBtnWrapper > button {
     width: 100%;
     display: flex;
     justify-content: flex-start;

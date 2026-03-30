@@ -496,26 +496,31 @@ export default {
 <style scoped>
 .containerWrapper {
   position: relative;
-  /* padding: 10px; */
-  background-color: rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  background-color: #F5F7FA;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
 .itemsWrapper {
   position: relative;
-  /* width: 100%; */
-  width: 48%;
+  width: calc(50% - 12px);
   height: calc((100vh - 64px - 48px - 50px) / 2);
-  margin: 10px 1%;
-  padding: 10px 20px;
+  padding: 16px 20px;
+  border-radius: 16px !important;
+  background: #ffffff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.05), 0 2px 12px rgba(0, 0, 0, 0.03) !important;
 }
 
 .itemsWrapper h2 {
   display: flex;
-  color: rgba(0, 0, 0, 0.7);
-  font-size: 1.5rem;
+  align-items: center;
+  color: #283593;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .cardTextWrapper {
@@ -531,30 +536,42 @@ export default {
 }
 
 .itemsWrapper h2 i {
-  color: rgba(0, 0, 0, 0.7);
-  font-size: 1.5rem;
+  color: #3F51B5;
+  font-size: 1.3rem;
 }
 
 .top_chart {
   position: relative;
   width: 30%;
   height: calc(80% - 20px);
-  margin: 10px;
+  margin: 8px;
   cursor: pointer;
-  /* background-color: lightgray; */
-  background-color: rgba(24, 127, 196, 0.12) !important;
-  color: rgba(0, 0, 0, 0.7) !important;
+  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
+  color: #283593 !important;
+  border-radius: 14px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.top_chart:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(63, 81, 181, 0.2) !important;
 }
 
 .bottom_chart {
   position: relative;
-  width: 20%;
+  width: 22%;
   height: calc(70% - 20px);
-  margin: 10px;
+  margin: 8px;
   cursor: pointer;
-  background-color: rgba(24, 127, 196, 0.12) !important;
-  /* background-color: lightgray; */
-  color: rgba(0, 0, 0, 0.7) !important;
+  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
+  color: #283593 !important;
+  border-radius: 14px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bottom_chart:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(63, 81, 181, 0.2) !important;
 }
 
 .chartWrapper {
@@ -627,51 +644,52 @@ export default {
 .topDmTextChart {
   position: relative;
   width: 30%;
-  margin: 10px;
+  margin: 8px;
   height: calc(50% - 20px);
-  /* cursor: pointer; */
-  background-color: rgba(24, 127, 196, 0.12) !important;
-  color: rgba(0, 0, 0, 0.7) !important;
+  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
+  color: #283593 !important;
+  border-radius: 14px !important;
 }
 
 .chartWrapper_2 .topDmTextChart {
   position: relative;
   width: 30%;
-  margin: 10px;
+  margin: 8px;
   height: 90%;
-  /* cursor: pointer; */
-  background-color: rgba(24, 127, 196, 0.12) !important;
-  color: rgba(0, 0, 0, 0.7) !important;
+  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
+  color: #283593 !important;
+  border-radius: 14px !important;
 }
 
 .chartWrapper_2 .topDmPieChart {
   position: relative;
   width: 30%;
-  margin: 10px;
+  margin: 8px;
   height: 95%;
   cursor: pointer;
   background-color: transparent !important;
-  color: rgba(0, 0, 0, 0.7) !important;
+  color: #455A64 !important;
 }
 
 .chartWrapper_3 .topDmTextChart {
   position: relative;
   width: 30%;
-  margin: 10px;
+  margin: 8px;
   height: 60%;
   cursor: pointer;
-  background-color: rgba(24, 127, 196, 0.12) !important;
-  color: rgba(0, 0, 0, 0.7) !important;
+  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
+  color: #283593 !important;
+  border-radius: 14px !important;
 }
 
 .chartWrapper_3 .topDmPieChart {
   position: relative;
   width: 30%;
-  margin: 10px;
+  margin: 8px;
   height: 95%;
   cursor: pointer;
   background-color: transparent !important;
-  color: rgba(0, 0, 0, 0.7) !important;
+  color: #455A64 !important;
 }
 
 .barchartWrapper_bottom {
@@ -683,6 +701,8 @@ export default {
   height: 30%;
   display: flex;
   align-items: center;
+  font-weight: 500;
+  color: #546E7A;
 }
 
 .contentFont {
@@ -692,12 +712,14 @@ export default {
   font-weight: 700;
   text-align: center;
   justify-content: center;
+  color: #283593;
 }
+
 .fontSize08 {
   font-size: 0.8vw !important;
 }
+
 .fontSize225 {
   font-size: 2.25vw !important;
 }
-
 </style>

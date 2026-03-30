@@ -81,7 +81,7 @@
           <tr>
             <th v-for="(h1, i1) in getSubHeader(dmColumnDetaileHeaders)" :key="i1"
               class="text-center child-header td-border-style"
-              :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(24, 127, 196, 0.1)' }">
+              :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(63, 81, 181, 0.08)' }">
               <pre>{{ h1.text }}</pre>
             </th>
           </tr>
@@ -142,7 +142,7 @@
               <template v-slot:body="{ items }" v-if="termDetailItem.length !== 0">
                 <tbody>
                   <tr v-for="header in termDetaileHeaders" :key="header.value">
-                    <td :style="{ backgroundColor: 'rgba(24, 127, 196, 0.1)', width: '25%' }">{{ header.text }}</td>
+                    <td :style="{ backgroundColor: 'rgba(63, 81, 181, 0.08)', width: '25%' }">{{ header.text }}</td>
                     <td v-for="item in items" :key="item.termNm">
                       <div v-if="Array.isArray(item[header.value])">
                         <div v-for="item2 in item[header.value]" :key="item2">{{ item2 }}</div>
@@ -384,11 +384,11 @@ export default {
 </script>
 
 <style scoped>
-.filterWrapper { border-bottom: 1px solid rgba(0,0,0,0.1); }
-.filterLabel { font-size: .8rem; white-space: nowrap; }
+.filterWrapper { border-bottom: 1px solid #E8EAF6; background: #ffffff; }
+.filterLabel { font-size: .8rem; white-space: nowrap; color: #455A64; font-weight: 500; }
 .filterInput { flex-grow: 0 !important; flex-shrink: 0 !important; }
-.tableSpt { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px; }
-.split_bottom_wrap { position: absolute; width: 100%; max-height: 60px; bottom: 0px; border-top: 1px solid rgba(0,0,0,0.1); }
+.tableSpt { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px; background: #FAFBFF; }
+.split_bottom_wrap { position: absolute; width: 100%; max-height: 60px; bottom: 0px; border-top: 1px solid #E8EAF6; background: #FAFBFF; }
 .pagination_wrap { position: relative; width: 100%; }
 pre { font-family: 'Roboto'; }
 .checkboxStyle { margin-top: 0; padding-top: 0; }

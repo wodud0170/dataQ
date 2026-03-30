@@ -52,22 +52,26 @@ export default {
 <style scoped>
 .modal_wrapper {
     position: relative;
+    border-radius: 16px !important;
+    overflow: hidden;
 }
 .modal_title {
     position: absolute;
     width: 100%;
-    /* height: 8vh !important; */
     top: 0;
     left: 0;
     overflow: hidden;
     box-sizing: border-box;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid #E8EAF6;
+    background-color: #FAFBFF;
+    font-weight: 600;
+    color: #283593;
+    font-size: 1.1rem;
 }
 
 .modal_body {
     position: relative;
     width: 100%;
-    /* max-height: 80vh; */
     top: 6vh;
     overflow-x: hidden;
     overflow-y: auto;
@@ -83,19 +87,18 @@ export default {
     bottom: 0px;
     left: 0;
     padding: 16px !important;
-    /* height: 8vh !important; */
     display: flex;
     align-items: center;
     flex-direction: row;
-    background-color: #fff;
+    background-color: #FAFBFF;
     box-sizing: border-box;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    border-top: 1px solid #E8EAF6;
 }
 .modal_footer_xs {
-    justify-content:space-evenly;
+    justify-content: space-evenly;
 }
 .modal_footer_lg {
-    justify-content:flex-end;
+    justify-content: flex-end;
 }
 .subbtnStyle {
     width: 150px;

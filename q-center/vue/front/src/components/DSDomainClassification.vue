@@ -285,7 +285,7 @@ export default {
           this.$swal.fire({
             title: '도메인 분류명은 필수 입력값입니다.',
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
           this.$refs.addDomainClassification_domainClsfNm.focus()
@@ -294,7 +294,7 @@ export default {
           this.$swal.fire({
             title: '도메인 그룹명은 필수 입력값입니다.',
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
           this.$refs.addDomainClassification_domainGrpNm.focus()
@@ -305,7 +305,7 @@ export default {
           this.$swal.fire({
             title: '도메인 분류명은 필수 입력값입니다.',
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
           this.$refs.updateDomainClassification_domainClsfNm.focus()
@@ -314,7 +314,7 @@ export default {
           this.$swal.fire({
             title: '도메인 그룹명은 필수 입력값입니다.',
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
           this.$refs.updateDomainClassification_domainGrpNm.focus()
@@ -640,6 +640,8 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #E8EAF6;
 }
 
 .btnWrapper {
@@ -665,7 +667,8 @@ export default {
   width: 100%;
   max-height: 76px;
   bottom: 0px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #E8EAF6;
+  background: #FAFBFF;
 }
 
 .tableSpt {
@@ -673,5 +676,6 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
+  background: #FAFBFF;
 }
 </style>

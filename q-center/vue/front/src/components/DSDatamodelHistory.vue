@@ -61,7 +61,7 @@
           <tr>
             <th v-for="(h1, i1) in getSubHeader(historyHeaders)" :key="i1"
               class="text-center child-header td-border-style"
-              :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(24, 127, 196, 0.1)' }">
+              :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(63, 81, 181, 0.08)' }">
               <pre>{{ h1.text }}</pre>
             </th>
           </tr>
@@ -248,11 +248,11 @@ export default {
 </script>
 
 <style scoped>
-.filterWrapper { border-bottom: 1px solid rgba(0,0,0,0.1); }
-.filterLabel { font-size: .8rem; white-space: nowrap; }
+.filterWrapper { border-bottom: 1px solid #E8EAF6; background: #ffffff; }
+.filterLabel { font-size: .8rem; white-space: nowrap; color: #455A64; font-weight: 500; }
 .filterInput { flex-grow: 0 !important; flex-shrink: 0 !important; }
-.tableSpt { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px; }
-.split_bottom_wrap { position: absolute; width: 100%; max-height: 60px; bottom: 0px; border-top: 1px solid rgba(0,0,0,0.1); }
+.tableSpt { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px; background: #FAFBFF; }
+.split_bottom_wrap { position: absolute; width: 100%; max-height: 60px; bottom: 0px; border-top: 1px solid #E8EAF6; background: #FAFBFF; }
 .pagination_wrap { position: relative; width: 100%; }
 #dmHistory_table { height: calc(100vh - 64px - 48px - 68px - 44px - 60px); overflow-y: overlay; overflow-x: hidden; }
 

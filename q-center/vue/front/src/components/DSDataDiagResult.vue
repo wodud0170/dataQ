@@ -1383,6 +1383,8 @@ export default {
 .filterLabel {
   font-size: .8rem;
   white-space: nowrap;
+  color: #455A64;
+  font-weight: 500;
 }
 /* 빈 값(-) 가운데 정렬 */
 .empty-val {
@@ -1392,8 +1394,8 @@ export default {
 /* 진단 칩 mouseover 시 관련 셀 빨간 배경 하이라이트 */
 .diag-highlight {
   background-color: #FFCDD2 !important;
-  border-radius: 2px;
-  padding: 1px 3px;
+  border-radius: 4px;
+  padding: 1px 4px;
   transition: background-color 0.15s ease;
 }
 </style>

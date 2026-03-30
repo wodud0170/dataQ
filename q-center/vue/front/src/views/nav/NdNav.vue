@@ -443,21 +443,13 @@ export default {
     bottom: calc((-100vh + 64px) / 3);
     width: 100%;
     height: calc((100vh - 64px) / 3);
-    background-color: rgba(0, 0, 0, 0.1);
-    -webkit-transition: all 0.5s ease;
-    -moz-transition: all 0.5s ease;
-    -ms-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
+    background-color: #F5F7FA;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .wsLogViewer.active {
     bottom: 0px;
-    -webkit-transition: all 0.5s ease;
-    -moz-transition: all 0.5s ease;
-    -ms-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .wsLogViewer h4 {
@@ -466,12 +458,14 @@ export default {
     width: 100%;
     height: 40px;
     line-height: 40px;
-    padding: 0 10px;
-    background-color: #b0bec5;
-    border-top-right-radius: 20px;
-    color: rgba(0, 0, 0, .54);
+    padding: 0 14px;
+    background-color: #E8EAF6;
+    border-top-right-radius: 16px;
+    color: #455A64;
     display: flex;
     justify-content: space-between;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
 .wsLogViewer button:focus {
@@ -484,11 +478,13 @@ export default {
     overflow-y: auto;
     width: 100%;
     height: calc((100vh - 64px) / 3);
-    padding-left: 10px;
-    background-color: rgba(0, 0, 0, 0.1);
+    padding-left: 14px;
+    padding-top: 8px;
+    background-color: #F5F7FA;
     word-wrap: break-word;
     font-size: .8125rem;
     font-weight: 500;
+    color: #455A64;
 }
 
 ::-webkit-scrollbar-track {

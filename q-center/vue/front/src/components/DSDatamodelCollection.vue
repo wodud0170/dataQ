@@ -98,7 +98,7 @@
               <tbody>
                 <!-- 상세 테이블 왼쪽  -->
                 <tr v-for="header in detaileHeaders" :key="header.value">
-                  <td :style="{ backgroundColor: 'rgba(24, 127, 196, 0.1)', width: '15%' }">
+                  <td :style="{ backgroundColor: 'rgba(63, 81, 181, 0.08)', width: '15%' }">
                     {{ header.text }}
                   </td>
                   <td v-for="item in items" :key="item.dataModelId">
@@ -116,7 +116,7 @@
                 </tr>
                 <!-- 스키마 수집 범위 -->
                 <tr>
-                  <td :style="{ backgroundColor: 'rgba(24, 127, 196, 0.1)', width: '15%', verticalAlign: 'top', paddingTop: '10px' }">
+                  <td :style="{ backgroundColor: 'rgba(63, 81, 181, 0.08)', width: '15%', verticalAlign: 'top', paddingTop: '10px' }">
                     스키마 수집 범위
                   </td>
                   <td>
@@ -872,7 +872,7 @@ export default {
           this.$swal.fire({
             title: `${_attr} 필수 입력값입니다.`,
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
 
@@ -896,7 +896,7 @@ export default {
           this.$swal.fire({
             title: `${_attr} 필수 입력값입니다.`,
             confirmButtonText: '확인',
-            confirmButtonColor: '#187fc4',
+            confirmButtonColor: '#3F51B5',
             icon: 'error',
           });
 
@@ -1109,6 +1109,8 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #E8EAF6;
 }
 
 .split_bottom_wrap {
@@ -1116,7 +1118,8 @@ export default {
   width: 100%;
   max-height: 76px;
   bottom: 0px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #E8EAF6;
+  background: #FAFBFF;
 }
 
 .pagination_wrap {
@@ -1129,18 +1132,21 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
+  background: #FAFBFF;
 }
 
 .split_bottom {
   overflow: hidden;
   position: relative;
   height: 100%;
+  background: #ffffff;
 }
 
 .splitBottomWrapper {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: #ffffff;
 }
 
 .splitBottomSpanWrapper {
@@ -1156,6 +1162,6 @@ export default {
 }
 
 #dataModel_detail_table tbody tr:nth-child(1) td {
-  border-top: thin solid rgba(0, 0, 0, 0.12);
+  border-top: thin solid rgba(0, 0, 0, 0.08);
 }
 </style>

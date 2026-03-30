@@ -25,7 +25,7 @@
             <tbody>
               <!-- 상세 테이블 왼쪽  -->
               <tr v-for="header in infoHeaders" :key="header.value">
-                <td :style="{ backgroundColor: 'rgba(24, 127, 196, 0.1)', width: '20%' }">
+                <td :style="{ backgroundColor: 'rgba(63, 81, 181, 0.08)', width: '20%' }">
                   {{ header.text }}
                 </td>
                 <!-- 상세 테이블 오른쪽  -->
@@ -933,20 +933,22 @@ export default {
   justify-content: space-between;
   align-items: stretch;
   height: 100%;
+  background: #F5F7FA;
 }
 
 .treeWrapper {
   width: 20%;
-  margin: 30px;
+  margin: 20px;
   overflow: hidden;
-  box-shadow: 0 3px 1px -2px rgba(0, 0, 0, .2), 0 2px 2px 0 rgba(0, 0, 0, .14), 0 1px 5px 0 rgba(0, 0, 0, .12);
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.03);
 }
 
-.treeWrapper>.treeCard {
+.treeWrapper > .treeCard {
   position: relative;
   width: 100%;
   height: 100%;
-  background-color: rgba(24, 127, 196, 0.12);
+  background-color: #E8EAF6;
   overflow: auto;
 }
 
@@ -956,8 +958,12 @@ export default {
 
 .infoWrapper {
   flex: 1;
-  margin: 30px;
+  margin: 20px;
   overflow: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.03);
+  padding: 16px;
 }
 
 #systemInfo_table {
@@ -966,7 +972,7 @@ export default {
 }
 
 #systemInfo_table tbody tr:nth-child(1) td {
-  border-top: thin solid rgba(0, 0, 0, 0.1);
+  border-top: thin solid rgba(0, 0, 0, 0.08);
 }
 
 #systemInfo_table thead th:nth-child(1) {
@@ -986,8 +992,8 @@ export default {
 
 .dsListWrapperStyle {
   width: 48%;
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  border-radius: 5px;
+  border: 1px solid #C5CAE9;
+  border-radius: 10px;
   max-height: 300px;
   overflow: auto;
 }

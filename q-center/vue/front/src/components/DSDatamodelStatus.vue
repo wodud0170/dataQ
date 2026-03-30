@@ -58,7 +58,7 @@
                 <!-- sub thead -->
                 <th v-for="(h1, i1) in getSubHeader(dataModelHeaders)" :key="i1"
                   class="text-center child-header td-border-style"
-                  :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(24, 127, 196, 0.1)' }">
+                  :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(63, 81, 181, 0.08)' }">
                   <pre>{{ h1.text }}</pre>
                 </th>
               </tr>
@@ -264,7 +264,7 @@
                       <!-- sub thead -->
                       <th v-for="(h1, i1) in clTb_getSubHeader(dmColumnDetaileHeaders)" :key="i1"
                         class="text-center child-header td-border-style"
-                        :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(24, 127, 196, 0.1)' }">
+                        :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(63, 81, 181, 0.08)' }">
                         <pre>{{ h1.text }}</pre>
                       </th>
                     </tr>
@@ -421,7 +421,7 @@
                 <tbody>
                   <!-- 상세 테이블 왼쪽  -->
                   <tr v-for="header in termDetaileHeaders" :key="header.value">
-                    <td :style="{ backgroundColor: 'rgba(24, 127, 196, 0.1)', width: '25%' }">
+                    <td :style="{ backgroundColor: 'rgba(63, 81, 181, 0.08)', width: '25%' }">
                       {{ header.text }}
                     </td>
                     <!-- 상세 테이블 오른쪽  -->
@@ -1360,16 +1360,18 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #E8EAF6;
 }
 
 .splitBottomWrapper {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: #ffffff;
 }
 
 .splitBottomSpanWrapper {
-  /* width: 60%; */
   display: flex;
   font-size: 1.2rem;
 }
@@ -1378,6 +1380,7 @@ export default {
   overflow: hidden;
   position: relative;
   height: 100%;
+  background: #ffffff;
 }
 
 .splitBottomSpan {
@@ -1389,7 +1392,8 @@ export default {
   width: 100%;
   max-height: 76px;
   bottom: 0px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #E8EAF6;
+  background: #FAFBFF;
 }
 
 .pagination_wrap {
@@ -1405,8 +1409,13 @@ export default {
 .tabsStyle .v-tab {
   border-top-right-radius: 10px !important;
   border-top-left-radius: 10px !important;
-  color: rgba(0, 0, 0, 0.8);
+  color: #455A64;
   font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.tabsStyle .v-tab--active {
+  color: #283593 !important;
 }
 
 .tabContentsWrapper {
@@ -1437,6 +1446,7 @@ pre {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
+  background: #FAFBFF;
 }
 
 #dmcltPicker button {
@@ -1469,7 +1479,7 @@ pre {
   width: 100%;
   max-height: 76px;
   bottom: 48px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #E8EAF6;
 }
 
 .pagination_wrapper {
@@ -1478,11 +1488,12 @@ pre {
   max-height: 76px;
   bottom: 0px;
   min-height: 76px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid #E8EAF6;
+  background: #FAFBFF;
 }
 
 #term_detail_table tbody tr:nth-child(1) td {
-  border-top: thin solid rgba(0, 0, 0, 0.12);
+  border-top: thin solid rgba(0, 0, 0, 0.08);
 }
 
 .checkboxStyle {

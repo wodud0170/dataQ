@@ -179,7 +179,7 @@ export default {
 }
 
 .login_card {
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.95);
     height: 90%;
     overflow: hidden;
     display: flex;
@@ -188,25 +188,49 @@ export default {
     align-content: center;
     justify-content: center;
     align-items: center;
+    border-radius: 20px !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+    backdrop-filter: blur(10px);
 }
 
 .login_card_mobile {
     width: 90%;
-    transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .login_card_not_mobile {
-    width: 50%;
-    transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 440px;
+    max-width: 50%;
+    transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login_btn {
+    border-radius: 12px !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.25s ease;
+}
+
+.login_btn:hover {
+    box-shadow: 0 6px 20px rgba(63, 81, 181, 0.35) !important;
+    transform: translateY(-1px);
 }
 
 .narae_link a {
-    color: rgba(0, 0, 0, 0.6);
+    color: #546E7A;
+    transition: color 0.2s ease;
+}
+
+.narae_link a:hover {
+    color: #3F51B5;
 }
 
 .card_text_custom {
-    letter-spacing: 0.0892857143em;
-    font-size: medium;
+    letter-spacing: 0.05em;
+    font-size: 0.85rem;
+    color: #78909C;
 }
 
 /* 모바일 가로 CSS */
@@ -217,7 +241,7 @@ export default {
         justify-content: center;
         align-items: center;
         padding: 4vw 4vw 4vw 2vw;
-        transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         width: 80%;
     }
 

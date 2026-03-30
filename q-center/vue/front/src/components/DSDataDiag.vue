@@ -281,6 +281,8 @@ export default {
 .filterLabel {
   font-size: .8rem;
   white-space: nowrap;
+  color: #455A64;
+  font-weight: 500;
 }
 .btn-sm.v-btn {
   height: 22px !important;
