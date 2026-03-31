@@ -11,7 +11,7 @@
                         :navDqGroup="navDqGroup" :navMmGroup="navMmGroup" :navAndGroup="navAndGroup" :navDqSub1="navDqSub1"
                         :navDqSub2="navDqSub2" :navDqSub3="navDqSub3" :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3"
                         :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
-                        :navAutoStdGroup="navAutoStdGroup"
+                        :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
                         @addTabItem="addTabItem" @addActiveContent="addActiveContent" @navAllGroupClose="navAllGroupClose"
                         @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                         @addNavSubGroupData="addNavSubGroupData" @resetSplit="resetSplit"
@@ -32,7 +32,7 @@
                 :navAndGroup="navAndGroup" :navDqSub1="navDqSub1" :navDqSub2="navDqSub2" :navDqSub3="navDqSub3"
                 :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3"
                 :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
-                :navAutoStdGroup="navAutoStdGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
+                :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
                 @navAllGroupClose="navAllGroupClose" @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                 @addNavSubGroupData="addNavSubGroupData" />
             <router-view name="content" :isMobile="isMobile" :tab="tab" :drawer="drawer" :activeContent="activeContent"
@@ -68,6 +68,7 @@ export default {
         navDsSub3: null,
         navDsStatusGroup: null,
         navDiagGroup: null,
+        navStructDiagGroup: null,
         navAutoStdGroup: null,
         navApprovalStatus: []// 대시보드에서 승인 페이지 호출 시 승인 상태를 저장하는 변수
     }),
@@ -152,8 +153,10 @@ export default {
                     break;
                 case "dataDiag":
                 case "dataDiagResult":
-                case "structDiag":
                     document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    break;
+                case "structDiag":
+                    document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
                 case "dqi":
                 case "ctq":
@@ -308,8 +311,10 @@ export default {
                 if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification') {
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
 
-                } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult' || tabName === 'structDiag') {
+                } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
                     document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                } else if (tabName === 'structDiag') {
+                    document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                 } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn') {
                     document.getElementById("dmGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
 
@@ -341,6 +346,7 @@ export default {
             this.navAndGroup = null;
             this.navDmGroup = null;
             this.navDiagGroup = null;
+            this.navStructDiagGroup = null;
             this.navAutoStdGroup = null;
             this.navSubGropClose();
         },
@@ -414,6 +420,15 @@ export default {
                     }
                     break;
 
+                case "structDiagGroup":
+
+                    if (this.navStructDiagGroup === null) {
+                        this.navStructDiagGroup = false;
+                    } else {
+                        this.navStructDiagGroup = !this.navStructDiagGroup;
+                    }
+                    break;
+
                 case "autoStdGroup":
 
                     if (this.navAutoStdGroup === null) {
@@ -460,8 +475,11 @@ export default {
             if (tabitem === 'termRecommend') {
                 this.navAutoStdGroup = true;
                 return;
-            } else if (tabitem === 'dataDiag' || tabitem === 'dataDiagResult' || tabitem === 'structDiag') {
+            } else if (tabitem === 'dataDiag' || tabitem === 'dataDiagResult') {
                 this.navDiagGroup = true;
+                return;
+            } else if (tabitem === 'structDiag') {
+                this.navStructDiagGroup = true;
                 return;
             } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn') {
                 this.navDmGroup = true;

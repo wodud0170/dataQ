@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 130" width="480" height="130">
+  <!-- 회사 로고 패밀리: 날개 + NDQ -->
+  <!-- 날개 모티브 (회사 로고 스타일) -->
+  <path d="M18 78 Q22 45, 42 30 Q44 50, 43 60 Q46 42, 62 32 Q58 55, 50 68 Q56 50, 72 44 Q65 62, 48 78 Z" fill="#1B6CA8" opacity="0.7"/>
+  <path d="M82 78 Q78 45, 58 30 Q56 50, 57 60 Q54 42, 38 32 Q42 55, 50 68 Q44 50, 28 44 Q35 62, 52 78 Z" fill="#0D3B66" opacity="0.7"/>
+  <!-- 별 아치 (회사 로고 스타일) -->
+  <path d="M20 38 Q50 5, 80 38" fill="none" stroke="#0D3B66" stroke-width="2"/>
+  <circle cx="30" cy="28" r="2.5" fill="#0D3B66"/>
+  <circle cx="42" cy="17" r="2.5" fill="#0D3B66"/>
+  <circle cx="50" cy="14" r="3" fill="#0D3B66"/>
+  <circle cx="58" cy="17" r="2.5" fill="#0D3B66"/>
+  <circle cx="70" cy="28" r="2.5" fill="#0D3B66"/>
+  <!-- NDQ 텍스트 -->
+  <text x="30" y="105" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="800" fill="#0D3B66" text-anchor="middle">ND</text>
+  <text x="67" y="105" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="800" fill="#1B6CA8" text-anchor="middle">Q</text>
+  <!-- Narae DataQ -->
+  <text x="105" y="55" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="400" fill="#0D3B66" letter-spacing="5">NARAE</text>
+  <text x="105" y="90" font-family="'Segoe UI', Arial, sans-serif" font-size="36" font-weight="700" fill="#0D3B66">Data</text>
+  <text x="210" y="90" font-family="'Segoe UI', Arial, sans-serif" font-size="36" font-weight="700" fill="#1B6CA8">Q</text>
+</svg>

@@ -166,6 +166,9 @@
         @click:row="onHistoryClick"
         style="cursor:pointer;"
       >
+        <template v-slot:item.status="{ item }">
+          <v-chip x-small :color="statusColor(item.status)" text-color="white">{{ statusLabel(item.status) }}</v-chip>
+        </template>
         <template v-slot:item.changeCnt="{ item }">
           <v-chip x-small :color="item.changeCnt > 0 ? 'orange' : 'green'" text-color="white">{{ item.changeCnt }}건</v-chip>
         </template>
@@ -191,9 +194,11 @@ export default {
     return {
       dataModelList: [],
       selectedModel: null,
+      selectedModelData: null,
       lastClctDt: '',
       executing: false,
       stepMessage: '',
+      currentDiagId: null,
 
       hasResult: false,
       isFirstDiag: false,
@@ -216,6 +221,7 @@ export default {
       historyHeaders: [
         { text: '진단일시',   value: 'diagDt',      width: '180px' },
         { text: '데이터모델', value: 'dataModelNm',  width: '180px' },
+        { text: '상태',       value: 'status',      width: '90px' },
         { text: '변경건수',   value: 'changeCnt',   width: '100px' },
         { text: '실행자',     value: 'cretUserId',   width: '120px' },
       ],
@@ -238,23 +244,43 @@ export default {
     this.loadDataModelList();
     this.loadHistory();
   },
+  beforeDestroy() {
+    this.clearTimers();
+  },
   methods: {
     loadDataModelList: function() {
       var self = this;
       axios.post(self.$APIURL.base + 'api/dm/getDataModelStatsList', { schNm: null, schSysNm: null }).then(function(res) {
         self.dataModelList = (res.data || []).map(function(item) {
-          return { dataModelId: item.dataModelId, dataModelNm: item.dataModelNm };
+          return {
+            dataModelId: item.dataModelId,
+            dataModelNm: item.dataModelNm,
+            dataModelDsId: item.dataModelDsId,
+            dataModelDsNm: item.dataModelDsNm,
+            dataModelSysCd: item.dataModelSysCd,
+            dataModelSysNm: item.dataModelSysNm,
+            ver: item.ver,
+          };
         });
       });
     },
 
     onModelChange: function(dmId) {
       this.lastClctDt = '';
+      this.selectedModelData = null;
       this.resetResult();
       if (!dmId) return;
 
-      // 최신 수집 일시만 표시
+      // 선택한 모델 데이터 찾기
       var self = this;
+      for (var i = 0; i < self.dataModelList.length; i++) {
+        if (self.dataModelList[i].dataModelId === dmId) {
+          self.selectedModelData = self.dataModelList[i];
+          break;
+        }
+      }
+
+      // 최신 수집 일시만 표시
       var _to   = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
       var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
 
@@ -268,9 +294,11 @@ export default {
 
     /**
      * 구조 진단 실행:
-     * 1. /api/dm/collectDataModel 호출 → DBMS 재수집
-     * 2. 수집 완료 대기 (폴링)
-     * 3. /api/std/structDiag/execute 호출 → 이전 수집 vs 방금 수집 diff
+     * 1. /api/dm/collectDataModel 호출 (StdDataModelVo 전달) → DBMS 재수집
+     * 2. 수집 완료 대기 (폴링: getDataModelClctList → clctCmptnYn 확인)
+     * 3. /api/std/structDiag/execute 호출 → q-executor에 백그라운드 diff 요청
+     * 4. diff 완료 대기 (폴링: /api/std/structDiag/status/{diagId})
+     * 5. 결과 표시
      */
     executeStructDiag: function() {
       if (!this.selectedModel) return;
@@ -287,7 +315,7 @@ export default {
           cancelButtonText: '취소'
         }).then(function(result) {
           if (result.value) {
-            self.$emit('addTabItem', '데이터 모델 현황', 'datamodelStatus');
+            self.$emit('addTabItem', '데이터 모델 수집', 'datamodelCollection');
           }
         });
         return;
@@ -295,22 +323,33 @@ export default {
 
       self.executing = true;
       self.resetResult();
-      self.stepMessage = '1/2 DBMS 재수집 중...';
+      self.stepMessage = '1/3 DBMS 재수집 중...';
 
-      // Step 1: 수집 실행
-      axios.post(self.$APIURL.base + 'api/dm/collectDataModel', {
-        dataModelId: self.selectedModel
-      }).then(function(collectRes) {
+      // Step 1: 수집 실행 (StdDataModelVo 전달)
+      var collectBody = {
+        dataModelId: self.selectedModel,
+      };
+      // StdDataModelVo에 필요한 추가 필드 전달
+      if (self.selectedModelData) {
+        collectBody.dataModelDsId = self.selectedModelData.dataModelDsId;
+        collectBody.dataModelDsNm = self.selectedModelData.dataModelDsNm;
+        collectBody.dataModelNm = self.selectedModelData.dataModelNm;
+        collectBody.dataModelSysCd = self.selectedModelData.dataModelSysCd;
+        collectBody.dataModelSysNm = self.selectedModelData.dataModelSysNm;
+        collectBody.ver = self.selectedModelData.ver;
+      }
+
+      axios.post(self.$APIURL.base + 'api/dm/collectDataModel', collectBody).then(function() {
         // 수집 요청은 비동기이므로 완료 대기 (폴링)
-        self.stepMessage = '1/2 수집 완료 대기 중...';
-        self.pollCollectAndDiff();
+        self.stepMessage = '1/3 수집 완료 대기 중...';
+        self.pollCollect();
       }).catch(function() {
         self.executing = false;
         self.showSnackbar('수집 요청 실패', 'error');
       });
     },
 
-    pollCollectAndDiff: function() {
+    pollCollect: function() {
       var self = this;
       var pollCount = 0;
       var maxPoll = 60; // 최대 60회 (3초 간격 = 3분)
@@ -333,19 +372,20 @@ export default {
           var sorted = (res.data || []).slice().sort(function(a, b) { return b.clctEndDt.localeCompare(a.clctEndDt); });
           // 최신 수집건의 완료 여부 확인
           if (sorted.length > 0 && sorted[0].clctCmptnYn === 'Y') {
-            // 수집 완료 → Step 2: diff 실행
-            self.stepMessage = '2/2 이전 수집과 비교 분석 중...';
+            // 수집 완료 → Step 2: q-executor에 diff 요청
+            self.lastClctDt = sorted[0].clctEndDt;
+            self.stepMessage = '2/3 구조 비교 분석 요청 중...';
             self.executeDiff();
           } else {
             // 아직 수집 중 → 3초 후 재확인
-            setTimeout(poll, 3000);
+            self._collectTimer = setTimeout(poll, 3000);
           }
         }).catch(function() {
-          setTimeout(poll, 3000);
+          self._collectTimer = setTimeout(poll, 3000);
         });
       };
 
-      setTimeout(poll, 2000); // 2초 후 첫 폴링
+      self._collectTimer = setTimeout(poll, 2000); // 2초 후 첫 폴링
     },
 
     executeDiff: function() {
@@ -353,17 +393,14 @@ export default {
       axios.post(self.$APIURL.base + 'api/std/structDiag/execute', {
         dataModelId: self.selectedModel
       }).then(function(res) {
-        self.executing = false;
-        var data = res.data;
-        if (data && data.success) {
-          self.applyResult(data);
-          var msg = data.totalChanges > 0
-            ? '구조 진단 완료: ' + data.totalChanges + '건 변경사항 발견'
-            : '구조 진단 완료: 변경사항 없음';
-          self.showSnackbar(msg, data.totalChanges > 0 ? 'warning' : 'success');
-          self.loadHistory();
+        if (res.data && res.data.resultCode === 200) {
+          var diagId = res.data.contents;
+          self.currentDiagId = diagId;
+          self.stepMessage = '3/3 구조 비교 분석 중...';
+          self.pollDiagStatus(diagId);
         } else {
-          self.showSnackbar(data.message || '분석 실패', 'error');
+          self.executing = false;
+          self.showSnackbar(res.data && res.data.resultMessage ? res.data.resultMessage : '분석 요청 실패', 'error');
         }
       }).catch(function() {
         self.executing = false;
@@ -371,31 +408,71 @@ export default {
       });
     },
 
-    applyResult: function(data) {
-      this.stats.totalTables = data.totalTables || 0;
-      this.stats.totalColumns = data.totalColumns || 0;
-      this.stats.totalChanges = data.totalChanges || 0;
-      this.isFirstDiag = data.isFirstDiag || false;
+    pollDiagStatus: function(diagId) {
+      var self = this;
+      var pollCount = 0;
+      var maxPoll = 120; // 최대 120회 (2초 간격 = 4분)
 
-      this.summary.addedTables = data.addedTables || 0;
-      this.summary.addedColumns = data.addedColumns || 0;
-      this.summary.modifiedColumns = data.modifiedColumns || 0;
-      this.summary.deletedTables = data.deletedTables || 0;
-      this.summary.deletedColumns = data.deletedColumns || 0;
+      var poll = function() {
+        pollCount++;
+        if (pollCount > maxPoll) {
+          self.executing = false;
+          self.showSnackbar('분석 시간 초과. 이력에서 결과를 확인해주세요.', 'warning');
+          self.loadHistory();
+          return;
+        }
 
-      // 상세 목록은 diagId로 별도 조회
-      if (data.diagId) {
-        var self = this;
-        axios.get(self.$APIURL.base + 'api/std/structDiag/result/' + data.diagId).then(function(res) {
-          self.changeList = (res.data && res.data.details) || [];
-          self.hasResult = true;
-          self.changeTypeFilter = 'ALL';
-          self.page = 1;
+        axios.get(self.$APIURL.base + 'api/std/structDiag/status/' + diagId).then(function(res) {
+          var data = res.data;
+          if (!data || data.status === 'NONE') {
+            self._diagTimer = setTimeout(poll, 2000);
+            return;
+          }
+
+          if (data.status === 'DONE') {
+            self.executing = false;
+            self.applyResultFromHistory(data);
+            // 상세 목록 로드
+            axios.get(self.$APIURL.base + 'api/std/structDiag/result/' + diagId).then(function(detailRes) {
+              self.changeList = (detailRes.data && detailRes.data.details) || [];
+              self.hasResult = true;
+              self.changeTypeFilter = 'ALL';
+              self.page = 1;
+            });
+            var totalChanges = (data.addedTables || 0) + (data.addedColumns || 0) + (data.modifiedColumns || 0) + (data.deletedTables || 0) + (data.deletedColumns || 0);
+            var msg = totalChanges > 0
+              ? '구조 진단 완료: ' + totalChanges + '건 변경사항 발견'
+              : '구조 진단 완료: 변경사항 없음';
+            self.showSnackbar(msg, totalChanges > 0 ? 'warning' : 'success');
+            self.loadHistory();
+          } else if (data.status === 'ERROR') {
+            self.executing = false;
+            self.showSnackbar('구조 진단 중 오류가 발생했습니다.', 'error');
+            self.loadHistory();
+          } else if (data.status === 'RUNNING' || data.status === 'READY') {
+            self._diagTimer = setTimeout(poll, 2000);
+          } else {
+            self._diagTimer = setTimeout(poll, 2000);
+          }
+        }).catch(function() {
+          self._diagTimer = setTimeout(poll, 2000);
         });
-      } else {
-        this.changeList = [];
-        this.hasResult = true;
-      }
+      };
+
+      self._diagTimer = setTimeout(poll, 1000);
+    },
+
+    applyResultFromHistory: function(h) {
+      this.stats.totalTables = h.totalTables || 0;
+      this.stats.totalColumns = h.totalColumns || 0;
+      this.stats.totalChanges = (h.addedTables || 0) + (h.addedColumns || 0) + (h.modifiedColumns || 0) + (h.deletedTables || 0) + (h.deletedColumns || 0);
+      this.isFirstDiag = false;
+
+      this.summary.addedTables = h.addedTables || 0;
+      this.summary.addedColumns = h.addedColumns || 0;
+      this.summary.modifiedColumns = h.modifiedColumns || 0;
+      this.summary.deletedTables = h.deletedTables || 0;
+      this.summary.deletedColumns = h.deletedColumns || 0;
     },
 
     resetResult: function() {
@@ -406,6 +483,12 @@ export default {
       this.summary = { addedTables: 0, addedColumns: 0, modifiedColumns: 0, deletedTables: 0, deletedColumns: 0 };
       this.changeTypeFilter = 'ALL';
       this.page = 1;
+      this.currentDiagId = null;
+    },
+
+    clearTimers: function() {
+      if (this._collectTimer) { clearTimeout(this._collectTimer); this._collectTimer = null; }
+      if (this._diagTimer) { clearTimeout(this._diagTimer); this._diagTimer = null; }
     },
 
     loadHistory: function() {
@@ -416,6 +499,7 @@ export default {
             diagId: h.diagId,
             diagDt: h.diagDt,
             dataModelNm: h.dataModelNm || '-',
+            status: h.status || 'DONE',
             changeCnt: (h.addedTables || 0) + (h.addedColumns || 0) + (h.modifiedColumns || 0) + (h.deletedTables || 0) + (h.deletedColumns || 0),
             cretUserId: h.cretUserId,
           };
@@ -425,22 +509,17 @@ export default {
 
     onHistoryClick: function(item) {
       if (!item.diagId) return;
+      if (item.status !== 'DONE') {
+        this.showSnackbar('완료된 진단만 결과를 볼 수 있습니다.', 'warning');
+        return;
+      }
       var self = this;
       axios.get(self.$APIURL.base + 'api/std/structDiag/result/' + item.diagId).then(function(res) {
         var data = res.data;
         if (data && data.history) {
-          var h = data.history;
-          self.stats.totalTables = h.totalTables || 0;
-          self.stats.totalColumns = h.totalColumns || 0;
-          self.stats.totalChanges = (h.addedTables || 0) + (h.addedColumns || 0) + (h.modifiedColumns || 0) + (h.deletedTables || 0) + (h.deletedColumns || 0);
-          self.summary.addedTables = h.addedTables || 0;
-          self.summary.addedColumns = h.addedColumns || 0;
-          self.summary.modifiedColumns = h.modifiedColumns || 0;
-          self.summary.deletedTables = h.deletedTables || 0;
-          self.summary.deletedColumns = h.deletedColumns || 0;
+          self.applyResultFromHistory(data.history);
           self.changeList = data.details || [];
           self.hasResult = true;
-          self.isFirstDiag = false;
           self.changeTypeFilter = 'ALL';
           self.page = 1;
           self.showSnackbar(item.diagDt + ' 진단 결과를 불러왔습니다.', 'info');
@@ -456,6 +535,14 @@ export default {
     changeTypeColor: function(type) {
       var map = { ADDED: 'green', MODIFIED: 'orange', DELETED: 'red' };
       return map[type] || 'grey';
+    },
+    statusColor: function(status) {
+      var map = { READY: 'grey', RUNNING: 'blue', DONE: 'green', ERROR: 'red' };
+      return map[status] || 'grey';
+    },
+    statusLabel: function(status) {
+      var map = { READY: '대기', RUNNING: '진행중', DONE: '완료', ERROR: '오류' };
+      return map[status] || status;
     },
     showSnackbar: function(msg, color) {
       this.snackbarMsg = msg;

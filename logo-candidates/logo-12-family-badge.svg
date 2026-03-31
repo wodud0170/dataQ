@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 130" width="480" height="130">
+  <defs>
+    <linearGradient id="gf2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1B6CA8"/>
+      <stop offset="100%" style="stop-color:#0D3B66"/>
+    </linearGradient>
+  </defs>
+  <!-- 라운드 뱃지 (회사 색상) -->
+  <rect x="8" y="15" width="85" height="85" rx="18" fill="url(#gf2)"/>
+  <!-- 뱃지 안 날개 + 별 -->
+  <path d="M30 65 Q33 45, 45 38 Q46 48, 45 53 Q48 43, 55 40 Q53 52, 48 60 Q51 50, 58 47 Q54 57, 45 65 Z" fill="white" opacity="0.9"/>
+  <path d="M70 65 Q67 45, 55 38 Q54 48, 55 53 Q52 43, 45 40 Q47 52, 52 60 Q49 50, 42 47 Q46 57, 55 65 Z" fill="white" opacity="0.6"/>
+  <circle cx="40" cy="30" r="2" fill="white" opacity="0.8"/>
+  <circle cx="50" cy="26" r="2.5" fill="white"/>
+  <circle cx="60" cy="30" r="2" fill="white" opacity="0.8"/>
+  <!-- DQ 텍스트 -->
+  <text x="50" y="87" font-family="'Segoe UI', Arial, sans-serif" font-size="18" font-weight="700" fill="white" text-anchor="middle" letter-spacing="2">DataQ</text>
+  <!-- 우측 텍스트 -->
+  <text x="115" y="48" font-family="'Segoe UI', Arial, sans-serif" font-size="18" font-weight="400" fill="#1B6CA8" letter-spacing="5">NARAE</text>
+  <text x="115" y="85" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="700" fill="#0D3B66">Data</text>
+  <text x="230" y="85" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="700" fill="#1B6CA8">Q</text>
+  <!-- 서브타이틀 -->
+  <text x="115" y="105" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="300" fill="#6B9CC4" letter-spacing="1">Data Quality Platform</text>
+</svg>

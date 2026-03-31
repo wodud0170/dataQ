@@ -5,6 +5,7 @@
 	<resultMap id="structDiagHistoryMap" type="java.util.HashMap">
 		<result property="diagId" column="DIAG_ID"/>
 		<result property="dsId" column="DS_ID"/>
+		<result property="dataModelId" column="DATA_MODEL_ID"/>
 		<result property="schemaNm" column="SCHEMA_NM"/>
 		<result property="diagDt" column="DIAG_DT"/>
 		<result property="prevCollectDt" column="PREV_COLLECT_DT"/>
@@ -15,6 +16,7 @@
 		<result property="modifiedColumns" column="MODIFIED_COLUMNS"/>
 		<result property="deletedTables" column="DELETED_TABLES"/>
 		<result property="deletedColumns" column="DELETED_COLUMNS"/>
+		<result property="status" column="STATUS"/>
 		<result property="cretUserId" column="CRET_USER_ID"/>
 		<result property="dataModelNm" column="DATA_MODEL_NM"/>
 	</resultMap>
@@ -33,20 +35,35 @@
 		<result property="currNullable" column="CURR_NULLABLE"/>
 	</resultMap>
 
-	<!-- 진단 이력 저장 -->
+	<!-- 진단 이력 저장 (READY 상태로 초기 생성) -->
 	<insert id="insertStructDiagHistory" parameterType="java.util.HashMap">
 		INSERT INTO TB_STRUCT_DIAG_HISTORY (
-			DIAG_ID, DS_ID, SCHEMA_NM, DIAG_DT, PREV_COLLECT_DT,
-			TOTAL_TABLES, TOTAL_COLUMNS,
-			ADDED_TABLES, ADDED_COLUMNS, MODIFIED_COLUMNS,
-			DELETED_TABLES, DELETED_COLUMNS, CRET_USER_ID
+			DIAG_ID, DATA_MODEL_ID, STATUS, DIAG_DT, CRET_USER_ID
 		) VALUES (
-			#{diagId}, #{dsId}, #{schemaNm}, CURRENT_TIMESTAMP, #{prevCollectDt},
-			#{totalTables}, #{totalColumns},
-			#{addedTables}, #{addedColumns}, #{modifiedColumns},
-			#{deletedTables}, #{deletedColumns}, #{cretUserId}
+			#{diagId}, #{dataModelId}, #{status}, CURRENT_TIMESTAMP, #{cretUserId}
 		)
 	</insert>
+
+	<!-- 진단 결과 업데이트 (diff 완료 후) -->
+	<update id="updateStructDiagResult" parameterType="java.util.HashMap">
+		UPDATE TB_STRUCT_DIAG_HISTORY SET
+			DS_ID = #{dsId},
+			PREV_COLLECT_DT = #{prevCollectDt},
+			TOTAL_TABLES = #{totalTables},
+			TOTAL_COLUMNS = #{totalColumns},
+			ADDED_TABLES = #{addedTables},
+			ADDED_COLUMNS = #{addedColumns},
+			MODIFIED_COLUMNS = #{modifiedColumns},
+			DELETED_TABLES = #{deletedTables},
+			DELETED_COLUMNS = #{deletedColumns}
+		WHERE DIAG_ID = #{diagId}
+	</update>
+
+	<!-- 진단 상태 변경 -->
+	<update id="updateStructDiagStatus" parameterType="java.util.HashMap">
+		UPDATE TB_STRUCT_DIAG_HISTORY SET STATUS = #{status}
+		WHERE DIAG_ID = #{diagId}
+	</update>
 
 	<!-- 진단 상세 저장 (변경 건만) -->
 	<insert id="insertStructDiagDetail" parameterType="java.util.HashMap">
@@ -63,13 +80,13 @@
 
 	<!-- 진단 이력 목록 조회 -->
 	<select id="selectStructDiagHistoryList" resultMap="structDiagHistoryMap">
-		SELECT h.DIAG_ID, h.DS_ID, h.SCHEMA_NM, h.DIAG_DT, h.PREV_COLLECT_DT,
+		SELECT h.DIAG_ID, h.DS_ID, h.DATA_MODEL_ID, h.SCHEMA_NM, h.DIAG_DT, h.PREV_COLLECT_DT,
 			h.TOTAL_TABLES, h.TOTAL_COLUMNS,
 			h.ADDED_TABLES, h.ADDED_COLUMNS, h.MODIFIED_COLUMNS,
-			h.DELETED_TABLES, h.DELETED_COLUMNS, h.CRET_USER_ID,
+			h.DELETED_TABLES, h.DELETED_COLUMNS, h.STATUS, h.CRET_USER_ID,
 			dm.DM_NM AS DATA_MODEL_NM
 		FROM TB_STRUCT_DIAG_HISTORY h
-		LEFT JOIN TB_DATA_MODEL dm ON dm.DM_DS_ID = h.DS_ID
+		LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DATA_MODEL_ID
 		ORDER BY h.DIAG_DT DESC
 	</select>
 
@@ -85,17 +102,19 @@
 
 	<!-- 특정 진단 이력 1건 조회 -->
 	<select id="selectStructDiagHistoryById" parameterType="String" resultMap="structDiagHistoryMap">
-		SELECT h.DIAG_ID, h.DS_ID, h.SCHEMA_NM, h.DIAG_DT, h.PREV_COLLECT_DT,
+		SELECT h.DIAG_ID, h.DS_ID, h.DATA_MODEL_ID, h.SCHEMA_NM, h.DIAG_DT, h.PREV_COLLECT_DT,
 			h.TOTAL_TABLES, h.TOTAL_COLUMNS,
 			h.ADDED_TABLES, h.ADDED_COLUMNS, h.MODIFIED_COLUMNS,
-			h.DELETED_TABLES, h.DELETED_COLUMNS, h.CRET_USER_ID
+			h.DELETED_TABLES, h.DELETED_COLUMNS, h.STATUS, h.CRET_USER_ID,
+			dm.DM_NM AS DATA_MODEL_NM
 		FROM TB_STRUCT_DIAG_HISTORY h
+		LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DATA_MODEL_ID
 		WHERE h.DIAG_ID = #{diagId}
 	</select>
 
 	<!-- 스키마별 최신 구조 진단 상태 조회 (뱃지용) -->
 	<select id="selectLatestStructDiagStatus" parameterType="java.util.HashMap" resultMap="structDiagHistoryMap">
-		SELECT DIAG_ID, DS_ID, SCHEMA_NM, DIAG_DT,
+		SELECT DIAG_ID, DS_ID, DATA_MODEL_ID, SCHEMA_NM, DIAG_DT, STATUS,
 			ADDED_TABLES + ADDED_COLUMNS + MODIFIED_COLUMNS + DELETED_TABLES + DELETED_COLUMNS AS TOTAL_CHANGES,
 			TOTAL_TABLES, TOTAL_COLUMNS,
 			ADDED_TABLES, ADDED_COLUMNS, MODIFIED_COLUMNS, DELETED_TABLES, DELETED_COLUMNS,

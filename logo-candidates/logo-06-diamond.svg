@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <defs>
+    <linearGradient id="g6a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5C6BC0"/>
+      <stop offset="100%" style="stop-color:#3F51B5"/>
+    </linearGradient>
+    <linearGradient id="g6b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3F51B5"/>
+      <stop offset="100%" style="stop-color:#1A237E"/>
+    </linearGradient>
+  </defs>
+  <!-- Diamond shape - two halves -->
+  <polygon points="50,10 85,55 50,100 15,55" fill="none" stroke="url(#g6a)" stroke-width="3"/>
+  <polygon points="50,25 72,55 50,85 28,55" fill="url(#g6b)"/>
+  <text x="50" y="62" font-family="'Segoe UI', Arial, sans-serif" font-size="18" font-weight="700" fill="white" text-anchor="middle">Q</text>
+  <!-- Text -->
+  <text x="105" y="55" font-family="'Segoe UI', Arial, sans-serif" font-size="30" font-weight="600" fill="#1A237E">Narae</text>
+  <text x="105" y="88" font-family="'Segoe UI', Arial, sans-serif" font-size="26" font-weight="300" fill="#5C6BC0">Data Quality</text>
+</svg>

@@ -160,13 +160,23 @@
                         <v-list-item-title>진단 결과</v-list-item-title>
                     </v-list-item>
 
+                </v-list-group>
+
+                <!-- 데이터 구조 진단 -->
+                <v-list-group link v-cloak :value="navStructDiagGroup" prepend-icon="mdi-database-search" active-class="ndColor--text"
+                    id="structDiagGroup" title="데이터 구조 진단" v-on:click.stop="addNavGroupData('structDiagGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">데이터 구조 진단</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
                     <v-list-item link id="nav_structDiag" href="#tab_structDiag"
                         active-class="ndColor--text" title="구조 진단"
                         v-on:click.stop="addTabItem('구조 진단', 'structDiag');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>구조 진단</v-list-item-title>
                     </v-list-item>
-
                 </v-list-group>
 
                 <!-- 자동 표준화 -->
@@ -381,6 +391,7 @@ export default {
         'navDsSub3',
         'navDmGroup',
         'navDiagGroup',
+        'navStructDiagGroup',
         'navAutoStdGroup'],
     data: () => ({
         selectedList: null,

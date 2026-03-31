@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 130" width="480" height="130">
+  <defs>
+    <linearGradient id="gf5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1B6CA8"/>
+      <stop offset="100%" style="stop-color:#0D3B66"/>
+    </linearGradient>
+  </defs>
+  <!-- 원형 + 날개 -->
+  <circle cx="50" cy="55" r="42" fill="url(#gf5)"/>
+  <!-- 원 안 날개 -->
+  <path d="M30 60 Q34 38, 48 28 Q46 44, 46 50 Q50 36, 58 30 Q56 48, 48 58 Z" fill="white" opacity="0.7"/>
+  <path d="M70 60 Q66 38, 52 28 Q54 44, 54 50 Q50 36, 42 30 Q44 48, 52 58 Z" fill="white" opacity="0.4"/>
+  <!-- Q 글자 -->
+  <text x="50" y="88" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="700" fill="white" text-anchor="middle">Q</text>
+  <!-- 별 아치 -->
+  <circle cx="35" cy="26" r="2" fill="white" opacity="0.6"/>
+  <circle cx="50" cy="19" r="2.5" fill="white"/>
+  <circle cx="65" cy="26" r="2" fill="white" opacity="0.6"/>
+  <!-- 텍스트 -->
+  <text x="110" y="45" font-family="'Segoe UI', Arial, sans-serif" font-size="18" font-weight="400" fill="#1B6CA8" letter-spacing="4">NARAE</text>
+  <text x="110" y="82" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="700" fill="#0D3B66">Data</text>
+  <text x="225" y="82" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="800" fill="#1B6CA8">Q</text>
+  <!-- 구분선 -->
+  <rect x="110" y="52" width="55" height="2" rx="1" fill="#C5D9E8"/>
+</svg>
