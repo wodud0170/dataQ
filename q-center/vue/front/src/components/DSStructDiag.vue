@@ -323,29 +323,43 @@ export default {
 
       self.executing = true;
       self.resetResult();
-      self.stepMessage = '1/3 DBMS 재수집 중...';
+      self.stepMessage = '1/3 기존 수집 건수 확인 중...';
 
-      // Step 1: 수집 실행 (StdDataModelVo 전달)
-      var collectBody = {
-        dataModelId: self.selectedModel,
-      };
-      // StdDataModelVo에 필요한 추가 필드 전달
-      if (self.selectedModelData) {
-        collectBody.dataModelDsId = self.selectedModelData.dataModelDsId;
-        collectBody.dataModelDsNm = self.selectedModelData.dataModelDsNm;
-        collectBody.dataModelNm = self.selectedModelData.dataModelNm;
-        collectBody.dataModelSysCd = self.selectedModelData.dataModelSysCd;
-        collectBody.dataModelSysNm = self.selectedModelData.dataModelSysNm;
-        collectBody.ver = self.selectedModelData.ver;
-      }
+      // 먼저 현재 완료된 수집 건수를 기록
+      var _to   = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
+      var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
 
-      axios.post(self.$APIURL.base + 'api/dm/collectDataModel', collectBody).then(function() {
-        // 수집 요청은 비동기이므로 완료 대기 (폴링)
-        self.stepMessage = '1/3 수집 완료 대기 중...';
-        self.pollCollect();
+      axios.post(self.$APIURL.base + 'api/dm/getDataModelClctList', {
+        schId: self.selectedModel, from: _from, to: _to
+      }).then(function(res) {
+        var completedBefore = (res.data || []).filter(function(c) { return c.clctCmptnYn === 'Y'; }).length;
+        self._completedBefore = completedBefore;
+
+        self.stepMessage = '1/3 DBMS 재수집 중...';
+
+        // Step 1: 수집 실행 (StdDataModelVo 전달)
+        var collectBody = {
+          dataModelId: self.selectedModel,
+        };
+        if (self.selectedModelData) {
+          collectBody.dataModelDsId = self.selectedModelData.dataModelDsId;
+          collectBody.dataModelDsNm = self.selectedModelData.dataModelDsNm;
+          collectBody.dataModelNm = self.selectedModelData.dataModelNm;
+          collectBody.dataModelSysCd = self.selectedModelData.dataModelSysCd;
+          collectBody.dataModelSysNm = self.selectedModelData.dataModelSysNm;
+          collectBody.ver = self.selectedModelData.ver;
+        }
+
+        axios.post(self.$APIURL.base + 'api/dm/collectDataModel', collectBody).then(function() {
+          self.stepMessage = '1/3 수집 완료 대기 중...';
+          self.pollCollect();
+        }).catch(function() {
+          self.executing = false;
+          self.showSnackbar('수집 요청 실패', 'error');
+        });
       }).catch(function() {
         self.executing = false;
-        self.showSnackbar('수집 요청 실패', 'error');
+        self.showSnackbar('수집 이력 조회 실패', 'error');
       });
     },
 
@@ -369,15 +383,15 @@ export default {
         axios.post(self.$APIURL.base + 'api/dm/getDataModelClctList', {
           schId: self.selectedModel, from: _from, to: _to
         }).then(function(res) {
-          var sorted = (res.data || []).slice().sort(function(a, b) { return b.clctEndDt.localeCompare(a.clctEndDt); });
-          // 최신 수집건의 완료 여부 확인
-          if (sorted.length > 0 && sorted[0].clctCmptnYn === 'Y') {
-            // 수집 완료 → Step 2: q-executor에 diff 요청
+          var completedNow = (res.data || []).filter(function(c) { return c.clctCmptnYn === 'Y'; }).length;
+          // 새 수집건이 완료되었는지: 완료건 수가 이전보다 늘었을 때
+          if (completedNow > (self._completedBefore || 0)) {
+            var sorted = (res.data || []).filter(function(c) { return c.clctCmptnYn === 'Y'; })
+              .sort(function(a, b) { return b.clctEndDt.localeCompare(a.clctEndDt); });
             self.lastClctDt = sorted[0].clctEndDt;
             self.stepMessage = '2/3 구조 비교 분석 요청 중...';
             self.executeDiff();
           } else {
-            // 아직 수집 중 → 3초 후 재확인
             self._collectTimer = setTimeout(poll, 3000);
           }
         }).catch(function() {
