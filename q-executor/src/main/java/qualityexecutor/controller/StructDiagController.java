@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+
 import lombok.extern.slf4j.Slf4j;
 import qualityexecutor.service.std.StructDiagService;
 import reactor.core.publisher.Mono;
@@ -18,6 +21,9 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/structDiag")
 public class StructDiagController extends DataControllerBase {
+
+    @Autowired
+    private ApplicationContext appContext;
 
     /** 구조 진단 실행 (백그라운드) */
     @PostMapping("/run")
@@ -49,7 +55,8 @@ public class StructDiagController extends DataControllerBase {
         log.info(">> compareSchema: dataModelId={}, clctId={}", dataModelId, clctId);
         try {
             StructDiagService svc = new StructDiagService(null, dataModelId, null, clctId);
-            runService(svc);
+            // autowire만 하고 run()은 호출하지 않음 (compareSchema만 사용)
+            appContext.getAutowireCapableBeanFactory().autowireBean(svc);
             Map<String, Object> compareResult = svc.compareSchema(dataModelId, clctId);
             if (compareResult.containsKey("error")) {
                 result.setResultInfo(RestResult.CODE_500.getCode(), (String) compareResult.get("error"));

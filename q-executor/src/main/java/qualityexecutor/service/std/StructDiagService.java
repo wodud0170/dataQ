@@ -224,8 +224,16 @@ public class StructDiagService implements Runnable {
             }
 
             updateStatus("DONE");
-            log.info("[StructDiag] 완료 - diagId={}, 수집스냅샷({}) vs 실제DB, 변경={}건 (추가T:{}/C:{}, 수정C:{}, 삭제T:{}/C:{})",
-                    diagId, targetClctId, changes.size(), addedTables, addedColumns, modifiedColumns, deletedTables, deletedColumns);
+
+            // TB_DATA_MODEL에 구조진단 결과 반영
+            boolean isMatch = (changes.size() == 0);
+            Map<String, Object> dmUpdateParam = new HashMap<>();
+            dmUpdateParam.put("dataModelId", dataModelId);
+            dmUpdateParam.put("structDiagYn", isMatch ? "Y" : "N");
+            sqlSessionTemplate.update("structdiag.updateDataModelStructDiag", dmUpdateParam);
+
+            log.info("[StructDiag] 완료 - diagId={}, 수집스냅샷({}) vs 실제DB, 변경={}건, 일치={}",
+                    diagId, targetClctId, changes.size(), isMatch);
 
         } catch (Exception e) {
             log.error(">> StructDiagService error: diagId={}", diagId, e);

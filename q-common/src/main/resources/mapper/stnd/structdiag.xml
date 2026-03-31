@@ -128,6 +128,14 @@
 		LIMIT 1
 	</select>
 
+	<!-- TB_DATA_MODEL 구조진단 결과 업데이트 -->
+	<update id="updateDataModelStructDiag" parameterType="java.util.HashMap">
+		UPDATE TB_DATA_MODEL SET
+			STRUCT_DIAG_YN = #{structDiagYn},
+			STRUCT_DIAG_DT = CURRENT_TIMESTAMP
+		WHERE DM_ID = #{dataModelId}
+	</update>
+
 	<!-- 최신 수집 이력 2건 조회 (구조 진단에서 자동 prev/curr 결정용) -->
 	<select id="selectRecentClctIds" parameterType="String" resultType="java.util.HashMap">
 		SELECT DM_CLCT_ID AS "clctId", CLCT_END_DT AS "clctEndDt"
