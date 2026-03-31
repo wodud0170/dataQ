@@ -48,7 +48,7 @@
 	<update id="updateStructDiagResult" parameterType="java.util.HashMap">
 		UPDATE TB_STRUCT_DIAG_HISTORY SET
 			DS_ID = #{dsId},
-			PREV_COLLECT_DT = #{prevCollectDt},
+			PREV_COLLECT_DT = TO_TIMESTAMP(#{prevCollectDt}, 'YYYYMMDDHH24MISS'),
 			TOTAL_TABLES = #{totalTables},
 			TOTAL_COLUMNS = #{totalColumns},
 			ADDED_TABLES = #{addedTables},
