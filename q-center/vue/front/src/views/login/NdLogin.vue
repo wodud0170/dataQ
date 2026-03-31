@@ -6,12 +6,12 @@
                 <v-container d-flex justify-center align-center
                     :class="{ 'pa-5': $vuetify.breakpoint.xs, 'pa-5': !$vuetify.breakpoint.sm, 'pa-10': $vuetify.breakpoint.xl }">
                     <!-- header의 logo 이미지 입니다. 모바일 이외의 화면에서 최대 높이와 최대 넓이를 지정합니다. -->
-                    <v-img v-show="!isMobile" lazy-src="" max-height="36" max-width="200"
-                        src="./../../../static/images/logo_font_200x36.png"></v-img>
+                    <v-img v-show="!isMobile" lazy-src="" max-height="50" max-width="250"
+                        src="./../../../static/images/logo_font_200x36.svg"></v-img>
 
                     <!-- header의 logo 이미지 입니다. 모바일 화면에서 최대 높이와 최대 넓이를 지정합니다. -->
-                    <v-img v-show="isMobile" lazy-src="" max-height="36" max-width="200"
-                        src="./../../../static/images/logo_font_200x36.png"></v-img>
+                    <v-img v-show="isMobile" lazy-src="" max-height="40" max-width="200"
+                        src="./../../../static/images/logo_font_200x36.svg"></v-img>
                 </v-container>
 
                 <!-- form container -->

@@ -5,11 +5,11 @@
 
         <!-- header의 logo 이미지 입니다. 모바일 이외의 화면에서 최대 높이와 최대 넓이를 지정합니다. -->
         <v-img v-cloak v-show="!isMobile" lazy-src="" max-height="36" max-width="180"
-            src="./../../../static/images/logo_font_200x36.png" class="header_logo" v-on:click="goToMain"></v-img>
+            src="./../../../static/images/logo_font_200x36.svg" class="header_logo" v-on:click="goToMain"></v-img>
 
         <!-- header의 logo 이미지 입니다. 모바일 화면에서 최대 높이와 최대 넓이를 지정합니다. -->
         <v-img v-cloak v-show="isMobile" lazy-src="" max-height="26" max-width="100"
-            src="./../../../static/images/logo_font_200x36.png" class="header_logo" v-on:click="goToMain"></v-img>
+            src="./../../../static/images/logo_font_200x36.svg" class="header_logo" v-on:click="goToMain"></v-img>
 
         <v-spacer />
 
