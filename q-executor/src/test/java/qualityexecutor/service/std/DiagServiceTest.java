@@ -424,6 +424,260 @@ class DiagServiceTest {
         }
     }
 
+    // ========== STEP 7: 모든 진단 유형 조합 테스트 ==========
+
+    @Nested
+    @DisplayName("진단 유형 조합")
+    class DiagTypeCombinationTest {
+
+        @Test
+        @DisplayName("TERM_NOT_EXIST 단독 (다른 진단 없음)")
+        void termNotExistAlone() {
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", "NONEXIST_COL", "테스트", "VARCHAR", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(1, results.size());
+            assertEquals("TERM_NOT_EXIST", results.get(0).getDiagType());
+            // TERM_NOT_EXIST이면 한글명/타입/길이 진단은 수행하지 않음
+        }
+
+        @Test
+        @DisplayName("KR_NM만 불일치 (타입·길이 동일)")
+        void krNmOnlyMismatch() {
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "유저아이디", "VARCHAR", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(1, results.size());
+            assertEquals("TERM_KR_NM_MISMATCH", results.get(0).getDiagType());
+        }
+
+        @Test
+        @DisplayName("TYPE만 불일치 (한글명·길이 동일)")
+        void typeOnlyMismatch() {
+            // VARCHAR(20) vs CHAR(20) → CHAR ↔ VARCHAR 동의어 → 불일치 안 함
+            // INTEGER(20) vs VARCHAR(20) → 타입 불일치
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "사용자ID", "INTEGER", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(1, results.size());
+            assertEquals("DATA_TYPE_MISMATCH", results.get(0).getDiagType());
+        }
+
+        @Test
+        @DisplayName("LEN만 불일치 (한글명·타입 동일)")
+        void lenOnlyMismatch() {
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "사용자ID", "VARCHAR", 30, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(1, results.size());
+            assertEquals("DATA_LEN_MISMATCH", results.get(0).getDiagType());
+        }
+
+        @Test
+        @DisplayName("KR_NM + TYPE 불일치 (길이 동일)")
+        void krNmAndTypeMismatch() {
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "유저아이디", "INTEGER", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(2, results.size());
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("TERM_KR_NM_MISMATCH")));
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_TYPE_MISMATCH")));
+        }
+
+        @Test
+        @DisplayName("KR_NM + LEN 불일치 (타입 동일)")
+        void krNmAndLenMismatch() {
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "유저아이디", "VARCHAR", 30, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(2, results.size());
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("TERM_KR_NM_MISMATCH")));
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_LEN_MISMATCH")));
+        }
+
+        @Test
+        @DisplayName("TYPE + LEN 불일치 (한글명 동일)")
+        void typeAndLenMismatch() {
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "사용자ID", "INTEGER", 30, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(2, results.size());
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_TYPE_MISMATCH")));
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_LEN_MISMATCH")));
+        }
+
+        @Test
+        @DisplayName("KR_NM + TYPE + LEN 전부 불일치 → 3건")
+        void allThreeMismatch() {
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "유저아이디", "INTEGER", 30, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(3, results.size());
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("TERM_KR_NM_MISMATCH")));
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_TYPE_MISMATCH")));
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_LEN_MISMATCH")));
+        }
+
+        @Test
+        @DisplayName("모두 일치 → 0건")
+        void allMatch() {
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "사용자ID", "VARCHAR", 20, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+            assertTrue(results.isEmpty());
+        }
+
+        @Test
+        @DisplayName("동의어 타입 + 길이 불일치 → LEN만 1건")
+        void equivalentTypeWithLenMismatch() {
+            // CHAR ↔ VARCHAR 동의어이므로 타입 불일치 없음
+            StdDataModelAttrVo attr = createAttr("TBL_MSG_HIST", "USER_ID", "사용자ID", "CHAR", 30, 0);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(1, results.size());
+            assertEquals("DATA_LEN_MISMATCH", results.get(0).getDiagType());
+        }
+
+        @Test
+        @DisplayName("소수점 불일치 + 한글명 불일치 동시")
+        void decimalAndKrNmMismatch() {
+            StdTermsVo numTerm = new StdTermsVo();
+            numTerm.setTermsNm("수량");
+            numTerm.setTermsEngAbrvNm("QTY");
+            numTerm.setDomainNm("N10_2");
+            numTerm.setDataType("NUMERIC");
+            numTerm.setDataLen((short) 10);
+            numTerm.setDataDecimalLen((short) 2);
+            termsByEng.put("QTY", numTerm);
+
+            StdDataModelAttrVo attr = createAttr("TBL_TEST", "QTY", "갯수", "NUMERIC", 10, 5);
+            List<StdDiagResultVo> results = diagnose(attr);
+
+            assertEquals(2, results.size());
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("TERM_KR_NM_MISMATCH")));
+            assertTrue(results.stream().anyMatch(r -> r.getDiagType().equals("DATA_LEN_MISMATCH")));
+        }
+    }
+
+    // ========== STEP 8: 대량 용어 진단 테스트 ==========
+
+    @Nested
+    @DisplayName("대량 용어 진단")
+    class BulkDiagTest {
+
+        @Test
+        @DisplayName("100개 컬럼 일괄 진단 - 전부 일치")
+        void bulkAllMatch() {
+            // 100개 용어 등록
+            for (int i = 0; i < 100; i++) {
+                StdTermsVo term = new StdTermsVo();
+                term.setTermsNm("용어" + i);
+                term.setTermsEngAbrvNm("TERM_" + i);
+                term.setDomainNm("V20");
+                term.setDataType("VARCHAR");
+                term.setDataLen((short) 20);
+                term.setDataDecimalLen((short) 0);
+                termsByEng.put("TERM_" + i, term);
+            }
+
+            List<StdDiagResultVo> allResults = new ArrayList<>();
+            for (int i = 0; i < 100; i++) {
+                StdDataModelAttrVo attr = createAttr("TBL_BULK", "TERM_" + i, "용어" + i, "VARCHAR", 20, 0);
+                allResults.addAll(diagnose(attr));
+            }
+
+            assertTrue(allResults.isEmpty(), "100개 컬럼 전부 일치 → 0건");
+        }
+
+        @Test
+        @DisplayName("100개 컬럼 일괄 진단 - 짝수번은 길이 불일치")
+        void bulkEvenLenMismatch() {
+            for (int i = 0; i < 100; i++) {
+                StdTermsVo term = new StdTermsVo();
+                term.setTermsNm("항목" + i);
+                term.setTermsEngAbrvNm("ITEM_" + i);
+                term.setDomainNm("V50");
+                term.setDataType("VARCHAR");
+                term.setDataLen((short) 50);
+                term.setDataDecimalLen((short) 0);
+                termsByEng.put("ITEM_" + i, term);
+            }
+
+            List<StdDiagResultVo> allResults = new ArrayList<>();
+            for (int i = 0; i < 100; i++) {
+                int len = (i % 2 == 0) ? 30 : 50;  // 짝수번은 길이 불일치
+                StdDataModelAttrVo attr = createAttr("TBL_BULK", "ITEM_" + i, "항목" + i, "VARCHAR", len, 0);
+                allResults.addAll(diagnose(attr));
+            }
+
+            assertEquals(50, allResults.size(), "짝수번 50개만 DATA_LEN_MISMATCH");
+            assertTrue(allResults.stream().allMatch(r -> r.getDiagType().equals("DATA_LEN_MISMATCH")));
+        }
+
+        @Test
+        @DisplayName("100개 컬럼 일괄 진단 - 미등록 용어 포함")
+        void bulkWithUnregistered() {
+            for (int i = 0; i < 50; i++) {
+                StdTermsVo term = new StdTermsVo();
+                term.setTermsNm("등록" + i);
+                term.setTermsEngAbrvNm("REG_" + i);
+                term.setDomainNm("V20");
+                term.setDataType("VARCHAR");
+                term.setDataLen((short) 20);
+                term.setDataDecimalLen((short) 0);
+                termsByEng.put("REG_" + i, term);
+            }
+
+            List<StdDiagResultVo> allResults = new ArrayList<>();
+            for (int i = 0; i < 100; i++) {
+                String attrNm = (i < 50) ? "REG_" + i : "UNREG_" + i;
+                String attrNmKr = (i < 50) ? "등록" + i : "미등록" + i;
+                StdDataModelAttrVo attr = createAttr("TBL_BULK", attrNm, attrNmKr, "VARCHAR", 20, 0);
+                allResults.addAll(diagnose(attr));
+            }
+
+            long termNotExist = allResults.stream()
+                    .filter(r -> r.getDiagType().equals("TERM_NOT_EXIST")).count();
+            assertEquals(50, termNotExist, "미등록 50개 → TERM_NOT_EXIST 50건");
+        }
+
+        @Test
+        @DisplayName("대량 진단 - 다양한 진단 유형 혼합")
+        void bulkMixedDiagTypes() {
+            // 10개 용어: 타입 VARCHAR, 길이 20
+            for (int i = 0; i < 10; i++) {
+                StdTermsVo term = new StdTermsVo();
+                term.setTermsNm("혼합" + i);
+                term.setTermsEngAbrvNm("MIX_" + i);
+                term.setDomainNm("V20");
+                term.setDataType("VARCHAR");
+                term.setDataLen((short) 20);
+                term.setDataDecimalLen((short) 0);
+                termsByEng.put("MIX_" + i, term);
+            }
+
+            List<StdDiagResultVo> allResults = new ArrayList<>();
+            for (int i = 0; i < 10; i++) {
+                String krNm;
+                String dataType;
+                int dataLen;
+                switch (i % 4) {
+                    case 0: krNm = "혼합" + i; dataType = "VARCHAR"; dataLen = 20; break;  // 정상
+                    case 1: krNm = "다른이름"; dataType = "VARCHAR"; dataLen = 20; break;    // 한글명만 불일치
+                    case 2: krNm = "혼합" + i; dataType = "INTEGER"; dataLen = 30; break;   // 타입+길이 불일치
+                    default: krNm = "다른이름"; dataType = "INTEGER"; dataLen = 30; break;   // 전부 불일치
+                }
+                StdDataModelAttrVo attr = createAttr("TBL_MIX", "MIX_" + i, krNm, dataType, dataLen, 0);
+                allResults.addAll(diagnose(attr));
+            }
+
+            // case 0: 0건 (i=0,4,8 → 3개)
+            // case 1: 1건 KR_NM (i=1,5,9 → 3개 → 3건)
+            // case 2: 2건 TYPE+LEN (i=2,6 → 2개 → 4건)
+            // case 3: 3건 KR+TYPE+LEN (i=3,7 → 2개 → 6건)
+            assertEquals(13, allResults.size());
+        }
+    }
+
     // ========== 헬퍼 메서드 ==========
 
     /** isTypeEquivalent 로직 재현 */

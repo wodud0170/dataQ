@@ -588,8 +588,285 @@ class DataStandardHelperTest {
     }
 
     // ==================================================================
+    // 8. registerWord 입력값 검증 로직 테스트
+    // ==================================================================
+
+    @Nested
+    @DisplayName("registerWord 입력값 검증")
+    class RegisterWordValidationTest {
+
+        @Test
+        @DisplayName("wordNm null → 실패")
+        void wordNmNull() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", null);
+            body.put("wordEngAbrvNm", "TST");
+            body.put("wordEngNm", "TEST");
+            Map<String, Object> res = validateRegisterWord(body);
+            assertFalse((Boolean) res.get("success"));
+            assertNotNull(res.get("message"));
+        }
+
+        @Test
+        @DisplayName("wordNm 빈값 → 실패")
+        void wordNmEmpty() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", "  ");
+            body.put("wordEngAbrvNm", "TST");
+            body.put("wordEngNm", "TEST");
+            Map<String, Object> res = validateRegisterWord(body);
+            assertFalse((Boolean) res.get("success"));
+        }
+
+        @Test
+        @DisplayName("wordEngAbrvNm null → 실패")
+        void wordEngAbrvNmNull() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", "테스트");
+            body.put("wordEngAbrvNm", null);
+            body.put("wordEngNm", "TEST");
+            Map<String, Object> res = validateRegisterWord(body);
+            assertFalse((Boolean) res.get("success"));
+        }
+
+        @Test
+        @DisplayName("wordEngAbrvNm 빈값 → 실패")
+        void wordEngAbrvNmEmpty() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", "테스트");
+            body.put("wordEngAbrvNm", "");
+            body.put("wordEngNm", "TEST");
+            Map<String, Object> res = validateRegisterWord(body);
+            assertFalse((Boolean) res.get("success"));
+        }
+
+        @Test
+        @DisplayName("wordEngNm null → 실패")
+        void wordEngNmNull() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", "테스트");
+            body.put("wordEngAbrvNm", "TST");
+            body.put("wordEngNm", null);
+            Map<String, Object> res = validateRegisterWord(body);
+            assertFalse((Boolean) res.get("success"));
+        }
+
+        @Test
+        @DisplayName("wordEngNm 빈값 → 실패")
+        void wordEngNmEmpty() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", "테스트");
+            body.put("wordEngAbrvNm", "TST");
+            body.put("wordEngNm", "   ");
+            Map<String, Object> res = validateRegisterWord(body);
+            assertFalse((Boolean) res.get("success"));
+        }
+
+        @Test
+        @DisplayName("필수 3필드 모두 null → 실패")
+        void allNull() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", null);
+            body.put("wordEngAbrvNm", null);
+            body.put("wordEngNm", null);
+            Map<String, Object> res = validateRegisterWord(body);
+            assertFalse((Boolean) res.get("success"));
+        }
+
+        @Test
+        @DisplayName("필수값 모두 정상 → 성공")
+        void allValid() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", "테스트");
+            body.put("wordEngAbrvNm", "TST");
+            body.put("wordEngNm", "TEST");
+            Map<String, Object> res = validateRegisterWord(body);
+            assertTrue((Boolean) res.get("success"));
+        }
+
+        @Test
+        @DisplayName("wordDesc/domainClsfNm은 선택 → null이어도 검증 통과")
+        void optionalFieldsNull() {
+            Map<String, Object> body = new HashMap<>();
+            body.put("wordNm", "테스트");
+            body.put("wordEngAbrvNm", "TST");
+            body.put("wordEngNm", "TEST");
+            body.put("wordDesc", null);
+            body.put("domainClsfNm", null);
+            Map<String, Object> res = validateRegisterWord(body);
+            assertTrue((Boolean) res.get("success"));
+        }
+    }
+
+    // ==================================================================
+    // 9. registerTermsBatch newWords 필수필드 검증 로직 테스트
+    // ==================================================================
+
+    @Nested
+    @DisplayName("registerTermsBatch newWords 필수필드 검증")
+    class RegisterTermsBatchNewWordsValidationTest {
+
+        @Test
+        @DisplayName("newWords null → 검증 통과 (단어 등록 없이 진행)")
+        void newWordsNull() {
+            assertDoesNotThrow(() -> validateNewWords(null));
+        }
+
+        @Test
+        @DisplayName("newWords 빈 리스트 → 검증 통과")
+        void newWordsEmpty() {
+            assertDoesNotThrow(() -> validateNewWords(new ArrayList<>()));
+        }
+
+        @Test
+        @DisplayName("newWord에 wordNm null → RuntimeException")
+        void newWordWordNmNull() {
+            List<Map<String, Object>> newWords = new ArrayList<>();
+            Map<String, Object> nw = new HashMap<>();
+            nw.put("wordNm", null);
+            nw.put("wordEngAbrvNm", "TST");
+            nw.put("wordEngNm", "TEST");
+            newWords.add(nw);
+            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
+        }
+
+        @Test
+        @DisplayName("newWord에 wordNm 빈값 → RuntimeException")
+        void newWordWordNmEmpty() {
+            List<Map<String, Object>> newWords = new ArrayList<>();
+            Map<String, Object> nw = new HashMap<>();
+            nw.put("wordNm", "  ");
+            nw.put("wordEngAbrvNm", "TST");
+            nw.put("wordEngNm", "TEST");
+            newWords.add(nw);
+            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
+        }
+
+        @Test
+        @DisplayName("newWord에 wordEngAbrvNm 빈값 → RuntimeException")
+        void newWordAbrvEmpty() {
+            List<Map<String, Object>> newWords = new ArrayList<>();
+            Map<String, Object> nw = new HashMap<>();
+            nw.put("wordNm", "테스트");
+            nw.put("wordEngAbrvNm", "");
+            nw.put("wordEngNm", "TEST");
+            newWords.add(nw);
+            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
+        }
+
+        @Test
+        @DisplayName("newWord에 wordEngNm null → RuntimeException")
+        void newWordEngNmNull() {
+            List<Map<String, Object>> newWords = new ArrayList<>();
+            Map<String, Object> nw = new HashMap<>();
+            nw.put("wordNm", "테스트");
+            nw.put("wordEngAbrvNm", "TST");
+            nw.put("wordEngNm", null);
+            newWords.add(nw);
+            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
+        }
+
+        @Test
+        @DisplayName("첫 번째 정상, 두 번째 누락 → RuntimeException")
+        void secondWordInvalid() {
+            List<Map<String, Object>> newWords = new ArrayList<>();
+            Map<String, Object> nw1 = new HashMap<>();
+            nw1.put("wordNm", "테스트1");
+            nw1.put("wordEngAbrvNm", "TST1");
+            nw1.put("wordEngNm", "TEST1");
+            newWords.add(nw1);
+
+            Map<String, Object> nw2 = new HashMap<>();
+            nw2.put("wordNm", "테스트2");
+            nw2.put("wordEngAbrvNm", "");
+            nw2.put("wordEngNm", "TEST2");
+            newWords.add(nw2);
+
+            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
+        }
+
+        @Test
+        @DisplayName("모든 필수필드 정상 → 예외 없음")
+        void allFieldsValid() {
+            List<Map<String, Object>> newWords = new ArrayList<>();
+            Map<String, Object> nw = new HashMap<>();
+            nw.put("wordNm", "핸드폰");
+            nw.put("wordEngAbrvNm", "HNDPHN");
+            nw.put("wordEngNm", "HANDPHONE");
+            nw.put("wordDesc", "핸드폰 설명");
+            nw.put("domainClsfNm", "");
+            newWords.add(nw);
+            assertDoesNotThrow(() -> validateNewWords(newWords));
+        }
+
+        @Test
+        @DisplayName("items가 null이거나 빈 리스트 → 빈 결과 반환")
+        void emptyItemsResult() {
+            Map<String, Object> res = simulateBatchWithEmptyItems(null);
+            assertEquals(0, res.get("success"));
+            assertEquals(0, res.get("fail"));
+
+            Map<String, Object> res2 = simulateBatchWithEmptyItems(new ArrayList<>());
+            assertEquals(0, res2.get("success"));
+            assertEquals(0, res2.get("fail"));
+        }
+    }
+
+    // ==================================================================
     // 로직 재현 (컨트롤러와 동일한 순수 로직)
     // ==================================================================
+
+    /**
+     * registerWord 입력값 검증 로직 재현 (DB 비의존 부분)
+     */
+    private Map<String, Object> validateRegisterWord(Map<String, Object> body) {
+        Map<String, Object> res = new HashMap<>();
+        String wordNm = (String) body.get("wordNm");
+        String wordEngAbrvNm = (String) body.get("wordEngAbrvNm");
+        String wordEngNm = (String) body.get("wordEngNm");
+
+        if (wordNm == null || wordNm.trim().isEmpty()
+                || wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
+                || wordEngNm == null || wordEngNm.trim().isEmpty()) {
+            res.put("success", false);
+            res.put("message", "한글명, 영문약어, 영문명은 필수입니다.");
+            return res;
+        }
+        res.put("success", true);
+        return res;
+    }
+
+    /**
+     * registerTermsBatch의 newWords 필수필드 검증 로직 재현
+     */
+    private void validateNewWords(List<Map<String, Object>> newWords) {
+        if (newWords == null) return;
+        for (int i = 0; i < newWords.size(); i++) {
+            Map<String, Object> nw = newWords.get(i);
+            String wordNm = (String) nw.get("wordNm");
+            String wordEngAbrvNm = (String) nw.get("wordEngAbrvNm");
+            String wordEngNm = (String) nw.get("wordEngNm");
+            if (wordNm == null || wordNm.trim().isEmpty()
+                    || wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
+                    || wordEngNm == null || wordEngNm.trim().isEmpty()) {
+                throw new RuntimeException("신규 단어 필수 항목 누락: 한글명, 영문약어, 영문명은 필수입니다. (단어: " + wordNm + ")");
+            }
+        }
+    }
+
+    /**
+     * registerTermsBatch의 빈 items 처리 로직 재현
+     */
+    private Map<String, Object> simulateBatchWithEmptyItems(List<Map<String, Object>> items) {
+        if (items == null || items.isEmpty()) {
+            Map<String, Object> res = new HashMap<>();
+            res.put("success", 0);
+            res.put("fail", 0);
+            res.put("details", new ArrayList<>());
+            return res;
+        }
+        return new HashMap<>(); // 여기선 도달하지 않음
+    }
 
     private List<String> greedySplit(String input, Set<String> candidates,
             Map<String, List<StdWordVo>> wordsByNm, Map<String, Map<String, Object>> wordDict) {

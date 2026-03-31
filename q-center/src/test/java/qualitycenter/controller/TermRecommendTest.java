@@ -464,6 +464,164 @@ class TermRecommendTest {
 		}
 	}
 
+	// ========== 8. DICT vs OKT 우선순위 검증 ==========
+
+	@Nested
+	@DisplayName("DICT vs OKT 우선순위")
+	class DictVsOktPriority {
+
+		@Test
+		@DisplayName("DICT에 있는 단어가 OKT 후보보다 우선 매칭됨")
+		void dictHigherThanOkt() {
+			// "핸드폰번호" - 핸드폰은 DICT에 있고, "핸드", "폰"은 OKT 후보
+			// DICT가 OKT보다 우선이므로 "핸드폰" 통째로 매칭
+			List<String> nnTokens = Arrays.asList("핸드폰번호", "핸드폰", "핸드", "폰", "번호");
+			Set<String> registered = new HashSet<>(Arrays.asList("번호"));
+			Set<String> dict = new HashSet<>(Arrays.asList("핸드폰"));
+
+			List<String> result = greedySplit("핸드폰번호", nnTokens, registered, dict);
+
+			// 번호는 registered (TB_WORD) → 1순위, 핸드폰은 DICT → 2순위
+			// "핸드폰번호" 시작에서 "번호"는 startsWith가 아니므로 건너뜀
+			// "핸드폰"은 DICT에서 매칭 → 그 다음 "번호"는 TB_WORD에서 매칭
+			assertEquals(2, result.size());
+			assertEquals("핸드폰", result.get(0));
+			assertEquals("번호", result.get(1));
+		}
+
+		@Test
+		@DisplayName("DICT에 핸드폰 있고 OKT에 핸드+폰 있을 때, DICT가 우선")
+		void dictBeatsOktShorterTokens() {
+			// OKT에 "핸드"(2글자), "폰"(1글자) 있지만
+			// DICT에 "핸드폰"(3글자) 있으므로 DICT가 우선
+			List<String> nnTokens = Arrays.asList("핸드폰명", "핸드폰", "핸드", "폰", "명");
+			Set<String> registered = Collections.emptySet();
+			Set<String> dict = new HashSet<>(Arrays.asList("핸드폰"));
+
+			List<String> result = greedySplit("핸드폰명", nnTokens, registered, dict);
+
+			assertEquals("핸드폰", result.get(0), "DICT에 있는 '핸드폰'이 OKT '핸드'+'폰'보다 우선");
+			assertEquals("명", result.get(1));
+		}
+
+		@Test
+		@DisplayName("TB_WORD 등록어가 DICT보다 우선")
+		void registeredBeatsDict() {
+			// "지갑"이 TB_WORD에도 DICT에도 있으면 TB_WORD가 우선
+			List<String> nnTokens = Arrays.asList("지갑번호", "지갑", "번호");
+			Set<String> registered = new HashSet<>(Arrays.asList("지갑", "번호"));
+			Set<String> dict = new HashSet<>(Arrays.asList("지갑"));
+
+			List<String> result = greedySplit("지갑번호", nnTokens, registered, dict);
+
+			assertEquals(Arrays.asList("지갑", "번호"), result);
+		}
+	}
+
+	// ========== 9. 입력 전체가 하나의 등록단어인 경우 ==========
+
+	@Nested
+	@DisplayName("입력 전체가 단일 등록 단어")
+	class SingleRegisteredWordInput {
+
+		@Test
+		@DisplayName("입력 전체가 등록단어 하나 → 분리 없이 1개 반환")
+		void wholeInputIsSingleRegisteredWord() {
+			// greedySplit에서 !c.equals(input) 조건이 있어 매칭되지 않음
+			// 결국 잔여 통째로 반환됨
+			List<String> nnTokens = Arrays.asList("사용자");
+			Set<String> registered = new HashSet<>(Arrays.asList("사용자"));
+			Set<String> dict = Collections.emptySet();
+
+			List<String> result = greedySplit("사용자", nnTokens, registered, dict);
+
+			assertEquals(1, result.size());
+			assertEquals("사용자", result.get(0));
+		}
+
+		@Test
+		@DisplayName("전체가 하나의 등록단어 → 상태 판정 시뮬레이션")
+		void singleWordStatusJudgement() {
+			// 단일 등록단어가 분리 결과로 나오면 MATCHED → AUTO
+			List<TermAnalysisResult.WordAnalysis> words = Arrays.asList(
+				matchedWordWithAbrv("사용자", "USR")
+			);
+			String status = judgeStatus(words);
+			assertEquals("AUTO", status);
+			assertEquals("USR", composeEngAbrv(words));
+		}
+
+		@Test
+		@DisplayName("전체가 하나의 DICT 단어 → 분리 없이 1개 반환")
+		void wholeInputIsSingleDictWord() {
+			List<String> nnTokens = Arrays.asList("핸드폰");
+			Set<String> registered = Collections.emptySet();
+			Set<String> dict = new HashSet<>(Arrays.asList("핸드폰"));
+
+			List<String> result = greedySplit("핸드폰", nnTokens, registered, dict);
+
+			assertEquals(1, result.size());
+			assertEquals("핸드폰", result.get(0));
+		}
+	}
+
+	// ========== 10. 1글자 단어 케이스 ==========
+
+	@Nested
+	@DisplayName("1글자 단어 처리")
+	class SingleCharWordTest {
+
+		@Test
+		@DisplayName("1글자 토큰만 있는 경우 - OKT 2+ 매칭 불가, gap 처리")
+		void singleCharTokensOnly() {
+			// 등록 단어도 DICT도 없고, OKT 후보도 1글자뿐
+			List<String> nnTokens = Arrays.asList("가", "나", "다");
+			Set<String> registered = Collections.emptySet();
+			Set<String> dict = Collections.emptySet();
+
+			List<String> result = greedySplit("가나다", nnTokens, registered, dict);
+
+			// 1글자는 OKT 2+ 매칭 조건(c.length() >= 2)에 걸리지 않음
+			// "가나다" 전체가 gap으로 처리됨
+			assertFalse(result.isEmpty());
+			// 결과는 gap 처리에 의해 "가나다" 통째이거나, 1글자씩 분리
+			// gap 로직: skip=1에서 "나다"에 대해 candidates 확인 - "나" startsWith but candidates에 "나" 있음 → gap
+			// 즉 "가"(gap) + "나" startsWith check...
+			// 실제로 1글자 후보는 !c.equals(input)를 만족하므로 gap에서 매칭 가능
+			assertTrue(result.size() >= 1);
+		}
+
+		@Test
+		@DisplayName("1글자 등록단어 → TB_WORD에서도 2글자 이상 조건이 있는지 확인")
+		void singleCharRegisteredWord() {
+			// greedySplit에서 registered 매칭은 길이 제한 없이 startsWith && !equals(input) 체크
+			List<String> nnTokens = Arrays.asList("가번호", "가", "번호");
+			Set<String> registered = new HashSet<>(Arrays.asList("가", "번호"));
+			Set<String> dict = Collections.emptySet();
+
+			// "가번호"에서 registered "가"는 startsWith=true, !equals("가번호")=true → 매칭
+			// 이어서 "번호" → registered 매칭
+			List<String> result = greedySplit("가번호", nnTokens, registered, dict);
+
+			assertEquals(2, result.size());
+			assertEquals("가", result.get(0));
+			assertEquals("번호", result.get(1));
+		}
+
+		@Test
+		@DisplayName("2순위 분리에서 2글자 이하 토큰은 분리하지 않음")
+		void altSplitSkipsShortTokens() {
+			List<String> primary = Arrays.asList("가", "나");
+			Set<String> candidateSet = new LinkedHashSet<>(Arrays.asList("가", "나"));
+			Set<String> registered = Collections.emptySet();
+
+			List<String> alt = generateAlternativeSplit(primary, candidateSet, registered);
+
+			// 2글자 이하이므로 분리하지 않음
+			assertEquals(primary, alt);
+		}
+	}
+
 	// ========== greedySplit 로직 재현 (컨트롤러와 동일) ==========
 
 	private List<String> greedySplit(String input, List<String> nnTokens, Set<String> registered, Set<String> dict) {
