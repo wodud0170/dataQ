@@ -109,18 +109,13 @@
 		LIMIT 1
 	</select>
 
-	<!-- 수집된 컬럼 스냅샷 (diff용) - dataModelId + 최신 clctId 기준 -->
-	<select id="selectAttrSnapshotByDataModelId" parameterType="String" resultType="java.util.HashMap">
-		SELECT a.OBJ_NM AS "tableNm", a.ATTR_NM AS "columnNm",
-			a.DATA_TYPE AS "dataType", a.DATA_LEN AS "dataLen",
-			a.NULLABLE_YN AS "nullableYn", a.DM_CLCT_ID AS "clctId"
-		FROM TB_DATA_MODEL_ATTR a
-		WHERE a.DM_CLCT_ID = (
-			SELECT c.DM_CLCT_ID FROM TB_DATA_MODEL_CLCT c
-			WHERE c.DM_ID = #{dataModelId} AND c.CLCT_CMPTN_YN = 'Y'
-			ORDER BY c.CLCT_END_DT DESC LIMIT 1
-		)
-		ORDER BY a.OBJ_NM, a.ATTR_NM
+	<!-- 최신 수집 이력 2건 조회 (구조 진단에서 자동 prev/curr 결정용) -->
+	<select id="selectRecentClctIds" parameterType="String" resultType="java.util.HashMap">
+		SELECT DM_CLCT_ID AS "clctId", CLCT_END_DT AS "clctEndDt"
+		FROM TB_DATA_MODEL_CLCT
+		WHERE DM_ID = #{dataModelId} AND CLCT_CMPTN_YN = 'Y'
+		ORDER BY CLCT_END_DT DESC
+		LIMIT 2
 	</select>
 
 </mapper>
