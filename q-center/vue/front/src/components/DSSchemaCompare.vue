@@ -30,14 +30,14 @@
 
       <v-btn small color="primary" :disabled="!selectedClctId" :loading="comparing" @click="runCompare">
         <v-icon small left>mdi-compare</v-icon>
-        비교 실행
+        진단 실행
       </v-btn>
     </v-sheet>
 
     <!-- 진행 표시 -->
     <v-sheet v-if="comparing" class="pa-4 mb-2 text-center" style="border:1px solid #E8EAF6; border-radius:4px;">
       <v-progress-circular indeterminate color="primary" size="32" class="mr-3" />
-      <span>DBMS에 접속하여 스키마를 비교하고 있습니다...</span>
+      <span>DBMS에 접속하여 구조를 진단하고 있습니다...</span>
     </v-sheet>
 
     <!-- 요약 카드 -->
@@ -199,8 +199,8 @@
     <v-sheet v-if="!hasResult && !comparing" style="flex:1; display:flex; align-items:center; justify-content:center; border:1px solid #E8EAF6; border-radius:4px;">
       <div class="text-center grey--text">
         <v-icon large color="grey lighten-1" class="mb-2">mdi-compare</v-icon>
-        <div>데이터모델과 수집일시를 선택한 후 [비교 실행] 버튼을 클릭하세요.</div>
-        <div class="mt-1 text-caption">수집 스냅샷과 현재 DBMS 스키마를 비교합니다.</div>
+        <div>데이터모델과 수집일시를 선택한 후 [진단 실행] 버튼을 클릭하세요.</div>
+        <div class="mt-1 text-caption">수집 스냅샷과 현재 DBMS 스키마를 비교하여 구조를 진단합니다.</div>
       </div>
     </v-sheet>
 
@@ -320,11 +320,11 @@ export default {
           }
           var totalChanges = (self.summary.modifiedTables || 0) + (self.summary.addedTables || 0) + (self.summary.deletedTables || 0);
           self.showSnackbar(
-            totalChanges > 0 ? '비교 완료: ' + totalChanges + '개 테이블 변경' : '비교 완료: 변경사항 없음',
+            totalChanges > 0 ? '진단 완료: ' + totalChanges + '개 테이블 변경' : '진단 완료: 변경사항 없음',
             totalChanges > 0 ? 'warning' : 'success'
           );
         } else {
-          self.showSnackbar('비교 실행 실패: ' + (data && data.resultMessage ? data.resultMessage : ''), 'error');
+          self.showSnackbar('진단 실행 실패: ' + (data && data.resultMessage ? data.resultMessage : ''), 'error');
         }
       }).catch(function() {
         self.comparing = false;

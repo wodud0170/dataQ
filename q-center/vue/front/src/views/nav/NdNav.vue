@@ -171,18 +171,11 @@
                         </v-list-item-content>
                     </template>
 
-                    <v-list-item link id="nav_structDiag" href="#tab_structDiag"
+                    <v-list-item link id="nav_schemaCompare" href="#tab_schemaCompare"
                         active-class="ndColor--text" title="구조 진단"
-                        v-on:click.stop="addTabItem('구조 진단', 'structDiag');">
+                        v-on:click.stop="addTabItem('구조 진단', 'schemaCompare');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>구조 진단</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item link id="nav_schemaCompare" href="#tab_schemaCompare"
-                        active-class="ndColor--text" title="스키마 비교"
-                        v-on:click.stop="addTabItem('스키마 비교', 'schemaCompare');">
-                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>스키마 비교</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
 

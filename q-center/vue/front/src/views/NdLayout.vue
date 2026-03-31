@@ -155,7 +155,6 @@ export default {
                 case "dataDiagResult":
                     document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
-                case "structDiag":
                 case "schemaCompare":
                     document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
@@ -314,7 +313,7 @@ export default {
 
                 } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
                     document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
-                } else if (tabName === 'structDiag' || tabName === 'schemaCompare') {
+                } else if (tabName === 'schemaCompare') {
                     document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                 } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn') {
                     document.getElementById("dmGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
@@ -479,7 +478,7 @@ export default {
             } else if (tabitem === 'dataDiag' || tabitem === 'dataDiagResult') {
                 this.navDiagGroup = true;
                 return;
-            } else if (tabitem === 'structDiag' || tabitem === 'schemaCompare') {
+            } else if (tabitem === 'schemaCompare') {
                 this.navStructDiagGroup = true;
                 return;
             } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn') {
