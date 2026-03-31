@@ -11,6 +11,10 @@
 		<result property="dataModelDsId" column="DM_DS_ID"/>
 		<result property="dataModelDsNm" column="DM_DS_NM"/>
 		<result property="ver" column="VER"/>
+		<result property="structDiagYn" column="STRUCT_DIAG_YN"/>
+		<result property="structDiagDt" column="STRUCT_DIAG_DT_FMT"/>
+		<result property="diagStndRate" column="DIAG_STND_RATE"/>
+		<result property="diagDt" column="DIAG_DT_FMT"/>
 		<collection property="dataModelStats" resultMap="stdDataModelStatsMap" />
 	</resultMap>
 	<resultMap id="stdDataModelStatsMap" type="com.ndata.quality.model.std.StdDataModelStatsVo">
@@ -53,6 +57,10 @@
             ,A.DM_DS_ID
             ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
             ,A.VER
+            ,COALESCE(A.STRUCT_DIAG_YN, 'N') as STRUCT_DIAG_YN
+            ,to_char(A.STRUCT_DIAG_DT, 'YYYY-MM-DD HH24:MI') as STRUCT_DIAG_DT_FMT
+            ,COALESCE(D.DIAG_STND_RATE, 0) as DIAG_STND_RATE
+            ,D.DIAG_DT_FMT
             ,B.DM_CLCT_ID
             ,COALESCE(B.OBJ_CNT,0) as OBJ_CNT
             ,COALESCE(B.ATTR_CNT,0) as ATTR_CNT
@@ -63,6 +71,16 @@
             where S.DM_CLCT_ID = T.DM_CLCT_ID and
                 T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID)
             ) B on A.DM_ID = B.DM_ID
+        LEFT OUTER JOIN (
+            select J.DM_ID,
+                CASE WHEN J.TOTAL_CNT > 0
+                    THEN ROUND((1.0 - (J.RESULT_CNT::decimal / J.TOTAL_CNT)) * 100, 1)
+                    ELSE 0 END as DIAG_STND_RATE,
+                to_char(to_timestamp(J.END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI') as DIAG_DT_FMT
+            from TB_DIAG_JOB J
+            where J.STATUS = 'DONE'
+                and J.END_DT = (select max(END_DT) from TB_DIAG_JOB where DM_ID = J.DM_ID and STATUS = 'DONE')
+            ) D on A.DM_ID = D.DM_ID
         where A.USE_YN = 'Y'
     <if test="schNm != null">
             AND A.DM_NM ILIKE '%' || #{schNm} || '%'

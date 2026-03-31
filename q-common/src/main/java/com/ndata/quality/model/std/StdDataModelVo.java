@@ -24,4 +24,12 @@ public class StdDataModelVo {
     private int nonStndCnt;           // 비표준 건수
     private int noTermsCnt;           // 용어 미존재 건수
     private int domainMismatchCnt;    // 도메인 불일치 건수
+
+    // 구조 진단 결과
+    private String structDiagYn;      // 구조진단 일치여부 (Y/N)
+    private String structDiagDt;      // 구조진단 최종 실행일시
+
+    // 표준화 진단 결과 (최신 Job 기준)
+    private double diagStndRate;      // 표준화 진단 준수율 (%)
+    private String diagDt;            // 표준화 진단 최종 실행일시
 }

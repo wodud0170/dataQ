@@ -88,7 +88,32 @@
                       :style="{ width: '40px', height: '25px !important', padding: '0 5px', minWidth: '45px', marginRight: '16px !important' }">선택</v-btn>
                   </div>
                 </template>
-                <!-- 컬럼 개수 -->
+                <!-- 구조 진단 -->
+                <template v-else-if="ci === 'structDiag'">
+                  <div :style="{ textAlign: 'center', padding: '4px 8px' }">
+                    <v-chip v-if="props.item.structDiagYn === 'Y'" x-small color="green" text-color="white" :title="'구조진단 ' + props.item.structDiagDt">
+                      <v-icon x-small left>mdi-check</v-icon>일치
+                    </v-chip>
+                    <v-chip v-else-if="props.item.structDiagDt" x-small color="orange" text-color="white" :title="'구조진단 ' + props.item.structDiagDt">
+                      <v-icon x-small left>mdi-alert</v-icon>불일치
+                    </v-chip>
+                    <span v-else class="grey--text text-caption">미진단</span>
+                    <div v-if="props.item.structDiagDt" class="text-caption grey--text" style="font-size:.65rem;">{{ props.item.structDiagDt }}</div>
+                  </div>
+                </template>
+                <!-- 표준 준수율 -->
+                <template v-else-if="ci === 'diagStndRate'">
+                  <div :style="{ textAlign: 'center', padding: '4px 8px' }">
+                    <template v-if="props.item.diagDt">
+                      <v-chip x-small :color="props.item.diagStndRate >= 90 ? 'green' : props.item.diagStndRate >= 70 ? 'orange' : 'red'" text-color="white">
+                        {{ props.item.diagStndRate }}%
+                      </v-chip>
+                      <div class="text-caption grey--text" style="font-size:.65rem;">{{ props.item.diagDt }}</div>
+                    </template>
+                    <span v-else class="grey--text text-caption">미진단</span>
+                  </div>
+                </template>
+                <!-- 버전 -->
                 <span v-else-if="ci === 'ver'" :style="{ margin: '0px 16px' }">{{ c }}</span>
                 <!-- 일반 아이템 -->
                 <!-- <span v-else :style="{ margin: '0px 16px' }">{{ c }}</span> -->
@@ -563,6 +588,8 @@ export default {
       { text: '테이블\n개수', sortable: false, align: 'center', value: 'objCnt' },
       { text: '컬럼\n개수', sortable: false, align: 'center', value: 'attrCnt' },
       { text: '수집일시', sortable: false, align: 'center', value: 'clctDt' },
+      { text: '구조\n진단', sortable: false, align: 'center', value: 'structDiag' },
+      { text: '표준\n준수율', sortable: false, align: 'center', value: 'diagStndRate' },
       { text: '버전', sortable: false, align: 'center', value: 'ver' },
     ],
     // 탭 활성화
@@ -1069,6 +1096,10 @@ export default {
             _obj.objCnt = _data[i].dataModelStats ? _data[i].dataModelStats.objCnt : 0;
             _obj.attrCnt = _data[i].dataModelStats ? _data[i].dataModelStats.attrCnt : 0;
             _obj.clctDt = _data[i].dataModelStats ? _data[i].dataModelStats.clctDt : '';
+            _obj.structDiagYn = _data[i].structDiagYn || 'N';
+            _obj.structDiagDt = _data[i].structDiagDt || '';
+            _obj.diagStndRate = _data[i].diagStndRate || 0;
+            _obj.diagDt = _data[i].diagDt || '';
             _obj.ver = _data[i].ver;
             _obj.dataModelId = _data[i].dataModelId;
             _obj.clctId = _data[i].dataModelStats ? _data[i].dataModelStats.clctId : '';
