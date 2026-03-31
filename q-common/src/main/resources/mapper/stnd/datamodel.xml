@@ -204,6 +204,30 @@
 			order by A.OBJ_NM, A.ATTR_ORD
 	</select>
 
+	<!-- 구조 진단용: clctId 기준 컬럼 스냅샷 (HashMap 반환) -->
+	<select id="selectDataModelAttrListByClctIdRaw" parameterType="String" resultType="java.util.HashMap">
+		SELECT A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm",
+			A.DATA_TYPE AS "dataType", A.DATA_LEN AS "dataLen",
+			A.NULLABLE_YN AS "nullableYn"
+		FROM TB_DATA_MODEL_ATTR A
+		WHERE A.DM_CLCT_ID = #{clctId}
+		ORDER BY A.OBJ_NM, A.ATTR_NM
+	</select>
+
+	<!-- 데이터모델 정보 조회 (구조진단용) -->
+	<select id="selectDataModelById" parameterType="String" resultType="java.util.HashMap">
+		SELECT DM_ID AS "dataModelId", DM_NM AS "dataModelNm", DM_DS_ID AS "dataModelDsId"
+		FROM TB_DATA_MODEL
+		WHERE DM_ID = #{dataModelId}
+	</select>
+
+	<!-- 수집 이력 1건 조회 (구조진단용) -->
+	<select id="selectDataModelClctById" parameterType="String" resultType="java.util.HashMap">
+		SELECT DM_CLCT_ID AS "clctId", CLCT_END_DT AS "clctEndDt"
+		FROM TB_DATA_MODEL_CLCT
+		WHERE DM_CLCT_ID = #{clctId}
+	</select>
+
 	<select id="selectDataModelAttrListByRetreiveCond" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDataModelAttrMap">
 			select 
 				 A.OBJ_NM

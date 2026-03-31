@@ -160,6 +160,24 @@
                         <v-list-item-title>진단 결과</v-list-item-title>
                     </v-list-item>
 
+                    <v-list-item link id="nav_structDiag" href="#tab_structDiag"
+                        active-class="ndColor--text" title="구조 진단"
+                        v-on:click.stop="addTabItem('구조 진단', 'structDiag');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>구조 진단</v-list-item-title>
+                    </v-list-item>
+
+                </v-list-group>
+
+                <!-- 자동 표준화 -->
+                <v-list-group link v-cloak :value="navAutoStdGroup" prepend-icon="auto_fix_high" active-class="ndColor--text"
+                    id="autoStdGroup" title="자동 표준화" v-on:click.stop="addNavGroupData('autoStdGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">자동 표준화</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
                     <v-list-item link id="nav_termRecommend" href="#tab_termRecommend"
                         active-class="ndColor--text" title="표준화 추천"
                         v-on:click.stop="addTabItem('표준화 추천', 'termRecommend');">
@@ -362,7 +380,8 @@ export default {
         'navDsSub2',
         'navDsSub3',
         'navDmGroup',
-        'navDiagGroup'],
+        'navDiagGroup',
+        'navAutoStdGroup'],
     data: () => ({
         selectedList: null,
         wsLogShow: false,

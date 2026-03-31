@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="structdiag">
+
+	<resultMap id="structDiagHistoryMap" type="java.util.HashMap">
+		<result property="diagId" column="DIAG_ID"/>
+		<result property="dsId" column="DS_ID"/>
+		<result property="schemaNm" column="SCHEMA_NM"/>
+		<result property="diagDt" column="DIAG_DT"/>
+		<result property="prevCollectDt" column="PREV_COLLECT_DT"/>
+		<result property="totalTables" column="TOTAL_TABLES"/>
+		<result property="totalColumns" column="TOTAL_COLUMNS"/>
+		<result property="addedTables" column="ADDED_TABLES"/>
+		<result property="addedColumns" column="ADDED_COLUMNS"/>
+		<result property="modifiedColumns" column="MODIFIED_COLUMNS"/>
+		<result property="deletedTables" column="DELETED_TABLES"/>
+		<result property="deletedColumns" column="DELETED_COLUMNS"/>
+		<result property="cretUserId" column="CRET_USER_ID"/>
+		<result property="dataModelNm" column="DATA_MODEL_NM"/>
+	</resultMap>
+
+	<resultMap id="structDiagDetailMap" type="java.util.HashMap">
+		<result property="diagId" column="DIAG_ID"/>
+		<result property="seq" column="SEQ"/>
+		<result property="tableNm" column="TABLE_NM"/>
+		<result property="columnNm" column="COLUMN_NM"/>
+		<result property="changeType" column="CHANGE_TYPE"/>
+		<result property="prevDataType" column="PREV_DATA_TYPE"/>
+		<result property="currDataType" column="CURR_DATA_TYPE"/>
+		<result property="prevDataLen" column="PREV_DATA_LEN"/>
+		<result property="currDataLen" column="CURR_DATA_LEN"/>
+		<result property="prevNullable" column="PREV_NULLABLE"/>
+		<result property="currNullable" column="CURR_NULLABLE"/>
+	</resultMap>
+
+	<!-- 진단 이력 저장 -->
+	<insert id="insertStructDiagHistory" parameterType="java.util.HashMap">
+		INSERT INTO TB_STRUCT_DIAG_HISTORY (
+			DIAG_ID, DS_ID, SCHEMA_NM, DIAG_DT, PREV_COLLECT_DT,
+			TOTAL_TABLES, TOTAL_COLUMNS,
+			ADDED_TABLES, ADDED_COLUMNS, MODIFIED_COLUMNS,
+			DELETED_TABLES, DELETED_COLUMNS, CRET_USER_ID
+		) VALUES (
+			#{diagId}, #{dsId}, #{schemaNm}, CURRENT_TIMESTAMP, #{prevCollectDt},
+			#{totalTables}, #{totalColumns},
+			#{addedTables}, #{addedColumns}, #{modifiedColumns},
+			#{deletedTables}, #{deletedColumns}, #{cretUserId}
+		)
+	</insert>
+
+	<!-- 진단 상세 저장 (변경 건만) -->
+	<insert id="insertStructDiagDetail" parameterType="java.util.HashMap">
+		INSERT INTO TB_STRUCT_DIAG_DETAIL (
+			DIAG_ID, SEQ, TABLE_NM, COLUMN_NM, CHANGE_TYPE,
+			PREV_DATA_TYPE, CURR_DATA_TYPE, PREV_DATA_LEN, CURR_DATA_LEN,
+			PREV_NULLABLE, CURR_NULLABLE
+		) VALUES (
+			#{diagId}, #{seq}, #{tableNm}, #{columnNm}, #{changeType},
+			#{prevDataType}, #{currDataType}, #{prevDataLen}, #{currDataLen},
+			#{prevNullable}, #{currNullable}
+		)
+	</insert>
+
+	<!-- 진단 이력 목록 조회 -->
+	<select id="selectStructDiagHistoryList" resultMap="structDiagHistoryMap">
+		SELECT h.DIAG_ID, h.DS_ID, h.SCHEMA_NM, h.DIAG_DT, h.PREV_COLLECT_DT,
+			h.TOTAL_TABLES, h.TOTAL_COLUMNS,
+			h.ADDED_TABLES, h.ADDED_COLUMNS, h.MODIFIED_COLUMNS,
+			h.DELETED_TABLES, h.DELETED_COLUMNS, h.CRET_USER_ID,
+			dm.DM_NM AS DATA_MODEL_NM
+		FROM TB_STRUCT_DIAG_HISTORY h
+		LEFT JOIN TB_DATA_MODEL dm ON dm.DM_DS_ID = h.DS_ID
+		ORDER BY h.DIAG_DT DESC
+	</select>
+
+	<!-- 특정 진단 결과 상세 조회 -->
+	<select id="selectStructDiagDetailList" parameterType="String" resultMap="structDiagDetailMap">
+		SELECT DIAG_ID, SEQ, TABLE_NM, COLUMN_NM, CHANGE_TYPE,
+			PREV_DATA_TYPE, CURR_DATA_TYPE, PREV_DATA_LEN, CURR_DATA_LEN,
+			PREV_NULLABLE, CURR_NULLABLE
+		FROM TB_STRUCT_DIAG_DETAIL
+		WHERE DIAG_ID = #{diagId}
+		ORDER BY TABLE_NM, SEQ
+	</select>
+
+	<!-- 특정 진단 이력 1건 조회 -->
+	<select id="selectStructDiagHistoryById" parameterType="String" resultMap="structDiagHistoryMap">
+		SELECT h.DIAG_ID, h.DS_ID, h.SCHEMA_NM, h.DIAG_DT, h.PREV_COLLECT_DT,
+			h.TOTAL_TABLES, h.TOTAL_COLUMNS,
+			h.ADDED_TABLES, h.ADDED_COLUMNS, h.MODIFIED_COLUMNS,
+			h.DELETED_TABLES, h.DELETED_COLUMNS, h.CRET_USER_ID
+		FROM TB_STRUCT_DIAG_HISTORY h
+		WHERE h.DIAG_ID = #{diagId}
+	</select>
+
+	<!-- 스키마별 최신 구조 진단 상태 조회 (뱃지용) -->
+	<select id="selectLatestStructDiagStatus" parameterType="java.util.HashMap" resultMap="structDiagHistoryMap">
+		SELECT DIAG_ID, DS_ID, SCHEMA_NM, DIAG_DT,
+			ADDED_TABLES + ADDED_COLUMNS + MODIFIED_COLUMNS + DELETED_TABLES + DELETED_COLUMNS AS TOTAL_CHANGES,
+			TOTAL_TABLES, TOTAL_COLUMNS,
+			ADDED_TABLES, ADDED_COLUMNS, MODIFIED_COLUMNS, DELETED_TABLES, DELETED_COLUMNS,
+			CRET_USER_ID
+		FROM TB_STRUCT_DIAG_HISTORY
+		WHERE DS_ID = #{dsId}
+		<if test="schemaNm != null and schemaNm != ''">
+			AND SCHEMA_NM = #{schemaNm}
+		</if>
+		ORDER BY DIAG_DT DESC
+		LIMIT 1
+	</select>
+
+	<!-- 수집된 컬럼 스냅샷 (diff용) - dataModelId + 최신 clctId 기준 -->
+	<select id="selectAttrSnapshotByDataModelId" parameterType="String" resultType="java.util.HashMap">
+		SELECT a.OBJ_NM AS "tableNm", a.ATTR_NM AS "columnNm",
+			a.DATA_TYPE AS "dataType", a.DATA_LEN AS "dataLen",
+			a.NULLABLE_YN AS "nullableYn", a.DM_CLCT_ID AS "clctId"
+		FROM TB_DATA_MODEL_ATTR a
+		WHERE a.DM_CLCT_ID = (
+			SELECT c.DM_CLCT_ID FROM TB_DATA_MODEL_CLCT c
+			WHERE c.DM_ID = #{dataModelId} AND c.CLCT_CMPTN_YN = 'Y'
+			ORDER BY c.CLCT_END_DT DESC LIMIT 1
+		)
+		ORDER BY a.OBJ_NM, a.ATTR_NM
+	</select>
+
+</mapper>

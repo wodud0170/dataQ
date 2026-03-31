@@ -454,3 +454,54 @@ INSERT INTO TB_WORD_DICT (WORD_KOR, WORD_ENG, WORD_ABRV, DOMAIN_CLSF_NM) VALUES 
 INSERT INTO TB_WORD_DICT (WORD_KOR, WORD_ENG, WORD_ABRV, DOMAIN_CLSF_NM) VALUES ('출장', 'Business Trip', 'BTRP', '');
 INSERT INTO TB_WORD_DICT (WORD_KOR, WORD_ENG, WORD_ABRV, DOMAIN_CLSF_NM) VALUES ('인사평가', 'Performance Review', 'PFRVW', '');
 INSERT INTO TB_WORD_DICT (WORD_KOR, WORD_ENG, WORD_ABRV, DOMAIN_CLSF_NM) VALUES ('복리후생', 'Welfare Benefits', 'WLFR', '');
+
+-- -------------------------------------------------------------
+-- 4. TB_STRUCT_DIAG_HISTORY
+--    구조 진단 이력 (재수집 → diff 결과 요약)
+--    (세션: 3f1ffb70 / 데이터 구조 진단 기능 추가 시)
+-- -------------------------------------------------------------
+CREATE TABLE TB_STRUCT_DIAG_HISTORY (
+    DIAG_ID             VARCHAR(40)     NOT NULL,
+    DS_ID               VARCHAR(40),
+    SCHEMA_NM           VARCHAR(100),
+    DIAG_DT             TIMESTAMP       DEFAULT CURRENT_TIMESTAMP,
+    PREV_COLLECT_DT     TIMESTAMP,
+    TOTAL_TABLES        INTEGER         DEFAULT 0,
+    TOTAL_COLUMNS       INTEGER         DEFAULT 0,
+    ADDED_TABLES        INTEGER         DEFAULT 0,
+    ADDED_COLUMNS       INTEGER         DEFAULT 0,
+    MODIFIED_COLUMNS    INTEGER         DEFAULT 0,
+    DELETED_TABLES      INTEGER         DEFAULT 0,
+    DELETED_COLUMNS     INTEGER         DEFAULT 0,
+    CRET_USER_ID        VARCHAR(40),
+    CONSTRAINT PK_TB_STRUCT_DIAG_HISTORY PRIMARY KEY (DIAG_ID)
+);
+
+COMMENT ON TABLE TB_STRUCT_DIAG_HISTORY IS '구조 진단 이력';
+COMMENT ON COLUMN TB_STRUCT_DIAG_HISTORY.DIAG_ID IS '진단 ID';
+COMMENT ON COLUMN TB_STRUCT_DIAG_HISTORY.DS_ID IS '데이터소스 ID';
+COMMENT ON COLUMN TB_STRUCT_DIAG_HISTORY.SCHEMA_NM IS '스키마명';
+COMMENT ON COLUMN TB_STRUCT_DIAG_HISTORY.DIAG_DT IS '진단 일시';
+COMMENT ON COLUMN TB_STRUCT_DIAG_HISTORY.PREV_COLLECT_DT IS '이전 수집 일시';
+
+-- -------------------------------------------------------------
+-- 5. TB_STRUCT_DIAG_DETAIL
+--    구조 진단 상세 (변경된 컬럼 목록)
+-- -------------------------------------------------------------
+CREATE TABLE TB_STRUCT_DIAG_DETAIL (
+    DIAG_ID             VARCHAR(40)     NOT NULL,
+    SEQ                 INTEGER         NOT NULL,
+    TABLE_NM            VARCHAR(200),
+    COLUMN_NM           VARCHAR(200),
+    CHANGE_TYPE         VARCHAR(20),
+    PREV_DATA_TYPE      VARCHAR(50),
+    CURR_DATA_TYPE      VARCHAR(50),
+    PREV_DATA_LEN       INTEGER,
+    CURR_DATA_LEN       INTEGER,
+    PREV_NULLABLE       CHAR(1),
+    CURR_NULLABLE       CHAR(1),
+    CONSTRAINT PK_TB_STRUCT_DIAG_DETAIL PRIMARY KEY (DIAG_ID, SEQ)
+);
+
+COMMENT ON TABLE TB_STRUCT_DIAG_DETAIL IS '구조 진단 상세 (변경 컬럼)';
+COMMENT ON COLUMN TB_STRUCT_DIAG_DETAIL.CHANGE_TYPE IS 'ADDED / MODIFIED / DELETED';

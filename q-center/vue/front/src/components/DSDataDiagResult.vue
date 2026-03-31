@@ -291,12 +291,14 @@
         <div class="d-flex align-center pa-2" style="gap:8px;">
           <v-btn small color="primary" outlined
             :disabled="selectedDetailItems.length === 0"
-            @click="bulkTermRegister">
+            @click="bulkTermRegister"
+            style="min-width:180px; white-space:nowrap;">
             <v-icon small left>mdi-book-plus</v-icon>일괄 용어등록 ({{ selectedDetailItems.length }})
           </v-btn>
           <v-btn small color="orange darken-2" outlined
             :disabled="selectedDetailItems.length === 0"
-            @click="bulkCommentGenerate">
+            @click="bulkCommentGenerate"
+            style="min-width:200px; white-space:nowrap;">
             <v-icon small left>mdi-comment-text-multiple</v-icon>일괄 코멘트 생성 ({{ selectedDetailItems.length }})
           </v-btn>
         </div>
