@@ -275,6 +275,24 @@ export default {
     executeStructDiag: function() {
       if (!this.selectedModel) return;
       var self = this;
+
+      // 수집 이력이 없으면 수집 화면으로 안내
+      if (!self.lastClctDt) {
+        self.$swal.fire({
+          title: '수집 이력 없음',
+          text: '이 데이터모델은 아직 수집된 적이 없습니다. 먼저 데이터 모델 수집을 진행해주세요.',
+          icon: 'warning',
+          confirmButtonText: '수집 화면으로 이동',
+          showCancelButton: true,
+          cancelButtonText: '취소'
+        }).then(function(result) {
+          if (result.value) {
+            self.$emit('addTabItem', '데이터 모델 현황', 'datamodelStatus');
+          }
+        });
+        return;
+      }
+
       self.executing = true;
       self.resetResult();
       self.stepMessage = '1/2 DBMS 재수집 중...';

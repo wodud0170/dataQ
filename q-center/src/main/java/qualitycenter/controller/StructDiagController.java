@@ -66,22 +66,22 @@ public class StructDiagController {
 			return result;
 		}
 
-		String currClctId = (String) recentClcts.get(0).get("clctId");
-		String prevClctId = null;
-		String prevCollectDt = null;
-
-		if (recentClcts.size() >= 2) {
-			prevClctId = (String) recentClcts.get(1).get("clctId");
-			prevCollectDt = (String) recentClcts.get(1).get("clctEndDt");
+		if (recentClcts.size() < 2) {
+			result.put("success", false);
+			result.put("message", "비교할 이전 수집 이력이 없습니다. 수집이 2회 이상 필요합니다.");
+			return result;
 		}
+
+		String currClctId = (String) recentClcts.get(0).get("clctId");
+		String prevClctId = (String) recentClcts.get(1).get("clctId");
+		String prevCollectDt = (String) recentClcts.get(1).get("clctEndDt");
 
 		String userId = sessionService.getUserId();
 		String diagId = StringUtils.getUUID();
 
-		// 이전 스냅샷 조회 (없으면 빈 리스트 → 전부 ADDED)
-		List<Map<String, Object>> prevAttrs = prevClctId != null
-				? sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctIdRaw", prevClctId)
-				: new ArrayList<>();
+		// 이전 스냅샷 조회
+		List<Map<String, Object>> prevAttrs = sqlSessionTemplate.selectList(
+				"datamodel.selectDataModelAttrListByClctIdRaw", prevClctId);
 
 		// 현재(방금 수집) 스냅샷 조회
 		List<Map<String, Object>> currAttrs = sqlSessionTemplate.selectList(
@@ -200,7 +200,6 @@ public class StructDiagController {
 
 		result.put("success", true);
 		result.put("diagId", diagId);
-		result.put("isFirstDiag", prevClctId == null);
 		result.put("totalChanges", changes.size());
 		result.put("totalTables", currTableSet.size());
 		result.put("totalColumns", currAttrs.size());
