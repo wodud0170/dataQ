@@ -294,11 +294,9 @@ export default {
 
     /**
      * 구조 진단 실행:
-     * 1. /api/dm/collectDataModel 호출 (StdDataModelVo 전달) → DBMS 재수집
-     * 2. 수집 완료 대기 (폴링: getDataModelClctList → clctCmptnYn 확인)
-     * 3. /api/std/structDiag/execute 호출 → q-executor에 백그라운드 diff 요청
-     * 4. diff 완료 대기 (폴링: /api/std/structDiag/status/{diagId})
-     * 5. 결과 표시
+     * 1. /api/std/structDiag/execute 호출 → q-executor가 실제 DBMS 접속 + 수집 스냅샷과 diff
+     * 2. 완료 대기 (폴링: /api/std/structDiag/status/{diagId})
+     * 3. 결과 표시
      */
     executeStructDiag: function() {
       if (!this.selectedModel) return;
@@ -315,7 +313,7 @@ export default {
           cancelButtonText: '취소'
         }).then(function(result) {
           if (result.value) {
-            self.$emit('addTabItem', '데이터 모델 수집', 'datamodelCollection');
+            self.$emit('addTabItem', '데이터 모델 현황', 'datamodelStatus');
           }
         });
         return;
@@ -323,106 +321,31 @@ export default {
 
       self.executing = true;
       self.resetResult();
-      self.stepMessage = '1/3 기존 수집 건수 확인 중...';
+      self.stepMessage = '실제 DBMS에 접속하여 스키마를 비교하고 있습니다...';
 
-      // 먼저 현재 완료된 수집 건수를 기록
-      var _to   = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-      var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-
-      axios.post(self.$APIURL.base + 'api/dm/getDataModelClctList', {
-        schId: self.selectedModel, from: _from, to: _to
-      }).then(function(res) {
-        var completedBefore = (res.data || []).filter(function(c) { return c.clctCmptnYn === 'Y'; }).length;
-        self._completedBefore = completedBefore;
-
-        self.stepMessage = '1/3 DBMS 재수집 중...';
-
-        // Step 1: 수집 실행 (StdDataModelVo 전달)
-        var collectBody = {
-          dataModelId: self.selectedModel,
-        };
-        if (self.selectedModelData) {
-          collectBody.dataModelDsId = self.selectedModelData.dataModelDsId;
-          collectBody.dataModelDsNm = self.selectedModelData.dataModelDsNm;
-          collectBody.dataModelNm = self.selectedModelData.dataModelNm;
-          collectBody.dataModelSysCd = self.selectedModelData.dataModelSysCd;
-          collectBody.dataModelSysNm = self.selectedModelData.dataModelSysNm;
-          collectBody.ver = self.selectedModelData.ver;
-        }
-
-        axios.post(self.$APIURL.base + 'api/dm/collectDataModel', collectBody).then(function() {
-          self.stepMessage = '1/3 수집 완료 대기 중...';
-          self.pollCollect();
-        }).catch(function() {
-          self.executing = false;
-          self.showSnackbar('수집 요청 실패', 'error');
-        });
-      }).catch(function() {
-        self.executing = false;
-        self.showSnackbar('수집 이력 조회 실패', 'error');
-      });
-    },
-
-    pollCollect: function() {
-      var self = this;
-      var pollCount = 0;
-      var maxPoll = 60; // 최대 60회 (3초 간격 = 3분)
-
-      var poll = function() {
-        pollCount++;
-        if (pollCount > maxPoll) {
-          self.executing = false;
-          self.showSnackbar('수집 시간 초과. 수집 화면에서 상태를 확인해주세요.', 'warning');
-          return;
-        }
-
-        // 최신 수집 이력 확인
-        var _to   = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-        var _from = new Date(new Date() - 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-
-        axios.post(self.$APIURL.base + 'api/dm/getDataModelClctList', {
-          schId: self.selectedModel, from: _from, to: _to
-        }).then(function(res) {
-          var completedNow = (res.data || []).filter(function(c) { return c.clctCmptnYn === 'Y'; }).length;
-          // 새 수집건이 완료되었는지: 완료건 수가 이전보다 늘었을 때
-          if (completedNow > (self._completedBefore || 0)) {
-            var sorted = (res.data || []).filter(function(c) { return c.clctCmptnYn === 'Y'; })
-              .sort(function(a, b) { return b.clctEndDt.localeCompare(a.clctEndDt); });
-            self.lastClctDt = sorted[0].clctEndDt;
-            self.stepMessage = '2/3 구조 비교 분석 요청 중...';
-            self.executeDiff();
-          } else {
-            self._collectTimer = setTimeout(poll, 3000);
-          }
-        }).catch(function() {
-          self._collectTimer = setTimeout(poll, 3000);
-        });
-      };
-
-      self._collectTimer = setTimeout(poll, 2000); // 2초 후 첫 폴링
-    },
-
-    executeDiff: function() {
-      var self = this;
+      // 바로 구조 진단 실행 (executor가 DBMS 접속 + diff 수행)
       axios.post(self.$APIURL.base + 'api/std/structDiag/execute', {
         dataModelId: self.selectedModel
       }).then(function(res) {
-        if (res.data && res.data.resultCode === 200) {
-          var diagId = res.data.contents;
-          self.currentDiagId = diagId;
-          self.stepMessage = '3/3 구조 비교 분석 중...';
-          self.pollDiagStatus(diagId);
+        var data = res.data;
+        if (data && data.resultCode === 200 && data.contents) {
+          self._diagId = data.contents;
+          self.stepMessage = '분석 중...';
+          self.pollDiag();
         } else {
           self.executing = false;
-          self.showSnackbar(res.data && res.data.resultMessage ? res.data.resultMessage : '분석 요청 실패', 'error');
+          self.showSnackbar('진단 요청 실패', 'error');
         }
       }).catch(function() {
         self.executing = false;
         self.showSnackbar('서버 오류가 발생했습니다.', 'error');
       });
+
     },
 
-    pollDiagStatus: function(diagId) {
+    pollDiag: function() {
+      var self = this;
+      var diagId = self._diagId;
       var self = this;
       var pollCount = 0;
       var maxPoll = 120; // 최대 120회 (2초 간격 = 4분)
@@ -501,7 +424,6 @@ export default {
     },
 
     clearTimers: function() {
-      if (this._collectTimer) { clearTimeout(this._collectTimer); this._collectTimer = null; }
       if (this._diagTimer) { clearTimeout(this._diagTimer); this._diagTimer = null; }
     },
 
