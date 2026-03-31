@@ -14,13 +14,21 @@
         @change="onModelChange"
       />
 
-      <v-chip v-if="lastClctDt" small outlined color="grey">
-        마지막 수집: {{ lastClctDt }}
-      </v-chip>
+      <span class="filterLabel">수집일시</span>
+      <v-select
+        v-model="selectedClctId"
+        :items="clctList"
+        item-text="clctDisplayDt"
+        item-value="clctId"
+        dense outlined hide-details
+        placeholder="수집일시 선택"
+        style="width:280px; flex-grow:0;"
+        :disabled="!selectedModel"
+      />
 
       <v-spacer />
 
-      <v-btn small color="primary" :disabled="!selectedModel" :loading="executing" @click="executeStructDiag">
+      <v-btn small color="primary" :disabled="!selectedModel || !selectedClctId" :loading="executing" @click="executeStructDiag">
         <v-icon small left>mdi-database-sync</v-icon>
         구조 진단 실행
       </v-btn>
@@ -195,6 +203,8 @@ export default {
       dataModelList: [],
       selectedModel: null,
       selectedModelData: null,
+      clctList: [],
+      selectedClctId: null,
       lastClctDt: '',
       executing: false,
       stepMessage: '',
@@ -268,6 +278,8 @@ export default {
     onModelChange: function(dmId) {
       this.lastClctDt = '';
       this.selectedModelData = null;
+      this.clctList = [];
+      this.selectedClctId = null;
       this.resetResult();
       if (!dmId) return;
 
@@ -280,13 +292,19 @@ export default {
         }
       }
 
-      // 최신 수집 일시만 표시
+      // 수집 이력 조회
       var _to   = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
       var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
 
       axios.post(self.$APIURL.base + 'api/dm/getDataModelClctList', { schId: dmId, from: _from, to: _to }).then(function(res) {
         var sorted = (res.data || []).slice().sort(function(a, b) { return b.clctEndDt.localeCompare(a.clctEndDt); });
-        if (sorted.length > 0) {
+        self.clctList = sorted.map(function(item, idx) {
+          return Object.assign({}, item, {
+            clctDisplayDt: item.clctEndDt + (idx === 0 ? ' (최신)' : '')
+          });
+        });
+        if (self.clctList.length > 0) {
+          self.selectedClctId = self.clctList[0].clctId;
           self.lastClctDt = sorted[0].clctEndDt;
         }
       });
@@ -324,9 +342,11 @@ export default {
       self.stepMessage = '실제 DBMS에 접속하여 스키마를 비교하고 있습니다...';
 
       // 바로 구조 진단 실행 (executor가 DBMS 접속 + diff 수행)
-      axios.post(self.$APIURL.base + 'api/std/structDiag/execute', {
-        dataModelId: self.selectedModel
-      }).then(function(res) {
+      var execBody = { dataModelId: self.selectedModel };
+      if (self.selectedClctId) {
+        execBody.clctId = self.selectedClctId;
+      }
+      axios.post(self.$APIURL.base + 'api/std/structDiag/execute', execBody).then(function(res) {
         var data = res.data;
         if (data && data.resultCode === 200 && data.contents) {
           self._diagId = data.contents;

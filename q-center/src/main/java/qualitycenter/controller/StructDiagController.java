@@ -52,6 +52,7 @@ public class StructDiagController {
 	@PostMapping("/execute")
 	public Mono<Response> execute(HttpServletRequest request, @RequestBody Map<String, Object> body) {
 		String dataModelId = (String) body.get("dataModelId");
+		String clctId = (String) body.get("clctId"); // 선택적: 특정 수집건 지정. 없으면 최신
 		Response result = new Response();
 
 		if (dataModelId == null || dataModelId.trim().isEmpty()) {
@@ -76,6 +77,9 @@ public class StructDiagController {
 			params.put("diagId", diagId);
 			params.put("dataModelId", dataModelId);
 			params.put("userId", userId);
+			if (clctId != null && !clctId.trim().isEmpty()) {
+				params.put("clctId", clctId);
+			}
 
 			WebClientHandler webClientHandler = new WebClientHandler(
 					NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/structDiag/run");
@@ -121,6 +125,41 @@ public class StructDiagController {
 		result.put("history", history);
 		result.put("details", details);
 		return result;
+	}
+
+	/**
+	 * 스키마 비교 실행 (수집 스냅샷 vs 현재 DBMS)
+	 * q-executor에 동기 요청하여 결과를 프론트에 반환
+	 */
+	@PostMapping("/compareSchema")
+	public Mono<Response> compareSchema(HttpServletRequest request, @RequestBody Map<String, Object> body) {
+		String dataModelId = (String) body.get("dataModelId");
+		String clctId = (String) body.get("clctId");
+		Response result = new Response();
+
+		if (dataModelId == null || dataModelId.trim().isEmpty()) {
+			result.setResultInfo(RestResult.CODE_500.getCode(), "dataModelId는 필수입니다.");
+			return Mono.just(result);
+		}
+
+		try {
+			Map<String, String> params = new HashMap<>();
+			params.put("dataModelId", dataModelId);
+			if (clctId != null && !clctId.trim().isEmpty()) {
+				params.put("clctId", clctId);
+			}
+
+			WebClientHandler webClientHandler = new WebClientHandler(
+					NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/structDiag/compareSchema");
+			return webClientHandler.postData(
+					sessionService.getUserId(),
+					Objects.toString(request.getSession().getAttribute("SSID"), null),
+					params);
+		} catch (Exception e) {
+			log.error(">> compareSchema failed", e);
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			return Mono.just(result);
+		}
 	}
 
 	/** 스키마별 최신 구조 진단 상태 (뱃지용) */
