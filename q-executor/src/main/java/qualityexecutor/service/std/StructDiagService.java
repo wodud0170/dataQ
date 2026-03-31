@@ -12,9 +12,9 @@ import java.util.Set;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.ndata.bean.DataSourceVo;
+import com.ndata.model.DataSourceVo;
 import com.ndata.datasource.dbms.handler.DBHandler;
-import com.ndata.datasource.dbms.handler.NamedParamStatement;
+import com.ndata.datasource.dbms.ext.NamedParamStatement;
 import com.ndata.quality.model.std.StdDataModelSchemaVo;
 import com.ndata.quality.tool.DataSourceUtils;
 
