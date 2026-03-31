@@ -137,12 +137,12 @@
 
                 </v-list-group>
 
-                <!-- 데이터 표준화 진단 -->
+                <!-- 표준화 진단 -->
                 <v-list-group link v-cloak :value="navDiagGroup" prepend-icon="search" active-class="ndColor--text"
-                    id="diagGroup" title="데이터 표준화 진단" v-on:click.stop="addNavGroupData('diagGroup');">
+                    id="diagGroup" title="표준화 진단" v-on:click.stop="addNavGroupData('diagGroup');">
                     <template v-slot:activator>
                         <v-list-item-content>
-                            <v-list-item-title :ripple="false">데이터 표준화 진단</v-list-item-title>
+                            <v-list-item-title :ripple="false">표준화 진단</v-list-item-title>
                         </v-list-item-content>
                     </template>
 
@@ -162,12 +162,12 @@
 
                 </v-list-group>
 
-                <!-- 데이터 구조 진단 -->
+                <!-- 구조 진단 -->
                 <v-list-group link v-cloak :value="navStructDiagGroup" prepend-icon="mdi-database-search" active-class="ndColor--text"
-                    id="structDiagGroup" title="데이터 구조 진단" v-on:click.stop="addNavGroupData('structDiagGroup');">
+                    id="structDiagGroup" title="구조 진단" v-on:click.stop="addNavGroupData('structDiagGroup');">
                     <template v-slot:activator>
                         <v-list-item-content>
-                            <v-list-item-title :ripple="false">데이터 구조 진단</v-list-item-title>
+                            <v-list-item-title :ripple="false">구조 진단</v-list-item-title>
                         </v-list-item-content>
                     </template>
 
@@ -179,12 +179,12 @@
                     </v-list-item>
                 </v-list-group>
 
-                <!-- 자동 표준화 -->
+                <!-- 자동 표준화 지원 -->
                 <v-list-group link v-cloak :value="navAutoStdGroup" prepend-icon="auto_fix_high" active-class="ndColor--text"
-                    id="autoStdGroup" title="자동 표준화" v-on:click.stop="addNavGroupData('autoStdGroup');">
+                    id="autoStdGroup" title="자동 표준화 지원" v-on:click.stop="addNavGroupData('autoStdGroup');">
                     <template v-slot:activator>
                         <v-list-item-content>
-                            <v-list-item-title :ripple="false">자동 표준화</v-list-item-title>
+                            <v-list-item-title :ripple="false">자동 표준화 지원</v-list-item-title>
                         </v-list-item-content>
                     </template>
 
