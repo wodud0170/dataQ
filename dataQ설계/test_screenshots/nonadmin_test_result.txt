@@ -1,0 +1,31 @@
+=== jyjang 로그인: 200, False ===
+
+--- 테스트 1: 일반 사용자(jyjang) 단어 등록 ---
+응답: {"success": true, "wordId": "fGlQGsRaQiXbr_18D28u4r", "wordEngAbrvNm": "NONADMTST", "domainClsfNm": "", "wordNm": "비관리자테스트", "alreadyExists": false, "wordEngNm": "NON ADMIN TEST"}
+wordId: fGlQGsRaQiXbr_18D28u4r
+
+--- 테스트 2: 등록된 단어 조회 ---
+  조회 응답: 
+
+--- 테스트 3: 미승인 단어로 용어 등록 시도 ---
+응답: {
+  "registeredTerms": 0,
+  "details": [
+    {
+      "termsNm": "비관리자테스트명",
+      "message": "\r\n### Error updating database.  Cause: org.postgresql.util.PSQLException: 오류: \"tb_terms\" 테이블에서 자료 추가, 갱신 작업이 \"tb_terms_fk\" 참조키(foreign key) 제약 조건을 위배했습니다\n  Detail: (domain_nm)=() 키가 \"tb_domain\" 테이블에 없습니다.\r\n### The error may exist in file [C:\\Users\\naraedata\\Desktop\\dataQ\\ndata-quality-master\\q-common\\target\\classes\\mapper\\stnd\\terms.xml]\r\n### The error may involve terms.insertTerms-Inline\r\n### The error occurred while setting parameters\r\n### SQL: INSERT INTO TB_TERMS            (              TERMS_ID             ,TERMS_NM                ,TERMS_ENG_ABRV_NM             ,TERMS_DESC               ,DOMAIN_NM              ,CODE_GRP              ,CHRG_ORG     ,ALLOPH_SYNM_LST              ,COMM_STND_YN              ,MAGNTD_ORD               ,APRV_YN                ,APRV_USER_ID              ,CRET_DT                ,CRET_USER_ID     ,APRV_STAT_UPDT_DT    ,REQ_SYS_CD            )            VALUES            (              ?             ,?             ,?             ,?             ,?             ,?             ,?    ,?             ,?             ,?             ,?             ,?             ,to_char(now(), 'YYYYMMDDHH24MISS')             ,?    ,to_char(now(), 'YYYYMMDDHH24MISS')    ,?            )\r\n### Cause: org.postgresql.util.PSQLException: 오류: \"tb_terms\" 테이블에서 자료 추가, 갱신 작업이 \"tb_terms_fk\" 참조키(foreign key) 제약 조건을 위배했습니다\n  Detail: (domain_nm)=() 키가 \"tb_domain\" 테이블에 없습니다.",
+      "status": "FAIL"
+    }
+  ],
+  "failed": 1,
+  "registeredWords": 0,
+  "skipped": 0
+}
+  ⚠️ 실패 (다른 이유): 
+### Error updating database.  Cause: org.postgresql.util.PSQLException: 오류: "tb_terms" 테이블에서 자료 추가
+
+--- 테스트 4: jyjang의 변경 이력 확인 ---
+jyjang 이력: 0건
+  ✅ 비관리자 INSERT 이력 미저장 (정상)
+
+=== 비관리자 테스트 완료 ===
