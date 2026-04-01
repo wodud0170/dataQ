@@ -64,6 +64,13 @@ import qualitycenter.service.auth.SessionService;
 import qualitycenter.service.ws.WebSocketService;
 import reactor.core.publisher.Mono;
 
+/**
+ * 데이터 표준화 컨트롤러 (단어/용어/도메인/코드/승인/표준화 추천/변경이력/영향도 분석)
+ *
+ * <p>표준 사전(단어, 용어, 도메인, 코드) CRUD 및 Excel 업/다운로드,
+ * 승인 처리, 표준화 추천(형태소 분석 기반 일괄 분석/등록),
+ * 변경 이력 관리, 영향도 분석 API를 제공한다.</p>
+ */
 @Tag(name = "데이터표준화", description = "데이터표준화 API")
 @Slf4j
 @RestController
@@ -88,7 +95,12 @@ public class DataStandardController {
 	@Autowired
 	private WebSocketService websocketService;
 
-	// 통합 검색
+	/**
+	 * 통합 검색 API - 단어/용어/도메인/컬럼을 키워드로 일괄 검색
+	 *
+	 * @param keyword 검색 키워드
+	 * @return 단어(words), 용어(terms), 도메인(domains), 컬럼(columns) 검색 결과 Map
+	 */
 	@GetMapping("/search")
 	public Map<String, Object> globalSearch(@RequestParam String keyword) {
 		Map<String, Object> result = new HashMap<>();
@@ -101,7 +113,16 @@ public class DataStandardController {
 		return result;
 	}
 
-	// 단어
+	/**
+	 * 단어 단건 등록 API
+	 *
+	 * - 금칙어 체크: 기존 단어의 금칙어 목록에 포함되면 등록 거부
+	 * - 유사어 체크: 기존 단어의 유사어 목록에 포함되면 경고 반환
+	 * - 관리자: APRV_YN = 'Y' (즉시 승인), 일반 사용자: APRV_YN = 'N'
+	 *
+	 * @param dataVo 단어 정보 (wordNm, wordEngAbrvNm, wordEngNm 등)
+	 * @return 등록 결과 (성공/실패 + 유사어 경고 메시지)
+	 */
 	@RequestMapping(value = "/createWord", method = RequestMethod.POST)
 	public Mono<Response> createWord(@RequestBody StdWordVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
@@ -143,6 +164,12 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 단어 수정 API - 변경 전 값을 조회하여 변경이력과 함께 저장
+	 *
+	 * @param dataVo 수정할 단어 정보
+	 * @return 수정 결과
+	 */
 	@RequestMapping(value = "/updateWord", method = RequestMethod.POST)
 	public Mono<Response> updateWord(@RequestBody StdWordVo dataVo) {
 		dataVo.setUpdtUserId(sessionService.getUserId());
@@ -167,6 +194,15 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 단어 다건 삭제 API
+	 *
+	 * - 삭제 전 참조 중인 용어가 있으면 삭제 차단
+	 * - 삭제된 단어명을 변경이력에 기록
+	 *
+	 * @param dataVos 삭제 대상 단어 목록
+	 * @return 삭제 결과 (참조 용어 존재 시 에러 메시지 포함)
+	 */
 	@RequestMapping(value = "/deleteWords", method = RequestMethod.POST)
 	public Mono<Response> deleteWords(@RequestBody List<StdWordVo> dataVos) {
 		Response result = new Response();
@@ -203,17 +239,35 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 단어 목록 조회 API - 검색 조건(키워드, 정렬 등)에 따라 필터링
+	 *
+	 * @param retCond 검색 조건 (null이면 전체 조회)
+	 * @return 단어 목록
+	 */
 	@RequestMapping(value = "/getWordList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdWordVo> getWordList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getWordList : {}", retCond);
 		return sqlSessionTemplate.selectList("word.selectWordList", retCond);
 	}
 
+	/**
+	 * 단어명으로 단어 정보 조회
+	 *
+	 * @param wordNm 단어 한글명
+	 * @return 해당 단어 정보 목록 (동음이의어 포함)
+	 */
 	@RequestMapping(value = "/getWordInfoByNm", method = RequestMethod.GET)
 	public List<StdWordVo> getWordInfoByNm(String wordNm) {
 		return sqlSessionTemplate.selectList("word.selectWordInfoByNm", wordNm);
 	}
 
+	/**
+	 * 단어 ID로 단어 정보 조회
+	 *
+	 * @param wordId 단어 고유 ID (UUID)
+	 * @return 해당 단어 정보 목록
+	 */
 	@RequestMapping(value = "/getWordInfoById", method = RequestMethod.GET)
 	public List<StdWordVo> getWordInfoById(String wordId) {
 		return sqlSessionTemplate.selectList("word.selectWordInfoById", wordId);
@@ -233,8 +287,14 @@ public class DataStandardController {
 		return sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", engAbrvNms);
 	}
 
+	/**
+	 * 단어 Excel 일괄 업로드 API - q-executor로 멀티파트 전달
+	 *
+	 * @param request HTTP 요청 (세션 SSID 추출용)
+	 * @param excelFile 업로드 Excel 파일
+	 * @return 업로드 처리 결과 (성공/실패 건수)
+	 */
 	@RequestMapping(value = "/uploadWords", method = RequestMethod.POST)
-	// public Response uploadWords(MultipartHttpServletRequest request) {
 	public Mono<Response> uploadWords(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
 
 		// websocketService.sendMessage(Objects.toString(request.getSession().getAttribute("SSID"), null),
@@ -255,6 +315,13 @@ public class DataStandardController {
 		return mResponse;
 	}
 
+	/**
+	 * 단어 목록 Excel 다운로드
+	 *
+	 * @param request  HTTP 요청
+	 * @param response HTTP 응답 (Excel 스트림 출력)
+	 * @param searchKey 검색 키워드 (null이면 전체)
+	 */
 	@RequestMapping(value = "/downloadWords", method = RequestMethod.GET)
 	public void downloadWordsExcel(HttpServletRequest request, HttpServletResponse response, String searchKey) {
 		log.info(">> download words excel started : {}", searchKey);
@@ -267,7 +334,17 @@ public class DataStandardController {
 		}
 	}
 
-	// 용어
+	/**
+	 * 용어 등록 API (트랜잭션 사용)
+	 *
+	 * - 중복 체크: 동일 한글명 용어가 이미 존재하면 등록 거부
+	 * - 구성 단어 승인 여부 체크: 미승인 단어가 포함되면 등록 거부
+	 * - 용어-단어 관계(TB_TERMS_WORDS)도 함께 등록
+	 * - 관리자: APRV_YN = 'Y' (즉시 승인), 일반 사용자: APRV_YN = 'N'
+	 *
+	 * @param dataVo 용어 정보 (termsNm, wordList 등)
+	 * @return 등록 결과
+	 */
 	@RequestMapping(value = "/createTerms", method = RequestMethod.POST)
 	public Mono<Response> createTerms(@RequestBody StdTermsVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
@@ -328,7 +405,15 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
-	// 용어 : 입력 (단어)형태소 분석
+	/**
+	 * 용어 형태소 분석 API (Map 형태 반환)
+	 *
+	 * - 입력된 용어명을 OKT 형태소 분석기로 분리하여 단어 후보를 반환
+	 * - 단일 단어이면서 형식단어(도메인)인 경우 즉시 반환
+	 *
+	 * @param termsNm 분석할 용어 한글명
+	 * @return 토큰명 -> 단어 정보 목록 (LinkedHashMap, 순서 보존)
+	 */
 	@RequestMapping(value = "/getTermsTokensByNm", method = RequestMethod.GET)
 	public Map<String, List<StdWordVo>> getTermsTokens(String termsNm) {
 		log.info(">> request termsNm : {}", termsNm);
@@ -377,6 +462,12 @@ public class DataStandardController {
 		return wordMap;
 	}
 
+	/**
+	 * 용어 형태소 분석 API (List 형태 반환, Vue 화면 바인딩용)
+	 *
+	 * @param termsNm 분석할 용어 한글명
+	 * @return WordDataVo 목록 (토큰명 + 후보 단어 리스트)
+	 */
 	@RequestMapping(value = "/getTermsTokenListByNm", method = RequestMethod.GET)
 	public List<WordDataVo> getTermsTokenListByNm(String termsNm) {
 		log.info(">> request termsNm : {}", termsNm);
@@ -435,6 +526,15 @@ public class DataStandardController {
 		return wordDatas;
 	}
 
+	/**
+	 * 용어 수정 API (트랜잭션 사용)
+	 *
+	 * - 중복 체크: 다른 용어의 한글명과 충돌하면 수정 거부
+	 * - 구성 단어(TB_TERMS_WORDS) 삭제 후 재등록
+	 *
+	 * @param dataVo 수정할 용어 정보
+	 * @return 수정 결과
+	 */
 	@RequestMapping(value = "/updateTerms", method = RequestMethod.POST)
 	public Mono<Response> updateTerms(@RequestBody StdTermsVo dataVo) {
 		dataVo.setUpdtUserId(sessionService.getUserId());
@@ -476,6 +576,12 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 용어 다건 삭제 API
+	 *
+	 * @param dataVos 삭제 대상 용어 목록
+	 * @return 삭제 결과
+	 */
 	@RequestMapping(value = "/deleteTermsList", method = RequestMethod.POST)
 	public Mono<Response> deleteTermsList(@RequestBody List<StdTermsVo> dataVos) {
 		Response result = new Response();
@@ -497,30 +603,60 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 용어 목록 조회 API
+	 *
+	 * @param retCond 검색 조건 (null이면 전체 조회)
+	 * @return 용어 목록
+	 */
 	@RequestMapping(value = "/getTermsList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdTermsVo> getTermsList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getTermsList : {}", retCond);
 		return sqlSessionTemplate.selectList("terms.selectTermsList", retCond);
 	}
 
+	/**
+	 * 용어 목록 조건 조회 API (POST 전용)
+	 *
+	 * @param retCond 검색 조건
+	 * @return 조건에 맞는 용어 목록
+	 */
 	@RequestMapping(value = "/getTermsListByCond", method = RequestMethod.POST)
 	public List<StdTermsVo> getTermsListByCond(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getTermsListByCond : {}", retCond);
 		return sqlSessionTemplate.selectList("terms.selectTermsList", retCond);
 	}
 
+	/**
+	 * 용어명으로 용어 상세 정보 조회
+	 *
+	 * @param termsNm 용어 한글명
+	 * @return 해당 용어 정보 목록
+	 */
 	@RequestMapping(value = "/getTermsInfoByNm", method = RequestMethod.GET)
 	public List<StdTermsVo> getTermsInfoByNm(String termsNm) {
 		return sqlSessionTemplate.selectList("terms.selectTermsInfoByNm", termsNm);
 	}
 
+	/**
+	 * 용어 구성 단어 목록 조회 - 용어 ID 기준
+	 *
+	 * @param termsId 용어 고유 ID
+	 * @return 구성 단어 정보 목록 (순서대로)
+	 */
 	@RequestMapping(value = "/getTermsWordInfoList", method = RequestMethod.GET)
 	public List<StdWordVo> getTermsWordInfoList(String termsId) {
 		return sqlSessionTemplate.selectList("word.selectTermsWordInfoList", termsId);
 	}
 
+	/**
+	 * 용어 Excel 일괄 업로드 API - q-executor로 멀티파트 전달
+	 *
+	 * @param request HTTP 요청
+	 * @param excelFile 업로드 Excel 파일
+	 * @return 업로드 처리 결과
+	 */
 	@RequestMapping(value = "/uploadTermsList", method = RequestMethod.POST)
-	// public Response uploadTermsList(MultipartHttpServletRequest request) {
 	public Mono<Response> uploadTermsList(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
 
 		log.info(">> started uploadTermsList file : {}", excelFile.getOriginalFilename());
@@ -535,6 +671,13 @@ public class DataStandardController {
 		return mResponse;
 	}
 
+	/**
+	 * 용어 목록 Excel 다운로드
+	 *
+	 * @param request  HTTP 요청
+	 * @param response HTTP 응답 (Excel 스트림 출력)
+	 * @param searchKey 검색 키워드
+	 */
 	@RequestMapping(value = "/downloadTermsList", method = RequestMethod.GET)
 	public void downloadTermsListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey) {
 		log.info(">> download terms excel started : {}", searchKey);
@@ -547,18 +690,35 @@ public class DataStandardController {
 		}
 	}
 
-	// 코드정보
+	/**
+	 * 코드 정보 목록 조회 API
+	 *
+	 * @param retCond 검색 조건 (null이면 전체 조회)
+	 * @return 코드 정보 목록
+	 */
 	@RequestMapping(value = "/getCodeInfoList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdCodeInfoVo> getCodeInfoList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getCodeInfoList : {}", retCond);
 		return sqlSessionTemplate.selectList("terms.selectCodeInfoList", retCond);
 	}
 
+	/**
+	 * 코드명으로 코드 정보 검색 (LIKE 검색)
+	 *
+	 * @param codeNm 코드명 키워드
+	 * @return 매칭되는 코드 정보 목록
+	 */
 	@RequestMapping(value = "/getCodeInfoListByNm", method = RequestMethod.GET)
 	public List<StdCodeInfoVo> getCodeInfoListByNm(String codeNm) {
 		return sqlSessionTemplate.selectList("terms.selectCodeInfoListByNm", "%" + codeNm + "%");
 	}
 
+	/**
+	 * 코드 등록 API - 내부적으로 createTerms를 호출하고 코드 이력을 추가 저장
+	 *
+	 * @param dataVo 코드(=용어) 정보
+	 * @return 등록 결과
+	 */
 	@RequestMapping(value = "/createCode", method = RequestMethod.POST)
 	public Mono<Response> createCode(@RequestBody StdTermsVo dataVo) {
 		Mono<Response> resp = createTerms(dataVo);
@@ -570,6 +730,12 @@ public class DataStandardController {
 		return resp;
 	}
 
+	/**
+	 * 코드 수정 API - 내부적으로 updateTerms를 호출하고 코드 이력을 추가 저장
+	 *
+	 * @param dataVo 수정할 코드 정보
+	 * @return 수정 결과
+	 */
 	@RequestMapping(value = "/updateCode", method = RequestMethod.POST)
 	public Mono<Response> updateCode(@RequestBody StdTermsVo dataVo) {
 		Mono<Response> resp = updateTerms(dataVo);
@@ -578,6 +744,12 @@ public class DataStandardController {
 		return resp;
 	}
 
+	/**
+	 * 코드 다건 삭제 API
+	 *
+	 * @param dataVos 삭제 대상 코드 목록
+	 * @return 삭제 결과
+	 */
 	@RequestMapping(value = "/deleteCodeList", method = RequestMethod.POST)
 	public Mono<Response> deleteCodeList(@RequestBody List<StdTermsVo> dataVos) {
 		List<String> deletedNames = new ArrayList<>();
@@ -591,6 +763,13 @@ public class DataStandardController {
 		return resp;
 	}
 
+	/**
+	 * 코드 Excel 일괄 업로드 API - q-executor로 멀티파트 전달
+	 *
+	 * @param request HTTP 요청
+	 * @param excelFile 업로드 Excel 파일
+	 * @return 업로드 처리 결과
+	 */
 	@RequestMapping(value = "/uploadCodeInfoList", method = RequestMethod.POST)
 	public Mono<Response> uploadCodeInfoList(HttpServletRequest request,
 			@RequestParam("file") MultipartFile excelFile) {
@@ -608,6 +787,13 @@ public class DataStandardController {
 		return mResponse;
 	}
 
+	/**
+	 * 코드 목록 Excel 다운로드
+	 *
+	 * @param request  HTTP 요청
+	 * @param response HTTP 응답
+	 * @param searchKey 검색 키워드
+	 */
 	@RequestMapping(value = "/downloadCodeInfoList", method = RequestMethod.GET)
 	public void downloadCodeInfoListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey) {
 		log.info(">> download code excel started : {}", searchKey);
@@ -620,17 +806,33 @@ public class DataStandardController {
 		}
 	}
 
-	// 코드데이터(항목값)
+	/**
+	 * 코드데이터(항목값) 전체 목록 조회
+	 *
+	 * @return 코드데이터 전체 목록
+	 */
 	@RequestMapping(value = "/getCodeDataList", method = RequestMethod.GET)
 	public List<StdCodeDataVo> getCodeDataList() {
 		return sqlSessionTemplate.selectList("codedata.selectCodeDataList");
 	}
 
+	/**
+	 * 코드명으로 코드데이터 검색
+	 *
+	 * @param codeNm 코드명
+	 * @return 해당 코드의 데이터(항목값) 목록
+	 */
 	@RequestMapping(value = "/getCodeDataListByNm", method = RequestMethod.GET)
 	public List<StdCodeDataVo> getCodeDataListByNm(String codeNm) {
 		return sqlSessionTemplate.selectList("codedata.selectCodeDataListByNm", codeNm);
 	}
 
+	/**
+	 * 코드데이터(항목값) 단건 등록
+	 *
+	 * @param dataVo 코드데이터 정보
+	 * @return 등록 결과
+	 */
 	@RequestMapping(value = "/createCodeData", method = RequestMethod.POST)
 	public Mono<Response> createCodeData(@RequestBody StdCodeDataVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
@@ -652,6 +854,12 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 코드데이터(항목값) 수정
+	 *
+	 * @param dataVo 수정할 코드데이터 정보
+	 * @return 수정 결과
+	 */
 	@RequestMapping(value = "/updateCodeData", method = RequestMethod.POST)
 	public Mono<Response> updateCodeData(@RequestBody StdCodeDataVo dataVo) {
 		dataVo.setUpdtUserId(sessionService.getUserId());
@@ -672,6 +880,12 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 코드데이터(항목값) 다건 삭제
+	 *
+	 * @param dataVos 삭제 대상 코드데이터 목록
+	 * @return 삭제 결과
+	 */
 	@RequestMapping(value = "/deleteCodeDatas", method = RequestMethod.POST)
 	public Mono<Response> deleteCodeDatas(@RequestBody List<StdCodeDataVo> dataVos) {
 		Response result = new Response();
@@ -693,6 +907,13 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 코드데이터 Excel 일괄 업로드 - q-executor로 전달
+	 *
+	 * @param request HTTP 요청
+	 * @param excelFile 업로드 Excel 파일
+	 * @return 업로드 처리 결과
+	 */
 	@RequestMapping(value = "/uploadCodeDataList", method = RequestMethod.POST)
 	public Mono<Response> uploadCodeDataList(HttpServletRequest request,
 			@RequestParam("file") MultipartFile excelFile) {
@@ -710,6 +931,13 @@ public class DataStandardController {
 		return mResponse;
 	}
 
+	/**
+	 * 코드데이터 목록 Excel 다운로드
+	 *
+	 * @param request  HTTP 요청
+	 * @param response HTTP 응답
+	 * @param searchKey 검색 키워드
+	 */
 	@RequestMapping(value = "/downloadCodeDataList", method = RequestMethod.GET)
 	public void downloadCodeDataListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey) {
 		log.info(">> download code excel started : {}", searchKey);
@@ -722,7 +950,15 @@ public class DataStandardController {
 		}
 	}
 
-	// 도메인
+	/**
+	 * 도메인 등록 API
+	 *
+	 * - 중복 체크: 동일 도메인명이 이미 존재하면 등록 거부
+	 * - 관리자: APRV_YN = 'Y' (즉시 승인), 일반 사용자: APRV_YN = 'N'
+	 *
+	 * @param dataVo 도메인 정보
+	 * @return 등록 결과
+	 */
 	@RequestMapping(value = "/createDomain", method = RequestMethod.POST)
 	public Mono<Response> createDomain(@RequestBody StdDomainVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
@@ -753,6 +989,12 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 도메인 수정 API - 변경 전 값 조회 후 이력과 함께 저장
+	 *
+	 * @param dataVo 수정할 도메인 정보
+	 * @return 수정 결과
+	 */
 	@RequestMapping(value = "/updateDomain", method = RequestMethod.POST)
 	public Mono<Response> updateDomain(@RequestBody StdDomainVo dataVo) {
 		dataVo.setUpdtUserId(sessionService.getUserId());
@@ -776,6 +1018,12 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 도메인 다건 삭제 API
+	 *
+	 * @param dataVos 삭제 대상 도메인 목록
+	 * @return 삭제 결과
+	 */
 	@RequestMapping(value = "/deleteDomains", method = RequestMethod.POST)
 	public Mono<Response> deleteDomains(@RequestBody List<StdDomainVo> dataVos) {
 		Response result = new Response();
@@ -797,22 +1045,46 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 도메인 목록 조회 API
+	 *
+	 * @param retCond 검색 조건 (null이면 전체)
+	 * @return 도메인 목록
+	 */
 	@RequestMapping(value = "/getDomainList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDomainVo> getDomainList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getDomainList : {}", retCond);
 		return sqlSessionTemplate.selectList("domain.selectDomainList", retCond);
 	}
 
+	/**
+	 * 도메인명으로 도메인 정보 조회
+	 *
+	 * @param domainNm 도메인명
+	 * @return 해당 도메인 정보 목록
+	 */
 	@RequestMapping(value = "/getDomainInfoByNm", method = RequestMethod.GET)
 	public List<StdDomainVo> getDomainInfoByNm(String domainNm) {
 		return sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", domainNm);
 	}
 
+	/**
+	 * 도메인분류명으로 도메인 정보 조회
+	 *
+	 * @param clsfNm 도메인분류명
+	 * @return 해당 분류의 도메인 목록
+	 */
 	@RequestMapping(value = "/getDomainInfoByClsfNm", method = RequestMethod.GET)
 	public List<StdDomainVo> getDomainInfoByClsfNm(String clsfNm) {
 		return sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", clsfNm);
 	}
 
+	/**
+	 * 도메인 그룹 등록
+	 *
+	 * @param dataVo 도메인 그룹 정보
+	 * @return 등록 결과
+	 */
 	@RequestMapping(value = "/createDomainGroup", method = RequestMethod.POST)
 	@ResponseBody
 	public Response createDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
@@ -840,6 +1112,12 @@ public class DataStandardController {
 		return result;
 	}
 
+	/**
+	 * 도메인 그룹 수정
+	 *
+	 * @param dataVo 수정할 도메인 그룹 정보
+	 * @return 수정 결과
+	 */
 	@RequestMapping(value = "/updateDomainGroup", method = RequestMethod.POST)
 	@ResponseBody
 	public Response updateDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
@@ -866,6 +1144,12 @@ public class DataStandardController {
 		return result;
 	}
 
+	/**
+	 * 도메인 그룹 다건 삭제
+	 *
+	 * @param dataVos 삭제 대상 도메인 그룹 목록
+	 * @return 삭제 결과
+	 */
 	@RequestMapping(value = "/deleteDomainGroups", method = RequestMethod.POST)
 	public Mono<Response> deleteDomainGroups(@RequestBody List<StdDomainGroupVo> dataVos) {
 		Response result = new Response();
@@ -879,11 +1163,22 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 도메인 그룹 전체 목록 조회
+	 *
+	 * @return 도메인 그룹 목록
+	 */
 	@RequestMapping(value = "/getDomainGroupList", method = RequestMethod.GET)
 	public List<StdDomainGroupVo> getDomainGroupList() {
 		return sqlSessionTemplate.selectList("domain.selectDomainGroupList");
 	}
 
+	/**
+	 * 도메인 분류 등록
+	 *
+	 * @param dataVo 도메인 분류 정보
+	 * @return 등록 결과
+	 */
 	@RequestMapping(value = "/createDomainClassification", method = RequestMethod.POST)
 	@ResponseBody
 	public Response createDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
@@ -913,6 +1208,12 @@ public class DataStandardController {
 		return result;
 	}
 
+	/**
+	 * 도메인 분류 수정
+	 *
+	 * @param dataVo 수정할 도메인 분류 정보
+	 * @return 수정 결과
+	 */
 	@RequestMapping(value = "/updateDomainClassification", method = RequestMethod.POST)
 	@ResponseBody
 	public Response updateDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
@@ -932,6 +1233,12 @@ public class DataStandardController {
 		return result;
 	}
 
+	/**
+	 * 도메인 분류 다건 삭제
+	 *
+	 * @param dataVos 삭제 대상 도메인 분류 목록
+	 * @return 삭제 결과
+	 */
 	@RequestMapping(value = "/deleteDomainClassifications", method = RequestMethod.POST)
 	public Mono<Response> deleteDomainClassifications(@RequestBody List<StdDomainClassificationVo> dataVos) {
 		Response result = new Response();
@@ -944,21 +1251,45 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 도메인 분류 전체 목록 조회
+	 *
+	 * @return 도메인 분류 목록
+	 */
 	@RequestMapping(value = "/getDomainClassificationList", method = RequestMethod.GET)
 	public List<StdDomainClassificationVo> getDomainClassificationList() {
 		return sqlSessionTemplate.selectList("domain.selectDomainClassificationList");
 	}
 
+	/**
+	 * 도메인분류명으로 도메인 분류 검색 (LIKE 검색)
+	 *
+	 * @param domainClsfNm 도메인분류명 키워드
+	 * @return 매칭되는 도메인 분류 목록
+	 */
 	@RequestMapping(value = "/getDomainClassificationListByNm", method = RequestMethod.GET)
 	public List<StdDomainClassificationVo> getDomainClassificationListByNm(String domainClsfNm) {
 		return sqlSessionTemplate.selectList("domain.selectDomainClassificationListByNm", "%" + domainClsfNm + "%");
 	}
 
+	/**
+	 * 도메인그룹명으로 도메인 분류 조회
+	 *
+	 * @param domainGrpNm 도메인 그룹명
+	 * @return 해당 그룹의 도메인 분류 목록
+	 */
 	@RequestMapping(value = "/getDomainClassificationListByDomainGrpNm", method = RequestMethod.GET)
 	public List<StdDomainClassificationVo> getDomainClassificationListByGrpNm(String domainGrpNm) {
 		return sqlSessionTemplate.selectList("domain.selectDomainClassificationListByGrpNm", domainGrpNm);
 	}
 
+	/**
+	 * 도메인 Excel 일괄 업로드 - q-executor로 전달
+	 *
+	 * @param request HTTP 요청
+	 * @param excelFile 업로드 Excel 파일
+	 * @return 업로드 처리 결과
+	 */
 	@RequestMapping(value = "/uploadDomains", method = RequestMethod.POST)
 	public Mono<Response> uploadDomains(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
 
@@ -974,6 +1305,13 @@ public class DataStandardController {
 		return mResponse;
 	}
 
+	/**
+	 * 도메인 목록 Excel 다운로드
+	 *
+	 * @param request  HTTP 요청
+	 * @param response HTTP 응답
+	 * @param searchKey 검색 키워드
+	 */
 	@RequestMapping(value = "/downloadDomains", method = RequestMethod.GET)
 	public void downloadDomains(HttpServletRequest request, HttpServletResponse response, String searchKey) {
 		log.info(">> download domains excel started : {}", searchKey);
@@ -986,7 +1324,15 @@ public class DataStandardController {
 		}
 	}
 
-	// 승인처리
+	/**
+	 * 표준 승인 요청 목록 조회
+	 *
+	 * - 관리자: 전체 목록 조회
+	 * - 일반 사용자: 자신이 신청한 내역만 조회
+	 *
+	 * @param retCond 검색 조건 (구분, 기간 등)
+	 * @return 승인 요청 목록
+	 */
 	@RequestMapping(value = "/getStdAprvStatList", method = RequestMethod.POST)
 	public List<StdApproveStatVo> getStdAprvStatList(@RequestBody StdApproveStatVo.RetrieveCond retCond) {
 		log.info(">> getStdAprvStatList : {}", retCond);
@@ -998,6 +1344,15 @@ public class DataStandardController {
 		return sqlSessionTemplate.selectList("approve.selectStdAprvStatList", retCond);
 	}
 
+	/**
+	 * 표준 승인/반려 처리 API (트랜잭션 사용)
+	 *
+	 * - 승인 대상별(TERMS, WORD, DOMAIN) APRV_YN 갱신
+	 * - 승인 완료 시 변경 이력 저장
+	 *
+	 * @param dataVos 승인/반려 대상 목록
+	 * @return 처리 결과
+	 */
 	@RequestMapping(value = "/putStdAprvStat", method = RequestMethod.POST)
 	public Mono<Response> putStdAprvStat(@RequestBody List<StdApproveStatVo> dataVos) {
 		log.info(">> putStdAprvStat : {}", dataVos);
@@ -1070,7 +1425,20 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
-	// 표준화 추천 - 분석
+	/**
+	 * 표준화 추천 - 용어 일괄 분석 API
+	 *
+	 * <p>입력된 한글 용어명 목록을 형태소 분석하여 다음을 수행한다:</p>
+	 * <ol>
+	 *   <li>기등록 용어 체크 (REGISTERED)</li>
+	 *   <li>OKT 형태소 분석 + TB_WORD/TB_WORD_DICT 기반 greedy 분리</li>
+	 *   <li>1순위/2순위 단어 분리 + 영문약어 자동 조합</li>
+	 *   <li>마지막 단어 기준 도메인 추천</li>
+	 * </ol>
+	 *
+	 * @param body { termNames: ["고객번호", "주문일자", ...] }
+	 * @return 용어별 분석 결과 목록 (상태: AUTO/PARTIAL/FAILED/REGISTERED)
+	 */
 	@RequestMapping(value = "/analyzeTermsBatch", method = RequestMethod.POST)
 	public List<TermAnalysisResult> analyzeTermsBatch(@RequestBody Map<String, List<String>> body) {
 		List<String> termNames = body.get("termNames");
@@ -1301,6 +1669,20 @@ public class DataStandardController {
 		return res;
 	}
 
+	/**
+	 * 표준화 추천 - 용어 일괄 등록 API (트랜잭션 사용)
+	 *
+	 * <p>분석 결과를 바탕으로 신규 단어 등록 + 용어 등록을 한 번에 처리한다.</p>
+	 * <ul>
+	 *   <li>신규 단어: 금칙어 체크 후 자동 등록</li>
+	 *   <li>구성 단어 승인 여부 체크 (미승인 단어 포함 시 실패)</li>
+	 *   <li>도메인 유효성 체크</li>
+	 *   <li>관리자: 일괄 등록 변경이력(BULK_INSERT) 저장</li>
+	 * </ul>
+	 *
+	 * @param body { items: [{termsNm, termsEngAbrvNm, words, newWords, ...}] }
+	 * @return 등록 결과 (registeredTerms, registeredWords, skipped, failed, details)
+	 */
 	@RequestMapping(value = "/registerTermsBatch", method = RequestMethod.POST)
 	public Map<String, Object> registerTermsBatch(@RequestBody Map<String, Object> body) {
 		@SuppressWarnings("unchecked")
@@ -1529,6 +1911,15 @@ public class DataStandardController {
 		return result;
 	}
 
+	/**
+	 * Excel 파일에서 컬럼명(한글명) 목록을 파싱하여 반환 (표준화 추천용)
+	 *
+	 * - 첫 번째 시트의 A열에서 값을 읽음
+	 * - 헤더행 자동 감지 ("컬럼", "용어", "한글" 등 포함 시 건너뜀)
+	 *
+	 * @param file 업로드 Excel 파일
+	 * @return 파싱된 컬럼명 목록
+	 */
 	@PostMapping(value = "/parseExcelColumnNames", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public List<String> parseExcelColumnNames(@RequestParam("file") MultipartFile file) {
 		List<String> columnNames = new ArrayList<>();
@@ -1760,13 +2151,23 @@ public class DataStandardController {
 
 	// ==================== 변경 이력 관리 ====================
 
-	// 이력 목록 조회
+	/**
+	 * 변경 이력 목록 조회 - 기간/유형/대상별 필터링
+	 *
+	 * @param params 검색 조건 (changeType, targetType, fromDt, toDt 등)
+	 * @return 변경 이력 목록
+	 */
 	@PostMapping("/getChangeHistoryList")
 	public List<Map<String, Object>> getChangeHistoryList(@RequestBody Map<String, Object> params) {
 		return sqlSessionTemplate.selectList("changehistory.selectChangeHistoryList", params);
 	}
 
-	// 이력 상세 (마스터 + 상세)
+	/**
+	 * 변경 이력 상세 조회 (마스터 + 상세 목록)
+	 *
+	 * @param changeId 변경 이력 ID
+	 * @return { history: 마스터 정보, details: 상세 목록 }
+	 */
 	@GetMapping("/getChangeHistoryDetail")
 	public Map<String, Object> getChangeHistoryDetail(@RequestParam String changeId) {
 		Map<String, Object> result = new HashMap<>();
@@ -1775,7 +2176,12 @@ public class DataStandardController {
 		return result;
 	}
 
-	// 특정 대상 이력 조회
+	/**
+	 * 특정 대상의 변경 이력 조회 (단어/용어/도메인 등 대상 ID 기준)
+	 *
+	 * @param params { targetType, targetId }
+	 * @return 해당 대상의 변경 이력 목록
+	 */
 	@PostMapping("/getChangeHistoryByTarget")
 	public List<Map<String, Object>> getChangeHistoryByTarget(@RequestBody Map<String, Object> params) {
 		return sqlSessionTemplate.selectList("changehistory.selectChangeHistoryByTarget", params);
@@ -1809,9 +2215,14 @@ public class DataStandardController {
 		return null;
 	}
 
-	// 이력 저장 헬퍼 메서드
 	// ========== 영향도 분석 ==========
 
+	/**
+	 * 단어 영향도 분석 - 해당 단어를 사용하는 용어/컬럼 목록 반환
+	 *
+	 * @param wordId 단어 고유 ID
+	 * @return { terms: 참조 용어 목록, columns: 참조 컬럼 목록 }
+	 */
 	@GetMapping("/impact/word")
 	public Map<String, Object> getWordImpact(@RequestParam String wordId) {
 		Map<String, Object> result = new HashMap<>();
@@ -1820,6 +2231,12 @@ public class DataStandardController {
 		return result;
 	}
 
+	/**
+	 * 도메인 영향도 분석 - 해당 도메인을 사용하는 용어 목록 반환
+	 *
+	 * @param domainNm 도메인명
+	 * @return { terms: 참조 용어 목록 }
+	 */
 	@GetMapping("/impact/domain")
 	public Map<String, Object> getDomainImpact(@RequestParam String domainNm) {
 		Map<String, Object> result = new HashMap<>();

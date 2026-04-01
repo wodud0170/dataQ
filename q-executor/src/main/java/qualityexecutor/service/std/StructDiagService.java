@@ -22,6 +22,16 @@ import com.ndata.quality.tool.DataSourceUtils;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 구조 진단 서비스 (수집 스냅샷 vs 실제 DBMS 스키마 비교)
+ *
+ * <p>이전 수집 스냅샷(TB_DATA_MODEL_ATTR)과 현재 실제 DBMS의 컬럼 정보를 비교하여
+ * 추가/삭제/변경된 테이블 및 컬럼을 감지한다.</p>
+ * <ul>
+ *   <li>run(): 비동기 진단 실행 → 결과를 TB_STRUCT_DIAG_HISTORY/DETAIL에 저장</li>
+ *   <li>compareSchema(): 동기 비교 → 결과를 직접 반환 (DB 미저장)</li>
+ * </ul>
+ */
 @Slf4j
 @NoArgsConstructor
 public class StructDiagService implements Runnable {
@@ -44,6 +54,19 @@ public class StructDiagService implements Runnable {
         this.clctId = clctId;
     }
 
+    /**
+     * 구조 진단 비동기 실행 (Runnable.run)
+     *
+     * <p>처리 흐름:</p>
+     * <ol>
+     *   <li>데이터모델 정보 및 수집 스냅샷 결정</li>
+     *   <li>스냅샷의 컬럼 목록(prev) 로드</li>
+     *   <li>실제 DBMS에 접속하여 현재 컬럼 목록(curr) 수집</li>
+     *   <li>prev vs curr 비교: ADDED / DELETED / MODIFIED 분류</li>
+     *   <li>결과를 TB_STRUCT_DIAG_HISTORY/DETAIL에 저장</li>
+     *   <li>TB_DATA_MODEL.structDiagYn 갱신 (변경 0건이면 Y, 아니면 N)</li>
+     * </ol>
+     */
     @Override
     public void run() {
         log.info(">> StructDiagService started: diagId={}, dataModelId={}", diagId, dataModelId);
@@ -262,8 +285,14 @@ public class StructDiagService implements Runnable {
     }
 
     /**
-     * compareSchema: 수집 스냅샷과 현재 DBMS 스키마를 비교하여 테이블/컬럼 단위 결과 반환.
-     * DB에 저장하지 않고 직접 결과를 반환한다.
+     * 스키마 비교 (동기 실행, DB 미저장)
+     *
+     * <p>수집 스냅샷과 현재 DBMS 스키마를 테이블/컬럼 단위로 비교하여
+     * 결과를 직접 반환한다. 프론트에서 실시간 비교 화면에 사용.</p>
+     *
+     * @param dataModelId 데이터모델 ID
+     * @param clctId      수집 ID (null이면 최신 수집건 사용)
+     * @return { tables: 테이블별 비교 결과, summary: 요약 통계 }
      */
     public Map<String, Object> compareSchema(String dataModelId, String clctId) {
         Map<String, Object> resultMap = new HashMap<>();

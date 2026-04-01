@@ -35,6 +35,13 @@ import com.ndata.quality.model.std.StdWordVo;
 import com.ndata.quality.model.std.UploadResult;
 import com.ndata.quality.tool.ExcelSheetHandler;
 
+/**
+ * Excel 일괄 업로드 서비스
+ *
+ * <p>단어/용어/코드/코드데이터/도메인의 Excel 파일을 파싱하여 DB에 일괄 등록한다.
+ * SAX 방식(XSSFReader)으로 메모리 효율적으로 대용량 Excel을 처리한다.
+ * 각 행 단위로 트랜잭션 처리하여, 일부 행 실패 시에도 나머지는 정상 등록된다.</p>
+ */
 @Service
 @Slf4j
 public class ExcelUploadService {
@@ -44,7 +51,16 @@ public class ExcelUploadService {
 	@Autowired
 	private SqlSessionFactory sqlSessionFactory;	// transaction 사용할 경우 사용
 	
-	//단어 일괄 저장
+	/**
+	 * 단어 Excel 일괄 등록
+	 *
+	 * <p>각 행을 파싱하여 단어를 등록한다. 이미 존재하면 Skip, 금칙어이면 Fail.</p>
+	 *
+	 * @param userId    실행 사용자 ID
+	 * @param multiPart 업로드된 Excel 파일
+	 * @return 업로드 결과 (성공/건너뜀/실패 건수 + 실패 상세)
+	 * @throws Exception Excel 파싱 실패 시
+	 */
 	public UploadResult uploadWords(String userId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
@@ -107,7 +123,17 @@ public class ExcelUploadService {
 		return result;
 	}
 
-	//용어 일괄 저장
+	/**
+	 * 용어 Excel 일괄 등록
+	 *
+	 * <p>각 행을 파싱하여 용어 + 구성단어 관계를 등록한다.
+	 * 도메인 유효성 검증, 구성단어 존재/승인 여부 체크를 수행한다.</p>
+	 *
+	 * @param userId    실행 사용자 ID
+	 * @param multiPart 업로드된 Excel 파일
+	 * @return 업로드 결과
+	 * @throws Exception Excel 파싱 실패 시
+	 */
 	public UploadResult uploadTermsList(String userId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
@@ -203,7 +229,14 @@ public class ExcelUploadService {
 		return result;
 	}
 
-	//코드 일괄 저장
+	/**
+	 * 코드 Excel 일괄 등록 - 내부적으로 uploadTermsList를 호출
+	 *
+	 * @param userId    실행 사용자 ID
+	 * @param multiPart 업로드된 Excel 파일
+	 * @return 업로드 결과
+	 * @throws Exception Excel 파싱 실패 시
+	 */
 	public UploadResult uploadCodeInfoList(String userId, MultipartFile multiPart) throws Exception {
 		UploadResult result = uploadTermsList(userId, multiPart);
 		// 코드 일괄 등록 이력 (uploadTermsList에서 TERM으로 저장되므로 CODE로도 기록)
@@ -211,7 +244,16 @@ public class ExcelUploadService {
 		return result;
 	}
 
-	//코드데이터(항목값) 일괄 저장
+	/**
+	 * 코드데이터(항목값) Excel 일괄 등록
+	 *
+	 * <p>각 행의 코드그룹/코드명/코드값을 파싱하여 등록한다. 이미 존재하면 Skip.</p>
+	 *
+	 * @param userId    실행 사용자 ID
+	 * @param multiPart 업로드된 Excel 파일
+	 * @return 업로드 결과
+	 * @throws Exception Excel 파싱 실패 시
+	 */
 	public UploadResult uploadCodeDataList(String userId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
@@ -252,7 +294,17 @@ public class ExcelUploadService {
 		return result;
 	}
 
-	//도메인 일괄 저장
+	/**
+	 * 도메인 Excel 일괄 등록
+	 *
+	 * <p>각 행의 도메인그룹/분류/도메인명/타입/길이 등을 파싱하여 등록한다.
+	 * 이미 존재하면 Skip.</p>
+	 *
+	 * @param userId    실행 사용자 ID
+	 * @param multiPart 업로드된 Excel 파일
+	 * @return 업로드 결과
+	 * @throws Exception Excel 파싱 실패 시
+	 */
 	public UploadResult uploadDomains(String userId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();

@@ -51,6 +51,12 @@ import qualitycenter.util.ErwinXmlParser;
 import qualitycenter.util.ErwinXmlParser.ErwinParseResult;
 import reactor.core.publisher.Mono;
 
+/**
+ * 데이터 모델 컨트롤러 (모델 CRUD, 스키마 수집, ERwin 임포트)
+ *
+ * <p>데이터 모델 등록/수정/삭제, 대상 DBMS 스키마 수집 요청,
+ * 수집 이력 관리, ERwin XML 파일 임포트 기능을 제공한다.</p>
+ */
 @Tag(name = "데이터모델", description = "데이터모델 API")
 @Slf4j
 @RestController
@@ -75,7 +81,12 @@ public class DataModelController {
 	@Autowired
 	private WebSocketService websocketService;
 
-	// 데이터모델 정보
+	/**
+	 * 데이터모델 등록 API
+	 *
+	 * @param dataVo 데이터모델 정보 (모델명, 데이터소스ID 등)
+	 * @return 등록 결과
+	 */
 	@RequestMapping(value = "/createDataModel", method = RequestMethod.POST)
 	public Mono<Response> createDataModel(@RequestBody StdDataModelVo dataVo) {
 		dataVo.setDataModelId(StringUtils.getUUID());
@@ -95,6 +106,12 @@ public class DataModelController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 데이터모델 수정 API
+	 *
+	 * @param dataVo 수정할 데이터모델 정보
+	 * @return 수정 결과
+	 */
 	@RequestMapping(value = "/updateDataModel", method = RequestMethod.POST)
 	public Mono<Response> updateDataModel(@RequestBody StdDataModelVo dataVo) {
 		dataVo.setUpdtUserId(sessionService.getUserId());
@@ -112,6 +129,12 @@ public class DataModelController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 데이터모델 다건 삭제 API
+	 *
+	 * @param dataVos 삭제 대상 데이터모델 목록
+	 * @return 삭제 결과
+	 */
 	@RequestMapping(value = "/deleteDataModels", method = RequestMethod.POST)
 	public Mono<Response> deleteDataModels(@RequestBody List<StdDataModelVo> dataVos) {
 		Response result = new Response();
@@ -126,43 +149,79 @@ public class DataModelController {
 		return Mono.just(result);
 	}
 
-	//데이터모델 현황 목록 조회 : 조회조건 - 모델명, 시스템명
+	/**
+	 * 데이터모델 현황 목록 조회 (모델별 최신 수집/진단 상태 포함)
+	 *
+	 * @param retCond 검색 조건 (모델명, 시스템명 등)
+	 * @return 데이터모델 현황 목록
+	 */
 	@RequestMapping(value = "/getDataModelStatsList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelVo> getDataModelStatsList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelStatsList", retCond);
 	}
 
-	//데이터모델 현황 정보 조회 : 조회조건 - 수집ID
+	/**
+	 * 수집 ID 기준 데이터모델 현황 정보 조회
+	 *
+	 * @param clctId 수집 ID
+	 * @return 해당 수집건의 데이터모델 현황 정보
+	 */
 	@RequestMapping(value = "/getDataModelStatsByClctId", method = RequestMethod.GET)
 	public StdDataModelVo getDataModelStatsByClctId(String clctId) {
 		return sqlSessionTemplate.selectOne("datamodel.selectDataModelStatsByClctId", clctId);
 	}
 
-	//데이터모델 목록 조회 : 조회조건 - 모델명, 시스템명
+	/**
+	 * 데이터모델 목록 조회 (수집 정보 포함)
+	 *
+	 * @param retCond 검색 조건 (모델명, 시스템명 등)
+	 * @return 데이터모델 + 수집 정보 목록
+	 */
 	@RequestMapping(value = "/getDataModelList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelCollectVo> getDataModelList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelList", retCond);
 	}
 
-	//데이터모델 수집 목록 조회 : 조회조건 - 모델ID, 모델명, 시스템명
+	/**
+	 * 데이터모델 수집 목록 조회 (모델ID, 모델명, 시스템명 기준)
+	 *
+	 * @param retCond 검색 조건
+	 * @return 수집 이력 목록
+	 */
 	@RequestMapping(value = "/getDataModelClctList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelCollectVo> getDataModelClctList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelClctList", retCond);
 	}
 
-	//데이터모델 객체(테이블) 수집 목록 조회
+	/**
+	 * 데이터모델 객체(테이블) 수집 목록 조회 - 수집 ID 기준
+	 *
+	 * @param clctId 수집 ID
+	 * @return 수집된 테이블 목록
+	 */
 	@RequestMapping(value = "/getDataModelObjListByClctId", method = RequestMethod.GET)
 	public List<StdDataModelObjVo> getDataModelObjListByClctId(String clctId) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", clctId);
 	}
 
-	//데이터모델 객체(테이블) 수집 목록 검색
+	/**
+	 * 데이터모델 객체(테이블) 이름으로 검색
+	 *
+	 * @param retCond 검색 조건 (테이블명 등)
+	 * @return 매칭되는 테이블 속성 목록
+	 */
 	@RequestMapping(value = "/getDataModelObjListByObjNm", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelAttrVo> getDataModelObjListByObjNm(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByObjNm", retCond);
 	}
 
-	//데이터모델 객체(테이블) 수집 목록 다운로드
+	/**
+	 * 데이터모델 객체(테이블) 목록 Excel 다운로드
+	 *
+	 * @param request  HTTP 요청
+	 * @param response HTTP 응답
+	 * @param clctId   수집 ID
+	 */
 	@RequestMapping(value = "/downloadDataModelObjs", method = RequestMethod.GET)
 	public void downloadDataModelObjs(HttpServletRequest request, HttpServletResponse response, String clctId) {
 		log.info(">> download  data model objects excel started : {}", clctId);
@@ -175,19 +234,35 @@ public class DataModelController {
 		}
 	}
 
-	//데이터모델 속성(컬럼) 수집 목록 조회
+	/**
+	 * 데이터모델 속성(컬럼) 수집 목록 조회 - 수집 ID 기준
+	 *
+	 * @param clctId 수집 ID
+	 * @return 수집된 컬럼 목록
+	 */
 	@RequestMapping(value = "/getDataModelAttrListByClctId", method = RequestMethod.GET)
 	public List<StdDataModelAttrVo> getDataModelAttrListByClctId(String clctId) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", clctId);
 	}
 
-	//데이터모델 속성(컬럼) 수집 목록 검색
+	/**
+	 * 데이터모델 속성(컬럼) 검색 - 조건별 조회
+	 *
+	 * @param retCond 검색 조건 (컬럼명, 테이블명 등)
+	 * @return 매칭되는 컬럼 목록
+	 */
 	@RequestMapping(value = "/getDataModelAttrListByRetreiveCond", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelAttrVo> getDataModelAttrListByRetreiveCond(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByRetreiveCond", retCond);
 	}
 
-	//데이터모델 속성(컬럼) 수집 목록 다운로드
+	/**
+	 * 데이터모델 속성(컬럼) 목록 Excel 다운로드
+	 *
+	 * @param request  HTTP 요청
+	 * @param response HTTP 응답
+	 * @param clctId   수집 ID
+	 */
 	@RequestMapping(value = "/downloadDataModelAttrs", method = RequestMethod.GET)
 	public void downloadDataModelAttrs(HttpServletRequest request, HttpServletResponse response, String clctId) {
 		log.info(">> download  data model attributes excel started : {}", clctId);
@@ -200,7 +275,15 @@ public class DataModelController {
 		}
 	}
 
-	// 데이터모델 스키마 목록 조회 (대상 DB에 직접 접속하여 스키마 조회)
+	/**
+	 * 대상 DB 스키마 목록 조회 (DB 직접 접속)
+	 *
+	 * <p>데이터소스에 직접 접속하여 접근 가능한 스키마 목록을 반환한다.
+	 * DBMS 유형(Oracle, MariaDB, PostgreSQL 등)에 따라 다른 SQL을 사용한다.</p>
+	 *
+	 * @param dataVo 데이터모델 정보 (dataModelDsId 필수)
+	 * @return 스키마명 목록
+	 */
 	@RequestMapping(value = "/getSchemaList", method = RequestMethod.POST)
 	public List<String> getSchemaList(@RequestBody StdDataModelVo dataVo) {
 		log.info(">> getSchemaList : dsId={}", dataVo.getDataModelDsId());
@@ -260,13 +343,23 @@ public class DataModelController {
 		}
 	}
 
-	// 데이터모델 스키마 수집 필터 조회
+	/**
+	 * 데이터모델 스키마 수집 필터 조회
+	 *
+	 * @param dataModelId 데이터모델 ID
+	 * @return 수집 대상 스키마 필터 목록
+	 */
 	@RequestMapping(value = "/getDataModelSchemas", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelSchemaVo> getDataModelSchemas(String dataModelId) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelSchemaList", dataModelId);
 	}
 
-	// 데이터모델 스키마 수집 필터 저장 (기존 전체 삭제 후 재저장)
+	/**
+	 * 데이터모델 스키마 수집 필터 저장 (기존 전체 삭제 후 재저장, 트랜잭션 사용)
+	 *
+	 * @param schemas 저장할 스키마 필터 목록
+	 * @return 저장 결과
+	 */
 	@RequestMapping(value = "/saveDataModelSchemas", method = RequestMethod.POST)
 	public Mono<Response> saveDataModelSchemas(@RequestBody List<StdDataModelSchemaVo> schemas) {
 		Response result = new Response();
@@ -294,13 +387,27 @@ public class DataModelController {
 		return Mono.just(result);
 	}
 
-	//데이터모델 수집이력 목록 조회
+	/**
+	 * 데이터모델 수집 이력 목록 조회
+	 *
+	 * @param retCond 검색 조건
+	 * @return 수집 이력 목록
+	 */
 	@RequestMapping(value = "/getDataModelHistoryList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelCollectVo> getDataModelHistoryList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelHistoryList", retCond);
 	}
 
-	//데이터모델 수집
+	/**
+	 * 데이터모델 수집 실행 API
+	 *
+	 * <p>q-executor에 수집 요청을 전달한다. executor가 대상 DBMS에 접속하여
+	 * 테이블/컬럼 정보를 수집하고 TB_DATA_MODEL_OBJ/ATTR/STATS에 저장한다.</p>
+	 *
+	 * @param request HTTP 요청
+	 * @param dataVo  데이터모델 정보 (dataModelId, dataModelDsId 필수)
+	 * @return 수집 요청 결과
+	 */
 	@RequestMapping(value = "/collectDataModel", method = RequestMethod.POST)
 	public Mono<Response> collectDataModel(HttpServletRequest request, @RequestBody StdDataModelVo dataVo) {
 		log.info(">> started collect data model : {}", dataVo);

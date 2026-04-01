@@ -28,6 +28,12 @@ import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
 import reactor.core.publisher.Mono;
 
+/**
+ * 구조 진단 컨트롤러 (수집 스냅샷 vs 현재 DBMS 스키마 비교)
+ *
+ * <p>수집된 데이터모델 스냅샷과 실제 DBMS의 현재 스키마를 비교하여
+ * 테이블/컬럼의 추가/삭제/변경을 감지한다. 진단 실행은 q-executor에서 처리.</p>
+ */
 @Tag(name = "구조진단", description = "구조 진단 (DBMS 재수집 → 스냅샷 diff) API")
 @Slf4j
 @RestController

@@ -20,6 +20,18 @@ import com.ndata.quality.model.std.StdTermsVo;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 표준화 진단 서비스 (백그라운드 워커)
+ *
+ * <p>수집된 데이터모델의 컬럼을 표준 용어(TB_TERMS)와 비교하여 진단한다.</p>
+ * <ul>
+ *   <li>TERM_NOT_EXIST: 영문명 기준 용어 미존재</li>
+ *   <li>TERM_KR_NM_MISMATCH: 한글명 불일치</li>
+ *   <li>DATA_TYPE_MISMATCH: 데이터 타입 불일치</li>
+ *   <li>DATA_LEN_MISMATCH: 데이터 길이 불일치</li>
+ * </ul>
+ * <p>중지 요청(stopFlags)을 통해 진행 중인 진단을 중단할 수 있다.</p>
+ */
 @Slf4j
 @NoArgsConstructor
 @Service
@@ -61,6 +73,19 @@ public class DiagService implements Runnable {
         return flag != null && flag.get();
     }
 
+    /**
+     * 진단 실행 메인 로직 (Runnable.run)
+     *
+     * <p>처리 흐름:</p>
+     * <ol>
+     *   <li>상태를 RUNNING으로 변경</li>
+     *   <li>전체 용어를 메모리에 로드 (영문명 기준 Map)</li>
+     *   <li>진단 대상 컬럼 목록 로드</li>
+     *   <li>컬럼별 진단: 용어 존재 → 한글명 일치 → 도메인(타입/길이) 검증</li>
+     *   <li>50건마다 배치 인서트 + 진행 상황 업데이트</li>
+     *   <li>완료/중지/에러 상태 갱신</li>
+     * </ol>
+     */
     @Override
     public void run() {
         stopFlags.put(diagJobId, new AtomicBoolean(false));
@@ -155,6 +180,17 @@ public class DiagService implements Runnable {
         }
     }
 
+    /**
+     * 도메인 검증: 표준 용어의 데이터 타입/길이와 실제 컬럼의 타입/길이를 비교
+     *
+     * @param attr            진단 대상 컬럼 정보
+     * @param term            매칭된 표준 용어
+     * @param dataType        실제 데이터 타입
+     * @param dataLen         실제 데이터 길이
+     * @param dataDecimalLen  실제 소수점 자릿수
+     * @param batch           진단 결과 누적 리스트
+     * @return 불일치 건수
+     */
     private int checkDomain(StdDataModelAttrVo attr, StdTermsVo term, String dataType, long dataLen, int dataDecimalLen, List<StdDiagResultVo> batch) {
         if (term.getDomainNm() == null) return 0;
         int cnt = 0;
@@ -175,7 +211,20 @@ public class DiagService implements Runnable {
         return cnt;
     }
 
-    /** 데이터 타입 동의어 비교 (Oracle DATE = DATETIME 등) */
+    /**
+     * 데이터 타입 동의어 비교
+     *
+     * <p>DBMS별 타입명 차이를 허용하는 비교 로직:</p>
+     * <ul>
+     *   <li>DATE ↔ DATETIME</li>
+     *   <li>CHAR ↔ VARCHAR ↔ VARCHAR2 (문자열 계열)</li>
+     *   <li>NUMBER ↔ NUMERIC ↔ DECIMAL (숫자 계열)</li>
+     * </ul>
+     *
+     * @param stdType    표준 데이터 타입
+     * @param actualType 실제 데이터 타입
+     * @return 동등하면 true
+     */
     private boolean isTypeEquivalent(String stdType, String actualType) {
         if (stdType.equalsIgnoreCase(actualType)) return true;
         String s = stdType.toUpperCase();

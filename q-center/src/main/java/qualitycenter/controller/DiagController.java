@@ -31,6 +31,13 @@ import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
 import reactor.core.publisher.Mono;
 
+/**
+ * 표준화 진단 컨트롤러 (용어/도메인 적합성 진단)
+ *
+ * <p>수집된 데이터모델의 컬럼을 표준 용어/도메인과 비교하여
+ * 용어 미존재, 한글명 불일치, 데이터 타입/길이 불일치를 진단한다.
+ * 진단 실행은 q-executor의 DiagService에서 비동기로 처리.</p>
+ */
 @Tag(name = "데이터표준화진단", description = "데이터 표준화 진단 API")
 @Slf4j
 @RestController

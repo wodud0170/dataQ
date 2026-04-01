@@ -32,6 +32,13 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import qualityexecutor.service.stomp.StompSessionService;
 
+/**
+ * 데이터 모델 수집 서비스 (백그라운드 워커)
+ *
+ * <p>대상 DBMS에 접속하여 테이블/컬럼 메타데이터를 수집하고
+ * TB_DATA_MODEL_CLCT, TB_DATA_MODEL_OBJ, TB_DATA_MODEL_ATTR, TB_DATA_MODEL_STATS에 저장한다.
+ * WebSocket을 통해 수집 진행 상황을 실시간 전송한다.</p>
+ */
 @Slf4j
 @NoArgsConstructor
 @Service
@@ -71,7 +78,24 @@ public class DataModelService implements Runnable {
 		}
 	}
 
-	// 데이터모델 수집
+	/**
+	 * 데이터 모델 수집 실행
+	 *
+	 * <p>처리 흐름:</p>
+	 * <ol>
+	 *   <li>데이터소스 조회 및 DB 접속</li>
+	 *   <li>수집 이력(TB_DATA_MODEL_CLCT) 생성</li>
+	 *   <li>스키마 필터(TB_DATA_MODEL_SCHEMA) 적용 (없으면 기본 스키마)</li>
+	 *   <li>테이블(OBJ) 메타 수집 → TB_DATA_MODEL_OBJ 저장</li>
+	 *   <li>컬럼(ATTR) 메타 수집 → TB_DATA_MODEL_ATTR 저장</li>
+	 *   <li>통계(TB_DATA_MODEL_STATS) 저장</li>
+	 *   <li>수집 완료 처리 + WebSocket 알림</li>
+	 * </ol>
+	 *
+	 * @param userId 실행 사용자 ID
+	 * @param ssId   WebSocket 세션 ID (진행 상황 전송용)
+	 * @param dataVo 데이터모델 정보 (dataModelId, dataModelDsId 필수)
+	 */
 	public void collectDataModel(String userId, String ssId, StdDataModelVo dataVo) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> collectDataModel start");
