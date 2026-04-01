@@ -98,6 +98,7 @@
             <!-- 수정 / 삭제 버튼 -->
             <v-sheet class="pr-4 pl-4">
               <v-btn class="gradient" v-on:click="showModal('update')">수정</v-btn>
+              <v-btn class="gradient" v-on:click="openImpactDialog()">영향도 분석</v-btn>
               <!-- <v-btn class="gradient" v-on:click="wordRemoveItem()">삭제</v-btn> -->
             </v-sheet>
           </v-sheet>
@@ -473,6 +474,64 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <!-- 영향도 분석 다이얼로그 -->
+    <v-dialog max-width="900" v-model="impactDialogShow" scrollable>
+      <v-card>
+        <v-card-title class="font-weight-bold">영향도 분석 - '{{ detailWord }}'</v-card-title>
+        <v-card-text>
+          <v-progress-linear v-if="impactLoading" indeterminate color="indigo darken-2" />
+          <template v-if="!impactLoading">
+            <div class="font-weight-bold mb-2">연관 용어 ({{ impactTerms.length }}건)</div>
+            <v-simple-table dense v-if="impactTerms.length > 0">
+              <template v-slot:default>
+                <thead>
+                  <tr>
+                    <th>용어명</th>
+                    <th>영문약어명</th>
+                    <th>도메인명</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(t, i) in impactTerms" :key="'term_'+i">
+                    <td>{{ t.termsNm }}</td>
+                    <td>{{ t.termsEngAbrvNm }}</td>
+                    <td>{{ t.domainNm }}</td>
+                  </tr>
+                </tbody>
+              </template>
+            </v-simple-table>
+            <v-alert v-else type="info" dense text class="mt-1">연관 용어가 없습니다.</v-alert>
+
+            <div class="font-weight-bold mb-2 mt-4">연관 컬럼 ({{ impactColumns.length }}건)</div>
+            <v-simple-table dense v-if="impactColumns.length > 0">
+              <template v-slot:default>
+                <thead>
+                  <tr>
+                    <th>데이터모델</th>
+                    <th>테이블명</th>
+                    <th>컬럼명</th>
+                    <th>컬럼한글명</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(c, i) in impactColumns" :key="'col_'+i">
+                    <td>{{ c.dataModelNm }}</td>
+                    <td>{{ c.objNm }}</td>
+                    <td>{{ c.attrNm }}</td>
+                    <td>{{ c.attrNmKr }}</td>
+                  </tr>
+                </tbody>
+              </template>
+            </v-simple-table>
+            <v-alert v-else type="info" dense text class="mt-1">연관 컬럼이 없습니다.</v-alert>
+          </template>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="ndColor" text @click="impactDialogShow = false">닫기</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-main>
 </template>
 
@@ -581,6 +640,11 @@ export default {
     updateWord_updtDt: null,
     updateWord_updtUserId: null,
     updateWord_reqSysCd: null,
+    // 영향도 분석
+    impactDialogShow: false,
+    impactLoading: false,
+    impactTerms: [],
+    impactColumns: [],
     // 삭제 관련
     removeItems: [],
     // 상단 테이블 헤더
@@ -998,6 +1062,25 @@ export default {
       this.detailWord = item.wordNm;
       // remove item에 단독으로 넣어주기
       this.removeItems = [item];
+    },
+    openImpactDialog() {
+      if (!this.selectedItem || this.selectedItem.length === 0) return;
+      const wordId = this.selectedItem[0].id;
+      this.impactDialogShow = true;
+      this.impactLoading = true;
+      this.impactTerms = [];
+      this.impactColumns = [];
+      axios.get(this.$APIURL.base + 'api/std/impact/word', { params: { wordId: wordId } })
+        .then(res => {
+          this.impactTerms = res.data.terms || [];
+          this.impactColumns = res.data.columns || [];
+        })
+        .catch(err => {
+          console.error('영향도 분석 조회 실패', err);
+        })
+        .finally(() => {
+          this.impactLoading = false;
+        });
     },
     addModalOpenSetWordNm() {
       // 모달 오픈 시 검색어에 문자열이 있을 경우 단어명에 자동으로 입력

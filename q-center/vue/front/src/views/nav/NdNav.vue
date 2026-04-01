@@ -144,6 +144,15 @@
                         <v-list-item-title>데이터 모델 현황</v-list-item-title>
                     </v-list-item>
 
+                    <v-list-item link id="nav_erwinImport" href="#tab_erwinImport"
+                        active-class="ndColor--text" title="ERwin 임포트"
+                        v-on:click.stop="addTabItem('ERwin 임포트', 'erwinImport');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>ERwin 임포트</v-list-item-title>
+                    </v-list-item>
+
                 </v-list-group>
 
                 <!-- 표준화 진단 -->

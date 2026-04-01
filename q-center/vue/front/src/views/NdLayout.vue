@@ -150,6 +150,7 @@ export default {
                 case "datamodelHistory":
                 case "datamodelStatusTable":
                 case "datamodelStatusColumn":
+                case "erwinImport":
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
                 case "dataDiag":
@@ -316,7 +317,7 @@ export default {
                     document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                 } else if (tabName === 'schemaCompare') {
                     document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
-                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn') {
+                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'erwinImport') {
                     document.getElementById("dmGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
 
                 } else if (tabName === 'dqi' || tabName === 'ctq' || tabName === 'dqbr' || tabName === 'target' || tabName === 'qv' || tabName === 'rvi' || tabName === 'dqqvrt') {
@@ -482,7 +483,7 @@ export default {
             } else if (tabitem === 'schemaCompare') {
                 this.navStructDiagGroup = true;
                 return;
-            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn') {
+            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'erwinImport') {
                 this.navDmGroup = true;
                 return;
             } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification' || tabitem === 'changeHistory') {

@@ -1787,6 +1787,23 @@ public class DataStandardController {
 	}
 
 	// 이력 저장 헬퍼 메서드
+	// ========== 영향도 분석 ==========
+
+	@GetMapping("/impact/word")
+	public Map<String, Object> getWordImpact(@RequestParam String wordId) {
+		Map<String, Object> result = new HashMap<>();
+		result.put("terms", sqlSessionTemplate.selectList("impact.selectImpactTermsByWordId", wordId));
+		result.put("columns", sqlSessionTemplate.selectList("impact.selectImpactColumnsByWordId", wordId));
+		return result;
+	}
+
+	@GetMapping("/impact/domain")
+	public Map<String, Object> getDomainImpact(@RequestParam String domainNm) {
+		Map<String, Object> result = new HashMap<>();
+		result.put("terms", sqlSessionTemplate.selectList("impact.selectImpactTermsByDomainNm", domainNm));
+		return result;
+	}
+
 	private void saveChangeHistory(String changeType, String targetType, String targetId, String targetNm,
 			String prevValue, String currValue, String summary) {
 		try {

@@ -105,6 +105,7 @@
             <!-- 수정 / 삭제 버튼 -->
             <v-sheet class="pr-4 pl-4">
               <v-btn class="gradient" v-on:click="showModal('update')">수정</v-btn>
+              <v-btn class="gradient" v-on:click="openImpactDialog()">영향도 분석</v-btn>
               <!-- <v-btn class="gradient" v-on:click="domainRemoveItem()">삭제</v-btn> -->
             </v-sheet>
           </v-sheet>
@@ -523,6 +524,39 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <!-- 영향도 분석 다이얼로그 -->
+    <v-dialog max-width="700" v-model="impactDialogShow" scrollable>
+      <v-card>
+        <v-card-title class="font-weight-bold">영향도 분석 - '{{ detailDomain }}'</v-card-title>
+        <v-card-text>
+          <v-progress-linear v-if="impactLoading" indeterminate color="indigo darken-2" />
+          <template v-if="!impactLoading">
+            <div class="font-weight-bold mb-2">연관 용어 ({{ impactTerms.length }}건)</div>
+            <v-simple-table dense v-if="impactTerms.length > 0">
+              <template v-slot:default>
+                <thead>
+                  <tr>
+                    <th>용어명</th>
+                    <th>영문약어명</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(t, i) in impactTerms" :key="'term_'+i">
+                    <td>{{ t.termsNm }}</td>
+                    <td>{{ t.termsEngAbrvNm }}</td>
+                  </tr>
+                </tbody>
+              </template>
+            </v-simple-table>
+            <v-alert v-else type="info" dense text class="mt-1">연관 용어가 없습니다.</v-alert>
+          </template>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="ndColor" text @click="impactDialogShow = false">닫기</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-main>
 </template>
 
@@ -646,6 +680,10 @@ export default {
     updateDomain_cretUserId: null,
     updateDomain_updtDt: null,
     updateDomain_updtUserId: null,
+    // 영향도 분석
+    impactDialogShow: false,
+    impactLoading: false,
+    impactTerms: [],
     // 삭제 관련
     removeItems: [],
     // 상단 테이블 헤더
@@ -752,6 +790,23 @@ export default {
       this.detailDomain = item.domainNm;
       // remove item에 단독으로 넣어주기
       this.removeItems = [item];
+    },
+    openImpactDialog() {
+      if (!this.selectedItem || this.selectedItem.length === 0) return;
+      const domainNm = this.selectedItem[0].domainNm;
+      this.impactDialogShow = true;
+      this.impactLoading = true;
+      this.impactTerms = [];
+      axios.get(this.$APIURL.base + 'api/std/impact/domain', { params: { domainNm: domainNm } })
+        .then(res => {
+          this.impactTerms = res.data.terms || [];
+        })
+        .catch(err => {
+          console.error('영향도 분석 조회 실패', err);
+        })
+        .finally(() => {
+          this.impactLoading = false;
+        });
     },
     resetDetail() {
       // 선택한 도메인 정보를 리셋

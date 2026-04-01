@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="impact">
+
+	<!-- 단어 → 연관 용어 -->
+	<select id="selectImpactTermsByWordId" parameterType="String" resultType="java.util.HashMap">
+		SELECT t.TERMS_NM AS "termsNm",
+			   t.TERMS_ENG_ABRV_NM AS "termsEngAbrvNm",
+			   t.DOMAIN_NM AS "domainNm"
+		FROM TB_TERMS_WORDS tw
+		JOIN TB_TERMS t ON tw.TERMS_ID = t.TERMS_ID
+		WHERE tw.WORD_ID = #{wordId}
+		ORDER BY t.TERMS_NM
+	</select>
+
+	<!-- 단어 → 연관 컬럼 (최신 수집건 기준) -->
+	<select id="selectImpactColumnsByWordId" parameterType="String" resultType="java.util.HashMap">
+		SELECT a.OBJ_NM AS "objNm",
+			   a.ATTR_NM AS "attrNm",
+			   a.ATTR_NM_KR AS "attrNmKr",
+			   m.DM_NM AS "dataModelNm"
+		FROM TB_DATA_MODEL_ATTR a
+		JOIN TB_DATA_MODEL m ON a.DM_ID = m.DM_ID
+		WHERE a.DM_CLCT_ID IN (
+			SELECT c.DM_CLCT_ID
+			FROM TB_DATA_MODEL_CLCT c
+			WHERE c.CLCT_END_DT = (
+				SELECT MAX(c2.CLCT_END_DT)
+				FROM TB_DATA_MODEL_CLCT c2
+				WHERE c2.DM_ID = c.DM_ID
+			)
+		)
+		AND a.ATTR_NM ILIKE '%' || (
+			SELECT w.WORD_ENG_ABRV_NM FROM TB_WORD w WHERE w.WORD_ID = #{wordId}
+		) || '%'
+		ORDER BY m.DM_NM, a.OBJ_NM, a.ATTR_NM
+	</select>
+
+	<!-- 도메인 → 연관 용어 -->
+	<select id="selectImpactTermsByDomainNm" parameterType="String" resultType="java.util.HashMap">
+		SELECT t.TERMS_NM AS "termsNm",
+			   t.TERMS_ENG_ABRV_NM AS "termsEngAbrvNm"
+		FROM TB_TERMS t
+		WHERE t.DOMAIN_NM = #{domainNm}
+		ORDER BY t.TERMS_NM
+	</select>
+
+</mapper>
