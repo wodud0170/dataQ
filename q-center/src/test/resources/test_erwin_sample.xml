@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<erwin>
+  <model>
+    <entities>
+      <entity id="E1">
+        <name>사용자</name>
+        <physical_name>TB_USER</physical_name>
+        <attributes>
+          <attribute id="A1">
+            <name>사용자ID</name>
+            <physical_name>USER_ID</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>20</length>
+            <nullable>N</nullable>
+            <pk>Y</pk>
+          </attribute>
+          <attribute id="A2">
+            <name>사용자명</name>
+            <physical_name>USER_NM</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>100</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A3">
+            <name>이메일</name>
+            <physical_name>EMAIL</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>200</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A4">
+            <name>전화번호</name>
+            <physical_name>PHONE_NO</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>20</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A5">
+            <name>부서코드</name>
+            <physical_name>DEPT_CD</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>10</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A6">
+            <name>등록일시</name>
+            <physical_name>REG_DT</physical_name>
+            <datatype>DATE</datatype>
+            <length>0</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A7">
+            <name>사용여부</name>
+            <physical_name>USE_YN</physical_name>
+            <datatype>CHAR</datatype>
+            <length>1</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+        </attributes>
+      </entity>
+      <entity id="E2">
+        <name>부서</name>
+        <physical_name>TB_DEPT</physical_name>
+        <attributes>
+          <attribute id="A8">
+            <name>부서코드</name>
+            <physical_name>DEPT_CD</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>10</length>
+            <nullable>N</nullable>
+            <pk>Y</pk>
+          </attribute>
+          <attribute id="A9">
+            <name>부서명</name>
+            <physical_name>DEPT_NM</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>100</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A10">
+            <name>상위부서코드</name>
+            <physical_name>UPPER_DEPT_CD</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>10</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A11">
+            <name>부서레벨</name>
+            <physical_name>DEPT_LVL</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>2</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A12">
+            <name>정렬순서</name>
+            <physical_name>SORT_ORD</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>5</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A13">
+            <name>사용여부</name>
+            <physical_name>USE_YN</physical_name>
+            <datatype>CHAR</datatype>
+            <length>1</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+        </attributes>
+      </entity>
+      <entity id="E3">
+        <name>주문</name>
+        <physical_name>TB_ORDER</physical_name>
+        <attributes>
+          <attribute id="A14">
+            <name>주문번호</name>
+            <physical_name>ORDER_NO</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>30</length>
+            <nullable>N</nullable>
+            <pk>Y</pk>
+          </attribute>
+          <attribute id="A15">
+            <name>주문일자</name>
+            <physical_name>ORDER_DT</physical_name>
+            <datatype>DATE</datatype>
+            <length>0</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A16">
+            <name>주문자ID</name>
+            <physical_name>ORDER_USER_ID</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>20</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A17">
+            <name>주문상태코드</name>
+            <physical_name>ORDER_STATUS_CD</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>10</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A18">
+            <name>총금액</name>
+            <physical_name>TOTAL_AMT</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>15</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A19">
+            <name>배송주소</name>
+            <physical_name>DLVR_ADDR</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>500</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A20">
+            <name>비고</name>
+            <physical_name>REMARK</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>1000</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A21">
+            <name>등록일시</name>
+            <physical_name>REG_DT</physical_name>
+            <datatype>DATE</datatype>
+            <length>0</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+        </attributes>
+      </entity>
+      <entity id="E4">
+        <name>주문상세</name>
+        <physical_name>TB_ORDER_DTL</physical_name>
+        <attributes>
+          <attribute id="A22">
+            <name>주문번호</name>
+            <physical_name>ORDER_NO</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>30</length>
+            <nullable>N</nullable>
+            <pk>Y</pk>
+          </attribute>
+          <attribute id="A23">
+            <name>순번</name>
+            <physical_name>SEQ_NO</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>5</length>
+            <nullable>N</nullable>
+            <pk>Y</pk>
+          </attribute>
+          <attribute id="A24">
+            <name>상품코드</name>
+            <physical_name>PROD_CD</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>20</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A25">
+            <name>상품명</name>
+            <physical_name>PROD_NM</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>200</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A26">
+            <name>수량</name>
+            <physical_name>QTY</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>10</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A27">
+            <name>단가</name>
+            <physical_name>UNIT_PRICE</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>15</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A28">
+            <name>금액</name>
+            <physical_name>AMT</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>15</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+        </attributes>
+      </entity>
+      <entity id="E5">
+        <name>상품</name>
+        <physical_name>TB_PRODUCT</physical_name>
+        <attributes>
+          <attribute id="A29">
+            <name>상품코드</name>
+            <physical_name>PROD_CD</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>20</length>
+            <nullable>N</nullable>
+            <pk>Y</pk>
+          </attribute>
+          <attribute id="A30">
+            <name>상품명</name>
+            <physical_name>PROD_NM</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>200</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A31">
+            <name>상품분류코드</name>
+            <physical_name>PROD_CATG_CD</physical_name>
+            <datatype>VARCHAR2</datatype>
+            <length>10</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A32">
+            <name>판매가격</name>
+            <physical_name>SALE_PRICE</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>15</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A33">
+            <name>재고수량</name>
+            <physical_name>STOCK_QTY</physical_name>
+            <datatype>NUMBER</datatype>
+            <length>10</length>
+            <nullable>Y</nullable>
+            <pk>N</pk>
+          </attribute>
+          <attribute id="A34">
+            <name>사용여부</name>
+            <physical_name>USE_YN</physical_name>
+            <datatype>CHAR</datatype>
+            <length>1</length>
+            <nullable>N</nullable>
+            <pk>N</pk>
+          </attribute>
+        </attributes>
+      </entity>
+    </entities>
+  </model>
+</erwin>
