@@ -55,22 +55,35 @@
 		<id column="domainStndRate" property="domainStndRate"/>
 	</resultMap>
 	<select id="selectDataModelStat" resultMap="dataModelStatMap">
-			select 		
+			select
 				 count(A.DM_ID) as dataModelCnt
 				,sum(COALESCE(B.OBJ_CNT,0)) as objCnt
 				,sum(COALESCE(B.ATTR_CNT,0)) as attrCnt
-				,ROUND(avg(COALESCE(B.TOTAL_STND_RATE,0)),2) as totalStndRate
-				,ROUND(avg(COALESCE(B.TERMS_STND_RATE,0)),2) as termsStndRate
-				,ROUND(avg(COALESCE(B.WORD_STND_RATE,0)),2) as wordStndRate
-				,ROUND(avg(COALESCE(B.DOMAIN_STND_RATE,0)),2) as domainStndRate
+				,COALESCE(D.totalStndRate, 0) as totalStndRate
+				,COALESCE(D.totalStndRate, 0) as termsStndRate
+				,COALESCE(D.wordStndRate, 0) as wordStndRate
+				,COALESCE(D.domainStndRate, 0) as domainStndRate
 			from TB_DATA_MODEL A LEFT OUTER JOIN (
 				select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID
-				  ,(S.TERMS_STND_RATE+S.WORD_STND_RATE+S.DOMAIN_STND_RATE)/3::NUMERIC as TOTAL_STND_RATE 
-				  ,S.TERMS_STND_RATE, S.WORD_STND_RATE, S.DOMAIN_STND_RATE, T.CLCT_END_DT as CLCT_DT
 				from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
-				where S.DM_CLCT_ID = T.DM_CLCT_ID and 
+				where S.DM_CLCT_ID = T.DM_CLCT_ID and
 				    T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID)
 				) B on A.DM_ID = B.DM_ID
+			LEFT OUTER JOIN (
+				select J.DM_ID,
+					CASE WHEN J.TOTAL_CNT > 0
+						THEN ROUND((1.0 - (J.RESULT_CNT::decimal / J.TOTAL_CNT)) * 100, 1)
+						ELSE 0 END as totalStndRate,
+					CASE WHEN J.TOTAL_CNT > 0
+						THEN ROUND((1.0 - (J.RESULT_CNT::decimal / J.TOTAL_CNT)) * 100, 1)
+						ELSE 0 END as wordStndRate,
+					CASE WHEN J.TOTAL_CNT > 0
+						THEN ROUND((1.0 - (J.RESULT_CNT::decimal / J.TOTAL_CNT)) * 100, 1)
+						ELSE 0 END as domainStndRate
+				from TB_DIAG_JOB J
+				where J.STATUS = 'DONE'
+					and J.END_DT = (select max(END_DT) from TB_DIAG_JOB where DM_ID = J.DM_ID and STATUS = 'DONE')
+				) D on A.DM_ID = D.DM_ID
 			where A.USE_YN = 'Y'
 	</select>
 
