@@ -1,189 +1,205 @@
 <template>
   <v-main>
     <v-sheet class="containerWrapper">
+      <!-- ===== 1. 표준 현황 ===== -->
       <v-card class="itemsWrapper">
         <h2><v-icon>grid_view</v-icon>&nbsp;&nbsp;표준 현황</h2>
         <v-sheet class="chartWrapper">
           <!-- 용어 -->
-          <v-card class="top_chart" v-on:click.stop="addTabItem('용어', 'term')">
-
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6 mt-2 mb-2 fontSize08">
-                용어
-              </div>
-              <div class="text-h2 fontSize225" :style="{ fontWeight: '700', textAlign: 'center' }">
-                {{ termsCnt }}
-              </div>
-            </v-card-text>
+          <v-card class="std-card" v-on:click.stop="addTabItem('용어', 'term')">
+            <div class="std-card__icon" style="background: linear-gradient(135deg, #3F51B5, #5C6BC0);">
+              <v-icon dark large>mdi-book-open-variant</v-icon>
+            </div>
+            <div class="std-card__content">
+              <div class="std-card__label">용어</div>
+              <div class="std-card__value">{{ termsCnt }}<span class="std-card__unit">건</span></div>
+            </div>
           </v-card>
 
           <!-- 단어 -->
-          <v-card class="top_chart" v-on:click.stop="addTabItem('단어', 'word')">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6  mt-2 mb-2 fontSize08">
-                단어
-              </div>
-              <div class="text-h2 fontSize225" :style="{ fontWeight: '700', textAlign: 'center' }">
-                {{ wordCnt }}
-              </div>
-            </v-card-text>
+          <v-card class="std-card" v-on:click.stop="addTabItem('단어', 'word')">
+            <div class="std-card__icon" style="background: linear-gradient(135deg, #303F9F, #5C6BC0);">
+              <v-icon dark large>mdi-alphabetical</v-icon>
+            </div>
+            <div class="std-card__content">
+              <div class="std-card__label">단어</div>
+              <div class="std-card__value">{{ wordCnt }}<span class="std-card__unit">건</span></div>
+            </div>
           </v-card>
+
           <!-- 도메인 -->
-          <v-card class="top_chart" v-on:click.stop="addTabItem('도메인', 'domain')">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6  mt-2 mb-2 fontSize08">
-                도메인
-              </div>
-              <div class="text-h2 fontSize225" :style="{ fontWeight: '700', textAlign: 'center' }">
-                {{ domainCnt }}
-              </div>
-            </v-card-text>
+          <v-card class="std-card" v-on:click.stop="addTabItem('도메인', 'domain')">
+            <div class="std-card__icon" style="background: linear-gradient(135deg, #283593, #5C6BC0);">
+              <v-icon dark large>mdi-domain</v-icon>
+            </div>
+            <div class="std-card__content">
+              <div class="std-card__label">도메인</div>
+              <div class="std-card__value">{{ domainCnt }}<span class="std-card__unit">건</span></div>
+            </div>
           </v-card>
         </v-sheet>
       </v-card>
+
+      <!-- ===== 2. 데이터 모델 현황 ===== -->
       <v-card class="itemsWrapper">
         <h2><v-icon>grading</v-icon>&nbsp;&nbsp;데이터 모델 현황</h2>
         <v-sheet class="chartWrapper_2">
           <!-- 모델 -->
-          <v-card class="topDmTextChart">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="titleFont fontSize08">
-                모델 갯수
-              </div>
-              <div class="contentFont fontSize225">
-                {{ dataModelCnt }}
-              </div>
-            </v-card-text>
+          <v-card class="std-card std-card--sm">
+            <div class="std-card__icon std-card__icon--sm" style="background: linear-gradient(135deg, #3F51B5, #7986CB);">
+              <v-icon dark>mdi-database</v-icon>
+            </div>
+            <div class="std-card__content">
+              <div class="std-card__label">모델</div>
+              <div class="std-card__value std-card__value--sm">{{ dataModelCnt }}<span class="std-card__unit">건</span></div>
+            </div>
           </v-card>
           <!-- 테이블 -->
-          <v-card class="topDmTextChart">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="titleFont fontSize08">
-                테이블 갯수
-              </div>
-              <div class="contentFont fontSize225">
-                {{ objCnt }}
-              </div>
-            </v-card-text>
+          <v-card class="std-card std-card--sm">
+            <div class="std-card__icon std-card__icon--sm" style="background: linear-gradient(135deg, #303F9F, #7986CB);">
+              <v-icon dark>mdi-table</v-icon>
+            </div>
+            <div class="std-card__content">
+              <div class="std-card__label">테이블</div>
+              <div class="std-card__value std-card__value--sm">{{ objCnt }}<span class="std-card__unit">건</span></div>
+            </div>
           </v-card>
           <!-- 컬럼 -->
-          <v-card class="topDmTextChart">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="titleFont fontSize08">
-                컬럼 갯수
-              </div>
-              <div class="contentFont fontSize225">
-                {{ attrCnt }}
-              </div>
-            </v-card-text>
+          <v-card class="std-card std-card--sm">
+            <div class="std-card__icon std-card__icon--sm" style="background: linear-gradient(135deg, #283593, #7986CB);">
+              <v-icon dark>mdi-view-column</v-icon>
+            </div>
+            <div class="std-card__content">
+              <div class="std-card__label">컬럼</div>
+              <div class="std-card__value std-card__value--sm">{{ attrCnt }}<span class="std-card__unit">건</span></div>
+            </div>
           </v-card>
         </v-sheet>
 
         <v-sheet class="chartWrapper_3">
           <!-- 용어 표준 준수율 -->
-          <div class="topDmPieChart">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6 mt-2 mb-2 fontSize08">
-                용어 표준 준수율
-              </div>
-              <apexchart type="pie" class="chart_full" :options="term_pie_chartOptions" :series="term_series"
-                :key="term_pie_Key"></apexchart>
-            </v-card-text>
+          <div class="donut-chart-wrapper">
+            <div class="donut-chart-title">용어 표준 준수율</div>
+            <apexchart type="donut" class="chart_full" :options="term_pie_chartOptions" :series="term_series"
+              :key="term_pie_Key"></apexchart>
           </div>
 
           <!-- 단어 표준 준수율 -->
-          <div class="topDmPieChart">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6  mt-2 mb-2 fontSize08">
-                단어 표준 준수율
-              </div>
-              <apexchart type="pie" class="chart_full" :options="word_pie_chartOptions" :series="word_series"
-                :key="word_pie_Key"></apexchart>
-
-            </v-card-text>
+          <div class="donut-chart-wrapper">
+            <div class="donut-chart-title">단어 표준 준수율</div>
+            <apexchart type="donut" class="chart_full" :options="word_pie_chartOptions" :series="word_series"
+              :key="word_pie_Key"></apexchart>
           </div>
 
           <!-- 도메인 표준 준수율 -->
-          <div class="topDmPieChart">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6  mt-2 mb-2 fontSize08">
-                도메인 표준 준수율
-              </div>
-              <apexchart type="pie" class="chart_full" :options="domain_pie_chartOptions" :series="domain_series"
-                :key="domain_pie_Key"></apexchart>
-            </v-card-text>
+          <div class="donut-chart-wrapper">
+            <div class="donut-chart-title">도메인 표준 준수율</div>
+            <apexchart type="donut" class="chart_full" :options="domain_pie_chartOptions" :series="domain_series"
+              :key="domain_pie_Key"></apexchart>
           </div>
         </v-sheet>
       </v-card>
 
+      <!-- ===== 3. 승인 현황 ===== -->
       <v-card class="itemsWrapper">
         <h2><v-icon>dashboard_customize</v-icon>&nbsp;&nbsp;승인 현황</h2>
         <v-sheet class="chartWrapper">
           <!-- 승인요청 -->
-          <v-card class="bottom_chart" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('REQUESTED');">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6 fontSize08 mt-2 mb-2">
-                승인요청
-              </div>
-              <div class="text-h2 fontSize225" :style="{ fontWeight: '700', textAlign: 'center' }">
-                {{ aprvStatRequestedCnt }}
-              </div>
-            </v-card-text>
+          <v-card class="aprv-card" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('REQUESTED');">
+            <div class="aprv-card__bar" style="background: #1976D2;"></div>
+            <div class="aprv-card__icon-area" style="background: rgba(25,118,210,0.1);">
+              <v-icon color="#1976D2" large>mdi-send</v-icon>
+            </div>
+            <div class="aprv-card__content">
+              <div class="aprv-card__label">승인요청</div>
+              <div class="aprv-card__value">{{ aprvStatRequestedCnt }}<span class="aprv-card__unit">건</span></div>
+            </div>
           </v-card>
           <!-- 검토 -->
-          <v-card class="bottom_chart" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('CHECKING');">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6 fontSize08 mt-2 mb-2">
-                검토
-              </div>
-              <div class="text-h2 fontSize225" :style="{ fontWeight: '700', textAlign: 'center' }">
-                {{ aprvStatCheckingCnt }}
-              </div>
-            </v-card-text></v-card>
+          <v-card class="aprv-card" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('CHECKING');">
+            <div class="aprv-card__bar" style="background: #FB8C00;"></div>
+            <div class="aprv-card__icon-area" style="background: rgba(251,140,0,0.1);">
+              <v-icon color="#FB8C00" large>mdi-eye</v-icon>
+            </div>
+            <div class="aprv-card__content">
+              <div class="aprv-card__label">검토</div>
+              <div class="aprv-card__value">{{ aprvStatCheckingCnt }}<span class="aprv-card__unit">건</span></div>
+            </div>
+          </v-card>
           <!-- 승인 완료 -->
-          <v-card class="bottom_chart" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('APPROVED');">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6 fontSize08 mt-2 mb-2">
-                승인완료
-              </div>
-              <div class="text-h2 fontSize225" :style="{ fontWeight: '700', textAlign: 'center' }">
-                {{ aprvStatApprovedCnt }}
-              </div>
-            </v-card-text></v-card>
+          <v-card class="aprv-card" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('APPROVED');">
+            <div class="aprv-card__bar" style="background: #43A047;"></div>
+            <div class="aprv-card__icon-area" style="background: rgba(67,160,71,0.1);">
+              <v-icon color="#43A047" large>mdi-check-circle</v-icon>
+            </div>
+            <div class="aprv-card__content">
+              <div class="aprv-card__label">승인완료</div>
+              <div class="aprv-card__value">{{ aprvStatApprovedCnt }}<span class="aprv-card__unit">건</span></div>
+            </div>
+          </v-card>
           <!-- 반려 -->
-          <v-card class="bottom_chart" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('REJECTED');">
-            <v-card-text class="pt-0 cardTextWrapper">
-              <div class="text-h6 fontSize08 mt-2 mb-2">
-                반려
-              </div>
-              <div class="text-h2 fontSize225" :style="{ fontWeight: '700', textAlign: 'center' }">
-                {{ aprvStatRejectedCnt }}
-              </div>
-            </v-card-text></v-card>
+          <v-card class="aprv-card" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('REJECTED');">
+            <div class="aprv-card__bar" style="background: #E53935;"></div>
+            <div class="aprv-card__icon-area" style="background: rgba(229,57,53,0.1);">
+              <v-icon color="#E53935" large>mdi-close-circle</v-icon>
+            </div>
+            <div class="aprv-card__content">
+              <div class="aprv-card__label">반려</div>
+              <div class="aprv-card__value">{{ aprvStatRejectedCnt }}<span class="aprv-card__unit">건</span></div>
+            </div>
+          </v-card>
         </v-sheet>
       </v-card>
+
+      <!-- ===== 4. 최근 활동 / 빠른 액션 ===== -->
       <v-card class="itemsWrapper" :style="{ overflow: 'hidden' }">
-        <h2><v-icon>trending_up</v-icon>&nbsp;&nbsp;Top 10 데이터 모델(표준준수율 기준)</h2>
-        <!-- 차트 영역 -->
-        <v-sheet class="barchartWrapper">
-          <apexchart class="bar_full" type="bar" height="95%" ref="barchart" :key="barchartKey"
-            :options="bar_chartOptions" :series="bar_series"></apexchart>
-        </v-sheet>
-        <!-- 테이블 영역 -->
-        <v-sheet class="barchartWrapper_bottom">
-          <v-data-table id="topTen_table" :headers="topTenDataModelHeaders" :items="topTenDataModelList"
-            hide-default-footer item-key="rank" class="px-4 pb-3" v-model="topTenDataModelList" :loading="loadTable"
-            loading-text="잠시만 기다려주세요.">
-            <template #top>
-              <v-progress-linear v-show="loadTable" color="indigo darken-2" indeterminate />
-            </template>
-            <template #no-data>
-              <v-alert v-show="!loadTable">
-                데이터가 존재하지 않습니다.
-              </v-alert>
-              <span v-show="loadTable">잠시만 기다려주세요.</span>
-            </template>
-          </v-data-table>
+        <h2><v-icon>mdi-lightning-bolt</v-icon>&nbsp;&nbsp;최근 활동 / 빠른 액션</h2>
+        <v-sheet class="bottom-split">
+          <!-- 좌측: 최근 변경 이력 -->
+          <div class="recent-history">
+            <div class="section-subtitle">최근 변경 이력</div>
+            <div v-if="recentHistoryLoading" class="recent-history__loading">
+              <v-progress-circular indeterminate color="indigo" size="24" />
+            </div>
+            <div v-else-if="recentHistoryList.length === 0" class="recent-history__empty">
+              변경 이력이 없습니다.
+            </div>
+            <div v-else class="recent-history__list">
+              <div v-for="(item, idx) in recentHistoryList" :key="idx" class="recent-history__item">
+                <div class="recent-history__dt">{{ item.changeDt }}</div>
+                <v-chip :color="getChangeTypeColor(item.changeType)" x-small dark class="mr-1">{{ getChangeTypeLabel(item.changeType) }}</v-chip>
+                <span class="recent-history__target">{{ getTargetTypeLabel(item.targetType) }}</span>
+                <span class="recent-history__sep">|</span>
+                <span class="recent-history__nm">{{ item.targetNm }}</span>
+                <span v-if="item.summary" class="recent-history__summary">- {{ item.summary }}</span>
+              </div>
+            </div>
+            <div class="recent-history__more">
+              <v-btn text small color="indigo" @click="addTabItem('변경 이력', 'changeHistory')">더보기 &rarr;</v-btn>
+            </div>
+          </div>
+
+          <!-- 우측: 빠른 액션 -->
+          <div class="quick-actions">
+            <div class="section-subtitle">빠른 액션</div>
+            <div class="quick-actions__grid">
+              <v-card class="quick-action-btn" @click="addTabItem('표준화 추천', 'termRecommend')">
+                <v-icon color="#3F51B5" x-large>mdi-auto-fix</v-icon>
+                <div class="quick-action-btn__label">표준화 추천</div>
+                <div class="quick-action-btn__desc">표준 용어 자동 추천</div>
+              </v-card>
+              <v-card class="quick-action-btn" @click="addTabItem('진단 실행', 'dataDiag')">
+                <v-icon color="#303F9F" x-large>mdi-stethoscope</v-icon>
+                <div class="quick-action-btn__label">진단 실행</div>
+                <div class="quick-action-btn__desc">표준화 진단 수행</div>
+              </v-card>
+              <v-card class="quick-action-btn" @click="addTabItem('구조 진단', 'schemaCompare')">
+                <v-icon color="#283593" x-large>mdi-file-compare</v-icon>
+                <div class="quick-action-btn__label">구조 진단</div>
+                <div class="quick-action-btn__desc">모델-DB 구조 비교</div>
+              </v-card>
+            </div>
+          </div>
         </v-sheet>
       </v-card>
     </v-sheet>
@@ -218,15 +234,39 @@ export default {
     term_series: [],
     word_series: [],
     domain_series: [],
-    // 파이차트 옵션
+    // 도넛 차트 옵션 (공통 생성 함수로 대체)
     term_pie_chartOptions: {
-      colors: ['#008FFB', '#00E396'],
+      colors: ['#43A047', '#E53935'],
       labels: ['준수', '미준수'],
       chart: {
-        width: 200,
-        height: 200,
-        type: 'pie',
+        type: 'donut',
       },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '65%',
+            labels: {
+              show: true,
+              name: { show: true, fontSize: '13px', color: '#546E7A' },
+              value: { show: true, fontSize: '20px', fontWeight: 700, color: '#283593' },
+              total: {
+                show: true,
+                label: '준수율',
+                fontSize: '12px',
+                color: '#546E7A',
+                formatter: function (w) {
+                  var s = w.globals.seriesTotals;
+                  if (s.length > 0 && (s[0] + s[1]) > 0) return s[0] + '%';
+                  return '0%';
+                }
+              }
+            }
+          }
+        }
+      },
+      dataLabels: { enabled: false },
+      legend: { show: false },
+      stroke: { width: 2, colors: ['#fff'] },
       tooltip: {
         y: {
           formatter: function (val) {
@@ -235,15 +275,39 @@ export default {
         }
       }
     },
-    term_pie_Key: 0, // 용어  파이차트 key 값 초기화
+    term_pie_Key: 0,
     word_pie_chartOptions: {
-      colors: ['#FF4560', '#FEB019'],
+      colors: ['#43A047', '#FB8C00'],
       labels: ['준수', '미준수'],
       chart: {
-        width: 200,
-        height: 200,
-        type: 'pie',
+        type: 'donut',
       },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '65%',
+            labels: {
+              show: true,
+              name: { show: true, fontSize: '13px', color: '#546E7A' },
+              value: { show: true, fontSize: '20px', fontWeight: 700, color: '#283593' },
+              total: {
+                show: true,
+                label: '준수율',
+                fontSize: '12px',
+                color: '#546E7A',
+                formatter: function (w) {
+                  var s = w.globals.seriesTotals;
+                  if (s.length > 0 && (s[0] + s[1]) > 0) return s[0] + '%';
+                  return '0%';
+                }
+              }
+            }
+          }
+        }
+      },
+      dataLabels: { enabled: false },
+      legend: { show: false },
+      stroke: { width: 2, colors: ['#fff'] },
       tooltip: {
         y: {
           formatter: function (val) {
@@ -252,15 +316,39 @@ export default {
         }
       }
     },
-    word_pie_Key: 0, // 단어  파이차트 key 값 초기화
+    word_pie_Key: 0,
     domain_pie_chartOptions: {
-      colors: ['#775DD0', '#43BCCD'],
+      colors: ['#43A047', '#E53935'],
       labels: ['준수', '미준수'],
       chart: {
-        width: 200,
-        height: 200,
-        type: 'pie',
+        type: 'donut',
       },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '65%',
+            labels: {
+              show: true,
+              name: { show: true, fontSize: '13px', color: '#546E7A' },
+              value: { show: true, fontSize: '20px', fontWeight: 700, color: '#283593' },
+              total: {
+                show: true,
+                label: '준수율',
+                fontSize: '12px',
+                color: '#546E7A',
+                formatter: function (w) {
+                  var s = w.globals.seriesTotals;
+                  if (s.length > 0 && (s[0] + s[1]) > 0) return s[0] + '%';
+                  return '0%';
+                }
+              }
+            }
+          }
+        }
+      },
+      dataLabels: { enabled: false },
+      legend: { show: false },
+      stroke: { width: 2, colors: ['#fff'] },
       tooltip: {
         y: {
           formatter: function (val) {
@@ -269,80 +357,10 @@ export default {
         }
       }
     },
-    domain_pie_Key: 0, // 단어  파이차트 key 값 초기화
-    // 바 차트 옵션
-    bar_series: [{
-      name: '전체',
-      data: []
-    }, {
-      name: '용어',
-      data: []
-    }, {
-      name: '단어',
-      data: []
-    }, {
-      name: '도메인',
-      data: []
-    }],
-    bar_chartOptions: {
-      chart: {
-        type: 'bar',
-        height: 200,
-        toolbar: {
-          show: false,
-        },
-      },
-      plotOptions: {
-        bar: {
-          horizontal: false,
-          columnWidth: '55%',
-          endingShape: 'rounded'
-        },
-      },
-      dataLabels: {
-        enabled: false
-      },
-      stroke: {
-        show: true,
-        width: 2,
-        colors: ['transparent']
-      },
-      xaxis: {
-        categories: [],
-        labels: {
-          rotate: 0,
-          hideOverlappingLabels: false,
-        },
-      },
-      yaxis: {
-        show: false,
-        title: {
-          text: '%'
-        }
-      },
-      fill: {
-        opacity: 1
-      },
-      tooltip: {
-        y: {
-          formatter: function (val) {
-            return val + "%"
-          }
-        }
-      }
-    },
-    barchartKey: 0, // 바 차트 key 값 초기화
-    topTenDataModelList: [],
-    topTenDataModelHeaders: [
-      { text: '순위', align: 'center', sortable: false, value: 'rank' },
-      { text: '데이터모델명', align: 'center', sortable: false, value: 'dataModelNm' },
-      { text: '전체', align: 'center', sortable: false, value: 'totalStndRate' },
-      { text: '용어', align: 'center', sortable: false, value: 'termsStndRate' },
-      { text: '단어', align: 'center', sortable: false, value: 'wordStndRate' },
-      { text: '도메인', align: 'center', sortable: false, value: 'domainStndRate' },
-
-    ],
-    loadTable: true,
+    domain_pie_Key: 0,
+    // 최근 변경 이력
+    recentHistoryList: [],
+    recentHistoryLoading: false,
   }),
   watch: {
 
@@ -351,7 +369,7 @@ export default {
     // 대시보드 메뉴 선택 시 호출
     this.getDashboardInfo();
     this.getDataModelStat();
-    this.getTopDataModelList();
+    this.getRecentChangeHistory();
   },
   mounted() {
   },
@@ -360,8 +378,6 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/search/getDashboardInfo").then(result => {
           let _data = result.data;
-
-          // console.log(_data);
 
           this.domainCnt = _data.domainCnt;
           this.aprvStatRequestedCnt = _data.aprvStatRequestedCnt;
@@ -388,8 +404,6 @@ export default {
         axios.get(this.$APIURL.base + "api/search/getDataModelStat").then(result => {
           let _data = result.data;
 
-          // console.log(_data);
-
           this.dataModelCnt = _data.dataModelCnt;
           this.objCnt = _data.objCnt;
           this.attrCnt = _data.attrCnt;
@@ -412,59 +426,39 @@ export default {
         console.error(error);
       }
     },
-    getTopDataModelList() {
-      this.loadTable = true;
+    getRecentChangeHistory() {
+      this.recentHistoryLoading = true;
       try {
-        axios.get(this.$APIURL.base + "api/search/getTopDataModelList").then(result => {
-          let _data = result.data;
-
-          // console.log(_data);
-
-          let xaxis_categories = [];
-          let bar_series_total = [];
-          let bar_series_term = [];
-          let bar_series_word = [];
-          let bar_series_domain = [];
-
-          for (let i = 0; i < _data.length; i++) {
-            xaxis_categories.push('#' + (i + 1));
-            bar_series_total.push(_data[i].totalStndRate);
-            bar_series_term.push(_data[i].termsStndRate);
-            bar_series_word.push(_data[i].wordStndRate);
-            bar_series_domain.push(_data[i].domainStndRate);
-            // 데이터에 rank 추가
-            _data[i].rank = '#' + (i + 1);
-            // 데이터에 % 추가 
-            _data[i].totalStndRate = _data[i].totalStndRate + "%";
-            _data[i].termsStndRate = _data[i].termsStndRate + "%";
-            _data[i].wordStndRate = _data[i].wordStndRate + "%";
-            _data[i].domainStndRate = _data[i].domainStndRate + "%";
-          }
-
-          this.bar_chartOptions.xaxis.categories = xaxis_categories;
-          this.bar_series[0].data = bar_series_total;
-          this.bar_series[1].data = bar_series_term;
-          this.bar_series[2].data = bar_series_word;
-          this.bar_series[3].data = bar_series_domain;
-
-          // key 값을 변경하여 그래프 다시 렌더링
-          this.barchartKey++;
-
-          // 테이블 생성을 위해 바인드
-          this.topTenDataModelList = _data;
-          this.loadTable = false;
+        axios.post(this.$APIURL.base + "api/std/getChangeHistoryList", {
+          targetType: "",
+          changeType: "",
+          fromDt: "",
+          toDt: ""
+        }).then(result => {
+          let _data = result.data || [];
+          this.recentHistoryList = _data.slice(0, 5);
+          this.recentHistoryLoading = false;
         }).catch(error => {
-          this.$swal.fire({
-            title: '대시보드 Top 10 데이터 모델 바인드 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-          this.loadTable = false;
+          console.error("최근 변경 이력 조회 실패:", error);
+          this.recentHistoryList = [];
+          this.recentHistoryLoading = false;
         });
       } catch (error) {
         console.error(error);
-        this.loadTable = false;
+        this.recentHistoryLoading = false;
       }
+    },
+    getChangeTypeColor(type) {
+      var map = { 'INSERT': 'green', 'UPDATE': 'blue', 'DELETE': 'red', 'BULK_INSERT': 'purple' };
+      return map[type] || 'grey';
+    },
+    getChangeTypeLabel(type) {
+      var map = { 'INSERT': '등록', 'UPDATE': '수정', 'DELETE': '삭제', 'BULK_INSERT': '일괄등록' };
+      return map[type] || type;
+    },
+    getTargetTypeLabel(type) {
+      var map = { 'WORD': '단어', 'TERM': '용어', 'DOMAIN': '도메인', 'CODE': '코드', 'CODE_DATA': '코드데이터' };
+      return map[type] || type;
     },
     addTabItem(title, name) {
       // 1. 탭과 네비게이션을 동기화
@@ -523,55 +517,9 @@ export default {
   letter-spacing: 0.02em;
 }
 
-.cardTextWrapper {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-}
-
-.cardTextWrapper .text-h6 {
-  position: absolute;
-  top: 0;
-}
-
 .itemsWrapper h2 i {
   color: #3F51B5;
   font-size: 1.3rem;
-}
-
-.top_chart {
-  position: relative;
-  width: 30%;
-  height: calc(80% - 20px);
-  margin: 8px;
-  cursor: pointer;
-  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
-  color: #283593 !important;
-  border-radius: 14px !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.top_chart:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(63, 81, 181, 0.2) !important;
-}
-
-.bottom_chart {
-  position: relative;
-  width: 22%;
-  height: calc(70% - 20px);
-  margin: 8px;
-  cursor: pointer;
-  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
-  color: #283593 !important;
-  border-radius: 14px !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.bottom_chart:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(63, 81, 181, 0.2) !important;
 }
 
 .chartWrapper {
@@ -583,19 +531,82 @@ export default {
   position: relative;
 }
 
-.barchartWrapper {
+/* ===== 1. 표준 현황 카드 ===== */
+.std-card {
   display: flex;
-  height: calc(60% - 36px);
-  justify-content: space-around;
-  bottom: 0px;
-  position: relative;
+  flex-direction: row;
+  align-items: center;
+  width: 30%;
+  height: calc(70% - 20px);
+  margin: 8px;
+  cursor: pointer;
+  background: #fff !important;
+  border: 1px solid #E8EAF6;
+  border-radius: 12px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
-  align-items: flex-start;
 }
 
+.std-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(63, 81, 181, 0.18) !important;
+}
+
+.std-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  min-width: 72px;
+  height: 100%;
+}
+
+.std-card__icon--sm {
+  width: 56px;
+  min-width: 56px;
+}
+
+.std-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 16px;
+}
+
+.std-card__label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #546E7A;
+  margin-bottom: 4px;
+}
+
+.std-card__value {
+  font-size: 2.2vw;
+  font-weight: 700;
+  color: #283593;
+  line-height: 1.1;
+}
+
+.std-card__value--sm {
+  font-size: 1.6vw;
+}
+
+.std-card__unit {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #9E9E9E;
+  margin-left: 4px;
+}
+
+.std-card--sm {
+  height: calc(80% - 16px);
+}
+
+/* ===== 2. 데이터 모델 현황 ===== */
 .chartWrapper_2 {
   display: flex;
-  height: calc(40% - 36px);
+  height: calc(35% - 36px);
   justify-content: space-around;
   align-items: center;
   bottom: 0px;
@@ -603,7 +614,7 @@ export default {
 
 .chartWrapper_3 {
   display: flex;
-  height: calc(68% - 36px);
+  height: calc(65% - 20px);
   justify-content: space-around;
   align-items: center;
   bottom: 0px;
@@ -611,115 +622,231 @@ export default {
   background-color: transparent;
 }
 
-.topChartStyle {
-  position: absolute;
-  width: 100%;
-  height: calc(50% - 1px);
-  left: 0;
-  bottom: -22px;
-  margin: 0;
-  padding: 0;
-  opacity: 0.5;
-}
-
-.bottomChartStyle {
-  position: absolute;
-  width: 100%;
-  height: calc(50% - 1px);
-  left: 0;
-  bottom: -38px;
-  margin: 0;
-  padding: 0;
-  opacity: 0.5;
-}
-
-.dividerStyle {
-  width: 100%;
-  position: absolute;
-  left: 0;
-  top: 50%;
-  margin: 0 !important;
-}
-
-.topDmTextChart {
-  position: relative;
-  width: 30%;
-  margin: 8px;
-  height: calc(50% - 20px);
-  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
-  color: #283593 !important;
-  border-radius: 14px !important;
-}
-
-.chartWrapper_2 .topDmTextChart {
-  position: relative;
-  width: 30%;
-  margin: 8px;
-  height: 90%;
-  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
-  color: #283593 !important;
-  border-radius: 14px !important;
-}
-
-.chartWrapper_2 .topDmPieChart {
+.donut-chart-wrapper {
   position: relative;
   width: 30%;
   margin: 8px;
   height: 95%;
-  cursor: pointer;
-  background-color: transparent !important;
-  color: #455A64 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.chartWrapper_3 .topDmTextChart {
+.donut-chart-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #546E7A;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.chart_full {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ===== 3. 승인 현황 카드 ===== */
+.aprv-card {
   position: relative;
-  width: 30%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 22%;
+  height: calc(65% - 20px);
   margin: 8px;
-  height: 60%;
   cursor: pointer;
-  background: linear-gradient(135deg, #E8EAF6 0%, #C5CAE9 100%) !important;
-  color: #283593 !important;
-  border-radius: 14px !important;
+  background: #fff !important;
+  border: 1px solid #ECEFF1;
+  border-radius: 12px !important;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.chartWrapper_3 .topDmPieChart {
-  position: relative;
-  width: 30%;
-  margin: 8px;
-  height: 95%;
-  cursor: pointer;
-  background-color: transparent !important;
-  color: #455A64 !important;
+.aprv-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
 }
 
-.barchartWrapper_bottom {
-  height: calc(48% - 36px);
-  overflow: auto;
+.aprv-card__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
 }
 
-.titleFont {
-  height: 30%;
+.aprv-card__icon-area {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 60px;
+  min-width: 60px;
+  height: 100%;
+}
+
+.aprv-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 12px;
+}
+
+.aprv-card__label {
+  font-size: 0.78rem;
   font-weight: 500;
   color: #546E7A;
+  margin-bottom: 4px;
 }
 
-.contentFont {
-  height: 70%;
+.aprv-card__value {
+  font-size: 2vw;
+  font-weight: 700;
+  color: #283593;
+  line-height: 1.1;
+}
+
+.aprv-card__unit {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #9E9E9E;
+  margin-left: 3px;
+}
+
+/* ===== 4. 최근 활동 / 빠른 액션 ===== */
+.bottom-split {
+  display: flex;
+  flex-direction: row;
+  height: calc(100% - 36px);
+  gap: 16px;
+  background: transparent;
+}
+
+.recent-history {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  background: #FAFBFD;
+  border-radius: 10px;
+  padding: 12px 16px;
+  border: 1px solid #E8EAF6;
+}
+
+.quick-actions {
+  flex: 0.8;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-subtitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3F51B5;
+  margin-bottom: 10px;
+}
+
+.recent-history__loading,
+.recent-history__empty {
+  flex: 1;
   display: flex;
   align-items: center;
-  font-weight: 700;
-  text-align: center;
   justify-content: center;
+  color: #9E9E9E;
+  font-size: 0.85rem;
+}
+
+.recent-history__list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.recent-history__item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 6px 0;
+  border-bottom: 1px solid #ECEFF1;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.recent-history__item:last-child {
+  border-bottom: none;
+}
+
+.recent-history__dt {
+  color: #78909C;
+  font-size: 0.72rem;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.recent-history__target {
+  font-weight: 500;
+  color: #455A64;
+  margin-left: 4px;
+}
+
+.recent-history__sep {
+  margin: 0 4px;
+  color: #CFD8DC;
+}
+
+.recent-history__nm {
+  font-weight: 600;
   color: #283593;
 }
 
-.fontSize08 {
-  font-size: 0.8vw !important;
+.recent-history__summary {
+  color: #78909C;
+  margin-left: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.fontSize225 {
-  font-size: 2.25vw !important;
+.recent-history__more {
+  text-align: right;
+  margin-top: 4px;
+}
+
+.quick-actions__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.quick-action-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 12px !important;
+  cursor: pointer;
+  background: linear-gradient(135deg, #E8EAF6 0%, #f5f5ff 100%) !important;
+  border: 1px solid #C5CAE9;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  gap: 14px;
+  flex: 1;
+}
+
+.quick-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(63, 81, 181, 0.15) !important;
+  background: linear-gradient(135deg, #C5CAE9 0%, #E8EAF6 100%) !important;
+}
+
+.quick-action-btn__label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #283593;
+}
+
+.quick-action-btn__desc {
+  font-size: 0.72rem;
+  color: #78909C;
+  margin-top: 2px;
 }
 </style>
