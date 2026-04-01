@@ -1412,6 +1412,16 @@ public class DataStandardController {
 							+ ". 먼저 단어 승인을 받은 후 용어를 등록해주세요.");
 				}
 
+				// 도메인 유효성 체크
+				if (domainNm != null && !domainNm.trim().isEmpty()) {
+					Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", domainNm.trim());
+					if (domainCheck == null) {
+						throw new RuntimeException("등록되지 않은 도메인입니다: " + domainNm);
+					}
+				} else {
+					domainNm = null; // 빈 문자열을 null로 변환하여 FK 에러 방지
+				}
+
 				// 용어 등록
 				StdTermsVo termsVo = new StdTermsVo();
 				String termsId = StringUtils.getUUID();
