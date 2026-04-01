@@ -12,6 +12,7 @@ public class StdApproveStatVo {
 	private String reqTp;
 	private String reqItemId;
     private String reqItemNm;
+    private String reqItemEngNm;
     private short aprvStat;
     private String reqSysCd;
     private String reqUserId;

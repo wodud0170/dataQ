@@ -250,6 +250,7 @@ export default {
     // 테이블 상단 헤더
     approvalHeaders: [
       { text: '요청 항목명', align: 'center', sortable: false, value: 'reqItemNm' },
+      { text: '영문명', align: 'center', sortable: false, value: 'reqItemEngNm' },
       { text: '요청 유형', align: 'center', sortable: false, value: 'reqTp' },
       { text: '승인 상태', align: 'center', sortable: false, value: 'aprvStat' },
       { text: '요청자ID', align: 'center', sortable: false, value: 'reqUserId' },
