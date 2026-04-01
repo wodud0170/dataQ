@@ -144,6 +144,7 @@ export default {
                 case "domain":
                 case "domainGroup":
                 case "domainClassification":
+                case "changeHistory":
                 case "datamodelStatus":
                 case "datamodelCollection":
                 case "datamodelHistory":
@@ -308,7 +309,7 @@ export default {
                 return;
             } else {
                 // group Active
-                if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification') {
+                if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory') {
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
 
                 } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
@@ -484,7 +485,7 @@ export default {
             } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn') {
                 this.navDmGroup = true;
                 return;
-            } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification') {
+            } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification' || tabitem === 'changeHistory') {
                 this.navDsGroup = true;
                 return;
             } else if (tabitem === 'dqi' || tabitem === 'ctq' || tabitem === 'dqbr') {

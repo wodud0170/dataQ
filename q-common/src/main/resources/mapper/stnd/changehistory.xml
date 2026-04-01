@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="changehistory">
+
+	<!-- 이력 마스터 저장 -->
+	<insert id="insertChangeHistory" parameterType="java.util.HashMap">
+		INSERT INTO TB_CHANGE_HISTORY (
+			CHANGE_ID, CHANGE_TYPE, TARGET_TYPE, TARGET_ID, TARGET_NM,
+			CHANGE_CNT, SUMMARY, PREV_VALUE, CURR_VALUE, CHANGE_USER_ID, CHANGE_DT
+		) VALUES (
+			#{changeId}, #{changeType}, #{targetType}, #{targetId}, #{targetNm},
+			#{changeCnt}, #{summary}, #{prevValue}, #{currValue}, #{changeUserId}, CURRENT_TIMESTAMP
+		)
+	</insert>
+
+	<!-- 이력 상세 저장 (일괄 등록 시) -->
+	<insert id="insertChangeHistoryDetail" parameterType="java.util.HashMap">
+		INSERT INTO TB_CHANGE_HISTORY_DETAIL (
+			CHANGE_ID, SEQ, TARGET_ID, TARGET_NM, DETAIL_TYPE,
+			PREV_VALUE, CURR_VALUE, REMARK
+		) VALUES (
+			#{changeId}, #{seq}, #{targetId}, #{targetNm}, #{detailType},
+			#{prevValue}, #{currValue}, #{remark}
+		)
+	</insert>
+
+	<!-- 이력 목록 조회 -->
+	<select id="selectChangeHistoryList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT CHANGE_ID AS "changeId",
+			CHANGE_TYPE AS "changeType",
+			TARGET_TYPE AS "targetType",
+			TARGET_ID AS "targetId",
+			TARGET_NM AS "targetNm",
+			CHANGE_CNT AS "changeCnt",
+			SUMMARY AS "summary",
+			CHANGE_USER_ID AS "changeUserId",
+			TO_CHAR(CHANGE_DT, 'YYYY-MM-DD HH24:MI:SS') AS "changeDt"
+		FROM TB_CHANGE_HISTORY
+		WHERE 1=1
+		<if test="targetType != null and targetType != ''">
+			AND TARGET_TYPE = #{targetType}
+		</if>
+		<if test="changeType != null and changeType != ''">
+			AND CHANGE_TYPE = #{changeType}
+		</if>
+		<if test="fromDt != null and fromDt != ''">
+			AND CHANGE_DT >= TO_TIMESTAMP(#{fromDt}, 'YYYY-MM-DD')
+		</if>
+		<if test="toDt != null and toDt != ''">
+			AND CHANGE_DT &lt;= TO_TIMESTAMP(#{toDt}, 'YYYY-MM-DD') + INTERVAL '1 day'
+		</if>
+		ORDER BY CHANGE_DT DESC
+		LIMIT 200
+	</select>
+
+	<!-- 이력 상세 조회 (마스터 1건) -->
+	<select id="selectChangeHistoryById" parameterType="String" resultType="java.util.HashMap">
+		SELECT CHANGE_ID AS "changeId",
+			CHANGE_TYPE AS "changeType",
+			TARGET_TYPE AS "targetType",
+			TARGET_ID AS "targetId",
+			TARGET_NM AS "targetNm",
+			CHANGE_CNT AS "changeCnt",
+			SUMMARY AS "summary",
+			PREV_VALUE AS "prevValue",
+			CURR_VALUE AS "currValue",
+			CHANGE_USER_ID AS "changeUserId",
+			TO_CHAR(CHANGE_DT, 'YYYY-MM-DD HH24:MI:SS') AS "changeDt"
+		FROM TB_CHANGE_HISTORY
+		WHERE CHANGE_ID = #{changeId}
+	</select>
+
+	<!-- 이력 상세 목록 (일괄 등록의 상세 건들) -->
+	<select id="selectChangeHistoryDetailList" parameterType="String" resultType="java.util.HashMap">
+		SELECT CHANGE_ID AS "changeId",
+			SEQ AS "seq",
+			TARGET_ID AS "targetId",
+			TARGET_NM AS "targetNm",
+			DETAIL_TYPE AS "detailType",
+			PREV_VALUE AS "prevValue",
+			CURR_VALUE AS "currValue",
+			REMARK AS "remark"
+		FROM TB_CHANGE_HISTORY_DETAIL
+		WHERE CHANGE_ID = #{changeId}
+		ORDER BY SEQ
+	</select>
+
+	<!-- 특정 대상의 이력 조회 (단어/용어/도메인 상세에서 "이력 보기") -->
+	<select id="selectChangeHistoryByTarget" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT CHANGE_ID AS "changeId",
+			CHANGE_TYPE AS "changeType",
+			SUMMARY AS "summary",
+			PREV_VALUE AS "prevValue",
+			CURR_VALUE AS "currValue",
+			CHANGE_USER_ID AS "changeUserId",
+			TO_CHAR(CHANGE_DT, 'YYYY-MM-DD HH24:MI:SS') AS "changeDt"
+		FROM TB_CHANGE_HISTORY
+		WHERE TARGET_TYPE = #{targetType} AND TARGET_ID = #{targetId}
+		ORDER BY CHANGE_DT DESC
+		LIMIT 50
+	</select>
+
+</mapper>

@@ -71,6 +71,15 @@
                         <v-list-item-title>도메인 분류</v-list-item-title>
                     </v-list-item>
 
+                    <v-list-item link id="nav_changeHistory" href="#tab_changeHistory"
+                        active-class="ndColor--text" title="변경 이력"
+                        v-on:click.stop=" addTabItem('변경 이력', 'changeHistory'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>변경 이력</v-list-item-title>
+                    </v-list-item>
+
                     <!-- <v-list-item link id="nav_datamodel" href="#tab_datamodel" active-class="ndColor--text" title="데이터 모델"
                         v-on:click.stop="addTabItem('데이터 모델', 'datamodel');">
                         <v-list-item-icon>

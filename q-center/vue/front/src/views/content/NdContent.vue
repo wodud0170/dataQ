@@ -218,6 +218,12 @@
                     <qcurrent :key="qcurrentKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'changeHistory'" id="tab_changeHistory" class="tab_contents"
+                :class="{ active: this.activeContent === 'changeHistory' }">
+                <keep-alive>
+                    <changeHistory :key="changeHistoryKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
         </div>
         <v-snackbar v-model="removeSnackbar" :timeout="removeSnackbarTimeout">
             {{ removeSnackbarText }}
@@ -248,6 +254,7 @@ import DSDataDiag from "../../components/DSDataDiag.vue"
 import DSDataDiagResult from "../../components/DSDataDiagResult.vue"
 import DSTermRecommend from "../../components/DSTermRecommend.vue"
 import DSSchemaCompare from "../../components/DSSchemaCompare.vue"
+import DSChangeHistory from "../../components/DSChangeHistory.vue"
 import DQDQI from "./../../components/DQDQI.vue"
 import DQCTQ from "./../../components/DQCTQ.vue"
 import DQBR from "./../../components/DQBR.vue"
@@ -326,6 +333,7 @@ export default {
             systemKey: this.createUUID(),
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
+            changeHistoryKey: this.createUUID(),
         }
     },
     components: {
@@ -359,7 +367,8 @@ export default {
         "datasource": MMDatasource,
         "system": MMSystem,
         "scurrent": ANDscurrent,
-        "qcurrent": ANDqcurrent
+        "qcurrent": ANDqcurrent,
+        "changeHistory": DSChangeHistory
     },
     methods: {
         addActiveContent(itemName, itemIdenx) {
@@ -460,6 +469,9 @@ export default {
                     break;
                 case "qcurrent":
                     this.qcurrentKey = this.createUUID();
+                    break;
+                case "changeHistory":
+                    this.changeHistoryKey = this.createUUID();
                     break;
             }
 

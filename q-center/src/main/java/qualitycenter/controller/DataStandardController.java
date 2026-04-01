@@ -19,6 +19,7 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -102,6 +103,9 @@ public class DataStandardController {
 		try {
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			saveChangeHistory("INSERT", "WORD", dataVo.getId(), dataVo.getWordNm(),
+					null, dataVo.toString(), "단어 등록: " + dataVo.getWordNm());
 		} catch (Exception e) {
 			log.error(">> createWord failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -118,8 +122,14 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
+			// 변경 전 값 조회
+			List<StdWordVo> prevList = sqlSessionTemplate.selectList("word.selectWordInfoById", dataVo.getId());
+			String prevValue = prevList != null && !prevList.isEmpty() ? prevList.get(0).toString() : null;
 			sqlSessionTemplate.update("word.updateWord", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			saveChangeHistory("UPDATE", "WORD", dataVo.getId(), dataVo.getWordNm(),
+					prevValue, dataVo.toString(), "단어 수정: " + dataVo.getWordNm());
 		} catch (Exception e) {
 			log.error(">> updateWord failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -142,8 +152,21 @@ public class DataStandardController {
 						"다음 용어에서 사용 중이므로 삭제할 수 없습니다: " + termList);
 				return Mono.just(result);
 			}
+			// 삭제 전 기존 값 보존
+			List<String> deletedNames = new ArrayList<>();
+			for (StdWordVo vo : dataVos) {
+				if (vo.getWordNm() != null) deletedNames.add(vo.getWordNm());
+				else if (vo.getId() != null) {
+					List<StdWordVo> prev = sqlSessionTemplate.selectList("word.selectWordInfoById", vo.getId());
+					if (prev != null && !prev.isEmpty()) deletedNames.add(prev.get(0).getWordNm());
+				}
+			}
 			sqlSessionTemplate.delete("word.deleteWords", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			String names = String.join(", ", deletedNames);
+			saveChangeHistory("DELETE", "WORD", null, names,
+					names, null, "단어 삭제 " + dataVos.size() + "건: " + names);
 		} catch (Exception e) {
 			log.error(">> deleteWords failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), "단어 삭제 중 오류가 발생했습니다.");
@@ -248,6 +271,9 @@ public class DataStandardController {
 			session.insert("terms.insertTermsWords", wordList);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			saveChangeHistory("INSERT", "TERM", dataVo.getId(), dataVo.getTermsNm(),
+					null, dataVo.toString(), "용어 등록: " + dataVo.getTermsNm());
 		} catch (Exception e) {
 			session.rollback();
 			log.error("create terms : {}", e.getMessage());
@@ -376,6 +402,10 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
+			// 변경 전 값 조회
+			StdTermsVo prevTerms = session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm());
+			String prevValue = prevTerms != null ? prevTerms.toString() : null;
+
 			// 기존 용어를 이미 존재하는 용어로 업데이트하는 경우에는 Exception 발생시킨다.
 			dataVo.setTermsNm(dataVo.getTermsNm().replaceAll("\\s", ""));
 			StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm());
@@ -389,6 +419,9 @@ public class DataStandardController {
 			session.insert("terms.insertTermsWords", Arrays.asList(dataVo.getWordList()));
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			saveChangeHistory("UPDATE", "TERM", dataVo.getId(), dataVo.getTermsNm(),
+					prevValue, dataVo.toString(), "용어 수정: " + dataVo.getTermsNm());
 		} catch (Exception e) {
 			session.rollback();
 			log.error("update terms : {}", e.getMessage());
@@ -404,8 +437,16 @@ public class DataStandardController {
 	public Mono<Response> deleteTermsList(@RequestBody List<StdTermsVo> dataVos) {
 		Response result = new Response();
 		try {
+			List<String> deletedNames = new ArrayList<>();
+			for (StdTermsVo vo : dataVos) {
+				if (vo.getTermsNm() != null) deletedNames.add(vo.getTermsNm());
+			}
 			sqlSessionTemplate.delete("terms.deleteTermsList", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			String names = String.join(", ", deletedNames);
+			saveChangeHistory("DELETE", "TERM", null, names,
+					names, null, "용어 삭제 " + dataVos.size() + "건: " + names);
 		} catch (Exception e) {
 			log.error(">> deleteTermsList failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -477,17 +518,32 @@ public class DataStandardController {
 
 	@RequestMapping(value = "/createCode", method = RequestMethod.POST)
 	public Mono<Response> createCode(@RequestBody StdTermsVo dataVo) {
-		return createTerms(dataVo);
+		Mono<Response> resp = createTerms(dataVo);
+		// 코드 이력을 별도로 저장 (createTerms에서 TERM으로 저장되므로 CODE로도 기록)
+		saveChangeHistory("INSERT", "CODE", dataVo.getId(), dataVo.getTermsNm(),
+				null, dataVo.toString(), "코드 등록: " + dataVo.getTermsNm());
+		return resp;
 	}
 
 	@RequestMapping(value = "/updateCode", method = RequestMethod.POST)
 	public Mono<Response> updateCode(@RequestBody StdTermsVo dataVo) {
-		return updateTerms(dataVo);
+		Mono<Response> resp = updateTerms(dataVo);
+		saveChangeHistory("UPDATE", "CODE", dataVo.getId(), dataVo.getTermsNm(),
+				null, dataVo.toString(), "코드 수정: " + dataVo.getTermsNm());
+		return resp;
 	}
 
 	@RequestMapping(value = "/deleteCodeList", method = RequestMethod.POST)
 	public Mono<Response> deleteCodeList(@RequestBody List<StdTermsVo> dataVos) {
-		return deleteTermsList(dataVos);
+		List<String> deletedNames = new ArrayList<>();
+		for (StdTermsVo vo : dataVos) {
+			if (vo.getTermsNm() != null) deletedNames.add(vo.getTermsNm());
+		}
+		Mono<Response> resp = deleteTermsList(dataVos);
+		String names = String.join(", ", deletedNames);
+		saveChangeHistory("DELETE", "CODE", null, names,
+				names, null, "코드 삭제 " + dataVos.size() + "건: " + names);
+		return resp;
 	}
 
 	@RequestMapping(value = "/uploadCodeInfoList", method = RequestMethod.POST)
@@ -540,6 +596,9 @@ public class DataStandardController {
 		try {
 			sqlSessionTemplate.insert("codedata.insertCodeData", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			saveChangeHistory("INSERT", "CODE_DATA", dataVo.getId(), dataVo.getCodeNm(),
+					null, dataVo.toString(), "코드데이터 등록: " + dataVo.getCodeNm());
 		} catch (Exception e) {
 			log.error(">> createCodeData failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -557,6 +616,9 @@ public class DataStandardController {
 		try {
 			sqlSessionTemplate.update("codedata.updateCodeData", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			saveChangeHistory("UPDATE", "CODE_DATA", dataVo.getId(), dataVo.getCodeNm(),
+					null, dataVo.toString(), "코드데이터 수정: " + dataVo.getCodeNm());
 		} catch (Exception e) {
 			log.error(">> updateCodeData failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -569,8 +631,16 @@ public class DataStandardController {
 	public Mono<Response> deleteCodeDatas(@RequestBody List<StdCodeDataVo> dataVos) {
 		Response result = new Response();
 		try {
+			List<String> deletedNames = new ArrayList<>();
+			for (StdCodeDataVo vo : dataVos) {
+				if (vo.getCodeNm() != null) deletedNames.add(vo.getCodeNm());
+			}
 			sqlSessionTemplate.delete("codedata.deleteCodeDatas", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			String names = String.join(", ", deletedNames);
+			saveChangeHistory("DELETE", "CODE_DATA", null, names,
+					names, null, "코드데이터 삭제 " + dataVos.size() + "건: " + names);
 		} catch (Exception e) {
 			log.error(">> deleteCodeDatas failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -625,6 +695,9 @@ public class DataStandardController {
 			}
 			sqlSessionTemplate.insert("domain.insertDomain", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			saveChangeHistory("INSERT", "DOMAIN", dataVo.getId(), dataVo.getDomainNm(),
+					null, dataVo.toString(), "도메인 등록: " + dataVo.getDomainNm());
 		} catch (Exception e) {
 			log.error(">> createDomain failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -640,8 +713,14 @@ public class DataStandardController {
 
 		Response result = new Response();
 		try {
+			// 변경 전 값 조회
+			List<StdDomainVo> prevList = sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dataVo.getDomainNm());
+			String prevValue = prevList != null && !prevList.isEmpty() ? prevList.get(0).toString() : null;
 			sqlSessionTemplate.update("domain.updateDomain", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			saveChangeHistory("UPDATE", "DOMAIN", dataVo.getId(), dataVo.getDomainNm(),
+					prevValue, dataVo.toString(), "도메인 수정: " + dataVo.getDomainNm());
 		} catch (Exception e) {
 			log.error(">> updateDomain failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -654,8 +733,16 @@ public class DataStandardController {
 	public Mono<Response> deleteDomains(@RequestBody List<StdDomainVo> dataVos) {
 		Response result = new Response();
 		try {
+			List<String> deletedNames = new ArrayList<>();
+			for (StdDomainVo vo : dataVos) {
+				if (vo.getDomainNm() != null) deletedNames.add(vo.getDomainNm());
+			}
 			sqlSessionTemplate.delete("domain.deleteDomains", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
+			// 이력 저장
+			String names = String.join(", ", deletedNames);
+			saveChangeHistory("DELETE", "DOMAIN", null, names,
+					names, null, "도메인 삭제 " + dataVos.size() + "건: " + names);
 		} catch (Exception e) {
 			log.error(">> deleteDomains failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -1103,6 +1190,10 @@ public class DataStandardController {
 
 		sqlSessionTemplate.insert("word.insertWord", wordVo);
 
+		// 이력 저장
+		saveChangeHistory("INSERT", "WORD", wordId, wordVo.getWordNm(),
+				null, wordVo.toString(), "단어 등록(표준화 추천): " + wordVo.getWordNm());
+
 		res.put("success", true);
 		res.put("alreadyExists", false);
 		res.put("wordId", wordId);
@@ -1256,6 +1347,32 @@ public class DataStandardController {
 			} finally {
 				session.close();
 			}
+		}
+
+		// 일괄 등록 이력 저장
+		try {
+			String changeId = StringUtils.getUUID();
+			Map<String, Object> history = new HashMap<>();
+			history.put("changeId", changeId);
+			history.put("changeType", "BULK_INSERT");
+			history.put("targetType", "TERM");
+			history.put("changeCnt", registeredTerms);
+			history.put("summary", String.format("용어 일괄등록(표준화 추천) %d건 (성공:%d, 건너뜀:%d, 실패:%d)", items.size(), registeredTerms, skipped, failed));
+			history.put("changeUserId", userId);
+			sqlSessionTemplate.insert("changehistory.insertChangeHistory", history);
+			// 상세 건 저장
+			int seq = 1;
+			for (Map<String, Object> detail : details) {
+				Map<String, Object> historyDetail = new HashMap<>();
+				historyDetail.put("changeId", changeId);
+				historyDetail.put("seq", seq++);
+				historyDetail.put("targetNm", detail.get("termsNm"));
+				historyDetail.put("detailType", detail.get("status"));
+				historyDetail.put("remark", detail.get("message"));
+				sqlSessionTemplate.insert("changehistory.insertChangeHistoryDetail", historyDetail);
+			}
+		} catch (Exception e) {
+			log.warn("일괄등록 이력 저장 실패: {}", e.getMessage());
 		}
 
 		Map<String, Object> result = new HashMap<>();
@@ -1494,5 +1611,49 @@ public class DataStandardController {
 		if (wordAnalyses.isEmpty() || !hasMatched) return "FAILED";
 		if (hasNew) return "PARTIAL";
 		return "AUTO";
+	}
+
+	// ==================== 변경 이력 관리 ====================
+
+	// 이력 목록 조회
+	@PostMapping("/getChangeHistoryList")
+	public List<Map<String, Object>> getChangeHistoryList(@RequestBody Map<String, Object> params) {
+		return sqlSessionTemplate.selectList("changehistory.selectChangeHistoryList", params);
+	}
+
+	// 이력 상세 (마스터 + 상세)
+	@GetMapping("/getChangeHistoryDetail")
+	public Map<String, Object> getChangeHistoryDetail(@RequestParam String changeId) {
+		Map<String, Object> result = new HashMap<>();
+		result.put("history", sqlSessionTemplate.selectOne("changehistory.selectChangeHistoryById", changeId));
+		result.put("details", sqlSessionTemplate.selectList("changehistory.selectChangeHistoryDetailList", changeId));
+		return result;
+	}
+
+	// 특정 대상 이력 조회
+	@PostMapping("/getChangeHistoryByTarget")
+	public List<Map<String, Object>> getChangeHistoryByTarget(@RequestBody Map<String, Object> params) {
+		return sqlSessionTemplate.selectList("changehistory.selectChangeHistoryByTarget", params);
+	}
+
+	// 이력 저장 헬퍼 메서드
+	private void saveChangeHistory(String changeType, String targetType, String targetId, String targetNm,
+			String prevValue, String currValue, String summary) {
+		try {
+			Map<String, Object> history = new HashMap<>();
+			history.put("changeId", StringUtils.getUUID());
+			history.put("changeType", changeType);
+			history.put("targetType", targetType);
+			history.put("targetId", targetId);
+			history.put("targetNm", targetNm);
+			history.put("changeCnt", 1);
+			history.put("summary", summary);
+			history.put("prevValue", prevValue);
+			history.put("currValue", currValue);
+			history.put("changeUserId", sessionService.getUserId());
+			sqlSessionTemplate.insert("changehistory.insertChangeHistory", history);
+		} catch (Exception e) {
+			log.warn("변경이력 저장 실패: {}", e.getMessage());
+		}
 	}
 }

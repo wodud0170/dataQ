@@ -3,7 +3,9 @@ package com.ndata.quality.service;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -92,9 +94,11 @@ public class ExcelUploadService {
 		} finally {
 			session.close();
 		}
+		// 일괄 등록 이력 저장
+		saveUploadHistory(userId, "WORD", "단어", result);
 		return result;
 	}
-	
+
 	//용어 일괄 저장
 	public UploadResult uploadTermsList(String userId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
@@ -180,12 +184,17 @@ public class ExcelUploadService {
 		} finally {
 			session.close();
 		}
+		// 일괄 등록 이력 저장
+		saveUploadHistory(userId, "TERM", "용어", result);
 		return result;
 	}
 
 	//코드 일괄 저장
 	public UploadResult uploadCodeInfoList(String userId, MultipartFile multiPart) throws Exception {
-		return uploadTermsList(userId, multiPart);
+		UploadResult result = uploadTermsList(userId, multiPart);
+		// 코드 일괄 등록 이력 (uploadTermsList에서 TERM으로 저장되므로 CODE로도 기록)
+		saveUploadHistory(userId, "CODE", "코드", result);
+		return result;
 	}
 
 	//코드데이터(항목값) 일괄 저장
@@ -224,6 +233,8 @@ public class ExcelUploadService {
 		} finally {
 			session.close();
 		}
+		// 일괄 등록 이력 저장
+		saveUploadHistory(userId, "CODE_DATA", "코드데이터", result);
 		return result;
 	}
 
@@ -286,9 +297,34 @@ public class ExcelUploadService {
 		} finally {
 			session.close();
 		}
+		// 일괄 등록 이력 저장
+		saveUploadHistory(userId, "DOMAIN", "도메인", result);
 		return result;
 	}
-	
+
+	// 일괄 등록 이력 저장 헬퍼
+	private void saveUploadHistory(String userId, String targetType, String targetLabel, UploadResult result) {
+		try {
+			SqlSession histSession = sqlSessionFactory.openSession();
+			try {
+				Map<String, Object> history = new HashMap<>();
+				history.put("changeId", StringUtils.getUUID());
+				history.put("changeType", "BULK_INSERT");
+				history.put("targetType", targetType);
+				history.put("changeCnt", result.getSuccessCount());
+				history.put("summary", String.format("%s 일괄등록 (성공:%d, 건너뜀:%d, 실패:%d)",
+						targetLabel, result.getSuccessCount(), result.getSkipCount(), result.getFailCount()));
+				history.put("changeUserId", userId);
+				histSession.insert("changehistory.insertChangeHistory", history);
+				histSession.commit();
+			} finally {
+				histSession.close();
+			}
+		} catch (Exception e) {
+			log.warn("일괄등록 이력 저장 실패: {}", e.getMessage());
+		}
+	}
+
 	public ExcelSheetHandler readExcel(MultipartFile multiPart) throws Exception {
 	    //SheetcontentHandler를 재정의 해서 만든 Class
 		ExcelSheetHandler sheetHandler = new ExcelSheetHandler();
