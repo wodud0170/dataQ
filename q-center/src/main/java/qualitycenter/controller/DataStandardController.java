@@ -33,6 +33,7 @@ import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 import com.ndata.common.handler.WebClientHandler;
 import com.ndata.module.StringUtils;
+import com.ndata.quality.common.NDQualityApproveStat;
 import com.ndata.quality.common.NDQualityConstant;
 import com.ndata.quality.common.NDQualityRetrieveCond;
 import com.ndata.quality.common.NDQualityStdObjectType;
@@ -103,9 +104,11 @@ public class DataStandardController {
 		try {
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
-			// 이력 저장
-			saveChangeHistory("INSERT", "WORD", dataVo.getId(), dataVo.getWordNm(),
-					null, dataVo.toString(), "단어 등록: " + dataVo.getWordNm());
+			// 이력 저장 (관리자 즉시 승인 시에만, 일반 사용자는 승인 시점에 저장)
+			if (sessionService.isAdmin()) {
+				saveChangeHistory("INSERT", "WORD", dataVo.getId(), dataVo.getWordNm(),
+						null, dataVo.toString(), "단어 등록: " + dataVo.getWordNm());
+			}
 		} catch (Exception e) {
 			log.error(">> createWord failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -260,20 +263,34 @@ public class DataStandardController {
 			if (session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm()) != null) {
 				throw new Exception("terms(" + dataVo.getTermsNm() + ") is already registered");
 			}
-			// 신규 용어 등록
-			session.insert("terms.insertTerms", dataVo);
+			// 구성 단어 승인 여부 체크
 			List<StdTermsVo.Word> wordList = Arrays.asList(dataVo.getWordList());
-			if (wordList != null) {
-				wordList.stream().forEach(v -> v.setTermsId(dataVo.getId()));
-			} else {
+			if (wordList == null) {
 				throw new Exception("terms word list is invalid");
 			}
+			List<String> unapprovedWords = new ArrayList<>();
+			for (StdTermsVo.Word w : wordList) {
+				if (w.getWordId() != null) {
+					List<StdWordVo> wordInfoList = session.selectList("word.selectWordInfoById", w.getWordId());
+					if (!wordInfoList.isEmpty() && !"Y".equals(wordInfoList.get(0).getAprvYn())) {
+						unapprovedWords.add(wordInfoList.get(0).getWordNm());
+					}
+				}
+			}
+			if (!unapprovedWords.isEmpty()) {
+				throw new Exception("다음 단어가 아직 승인되지 않았습니다: " + String.join(", ", unapprovedWords));
+			}
+			// 신규 용어 등록
+			session.insert("terms.insertTerms", dataVo);
+			wordList.stream().forEach(v -> v.setTermsId(dataVo.getId()));
 			session.insert("terms.insertTermsWords", wordList);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
-			// 이력 저장
-			saveChangeHistory("INSERT", "TERM", dataVo.getId(), dataVo.getTermsNm(),
-					null, dataVo.toString(), "용어 등록: " + dataVo.getTermsNm());
+			// 이력 저장 (관리자 즉시 승인 시에만)
+			if (sessionService.isAdmin()) {
+				saveChangeHistory("INSERT", "TERM", dataVo.getId(), dataVo.getTermsNm(),
+						null, dataVo.toString(), "용어 등록: " + dataVo.getTermsNm());
+			}
 		} catch (Exception e) {
 			session.rollback();
 			log.error("create terms : {}", e.getMessage());
@@ -519,9 +536,11 @@ public class DataStandardController {
 	@RequestMapping(value = "/createCode", method = RequestMethod.POST)
 	public Mono<Response> createCode(@RequestBody StdTermsVo dataVo) {
 		Mono<Response> resp = createTerms(dataVo);
-		// 코드 이력을 별도로 저장 (createTerms에서 TERM으로 저장되므로 CODE로도 기록)
-		saveChangeHistory("INSERT", "CODE", dataVo.getId(), dataVo.getTermsNm(),
-				null, dataVo.toString(), "코드 등록: " + dataVo.getTermsNm());
+		// 코드 이력을 별도로 저장 (관리자 즉시 승인 시에만)
+		if (sessionService.isAdmin()) {
+			saveChangeHistory("INSERT", "CODE", dataVo.getId(), dataVo.getTermsNm(),
+					null, dataVo.toString(), "코드 등록: " + dataVo.getTermsNm());
+		}
 		return resp;
 	}
 
@@ -695,9 +714,11 @@ public class DataStandardController {
 			}
 			sqlSessionTemplate.insert("domain.insertDomain", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
-			// 이력 저장
-			saveChangeHistory("INSERT", "DOMAIN", dataVo.getId(), dataVo.getDomainNm(),
-					null, dataVo.toString(), "도메인 등록: " + dataVo.getDomainNm());
+			// 이력 저장 (관리자 즉시 승인 시에만, 일반 사용자는 승인 시점에 저장)
+			if (sessionService.isAdmin()) {
+				saveChangeHistory("INSERT", "DOMAIN", dataVo.getId(), dataVo.getDomainNm(),
+						null, dataVo.toString(), "도메인 등록: " + dataVo.getDomainNm());
+			}
 		} catch (Exception e) {
 			log.error(">> createDomain failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -965,7 +986,8 @@ public class DataStandardController {
 
 			try {
 				session.insert("approve.insertStdAprvStat", dataVo);
-				switch (NDQualityStdObjectType.valueOf(dataVo.getReqTp())) {
+				NDQualityStdObjectType objType = NDQualityStdObjectType.valueOf(dataVo.getReqTp());
+				switch (objType) {
 					case TERMS:
 						session.update("approve.updateTermsAprvStat", dataVo);
 						break;
@@ -978,6 +1000,38 @@ public class DataStandardController {
 				}
 				session.commit();
 				result.setResultInfo(RestResult.CODE_200);
+
+				// 승인 완료 시(aprvStat=2) 변경 이력 저장
+				if (dataVo.getAprvStat() == NDQualityApproveStat.APPROVED.getValue()) {
+					String targetType = objType == NDQualityStdObjectType.TERMS ? "TERM"
+							: objType == NDQualityStdObjectType.WORD ? "WORD" : "DOMAIN";
+					String targetNm = dataVo.getReqItemNm();
+					// 승인된 항목의 현재 값 조회
+					String currValue = null;
+					try {
+						switch (objType) {
+							case TERMS:
+								Object termsObj = sqlSessionTemplate.selectOne("terms.selectTermsInfo", dataVo.getReqItemId());
+								currValue = termsObj != null ? termsObj.toString() : null;
+								break;
+							case WORD:
+								List<StdWordVo> wordInfoList = sqlSessionTemplate.selectList("word.selectWordInfoById", dataVo.getReqItemId());
+								currValue = !wordInfoList.isEmpty() ? wordInfoList.get(0).toString() : null;
+								if (targetNm == null && !wordInfoList.isEmpty()) targetNm = wordInfoList.get(0).getWordNm();
+								break;
+							case DOMAIN:
+								if (targetNm != null) {
+									Object domainObj = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", targetNm);
+									currValue = domainObj != null ? domainObj.toString() : null;
+								}
+								break;
+						}
+					} catch (Exception ex) {
+						log.warn("승인 이력 조회 실패: {}", ex.getMessage());
+					}
+					saveChangeHistory("INSERT", targetType, dataVo.getReqItemId(), targetNm,
+							null, currValue, targetType + " 승인 등록: " + targetNm);
+				}
 			} catch (Exception e) {
 				session.rollback();
 				log.error("update standard approve stat : {}", e.getMessage());
@@ -1187,12 +1241,15 @@ public class DataStandardController {
 		wordVo.setCommStndYn("N");
 		wordVo.setCretUserId(userId);
 		if (isAdmin) wordVo.setAprvYn("Y");
+		else wordVo.setAprvYn("N");
 
 		sqlSessionTemplate.insert("word.insertWord", wordVo);
 
-		// 이력 저장
-		saveChangeHistory("INSERT", "WORD", wordId, wordVo.getWordNm(),
-				null, wordVo.toString(), "단어 등록(표준화 추천): " + wordVo.getWordNm());
+		// 이력 저장 (관리자 즉시 승인 시에만)
+		if (isAdmin) {
+			saveChangeHistory("INSERT", "WORD", wordId, wordVo.getWordNm(),
+					null, wordVo.toString(), "단어 등록(표준화 추천): " + wordVo.getWordNm());
+		}
 
 		res.put("success", true);
 		res.put("alreadyExists", false);
@@ -1273,10 +1330,41 @@ public class DataStandardController {
 						wordVo.setCommStndYn("N");
 						wordVo.setCretUserId(userId);
 						if (isAdmin) wordVo.setAprvYn("Y");
+						else wordVo.setAprvYn("N");
 						session.insert("word.insertWord", wordVo);
 						newWordIdMap.put(i, wordId);
 						newWordCount++;
 					}
+				}
+
+				// 구성 단어 승인 여부 체크
+				List<String> unapprovedWords = new ArrayList<>();
+				if (words != null) {
+					for (Map<String, Object> w : words) {
+						String wordId = (String) w.get("wordId");
+						if (wordId != null) {
+							List<StdWordVo> wordInfo = session.selectList("word.selectWordInfoById", wordId);
+							if (!wordInfo.isEmpty() && !"Y".equals(wordInfo.get(0).getAprvYn())) {
+								unapprovedWords.add(wordInfo.get(0).getWordNm());
+							}
+						} else {
+							// 신규 단어 → 비관리자는 APRV_YN='N'이므로 체크
+							Number newWordIndex = (Number) w.get("newWordIndex");
+							if (newWordIndex != null && !isAdmin) {
+								String nwId = newWordIdMap.get(newWordIndex.intValue());
+								if (nwId != null) {
+									List<StdWordVo> wordInfo = session.selectList("word.selectWordInfoById", nwId);
+									if (!wordInfo.isEmpty() && !"Y".equals(wordInfo.get(0).getAprvYn())) {
+										unapprovedWords.add(wordInfo.get(0).getWordNm());
+									}
+								}
+							}
+						}
+					}
+				}
+				if (!unapprovedWords.isEmpty()) {
+					throw new RuntimeException("다음 단어가 아직 승인되지 않았습니다: " + String.join(", ", unapprovedWords)
+							+ ". 먼저 단어 승인을 받은 후 용어를 등록해주세요.");
 				}
 
 				// 용어 등록
@@ -1349,30 +1437,32 @@ public class DataStandardController {
 			}
 		}
 
-		// 일괄 등록 이력 저장
-		try {
-			String changeId = StringUtils.getUUID();
-			Map<String, Object> history = new HashMap<>();
-			history.put("changeId", changeId);
-			history.put("changeType", "BULK_INSERT");
-			history.put("targetType", "TERM");
-			history.put("changeCnt", registeredTerms);
-			history.put("summary", String.format("용어 일괄등록(표준화 추천) %d건 (성공:%d, 건너뜀:%d, 실패:%d)", items.size(), registeredTerms, skipped, failed));
-			history.put("changeUserId", userId);
-			sqlSessionTemplate.insert("changehistory.insertChangeHistory", history);
-			// 상세 건 저장
-			int seq = 1;
-			for (Map<String, Object> detail : details) {
-				Map<String, Object> historyDetail = new HashMap<>();
-				historyDetail.put("changeId", changeId);
-				historyDetail.put("seq", seq++);
-				historyDetail.put("targetNm", detail.get("termsNm"));
-				historyDetail.put("detailType", detail.get("status"));
-				historyDetail.put("remark", detail.get("message"));
-				sqlSessionTemplate.insert("changehistory.insertChangeHistoryDetail", historyDetail);
+		// 일괄 등록 이력 저장 (관리자 즉시 승인 시에만, 일반 사용자는 승인 시점에 저장)
+		if (isAdmin) {
+			try {
+				String changeId = StringUtils.getUUID();
+				Map<String, Object> history = new HashMap<>();
+				history.put("changeId", changeId);
+				history.put("changeType", "BULK_INSERT");
+				history.put("targetType", "TERM");
+				history.put("changeCnt", registeredTerms);
+				history.put("summary", String.format("용어 일괄등록(표준화 추천) %d건 (성공:%d, 건너뜀:%d, 실패:%d)", items.size(), registeredTerms, skipped, failed));
+				history.put("changeUserId", userId);
+				sqlSessionTemplate.insert("changehistory.insertChangeHistory", history);
+				// 상세 건 저장
+				int seq = 1;
+				for (Map<String, Object> detail : details) {
+					Map<String, Object> historyDetail = new HashMap<>();
+					historyDetail.put("changeId", changeId);
+					historyDetail.put("seq", seq++);
+					historyDetail.put("targetNm", detail.get("termsNm"));
+					historyDetail.put("detailType", detail.get("status"));
+					historyDetail.put("remark", detail.get("message"));
+					sqlSessionTemplate.insert("changehistory.insertChangeHistoryDetail", historyDetail);
+				}
+			} catch (Exception e) {
+				log.warn("일괄등록 이력 저장 실패: {}", e.getMessage());
 			}
-		} catch (Exception e) {
-			log.warn("일괄등록 이력 저장 실패: {}", e.getMessage());
 		}
 
 		Map<String, Object> result = new HashMap<>();

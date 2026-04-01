@@ -169,6 +169,13 @@
             <v-chip color="grey" text-color="white" class="mx-1" v-if="registerResult.skipped > 0">스킵: {{ registerResult.skipped }}건</v-chip>
             <v-chip color="red" text-color="white" class="mx-1" v-if="registerResult.failed > 0">실패: {{ registerResult.failed }}건</v-chip>
           </div>
+          <div class="mt-4" v-if="registerResult && registerResult.details">
+            <template v-for="(d, idx) in registerResult.details">
+              <v-alert v-if="d.status === 'FAIL'" :key="idx" type="error" dense text class="text-left mb-1" style="font-size:13px;">
+                {{ d.termsNm }}: {{ d.message }}
+              </v-alert>
+            </template>
+          </div>
 
           <!-- DDL Generation -->
           <v-divider class="my-6"></v-divider>

@@ -1,0 +1,40 @@
+=== 로그인: 200 ===
+
+--- 테스트 1: 일반 사용자 단어 등록 ---
+응답: {"success": true, "wordId": "xVw3tZok4N8BySv9bTwvF", "wordEngAbrvNm": "TSTVRFY", "domainClsfNm": "", "wordNm": "테스트검증단어", "alreadyExists": false, "wordEngNm": "TEST VERIFY"}
+단어 등록 성공: wordId=xVw3tZok4N8BySv9bTwvF
+즉시 승인 여부 확인 필요 (일반 사용자이므로 APRV_YN=N이어야 함)
+
+--- 테스트 2: 미승인 단어로 용어 등록 시도 ---
+응답: {
+  "registeredTerms": 0,
+  "details": [
+    {
+      "termsNm": "테스트검증단어명",
+      "message": "\r\n### Error updating database.  Cause: org.postgresql.util.PSQLException: 오류: \"tb_terms\" 테이블에서 자료 추가, 갱신 작업이 \"tb_terms_fk\" 참조키(foreign key) 제약 조건을 위배했습니다\n  Detail: (domain_nm)=() 키가 \"tb_domain\" 테이블에 없습니다.\r\n### The error may exist in file [C:\\Users\\naraedata\\Desktop\\dataQ\\ndata-quality-master\\q-common\\target\\classes\\mapper\\stnd\\terms.xml]\r\n### The error may involve terms.insertTerms-Inline\r\n### The error occurred while setting parameters\r\n### SQL: INSERT INTO TB_TERMS            (              TERMS_ID             ,TERMS_NM                ,TERMS_ENG_ABRV_NM             ,TERMS_DESC               ,DOMAIN_NM              ,CODE_GRP              ,CHRG_ORG     ,ALLOPH_SYNM_LST              ,COMM_STND_YN              ,MAGNTD_ORD               ,APRV_YN                ,APRV_USER_ID              ,CRET_DT                ,CRET_USER_ID     ,APRV_STAT_UPDT_DT    ,REQ_SYS_CD            )            VALUES            (              ?             ,?             ,?             ,?             ,?             ,?             ,?    ,?             ,?             ,?             ,?             ,?             ,to_char(now(), 'YYYYMMDDHH24MISS')             ,?    ,to_char(now(), 'YYYYMMDDHH24MISS')    ,?            )\r\n### Cause: org.postgresql.util.PSQLException: 오류: \"tb_terms\" 테이블에서 자료 추가, 갱신 작업이 \"tb_terms_fk\" 참조키(foreign key) 제약 조건을 위배했습니다\n  Detail: (domain_nm)=() 키가 \"tb_domain\" 테이블에 없습니다.",
+      "status": "FAIL"
+    }
+  ],
+  "failed": 1,
+  "registeredWords": 0,
+  "skipped": 0
+}
+  ✅ 등록 거부됨 (정상): 
+### Error updating database.  Cause: org.postgresql.util.PSQLException: 오류: "tb_terms" 테이블에서 자료 추가, 갱신 작업이 "tb_terms_fk" 참조키(foreign key) 제약 조건을 위배했습니다
+  Detail: (domain_nm)=() 키가 "tb_domain" 테이블에 없습니다.
+### The error may exist in file [C:\Users\naraedata\Desktop\dataQ\ndata-quality-master\q-common\target\classes\mapper\stnd\terms.xml]
+### The error may involve terms.insertTerms-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO TB_TERMS            (              TERMS_ID             ,TERMS_NM                ,TERMS_ENG_ABRV_NM             ,TERMS_DESC               ,DOMAIN_NM              ,CODE_GRP              ,CHRG_ORG     ,ALLOPH_SYNM_LST              ,COMM_STND_YN              ,MAGNTD_ORD               ,APRV_YN                ,APRV_USER_ID              ,CRET_DT                ,CRET_USER_ID     ,APRV_STAT_UPDT_DT    ,REQ_SYS_CD            )            VALUES            (              ?             ,?             ,?             ,?             ,?             ,?             ,?    ,?             ,?             ,?             ,?             ,?             ,to_char(now(), 'YYYYMMDDHH24MISS')             ,?    ,to_char(now(), 'YYYYMMDDHH24MISS')    ,?            )
+### Cause: org.postgresql.util.PSQLException: 오류: "tb_terms" 테이블에서 자료 추가, 갱신 작업이 "tb_terms_fk" 참조키(foreign key) 제약 조건을 위배했습니다
+  Detail: (domain_nm)=() 키가 "tb_domain" 테이블에 없습니다.
+
+--- 테스트 3: 승인된 단어로 용어 등록 시도 ---
+응답 코드: 200
+응답: {"serviceName": null, "requestCode": null, "resultCode": 500, "resultMessage": "\r\n### Error updating database.  Cause: org.postgresql.util.PSQLException: 오류: \"tb_terms\" 테이블에서 자료 추가, 갱신 작업이 \"tb_terms_fk\" 참조키(foreign key) 제약 조건을 위배했습니다\n  Detail: (domain_nm)=() 키가 \"tb_domain\" 테이블에 없습니다.\r\n### The error may exist in file [C:\\Users\\naraedata\\Desktop\\dataQ\\ndata-quality-master\\q-common\\target\\classes\\mapper\\stnd\\terms.xml]\r\n### The error may involve terms.insertTerms-Inline\r\n### The error occurred while setting parameters\r\n### SQL: INSERT INTO TB_TERMS            (              TERMS_ID             ,TERMS_NM                ,TERMS_ENG_ABRV_NM             ,TERMS_DESC               ,DOMAIN_NM              ,CODE_GRP              ,CHRG_ORG     ,ALLOPH_SYNM_LST              ,COMM_STND_YN              ,MAGNTD_ORD               ,APRV_YN                ,APRV_USER_ID              ,CRET_DT                ,CRET_USER_ID     ,APRV_STAT_UPDT_DT    ,REQ_SYS_CD            )            VALUES            (              ?             ,?             ,?             ,?             ,?             ,?             ,?    ,?             ,?             ,?             ,?             ,?             ,to_char(now(), 'YYYYMMDDHH24MISS')             ,?    ,to_char(now(), 'YYYYMMDDHH24MISS')    ,?            )\r\n### Cause: org.postgresql.util.PSQLException: 오류: \"tb_terms\" 테이블에서 자료 추가, 갱신 작업이 \"tb_terms_fk\" 참조키(foreign key) 제약 조건을 위배했습니다\n  Detail: (domain_nm)=() 키가 \"tb_domain\" 테이블에 없습니다.", "contents": null}
+
+--- 테스트 4: 변경 이력 확인 ---
+이력 건수: 2건
+최근 이력: {"summary": "용어 일괄등록(표준화 추천) 1건 (성공:0, 건너뜀:0, 실패:1)", "changeDt": "2026-04-01 13:36:28", "changeUserId": "space", "changeCnt": 0, "changeType": "BULK_INSERT", "targetType": "TERM", "changeId": "evFZL4fukL4a*ViEipnVpy"}
+
+=== 모든 테스트 완료 ===
