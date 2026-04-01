@@ -171,7 +171,7 @@
 |                | DDL 자동 생성             | ◐     | ●     | ◐         | ●          |
 |                | DBMS vs 표준 GAP 분석     | ●     | ●     | ●         | ●          |
 |                | DBMS vs 모델 GAP 분석     | ●     | ●     | ●         | ●          |
-|                | 멀티 DBMS 지원            | ● (Oracle/MSSQL/MariaDB/PostgreSQL/Tibero/Altibase/Cubrid 등) | ◐ (Oracle, Tibero) | ● | ● |
+|                | 멀티 DBMS 지원            | ◐ (수집은 9종 지원, 전체 기능 검증은 Oracle 기준) | ◐ (Oracle, Tibero) | ● | ● |
 | **데이터 거버넌스**   | 결재/승인 프로세스            | ●     | ●     | ●         | ●          |
 |                | 역할별 권한 관리             | ●     | ●     | ●         | ●          |
 |                | 변경 이력 추적              | ◐     | ●     | ●         | ●          |
