@@ -488,7 +488,11 @@ export default {
           // 전체 상태 재판정
           self.recalcItemStatus(self.editingItem);
           var msg = res.data.alreadyExists ? '이미 등록된 단어입니다. 기존 정보를 사용합니다.' : '단어가 등록되었습니다.';
-          self.$swal.fire({ title: '완료', text: msg, icon: 'success', confirmButtonText: '확인', timer: 1500 });
+          if (res.data.warning) {
+            self.$swal.fire({ title: '완료', text: msg + '\n\n' + res.data.warning, icon: 'warning', confirmButtonText: '확인' });
+          } else {
+            self.$swal.fire({ title: '완료', text: msg, icon: 'success', confirmButtonText: '확인', timer: 1500 });
+          }
         } else {
           self.$swal.fire({ title: '등록 실패', text: res.data.message, icon: 'error', confirmButtonText: '확인' });
         }

@@ -63,6 +63,14 @@ public class ExcelUploadService {
 					}
 					stdWordVo.setId(StringUtils.getUUID());
 					stdWordVo.setWordNm(dataRow.get(2));
+
+					// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
+					Map<String, Object> forbiddenWord = session.selectOne("word.selectWordByForbiddenNm", dataRow.get(2));
+					if (forbiddenWord != null) {
+						String stdWordNm = (String) forbiddenWord.get("wordNm");
+						throw new Exception("'" + dataRow.get(2) + "'은(는) '" + stdWordNm + "'의 금칙어입니다. '" + stdWordNm + "'를 사용해주세요.");
+					}
+
 					stdWordVo.setWordEngAbrvNm(dataRow.get(3));
 					stdWordVo.setWordEngNm(dataRow.get(4));
 					stdWordVo.setWordDesc(dataRow.get(5));

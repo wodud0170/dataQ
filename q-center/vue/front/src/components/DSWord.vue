@@ -1263,12 +1263,22 @@ export default {
             if (res.data.resultCode === 200) {
               this.hideModal('add');
 
-              this.$swal.fire({
-                title: '새로운 단어가 등록되었습니다.',
-                icon: 'success',
-                showConfirmButton: false,
-                timer: 1500
-              })
+              if (res.data.resultMessage) {
+                // 유사어 경고가 있는 경우
+                this.$swal.fire({
+                  title: '단어가 등록되었습니다.',
+                  text: res.data.resultMessage,
+                  icon: 'warning',
+                  confirmButtonText: '확인',
+                });
+              } else {
+                this.$swal.fire({
+                  title: '새로운 단어가 등록되었습니다.',
+                  icon: 'success',
+                  showConfirmButton: false,
+                  timer: 1500
+                });
+              }
 
               this.getWordData();
             } else {

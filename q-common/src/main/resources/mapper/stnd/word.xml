@@ -375,6 +375,24 @@
 		GROUP BY W.WORD_NM
 	</select>
 
+	<!-- 금칙어로 등록된 단어 찾기: 입력 단어명이 기존 단어의 금칙어 목록에 포함되는지 체크 -->
+	<select id="selectWordByForbiddenNm" parameterType="String" resultType="java.util.HashMap">
+		SELECT WORD_NM AS "wordNm", WORD_ENG_ABRV_NM AS "wordEngAbrvNm"
+		FROM TB_WORD
+		WHERE #{wordNm} = ANY(FORBDN_WORD_LST)
+		  AND APRV_YN = 'Y'
+		LIMIT 1
+	</select>
+
+	<!-- 유사어로 등록된 단어 찾기: 입력 단어명이 기존 단어의 유사어 목록에 포함되는지 체크 -->
+	<select id="selectWordBySynonymNm" parameterType="String" resultType="java.util.HashMap">
+		SELECT WORD_NM AS "wordNm", WORD_ENG_ABRV_NM AS "wordEngAbrvNm"
+		FROM TB_WORD
+		WHERE #{wordNm} = ANY(ALLOPH_SYNM_LST)
+		  AND APRV_YN = 'Y'
+		LIMIT 1
+	</select>
+
 	<!-- 추천 사전 전체 조회 (TB_WORD_DICT) -->
 	<select id="selectAllWordDict" resultType="java.util.HashMap">
 		SELECT WORD_KOR AS "wordKor", WORD_ENG AS "wordEng", WORD_ABRV AS "wordAbrv", DOMAIN_CLSF_NM AS "domainClsfNm"

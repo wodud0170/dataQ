@@ -102,8 +102,21 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
+			// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
+			String forbiddenMsg = checkForbiddenWord(dataVo.getWordNm());
+			if (forbiddenMsg != null) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), forbiddenMsg);
+				return Mono.just(result);
+			}
+			// 유사어 체크: 경고만 (등록은 허용, warning 메시지를 resultMessage에 포함)
+			String synonymMsg = checkSynonymWord(dataVo.getWordNm());
+
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
-			result.setResultInfo(RestResult.CODE_200);
+			if (synonymMsg != null) {
+				result.setResultInfo(RestResult.CODE_200.getCode(), synonymMsg);
+			} else {
+				result.setResultInfo(RestResult.CODE_200);
+			}
 			// 이력 저장 (관리자 즉시 승인 시에만, 일반 사용자는 승인 시점에 저장)
 			if (sessionService.isAdmin()) {
 				saveChangeHistory("INSERT", "WORD", dataVo.getId(), dataVo.getWordNm(),
@@ -1211,6 +1224,14 @@ public class DataStandardController {
 			return res;
 		}
 
+		// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
+		String forbiddenMsg = checkForbiddenWord(wordNm.trim());
+		if (forbiddenMsg != null) {
+			res.put("success", false);
+			res.put("message", forbiddenMsg);
+			return res;
+		}
+
 		// 중복 체크
 		List<StdWordVo> existing = sqlSessionTemplate.selectList("word.selectWordInfoByNm", wordNm.trim());
 		if (existing != null && !existing.isEmpty()) {
@@ -1225,6 +1246,9 @@ public class DataStandardController {
 			res.put("domainClsfNm", existWord.getDomainClsfNm());
 			return res;
 		}
+
+		// 유사어 체크: 경고 메시지만 (등록은 진행)
+		String synonymMsg = checkSynonymWord(wordNm.trim());
 
 		String userId = sessionService.getUserId();
 		boolean isAdmin = sessionService.isAdmin();
@@ -1258,6 +1282,9 @@ public class DataStandardController {
 		res.put("wordEngAbrvNm", wordVo.getWordEngAbrvNm());
 		res.put("wordEngNm", wordVo.getWordEngNm());
 		res.put("domainClsfNm", wordVo.getDomainClsfNm());
+		if (synonymMsg != null) {
+			res.put("warning", synonymMsg);
+		}
 		return res;
 	}
 
@@ -1317,6 +1344,11 @@ public class DataStandardController {
 								|| wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
 								|| wordEngNm == null || wordEngNm.trim().isEmpty()) {
 							throw new RuntimeException("신규 단어 필수 항목 누락: 한글명, 영문약어, 영문명은 필수입니다. (단어: " + wordNm + ")");
+						}
+						// 금칙어 체크
+						String forbiddenMsg = checkForbiddenWord(wordNm.trim());
+						if (forbiddenMsg != null) {
+							throw new RuntimeException(forbiddenMsg);
 						}
 						StdWordVo wordVo = new StdWordVo();
 						String wordId = StringUtils.getUUID();
@@ -1724,6 +1756,34 @@ public class DataStandardController {
 	@PostMapping("/getChangeHistoryByTarget")
 	public List<Map<String, Object>> getChangeHistoryByTarget(@RequestBody Map<String, Object> params) {
 		return sqlSessionTemplate.selectList("changehistory.selectChangeHistoryByTarget", params);
+	}
+
+	/**
+	 * 입력된 단어명이 기존 단어의 금칙어 목록에 포함되는지 체크
+	 * @return 금칙어에 해당하면 에러 메시지, 아니면 null
+	 */
+	private String checkForbiddenWord(String wordNm) {
+		if (wordNm == null || wordNm.trim().isEmpty()) return null;
+		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordByForbiddenNm", wordNm.trim());
+		if (found != null) {
+			String stdWordNm = (String) found.get("wordNm");
+			return "'" + wordNm.trim() + "'은(는) '" + stdWordNm + "'의 금칙어입니다. '" + stdWordNm + "'를 사용해주세요.";
+		}
+		return null;
+	}
+
+	/**
+	 * 입력된 단어명이 기존 단어의 유사어 목록에 포함되는지 체크
+	 * @return 유사어에 해당하면 안내 메시지, 아니면 null
+	 */
+	private String checkSynonymWord(String wordNm) {
+		if (wordNm == null || wordNm.trim().isEmpty()) return null;
+		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordBySynonymNm", wordNm.trim());
+		if (found != null) {
+			String stdWordNm = (String) found.get("wordNm");
+			return "'" + wordNm.trim() + "'은(는) '" + stdWordNm + "'의 유사어입니다. '" + stdWordNm + "' 사용을 권장합니다.";
+		}
+		return null;
 	}
 
 	// 이력 저장 헬퍼 메서드
