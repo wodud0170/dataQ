@@ -88,6 +88,19 @@ public class DataStandardController {
 	@Autowired
 	private WebSocketService websocketService;
 
+	// 통합 검색
+	@GetMapping("/search")
+	public Map<String, Object> globalSearch(@RequestParam String keyword) {
+		Map<String, Object> result = new HashMap<>();
+		Map<String, Object> param = new HashMap<>();
+		param.put("keyword", keyword);
+		result.put("words", sqlSessionTemplate.selectList("search.selectSearchWords", param));
+		result.put("terms", sqlSessionTemplate.selectList("search.selectSearchTerms", param));
+		result.put("domains", sqlSessionTemplate.selectList("search.selectSearchDomains", param));
+		result.put("columns", sqlSessionTemplate.selectList("search.selectSearchColumns", param));
+		return result;
+	}
+
 	// 단어
 	@RequestMapping(value = "/createWord", method = RequestMethod.POST)
 	public Mono<Response> createWord(@RequestBody StdWordVo dataVo) {

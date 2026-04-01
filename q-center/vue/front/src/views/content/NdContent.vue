@@ -230,6 +230,12 @@
                     <changeHistory :key="changeHistoryKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'globalSearch'" id="tab_globalSearch" class="tab_contents"
+                :class="{ active: this.activeContent === 'globalSearch' }">
+                <keep-alive>
+                    <globalSearch :key="globalSearchKey" :isMobile="isMobile" @addTabItem="addTabItem" />
+                </keep-alive>
+            </div>
         </div>
         <v-snackbar v-model="removeSnackbar" :timeout="removeSnackbarTimeout">
             {{ removeSnackbarText }}
@@ -262,6 +268,7 @@ import DSTermRecommend from "../../components/DSTermRecommend.vue"
 import DSSchemaCompare from "../../components/DSSchemaCompare.vue"
 import DSErwinImport from "../../components/DSErwinImport.vue"
 import DSChangeHistory from "../../components/DSChangeHistory.vue"
+import DSGlobalSearch from "../../components/DSGlobalSearch.vue"
 import DQDQI from "./../../components/DQDQI.vue"
 import DQCTQ from "./../../components/DQCTQ.vue"
 import DQBR from "./../../components/DQBR.vue"
@@ -342,6 +349,7 @@ export default {
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
             changeHistoryKey: this.createUUID(),
+            globalSearchKey: this.createUUID(),
         }
     },
     components: {
@@ -377,7 +385,8 @@ export default {
         "system": MMSystem,
         "scurrent": ANDscurrent,
         "qcurrent": ANDqcurrent,
-        "changeHistory": DSChangeHistory
+        "changeHistory": DSChangeHistory,
+        "globalSearch": DSGlobalSearch
     },
     methods: {
         addActiveContent(itemName, itemIdenx) {
@@ -484,6 +493,9 @@ export default {
                     break;
                 case "changeHistory":
                     this.changeHistoryKey = this.createUUID();
+                    break;
+                case "globalSearch":
+                    this.globalSearchKey = this.createUUID();
                     break;
             }
 

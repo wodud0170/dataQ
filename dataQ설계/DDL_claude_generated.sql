@@ -560,3 +560,11 @@ COMMENT ON TABLE TB_CHANGE_HISTORY IS '변경 이력 마스터';
 COMMENT ON COLUMN TB_CHANGE_HISTORY.CHANGE_TYPE IS 'INSERT, UPDATE, DELETE, BULK_INSERT';
 COMMENT ON COLUMN TB_CHANGE_HISTORY.TARGET_TYPE IS 'WORD, TERM, DOMAIN, CODE, CODE_DATA';
 COMMENT ON TABLE TB_CHANGE_HISTORY_DETAIL IS '변경 이력 상세 (일괄 등록 시)';
+
+-- -------------------------------------------------------------
+-- 8. TB_DATA_MODEL.MODEL_TYPE
+--    데이터 모델의 논리/물리 구분 컬럼
+--    (세션: 작업1 / 논리·물리 모델 구분 기능)
+-- -------------------------------------------------------------
+ALTER TABLE TB_DATA_MODEL ADD COLUMN IF NOT EXISTS MODEL_TYPE VARCHAR(10) DEFAULT 'PHYSICAL';
+COMMENT ON COLUMN TB_DATA_MODEL.MODEL_TYPE IS '모델유형 (PHYSICAL: 물리, LOGICAL: 논리)';

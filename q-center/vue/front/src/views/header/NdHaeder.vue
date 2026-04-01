@@ -13,6 +13,19 @@
 
         <v-spacer />
 
+        <!-- 통합 검색 -->
+        <v-text-field
+            v-model="searchKeyword"
+            placeholder="통합 검색"
+            prepend-inner-icon="mdi-magnify"
+            dense hide-details outlined single-line
+            class="search-field mr-3"
+            style="max-width: 260px;"
+            @keyup.enter="executeSearch"
+            @click:prepend-inner="executeSearch"
+            clearable
+        ></v-text-field>
+
         <v-menu bottom rounded offset-y :max-width="isMobile ? '120px' : '150px'" transition="slide-y-transition">
             <template v-slot:activator="{ on }">
                 <!-- header의 오른쪽 아바타입니다. 모바일 이외의 화면에서 사이즈를 지정합니다. -->
@@ -48,11 +61,13 @@
 </template>
 
 <script>
+import { eventBus } from './../../eventBus.js'
 
 export default {
     name: 'NdHeader',
     props: ['isMobile', 'drawer','tabs'],
     data: () => ({
+        searchKeyword: '',
     }),
     methods: {
         navIconClick() {
@@ -85,6 +100,14 @@ export default {
         },
         goToUserPage() {
             this.addTabItem('사용자', 'user');
+        },
+        executeSearch() {
+            if (!this.searchKeyword || !this.searchKeyword.trim()) return;
+            const keyword = this.searchKeyword.trim();
+            this.addTabItem('통합 검색', 'globalSearch');
+            this.$nextTick(() => {
+                eventBus.$emit('globalSearch', keyword);
+            });
         },
         addTabItem(title, name) {
             // 탭에 현재 클릭한 메뉴가 있는지 확인하여 있으면 해당 탭으로 이동, 없으면 탭 추가

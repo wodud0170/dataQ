@@ -101,4 +101,59 @@
 			order by totalStndRate desc
 			limit 10
 	</select>
+	<!-- ============ 통합 검색 ============ -->
+
+	<!-- 단어 검색 -->
+	<select id="selectSearchWords" parameterType="HashMap" resultType="HashMap">
+		SELECT WORD_NM      AS "wordNm",
+		       WORD_ENG_ABRV_NM AS "wordEngAbrvNm",
+		       WORD_ENG_NM  AS "wordEngNm",
+		       WORD_DESC    AS "wordDesc"
+		  FROM TB_WORD
+		 WHERE APRV_YN = 'Y'
+		   AND (WORD_NM ILIKE '%'||#{keyword}||'%' OR WORD_ENG_ABRV_NM ILIKE '%'||#{keyword}||'%')
+		 ORDER BY WORD_NM
+		 LIMIT 20
+	</select>
+
+	<!-- 용어 검색 -->
+	<select id="selectSearchTerms" parameterType="HashMap" resultType="HashMap">
+		SELECT TERMS_NM         AS "termsNm",
+		       TERMS_ENG_ABRV_NM AS "termsEngAbrvNm",
+		       TERMS_DESC       AS "termsDesc",
+		       DOMAIN_NM        AS "domainNm"
+		  FROM TB_TERMS
+		 WHERE APRV_YN = 'Y'
+		   AND (TERMS_NM ILIKE '%'||#{keyword}||'%' OR TERMS_ENG_ABRV_NM ILIKE '%'||#{keyword}||'%')
+		 ORDER BY TERMS_NM
+		 LIMIT 20
+	</select>
+
+	<!-- 도메인 검색 -->
+	<select id="selectSearchDomains" parameterType="HashMap" resultType="HashMap">
+		SELECT DOMAIN_NM        AS "domainNm",
+		       DOMAIN_GROUP_NM  AS "domainGroupNm",
+		       DATA_TYPE        AS "dataType",
+		       DATA_LEN         AS "dataLen"
+		  FROM TB_DOMAIN
+		 WHERE DOMAIN_NM ILIKE '%'||#{keyword}||'%'
+		 ORDER BY DOMAIN_NM
+		 LIMIT 20
+	</select>
+
+	<!-- 테이블/컬럼 검색 -->
+	<select id="selectSearchColumns" parameterType="HashMap" resultType="HashMap">
+		SELECT OBJ_NM     AS "objNm",
+		       OBJ_NM_KR  AS "objNmKr",
+		       ATTR_NM    AS "attrNm",
+		       ATTR_NM_KR AS "attrNmKr",
+		       DATA_TYPE  AS "dataType"
+		  FROM TB_DATA_MODEL_ATTR
+		 WHERE OBJ_NM ILIKE '%'||#{keyword}||'%'
+		    OR ATTR_NM ILIKE '%'||#{keyword}||'%'
+		    OR ATTR_NM_KR ILIKE '%'||#{keyword}||'%'
+		 ORDER BY OBJ_NM, ATTR_NM
+		 LIMIT 20
+	</select>
+
 </mapper>

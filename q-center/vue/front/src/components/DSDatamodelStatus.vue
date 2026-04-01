@@ -142,14 +142,20 @@
       </SplitArea>
       <SplitArea :size="50" :style="{ overflow: 'hidden', position: 'relative' }">
         <v-sheet>
-          <!-- 탭 -->
-          <v-tabs :value="this.detailTab" class="tabsStyle" background-color="rgba(0,0,0,0.1)">
-            <v-tab v-for="item in detailTab" :tabindex="item.index" :key="item.index" class="tabBgColor"
-              active-class="activeTabBgColor" v-on:click.stop="addActiveDetail(item.name, item.index)"
-              :style="{ borderRight: '1px solid rgba(255,255,255, 0.4) !important' }">
-              {{ item.title }}
-            </v-tab>
-          </v-tabs>
+          <!-- 논리/물리 모델 전환 + 탭 -->
+          <v-sheet class="d-flex align-center" style="background-color: rgba(0,0,0,0.1);">
+            <v-tabs :value="this.detailTab" class="tabsStyle" background-color="transparent" style="flex: 1;">
+              <v-tab v-for="item in detailTab" :tabindex="item.index" :key="item.index" class="tabBgColor"
+                active-class="activeTabBgColor" v-on:click.stop="addActiveDetail(item.name, item.index)"
+                :style="{ borderRight: '1px solid rgba(255,255,255, 0.4) !important' }">
+                {{ item.title }}
+              </v-tab>
+            </v-tabs>
+            <v-btn-toggle v-model="modelViewMode" mandatory dense class="mr-2" style="height:30px;">
+              <v-btn x-small value="physical" :color="modelViewMode === 'physical' ? 'indigo' : ''" :dark="modelViewMode === 'physical'">물리</v-btn>
+              <v-btn x-small value="logical" :color="modelViewMode === 'logical' ? 'indigo' : ''" :dark="modelViewMode === 'logical'">논리</v-btn>
+            </v-btn-toggle>
+          </v-sheet>
         </v-sheet>
         <!-- 탭별 콘텐츠 -->
         <v-sheet v-if="activeDetailTab === 'tab1'" class="tabContentsWrapper">
@@ -191,7 +197,7 @@
                 </v-sheet>
               </v-sheet>
               <!-- 테이블 데이터 목록 -->
-              <v-data-table id="dmTable_table" :headers="dmTabledetaileHeaders" :items="dmTableItems" :page.sync="tb_page"
+              <v-data-table id="dmTable_table" :headers="currentTableHeaders" :items="dmTableItems" :page.sync="tb_page"
                 :items-per-page="tb_itemsPerPage" hide-default-footer item-key="tableid" class="px-4 pb-3"
                 :loading="tb_loadTable" loading-text="잠시만 기다려주세요.">
                 <!-- 클릭 가능한 아이템 설정 : 테이블 한글명  -->
@@ -270,7 +276,7 @@
 
               </v-sheet>
               <!-- 컬럼 목록 -->
-              <v-data-table id="clTable_table" :headers="dmColumnDetaileHeaders" :items="dmColumnItems"
+              <v-data-table id="clTable_table" :headers="currentColumnHeaders" :items="dmColumnItems"
                 :page.sync="cl_page" :items-per-page="cl_itemsPerPage" hide-default-footer hide-default-header
                 item-key="tableid" class="px-4 pb-3" :loading="cl_loadTable" loading-text="잠시만 기다려주세요.">
 
@@ -279,7 +285,7 @@
                   <!-- <template v-slot:header="{props}"> -->
                   <thead class="v-data-table-header">
                     <tr>
-                      <th v-for="(h, i) in dmColumnDetaileHeaders" :key="i"
+                      <th v-for="(h, i) in currentColumnHeaders" :key="i"
                         class="text-center parent-header td-border-style" :rowspan="h.children ? 1 : 2"
                         :colspan="h.children ? h.children.length : 1">
                         <pre>{{ h.text }}</pre>
@@ -287,7 +293,7 @@
                     </tr>
                     <tr>
                       <!-- sub thead -->
-                      <th v-for="(h1, i1) in clTb_getSubHeader(dmColumnDetaileHeaders)" :key="i1"
+                      <th v-for="(h1, i1) in clTb_getSubHeader(currentColumnHeaders)" :key="i1"
                         class="text-center child-header td-border-style"
                         :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(63, 81, 181, 0.08)' }">
                         <pre>{{ h1.text }}</pre>
@@ -664,7 +670,39 @@ export default {
     dmCdlListSelected: [],
     // 컬럼 탭 체크 박스
     statusListArray: ['Y', 'N'],
+    // 논리/물리 모델 전환
+    modelViewMode: 'physical',
+    // 논리 모델용 테이블 헤더 (한글명 먼저)
+    dmTableLogicalHeaders: [
+      { text: '테이블 한글명', align: 'start', sortable: false, value: 'objNmKr' },
+      { text: '테이블명', sortable: false, align: 'start', value: 'objNm' },
+      { text: '소유자', sortable: false, align: 'start', value: 'objOwner' },
+      { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
+      { text: '테이블 설명', sortable: false, align: 'start', value: 'objDesc' },
+    ],
+    // 논리 모델용 컬럼 헤더 (한글명 먼저)
+    dmColumnLogicalHeaders: [
+      { text: '테이블 한글명', sortable: false, align: 'center', value: 'objNmKr' },
+      { text: '테이블명', align: 'center', sortable: false, value: 'objNm' },
+      { text: '컬럼\n한글명', sortable: false, align: 'center', value: 'attrNmKr' },
+      { text: '컬럼명', sortable: false, align: 'center', value: 'attrNm' },
+      { text: '데이터\n타입', sortable: false, align: 'center', value: 'dataType' },
+      { text: '데이터\n길이', sortable: false, align: 'center', value: 'dataLen' },
+      { text: '데이터\n소수점\n길이', sortable: false, align: 'center', value: 'dataDecimalLen' },
+      { text: 'NULL\n여부', sortable: false, align: 'center', value: 'nullableYn' },
+      { text: 'PK 여부', sortable: false, align: 'center', value: 'pkYn' },
+      { text: 'FK 여부', sortable: false, align: 'center', value: 'fkYn' },
+      { text: '디폴트 값', sortable: false, align: 'center', value: 'defaultVal' },
+    ],
   }),
+  computed: {
+    currentTableHeaders() {
+      return this.modelViewMode === 'logical' ? this.dmTableLogicalHeaders : this.dmTabledetaileHeaders;
+    },
+    currentColumnHeaders() {
+      return this.modelViewMode === 'logical' ? this.dmColumnLogicalHeaders : this.dmColumnDetaileHeaders;
+    },
+  },
   methods: {
     setListPage() {
       // 페이지네이션 버튼 개수
