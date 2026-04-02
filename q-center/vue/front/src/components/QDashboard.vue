@@ -77,25 +77,18 @@
         </v-sheet>
 
         <v-sheet class="chartWrapper_3">
-          <!-- 용어 표준 준수율 -->
-          <div class="donut-chart-wrapper">
-            <div class="donut-chart-title">용어 표준 준수율</div>
+          <!-- 표준 준수율 -->
+          <div class="donut-chart-wrapper" style="flex:1;">
+            <div class="donut-chart-title">표준 준수율</div>
             <apexchart type="donut" class="chart_full" :options="term_pie_chartOptions" :series="term_series"
               :key="term_pie_Key"></apexchart>
           </div>
 
-          <!-- 단어 표준 준수율 -->
-          <div class="donut-chart-wrapper">
-            <div class="donut-chart-title">단어 표준 준수율</div>
-            <apexchart type="donut" class="chart_full" :options="word_pie_chartOptions" :series="word_series"
-              :key="word_pie_Key"></apexchart>
-          </div>
-
-          <!-- 도메인 표준 준수율 -->
-          <div class="donut-chart-wrapper">
-            <div class="donut-chart-title">도메인 표준 준수율</div>
-            <apexchart type="donut" class="chart_full" :options="domain_pie_chartOptions" :series="domain_series"
-              :key="domain_pie_Key"></apexchart>
+          <!-- 구조 일치율 -->
+          <div class="donut-chart-wrapper" style="flex:1;">
+            <div class="donut-chart-title">구조 일치율</div>
+            <apexchart type="donut" class="chart_full" :options="struct_pie_chartOptions" :series="struct_series"
+              :key="struct_pie_Key"></apexchart>
           </div>
         </v-sheet>
       </v-card>
@@ -358,6 +351,41 @@ export default {
       }
     },
     domain_pie_Key: 0,
+    // 구조 일치율
+    struct_series: [0, 100],
+    struct_pie_chartOptions: {
+      colors: ['#43A047', '#FF9800'],
+      labels: ['일치', '불일치'],
+      chart: { type: 'donut' },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '65%',
+            labels: {
+              show: true,
+              name: { show: true, fontSize: '13px', color: '#546E7A' },
+              value: { show: true, fontSize: '20px', fontWeight: 700, color: '#283593' },
+              total: {
+                show: true,
+                label: '일치율',
+                fontSize: '12px',
+                color: '#546E7A',
+                formatter: function (w) {
+                  var s = w.globals.seriesTotals;
+                  if (s.length > 0 && (s[0] + s[1]) > 0) return s[0] + '%';
+                  return '미진단';
+                }
+              }
+            }
+          }
+        }
+      },
+      dataLabels: { enabled: false },
+      legend: { show: false },
+      stroke: { width: 2, colors: ['#fff'] },
+      tooltip: { y: { formatter: function (val) { return val + "%"; } } }
+    },
+    struct_pie_Key: 0,
     // 최근 변경 이력
     recentHistoryList: [],
     recentHistoryLoading: false,
@@ -408,12 +436,11 @@ export default {
           this.objCnt = _data.objCnt;
           this.attrCnt = _data.attrCnt;
           this.term_series = [_data.termsStndRate, (100 - _data.termsStndRate)];
-          this.word_series = [_data.wordStndRate, (100 - _data.wordStndRate)];
-          this.domain_series = [_data.domainStndRate, (100 - _data.domainStndRate)];
 
           this.term_pie_Key++;
-          this.word_pie_Key++;
-          this.domain_pie_Key++;
+
+          // 구조 일치율 조회
+          this.getStructDiagRate();
 
         }).catch(error => {
           this.$swal.fire({
@@ -425,6 +452,26 @@ export default {
       } catch (error) {
         console.error(error);
       }
+    },
+    getStructDiagRate() {
+      try {
+        axios.get(this.$APIURL.base + "api/std/structDiag/history").then(result => {
+          var data = result.data || [];
+          if (data.length > 0) {
+            // 최신 진단 결과에서 일치율 계산
+            var latest = data[0];
+            var totalChanges = (latest.addedTables || 0) + (latest.addedColumns || 0) +
+              (latest.modifiedColumns || 0) + (latest.deletedTables || 0) + (latest.deletedColumns || 0);
+            var totalItems = (latest.totalTables || 0) + (latest.totalColumns || 0);
+            var matchRate = totalItems > 0 ? Math.round((1 - totalChanges / totalItems) * 100) : 0;
+            if (matchRate < 0) matchRate = 0;
+            this.struct_series = [matchRate, (100 - matchRate)];
+          } else {
+            this.struct_series = [0, 0]; // 미진단
+          }
+          this.struct_pie_Key++;
+        }).catch(function() {});
+      } catch (e) { console.error(e); }
     },
     getRecentChangeHistory() {
       this.recentHistoryLoading = true;
