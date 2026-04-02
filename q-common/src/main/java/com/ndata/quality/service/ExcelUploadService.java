@@ -201,6 +201,16 @@ public class ExcelUploadService {
 						throw new Exception(String.format("단어 미승인: %s", String.join(", ", unapprovedWords)));
 					}
 
+					// 분류어 검증: 마지막 단어가 분류어(WORD_CLSF_YN='Y')여야 함
+					if (wordEngAbrvNms.length < 2) {
+						throw new Exception("용어는 최소 2개 이상의 단어로 구성되어야 합니다");
+					}
+					String lastEngAbrv = wordEngAbrvNms[wordEngAbrvNms.length - 1];
+					StdWordVo lastWordVo = session.selectOne("word.selectWordByEngAbrvNm", lastEngAbrv);
+					if (lastWordVo != null && !"Y".equals(lastWordVo.getWordClsfYn())) {
+						throw new Exception("용어의 마지막 단어는 분류어여야 합니다. (현재: " + lastWordVo.getWordNm() + ")");
+					}
+
 					session.insert("terms.insertTerms", stdTermsVo);
 
 					List<StdTermsVo.Word> wordList = new ArrayList<StdTermsVo.Word>();

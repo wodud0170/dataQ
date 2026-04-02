@@ -31,6 +31,9 @@ public class NDQualityRetrieveCond {
     //단어 검색 조건 추가
     private String searchEngWord;
 
+    // 분류어 여부 필터 (Y/N)
+    private String wordClsfYn;
+
     //도메인 검색 조건 추가
     private String schDomainGrpNm;
     private String schDataType;

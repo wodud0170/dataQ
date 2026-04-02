@@ -799,6 +799,202 @@ class TermRecommendTest {
 		return wa;
 	}
 
+	// ========== 11. DP 기반 분리 (dpSplit) 테스트 ==========
+
+	@Nested
+	@DisplayName("DP 기반 1순위 분리 (dpSplit)")
+	class DpSplitTest {
+
+		@Test
+		@DisplayName("핸드폰지갑명 - DICT에 핸드폰,지갑 있음 → [핸드폰, 지갑, 명]")
+		void 핸드폰지갑명_DICT_우선() {
+			List<String> nnTokens = Arrays.asList(
+				"핸드폰지갑명", "핸드폰", "지갑명", "핸드폰지갑", "핸", "드", "폰", "지갑", "지", "갑", "명"
+			);
+			Set<String> registered = Collections.emptySet();
+			Set<String> dict = new HashSet<>(Arrays.asList("핸드폰", "지갑"));
+
+			List<String> result = dpSplit("핸드폰지갑명", nnTokens, registered, dict);
+
+			System.out.println("[TEST] DP 핸드폰지갑명: " + result);
+			assertEquals(Arrays.asList("핸드폰", "지갑", "명"), result);
+		}
+
+		@Test
+		@DisplayName("운전면허번호 - TB_WORD에 운전,면허,번호 → [운전, 면허, 번호] (DP는 총점수가 높은 분리 선택)")
+		void 운전면허번호_등록단어_longest() {
+			List<String> nnTokens = Arrays.asList("운전면허번호", "운전면허", "운전", "면허", "번호", "면허번호");
+			Set<String> registered = new HashSet<>(Arrays.asList("운전", "면허", "번호", "운전면허"));
+			Set<String> dict = Collections.emptySet();
+
+			List<String> result = dpSplit("운전면허번호", nnTokens, registered, dict);
+
+			System.out.println("[TEST] DP 운전면허번호: " + result);
+			// DP는 운전(10200)+면허(10200)+번호(10200)=30600 > 운전면허(10400)+번호(10200)=20600
+			// 개별 등록 단어가 모두 매칭되므로 총점수가 높은 쪽 선택
+			assertEquals(Arrays.asList("운전", "면허", "번호"), result);
+		}
+
+		@Test
+		@DisplayName("사용자전화번호 - 전부 TB_WORD → [사용자, 전화, 번호]")
+		void 사용자전화번호_전부등록() {
+			List<String> nnTokens = Arrays.asList("사용자", "전화", "번호", "사용", "자");
+			Set<String> registered = new HashSet<>(Arrays.asList("사용자", "전화", "번호"));
+			Set<String> dict = Collections.emptySet();
+
+			List<String> result = dpSplit("사용자전화번호", nnTokens, registered, dict);
+
+			assertEquals(Arrays.asList("사용자", "전화", "번호"), result);
+		}
+
+		@Test
+		@DisplayName("테슬라코일제목 - 제목이 TB_WORD → [테슬라, 코일, 제목] (DP가 뒤의 등록단어를 찾아냄)")
+		void 테슬라코일제목_DP_최적분리() {
+			// OKT 토큰 시뮬레이션
+			List<String> nnTokens = Arrays.asList(
+				"테슬라코일제목", "테슬라코일제", "테슬라코일", "테슬라", "코일제목", "코일제", "코일", "제목", "테", "슬", "라", "코", "일", "제", "목"
+			);
+			// TB_WORD에 "제목" 등록
+			Set<String> registered = new HashSet<>(Arrays.asList("제목"));
+			// DICT에 "테슬라", "코일"
+			Set<String> dict = new HashSet<>(Arrays.asList("테슬라", "코일"));
+
+			List<String> result = dpSplit("테슬라코일제목", nnTokens, registered, dict);
+
+			System.out.println("[TEST] DP 테슬라코일제목: " + result);
+			// 제목이 TB_WORD이므로 반드시 매칭되어야 함
+			assertTrue(result.contains("제목"), "DP는 뒤에 있는 등록단어 '제목'을 찾아야 함");
+			// 전체 결과는 [테슬라, 코일, 제목] 또는 [테슬라코일, 제목]
+			String joined = String.join("", result);
+			assertEquals("테슬라코일제목", joined, "분리 결과 합치면 원본과 동일해야 함");
+		}
+
+		@Test
+		@DisplayName("서버관리자명 - 관리자가 TB_WORD이면 [서버, 관리자, 명]")
+		void 서버관리자명_DP() {
+			List<String> nnTokens = Arrays.asList(
+				"서버관리자명", "서버", "관리자", "관리", "자명", "자", "명"
+			);
+			Set<String> registered = new HashSet<>(Arrays.asList("관리자"));
+			Set<String> dict = new HashSet<>(Arrays.asList("서버"));
+
+			List<String> result = dpSplit("서버관리자명", nnTokens, registered, dict);
+
+			System.out.println("[TEST] DP 서버관리자명: " + result);
+			assertTrue(result.contains("관리자"), "등록단어 '관리자'가 매칭되어야 함");
+			String joined = String.join("", result);
+			assertEquals("서버관리자명", joined);
+		}
+
+		@Test
+		@DisplayName("사용자 - 단일 등록 단어 (전체와 동일하면 skip) → 1글자 분리")
+		void 단일등록단어_DP() {
+			// dpSplit은 c.equals(input) 조건으로 전체 입력과 동일한 토큰을 제외
+			// 단일 등록 단어만 있는 경우 1글자 스킵으로 처리됨
+			List<String> nnTokens = Arrays.asList("사용자");
+			Set<String> registered = new HashSet<>(Arrays.asList("사용자"));
+			Set<String> dict = Collections.emptySet();
+
+			List<String> result = dpSplit("사용자", nnTokens, registered, dict);
+
+			// 분리 결과를 합치면 원본과 동일해야 함
+			String joined = String.join("", result);
+			assertEquals("사용자", joined);
+		}
+
+		@Test
+		@DisplayName("빈 문자열 → 빈 리스트")
+		void 빈문자열_DP() {
+			List<String> nnTokens = Collections.emptyList();
+			Set<String> registered = Collections.emptySet();
+			Set<String> dict = Collections.emptySet();
+
+			List<String> result = dpSplit("", nnTokens, registered, dict);
+
+			assertTrue(result.isEmpty());
+		}
+
+		@Test
+		@DisplayName("코드 - 짧은 등록 단어 (전체와 동일하면 skip) → 1글자 분리")
+		void 짧은등록단어_DP() {
+			// dpSplit은 c.equals(input) 조건으로 전체 입력과 동일한 토큰을 제외
+			List<String> nnTokens = Arrays.asList("코드");
+			Set<String> registered = new HashSet<>(Arrays.asList("코드"));
+			Set<String> dict = Collections.emptySet();
+
+			List<String> result = dpSplit("코드", nnTokens, registered, dict);
+
+			// 분리 결과를 합치면 원본과 동일해야 함
+			String joined = String.join("", result);
+			assertEquals("코드", joined);
+		}
+	}
+
+	// ========== dpSplit 로직 재현 (컨트롤러와 동일) ==========
+
+	private List<String> dpSplit(String input, List<String> nnTokens, Set<String> registered, Set<String> dict) {
+		int n = input.length();
+		if (n == 0) return new ArrayList<>();
+
+		Set<String> candidateSet = new LinkedHashSet<>(nnTokens);
+		for (String w : registered) { if (w.length() >= 2 && input.contains(w)) candidateSet.add(w); }
+
+		int[] dp = new int[n + 1];
+		int[] parent = new int[n + 1];
+		String[] token = new String[n + 1];
+		Arrays.fill(dp, Integer.MIN_VALUE / 2);
+		Arrays.fill(parent, -1);
+		dp[0] = 0;
+
+		for (int i = 0; i < n; i++) {
+			if (dp[i] == Integer.MIN_VALUE / 2) continue;
+
+			for (String c : candidateSet) {
+				if (c.equals(input)) continue;
+				if (i + c.length() <= n && input.startsWith(c, i)) {
+					int score = calcScore(c, registered, dict);
+					if (dp[i] + score > dp[i + c.length()]) {
+						dp[i + c.length()] = dp[i] + score;
+						parent[i + c.length()] = i;
+						token[i + c.length()] = c;
+					}
+				}
+			}
+
+			// 1글자 스킵
+			int skipScore = dp[i] - 500;
+			if (skipScore > dp[i + 1]) {
+				dp[i + 1] = skipScore;
+				parent[i + 1] = i;
+				token[i + 1] = input.substring(i, i + 1);
+			}
+		}
+
+		List<String> result = new ArrayList<>();
+		int pos = n;
+		while (pos > 0 && parent[pos] >= 0) {
+			result.add(0, token[pos]);
+			pos = parent[pos];
+		}
+		if (result.isEmpty()) {
+			result.add(input);
+		}
+		return result;
+	}
+
+	private int calcScore(String token, Set<String> registered, Set<String> dict) {
+		if (registered.contains(token)) {
+			return 10000 + token.length() * 100;
+		}
+		if (dict.contains(token)) {
+			return 5000 + token.length() * 100;
+		}
+		int len = token.length();
+		if (len >= 2 && len <= 4) return 500 + len * 50;
+		if (len >= 5) return 100;
+		return 10;
+	}
+
 	/** 테스트용 단어 VO */
 	private static class FakeWord {
 		final String nm, eng, abrv, domainClsf;

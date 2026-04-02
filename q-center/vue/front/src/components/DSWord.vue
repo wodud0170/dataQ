@@ -22,6 +22,13 @@
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
               <!-- 승인 여부 추가 -->
+              <!-- 분류어 여부 필터 -->
+              <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">분류어</span>
+              <v-select class="pr-4 pl-2" v-model="searchWordClsfYn" :items="wordClsfYnOptions"
+                item-text="text" item-value="value"
+                dense outlined hide-details single-line
+                :style="{ maxWidth: '120px' }">
+              </v-select>
               <v-checkbox class="wordSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
               <v-btn class="gradient" title="검색" v-on:click="getWordData"
@@ -575,6 +582,13 @@ export default {
     searchEngWord: '',
     // 검색 승인 여부
     searchApproval: true,
+    // 분류어 여부 필터
+    searchWordClsfYn: '',
+    wordClsfYnOptions: [
+      { text: '전체', value: '' },
+      { text: '분류어', value: 'Y' },
+      { text: '일반어', value: 'N' }
+    ],
     // 등록 모달 보이기
     addWordModalShow: false,
     // 수정 모달 보이기
@@ -686,6 +700,7 @@ export default {
       this.searchWord = '';
       this.searchEngWord = '';
       this.searchApproval = true;
+      this.searchWordClsfYn = '';
     },
     checkEngAbrvDuplicate() {
       var vm = this;
@@ -1139,7 +1154,8 @@ export default {
             {
               'schNm': schNm,
               'searchEngWord': searchEngWord,
-              'schAprvYn': schAprvYn
+              'schAprvYn': schAprvYn,
+              'wordClsfYn': this.searchWordClsfYn || null
             }).then(result => {
               let _data = result.data;
 

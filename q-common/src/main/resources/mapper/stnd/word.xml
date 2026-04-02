@@ -84,6 +84,9 @@
 			<if test="schAprvYn != null">
 				AND A.APRV_YN = #{schAprvYn}
 			</if>
+			<if test="wordClsfYn != null and wordClsfYn != ''">
+				AND A.WORD_CLSF_YN = #{wordClsfYn}
+			</if>
 			order by A.WORD_NM
 	</select>
 

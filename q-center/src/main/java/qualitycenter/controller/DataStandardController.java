@@ -395,6 +395,17 @@ public class DataStandardController {
 			if (!unapprovedWords.isEmpty()) {
 				throw new Exception("다음 단어가 아직 승인되지 않았습니다: " + String.join(", ", unapprovedWords));
 			}
+			// 분류어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 분류어여야 함
+			if (wordList.size() < 2) {
+				throw new Exception("용어는 최소 2개 이상의 단어로 구성되어야 합니다");
+			}
+			StdTermsVo.Word lastWord = wordList.get(wordList.size() - 1);
+			if (lastWord.getWordId() != null) {
+				List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWord.getWordId());
+				if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
+					throw new Exception("용어의 마지막 단어는 분류어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
+				}
+			}
 			// 신규 용어 등록
 			session.insert("terms.insertTerms", dataVo);
 			wordList.stream().forEach(v -> v.setTermsId(dataVo.getId()));
@@ -1567,7 +1578,7 @@ public class DataStandardController {
 			}
 
 			// 1순위: TB_WORD > DICT > OKT longest
-			List<String> primaryTokens = greedySplit(cleanName, candidateSet, wordsByNm, wordDict);
+			List<String> primaryTokens = dpSplit(cleanName, candidateSet, wordsByNm, wordDict);
 			log.info("[TermAnalysis] 1순위 for '{}': {}", cleanName, primaryTokens);
 
 			// 2순위: 1순위에서 미등록 단어를 추가 분리
@@ -1829,6 +1840,26 @@ public class DataStandardController {
 							+ ". 먼저 단어 승인을 받은 후 용어를 등록해주세요.");
 				}
 
+				// 분류어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 분류어여야 함
+				if (words == null || words.size() < 2) {
+					throw new RuntimeException("용어는 최소 2개 이상의 단어로 구성되어야 합니다");
+				}
+				Map<String, Object> lastWordEntry = words.get(words.size() - 1);
+				String lastWordId = (String) lastWordEntry.get("wordId");
+				if (lastWordId == null) {
+					// 신규 단어인 경우 newWordIndex로 ID 가져오기
+					Number lastNewWordIndex = (Number) lastWordEntry.get("newWordIndex");
+					if (lastNewWordIndex != null) {
+						lastWordId = newWordIdMap.get(lastNewWordIndex.intValue());
+					}
+				}
+				if (lastWordId != null) {
+					List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWordId);
+					if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
+						throw new RuntimeException("용어의 마지막 단어는 분류어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
+					}
+				}
+
 				// 도메인 유효성 체크
 				if (domainNm != null && !domainNm.trim().isEmpty()) {
 					Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", domainNm.trim());
@@ -1999,13 +2030,98 @@ public class DataStandardController {
 	}
 
 	/**
+	 * DP 기반 최적 단어 분리
+	 *
+	 * 입력 문자열의 모든 위치에서 모든 가능한 토큰을 시도하고,
+	 * 총 점수가 가장 높은 분리를 선택한다.
+	 *
+	 * @param input      입력 문자열 (공백 제거됨)
+	 * @param candidates OKT 토큰 후보 세트
+	 * @param wordsByNm  TB_WORD 등록 단어 맵
+	 * @param wordDict   TB_WORD_DICT 추천 사전 맵
+	 * @return 최적 분리된 토큰 목록
+	 */
+	private List<String> dpSplit(String input, Set<String> candidates,
+			Map<String, List<StdWordVo>> wordsByNm,
+			Map<String, Map<String, Object>> wordDict) {
+		int n = input.length();
+		if (n == 0) return new ArrayList<>();
+
+		int[] dp = new int[n + 1];
+		int[] parent = new int[n + 1];
+		String[] token = new String[n + 1];
+		Arrays.fill(dp, Integer.MIN_VALUE / 2);
+		Arrays.fill(parent, -1);
+		dp[0] = 0;
+
+		for (int i = 0; i < n; i++) {
+			if (dp[i] == Integer.MIN_VALUE / 2) continue;
+
+			// 모든 후보 토큰 시도
+			for (String c : candidates) {
+				if (c.equals(input)) continue; // 전체 입력과 동일한 토큰 제외
+				if (i + c.length() <= n && input.startsWith(c, i)) {
+					int score = calculateTokenScore(c, wordsByNm, wordDict);
+					if (dp[i] + score > dp[i + c.length()]) {
+						dp[i + c.length()] = dp[i] + score;
+						parent[i + c.length()] = i;
+						token[i + c.length()] = c;
+					}
+				}
+			}
+
+			// 1글자 스킵 (매칭 안 될 때)
+			String oneChar = input.substring(i, i + 1);
+			int skipScore = dp[i] - 500;
+			if (skipScore > dp[i + 1]) {
+				dp[i + 1] = skipScore;
+				parent[i + 1] = i;
+				token[i + 1] = oneChar;
+			}
+		}
+
+		// 역추적
+		List<String> result = new ArrayList<>();
+		int pos = n;
+		while (pos > 0 && parent[pos] >= 0) {
+			result.add(0, token[pos]);
+			pos = parent[pos];
+		}
+		// 도달 못한 경우 전체를 하나로
+		if (result.isEmpty()) {
+			result.add(input);
+		}
+		return result;
+	}
+
+	/**
+	 * DP 분리용 토큰 점수 계산
+	 *
+	 * TB_WORD 등록 단어 > TB_WORD_DICT 추천 사전 > OKT 토큰 순으로 점수 부여.
+	 * 같은 유형 내에서는 긴 토큰이 더 높은 점수를 받는다.
+	 */
+	private int calculateTokenScore(String token, Map<String, List<StdWordVo>> wordsByNm,
+			Map<String, Map<String, Object>> wordDict) {
+		if (wordsByNm.containsKey(token)) {
+			return 10000 + token.length() * 100;
+		}
+		if (wordDict.containsKey(token)) {
+			return 5000 + token.length() * 100;
+		}
+		int len = token.length();
+		if (len >= 2 && len <= 4) return 500 + len * 50;
+		if (len >= 5) return 100;
+		return 10;
+	}
+
+	/**
 	 * 입력 문자열을 순서대로 커버하는 최적 토큰 조합을 선택한다.
 	 * - 등록된 단어(wordsByNm에 존재)를 우선 매칭
 	 * - 같은 조건이면 긴 토큰 우선 (greedy)
 	 * - 예: "API코드" → ["API", "코드"] (등록단어), "API코드"나 "코", "드" 등은 제외
 	 */
 	/**
-	 * 1순위 분리: TB_WORD > DICT > OKT longest 순으로 greedy 매칭
+	 * 1순위 분리: TB_WORD > DICT > OKT longest 순으로 greedy 매칭 (fallback용)
 	 */
 	private List<String> greedySplit(String input, Set<String> candidates,
 			Map<String, List<StdWordVo>> wordsByNm, Map<String, Map<String, Object>> wordDict) {
