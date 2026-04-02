@@ -80,6 +80,10 @@ public class ExcelUploadService {
 					stdWordVo.setId(StringUtils.getUUID());
 					stdWordVo.setWordNm(dataRow.get(2));
 
+					// 영문약어에 언더바(_) 체크
+					if (dataRow.get(3) != null && dataRow.get(3).contains("_")) {
+						throw new Exception("단어 영문약어에 언더바(_)는 사용할 수 없습니다.");
+					}
 					// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
 					Map<String, Object> forbiddenWord = session.selectOne("word.selectWordByForbiddenNm", dataRow.get(2));
 					if (forbiddenWord != null) {

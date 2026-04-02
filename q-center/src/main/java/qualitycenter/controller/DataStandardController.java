@@ -136,6 +136,10 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
+			// 영문약어에 언더바(_) 포함 여부 체크: 단어 영문약어에는 _ 사용 불가
+			if (dataVo.getWordEngAbrvNm() != null && dataVo.getWordEngAbrvNm().contains("_")) {
+				throw new Exception("단어 영문약어에 언더바(_)는 사용할 수 없습니다. 언더바는 용어(단어 조합)에서 구분자로 사용됩니다.");
+			}
 			// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
 			String forbiddenMsg = checkForbiddenWord(dataVo.getWordNm());
 			if (forbiddenMsg != null) {
@@ -1626,6 +1630,13 @@ public class DataStandardController {
 				|| wordEngNm == null || wordEngNm.trim().isEmpty()) {
 			res.put("success", false);
 			res.put("message", "한글명, 영문약어, 영문명은 필수입니다.");
+			return res;
+		}
+
+		// 영문약어에 언더바(_) 포함 여부 체크
+		if (wordEngAbrvNm.contains("_")) {
+			res.put("success", false);
+			res.put("message", "단어 영문약어에 언더바(_)는 사용할 수 없습니다. 언더바는 용어(단어 조합)에서 구분자로 사용됩니다.");
 			return res;
 		}
 
