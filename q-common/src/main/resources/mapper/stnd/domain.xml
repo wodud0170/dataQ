@@ -214,23 +214,24 @@
   <update id="updateDomain" parameterType="com.ndata.quality.model.std.StdDomainVo">
             UPDATE
               TB_DOMAIN
-            SET
-               DOMAIN_NM = #{domainNm}
-              ,DOMAIN_GRP_NM = #{domainGrpNm}
-              ,DOMAIN_CLSF_NM = #{domainClsfNm}
-              ,DOMAIN_DESC = #{domainDesc}
-              ,DATA_TYPE = #{dataType}
-			        ,DATA_LEN = #{dataLen}
-              ,DATA_DECIMAL_LEN = #{dataDecimalLen}
-              ,DATA_UNIT = #{dataUnit, jdbcType=VARCHAR}
-              ,STOR_FMT = #{storFmt, jdbcType=VARCHAR}
-              ,EXPR_FMT_LST = #{exprFmtLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
-              ,ALLOW_VAL_LST = #{allowValLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
-              ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
-              ,MAGNTD_ORD = #{magntdOrd, jdbcType=VARCHAR}
-              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-              ,UPDT_USER_ID = #{updtUserId}
-              ,REQ_SYS_CD = #{reqSysCd, jdbcType=VARCHAR}
+            <set>
+              <if test="domainNm != null">DOMAIN_NM = #{domainNm},</if>
+              <if test="domainGrpNm != null">DOMAIN_GRP_NM = #{domainGrpNm},</if>
+              <if test="domainClsfNm != null">DOMAIN_CLSF_NM = #{domainClsfNm},</if>
+              <if test="domainDesc != null">DOMAIN_DESC = #{domainDesc},</if>
+              <if test="dataType != null">DATA_TYPE = #{dataType},</if>
+              <if test="dataLen != null">DATA_LEN = #{dataLen},</if>
+              <if test="dataDecimalLen != null">DATA_DECIMAL_LEN = #{dataDecimalLen},</if>
+              DATA_UNIT = #{dataUnit, jdbcType=VARCHAR},
+              STOR_FMT = #{storFmt, jdbcType=VARCHAR},
+              EXPR_FMT_LST = #{exprFmtLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler},
+              ALLOW_VAL_LST = #{allowValLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler},
+              <if test="commStndYn != null">COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR},</if>
+              MAGNTD_ORD = #{magntdOrd, jdbcType=VARCHAR},
+              UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
+              UPDT_USER_ID = #{updtUserId},
+              REQ_SYS_CD = #{reqSysCd, jdbcType=VARCHAR}
+            </set>
             WHERE
               DOMAIN_ID = #{id}
   </update>
@@ -280,11 +281,12 @@
   <update id="updateDomainGroup" parameterType="com.ndata.quality.model.std.StdDomainGroupVo">
             UPDATE
               TB_DOMAIN_GRP
-            SET
-              DOMAIN_GRP_NM = #{domainGrpNm}
-              ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
-              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-              ,UPDT_USER_ID = #{updtUserId}
+            <set>
+              <if test="domainGrpNm != null">DOMAIN_GRP_NM = #{domainGrpNm},</if>
+              <if test="commStndYn != null">COMM_STND_YN = #{commStndYn},</if>
+              UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
+              UPDT_USER_ID = #{updtUserId}
+            </set>
             WHERE
               DOMAIN_GRP_ID = #{id}
   </update>
@@ -367,12 +369,13 @@
   <update id="updateDomainClassification" parameterType="com.ndata.quality.model.std.StdDomainClassificationVo">
             UPDATE
               TB_DOMAIN_CLSF
-            SET
-               DOMAIN_CLSF_NM = #{domainClsfNm}
-              ,DOMAIN_GRP_NM = #{domainGrpNm}
-              ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
-              ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-              ,UPDT_USER_ID = #{updtUserId}
+            <set>
+              <if test="domainClsfNm != null">DOMAIN_CLSF_NM = #{domainClsfNm},</if>
+              <if test="domainGrpNm != null">DOMAIN_GRP_NM = #{domainGrpNm},</if>
+              <if test="commStndYn != null">COMM_STND_YN = #{commStndYn},</if>
+              UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
+              UPDT_USER_ID = #{updtUserId}
+            </set>
             WHERE
               DOMAIN_CLSF_ID = #{id}
   </update>

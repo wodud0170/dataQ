@@ -349,6 +349,10 @@ public class DataStandardController {
 	public Mono<Response> createTerms(@RequestBody StdTermsVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
+		// termsDesc가 null이면 termsNm을 자동으로 채움
+		if (dataVo.getTermsDesc() == null || dataVo.getTermsDesc().isEmpty()) {
+			dataVo.setTermsDesc(dataVo.getTermsNm());
+		}
 		// 사용자가 어드민인 경우에 자동승인 처리
 		if (sessionService.isAdmin()) {
 			dataVo.setAprvYn("Y");
@@ -1095,6 +1099,10 @@ public class DataStandardController {
 
 			dataVo.setId(StringUtils.getUUID());
 			dataVo.setCretUserId(sessionService.getUserId());
+			// commStndYn이 null이면 기본값 'N'
+			if (dataVo.getCommStndYn() == null || dataVo.getCommStndYn().isEmpty()) {
+				dataVo.setCommStndYn("N");
+			}
 
 			int cnt = sqlSessionTemplate.insert("domain.insertDomainGroup", dataVo);
 
@@ -1125,6 +1133,10 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
+			if (dataVo.getId() == null || dataVo.getId().isEmpty()) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "필수 파라미터 누락: id");
+				return result;
+			}
 
 			dataVo.setUpdtUserId(sessionService.getUserId());
 
@@ -1189,6 +1201,10 @@ public class DataStandardController {
 
 			dataVo.setId(StringUtils.getUUID());
 			dataVo.setCretUserId(sessionService.getUserId());
+			// commStndYn이 null이면 기본값 'N'
+			if (dataVo.getCommStndYn() == null || dataVo.getCommStndYn().isEmpty()) {
+				dataVo.setCommStndYn("N");
+			}
 
 			int cnt = sqlSessionTemplate.insert("domain.insertDomainClassification", dataVo);
 
@@ -1219,6 +1235,10 @@ public class DataStandardController {
 	public Response updateDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
 		Response result = new Response();
 		try {
+			if (dataVo.getId() == null || dataVo.getId().isEmpty()) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "필수 파라미터 누락: id");
+				return result;
+			}
 			dataVo.setUpdtUserId(sessionService.getUserId());
 			int cnt = sqlSessionTemplate.update("domain.updateDomainClassification", dataVo);
 			if (cnt == 1) {

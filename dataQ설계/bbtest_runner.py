@@ -934,12 +934,12 @@ def test_domain_group(session):
                 "commStndYn": "N"
             })
             d2 = r2.json()
-            ok_update = d2.get("code") == "200" or d2.get("resultCode") == "200"
+            ok_update = str(d2.get("code", d2.get("resultCode", ""))) == "200"
 
             # Delete
             r3 = session.post(f"{BASE}/api/std/deleteDomainGroups", json=[{"id": created_grp_id}])
             d3 = r3.json()
-            ok_delete = d3.get("code") == "200" or d3.get("resultCode") == "200"
+            ok_delete = str(d3.get("code", d3.get("resultCode", ""))) == "200"
 
         ok = ok_create and ok_update and ok_delete
         add_result("7-2", "도메인 그룹 CRUD", ok, f"등록={ok_create}, 수정={ok_update}, 삭제={ok_delete}")
@@ -986,11 +986,11 @@ def test_domain_group(session):
                 "domainGrpNm": grp_nm
             })
             d2 = r2.json()
-            ok_update = d2.get("code") == "200" or d2.get("resultCode") == "200"
+            ok_update = str(d2.get("code", d2.get("resultCode", ""))) == "200"
 
             r3 = session.post(f"{BASE}/api/std/deleteDomainClassifications", json=[{"id": created_clsf_id}])
             d3 = r3.json()
-            ok_delete = d3.get("code") == "200" or d3.get("resultCode") == "200"
+            ok_delete = str(d3.get("code", d3.get("resultCode", ""))) == "200"
 
         ok = ok_create and ok_update and ok_delete
         add_result("7-4", "도메인 분류 CRUD", ok, f"등록={ok_create}, 수정={ok_update}, 삭제={ok_delete}")

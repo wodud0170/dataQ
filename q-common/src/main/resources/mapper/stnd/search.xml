@@ -139,7 +139,7 @@
 	<!-- 도메인 검색 -->
 	<select id="selectSearchDomains" parameterType="HashMap" resultType="HashMap">
 		SELECT DOMAIN_NM        AS "domainNm",
-		       DOMAIN_GROUP_NM  AS "domainGroupNm",
+		       DOMAIN_GRP_NM   AS "domainGroupNm",
 		       DATA_TYPE        AS "dataType",
 		       DATA_LEN         AS "dataLen"
 		  FROM TB_DOMAIN
@@ -151,7 +151,6 @@
 	<!-- 테이블/컬럼 검색 -->
 	<select id="selectSearchColumns" parameterType="HashMap" resultType="HashMap">
 		SELECT OBJ_NM     AS "objNm",
-		       OBJ_NM_KR  AS "objNmKr",
 		       ATTR_NM    AS "attrNm",
 		       ATTR_NM_KR AS "attrNmKr",
 		       DATA_TYPE  AS "dataType"
