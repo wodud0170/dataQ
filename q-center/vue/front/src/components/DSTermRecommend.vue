@@ -234,25 +234,22 @@
               <tr v-for="(w, wi) in currentEditWords" :key="wi">
                 <td>{{ w.wordNm }}</td>
                 <td>
-                  <v-text-field v-if="w.status === 'NEW'" v-model="w.newWord.wordEngAbrvNm" dense hide-details
+                  <v-text-field v-if="w.status === 'NEW' || w.status === 'UNRECOGNIZED'" v-model="w.newWord.wordEngAbrvNm" dense hide-details
                     @input="w.newWord.wordEngAbrvNm = (w.newWord.wordEngAbrvNm || '').toUpperCase()"
                     style="max-width:120px"></v-text-field>
-                  <span v-else-if="w.status === 'UNRECOGNIZED'" class="grey--text">-</span>
                   <span v-else>{{ w.selected && w.selected.wordEngAbrvNm || '-' }}</span>
                 </td>
                 <td>
-                  <v-text-field v-if="w.status === 'NEW'" v-model="w.newWord.wordEngNm" dense hide-details
+                  <v-text-field v-if="w.status === 'NEW' || w.status === 'UNRECOGNIZED'" v-model="w.newWord.wordEngNm" dense hide-details
                     style="max-width:150px"></v-text-field>
-                  <span v-else-if="w.status === 'UNRECOGNIZED'" class="grey--text">-</span>
                   <span v-else>{{ w.selected && w.selected.wordEngNm || '-' }}</span>
                 </td>
                 <td>
-                  <v-chip v-if="w.status === 'UNRECOGNIZED'" x-small color="red" text-color="white">매칭불가</v-chip>
-                  <v-chip v-else-if="w.status === 'NEW' && !w._registered" x-small color="orange" text-color="white">신규</v-chip>
+                  <v-chip v-if="(w.status === 'UNRECOGNIZED' || w.status === 'NEW') && !w._registered" x-small color="orange" text-color="white">신규</v-chip>
                   <v-chip v-else x-small color="green" text-color="white">등록됨</v-chip>
                 </td>
                 <td>
-                  <v-btn v-if="w.status === 'NEW' && !w._registered" x-small color="primary"
+                  <v-btn v-if="(w.status === 'NEW' || w.status === 'UNRECOGNIZED') && !w._registered" x-small color="primary"
                     :loading="w._registering"
                     @click="registerSingleWord(w)">단어등록</v-btn>
                   <v-icon v-if="w._registered" small color="green">mdi-check-circle</v-icon>
@@ -540,7 +537,7 @@ export default {
           var nw = item.words[j];
           if (nw.status === 'UNRECOGNIZED') {
             unrecognized.push(nw.wordNm);
-          } else if (nw.status === 'NEW' && !nw._registered) {
+          } else if ((nw.status === 'NEW' || nw.status === 'UNRECOGNIZED') && !nw._registered) {
             unregistered.push(nw.wordNm);
           }
         }
