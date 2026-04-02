@@ -59,10 +59,10 @@
 				 count(A.DM_ID) as dataModelCnt
 				,sum(COALESCE(B.OBJ_CNT,0)) as objCnt
 				,sum(COALESCE(B.ATTR_CNT,0)) as attrCnt
-				,COALESCE(D.totalStndRate, 0) as totalStndRate
-				,COALESCE(D.totalStndRate, 0) as termsStndRate
-				,COALESCE(D.wordStndRate, 0) as wordStndRate
-				,COALESCE(D.domainStndRate, 0) as domainStndRate
+				,ROUND(avg(COALESCE(D.stndRate, 0)), 2) as totalStndRate
+				,ROUND(avg(COALESCE(D.stndRate, 0)), 2) as termsStndRate
+				,ROUND(avg(COALESCE(D.stndRate, 0)), 2) as wordStndRate
+				,ROUND(avg(COALESCE(D.stndRate, 0)), 2) as domainStndRate
 			from TB_DATA_MODEL A LEFT OUTER JOIN (
 				select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID
 				from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
@@ -73,13 +73,7 @@
 				select J.DM_ID,
 					CASE WHEN J.TOTAL_CNT > 0
 						THEN ROUND((1.0 - (J.RESULT_CNT::decimal / J.TOTAL_CNT)) * 100, 1)
-						ELSE 0 END as totalStndRate,
-					CASE WHEN J.TOTAL_CNT > 0
-						THEN ROUND((1.0 - (J.RESULT_CNT::decimal / J.TOTAL_CNT)) * 100, 1)
-						ELSE 0 END as wordStndRate,
-					CASE WHEN J.TOTAL_CNT > 0
-						THEN ROUND((1.0 - (J.RESULT_CNT::decimal / J.TOTAL_CNT)) * 100, 1)
-						ELSE 0 END as domainStndRate
+						ELSE 0 END as stndRate
 				from TB_DIAG_JOB J
 				where J.STATUS = 'DONE'
 					and J.END_DT = (select max(END_DT) from TB_DIAG_JOB where DM_ID = J.DM_ID and STATUS = 'DONE')
