@@ -353,6 +353,10 @@ public class DataStandardController {
 		if (dataVo.getTermsDesc() == null || dataVo.getTermsDesc().isEmpty()) {
 			dataVo.setTermsDesc(dataVo.getTermsNm());
 		}
+		// domainNm이 null이면 빈 문자열 대신 null 유지 방지
+		if (dataVo.getDomainNm() == null || dataVo.getDomainNm().trim().isEmpty()) {
+			dataVo.setDomainNm(null);
+		}
 		// 사용자가 어드민인 경우에 자동승인 처리
 		if (sessionService.isAdmin()) {
 			dataVo.setAprvYn("Y");
