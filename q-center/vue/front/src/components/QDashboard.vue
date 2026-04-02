@@ -90,6 +90,13 @@
             <apexchart type="donut" class="chart_full" :options="struct_pie_chartOptions" :series="struct_series"
               :key="struct_pie_Key"></apexchart>
           </div>
+
+          <!-- 진단 추이 -->
+          <div class="donut-chart-wrapper" style="flex:1.3;">
+            <div class="donut-chart-title">진단 준수율 추이</div>
+            <apexchart type="line" height="170" :options="diagTrendOptions" :series="diagTrendSeries"
+              :key="diagTrendKey"></apexchart>
+          </div>
         </v-sheet>
       </v-card>
 
@@ -386,6 +393,20 @@ export default {
       tooltip: { y: { formatter: function (val) { return val + "%"; } } }
     },
     struct_pie_Key: 0,
+    // 진단 추이 라인차트
+    diagTrendSeries: [{ name: '준수율', data: [] }],
+    diagTrendOptions: {
+      chart: { type: 'line', toolbar: { show: false }, sparkline: { enabled: false } },
+      colors: ['#3F51B5'],
+      stroke: { width: 3, curve: 'smooth' },
+      markers: { size: 5, colors: ['#3F51B5'], strokeColors: '#fff', strokeWidth: 2 },
+      xaxis: { categories: [], labels: { style: { fontSize: '10px', colors: '#9E9E9E' } } },
+      yaxis: { min: 0, max: 100, labels: { style: { fontSize: '10px' }, formatter: function(v) { return v + '%'; } } },
+      grid: { borderColor: '#F0F0F0', strokeDashArray: 4 },
+      tooltip: { y: { formatter: function(v) { return v + '%'; } } },
+      dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 600 }, formatter: function(v) { return v + '%'; }, offsetY: -8 },
+    },
+    diagTrendKey: 0,
     // 최근 변경 이력
     recentHistoryList: [],
     recentHistoryLoading: false,
@@ -397,6 +418,7 @@ export default {
     // 대시보드 메뉴 선택 시 호출
     this.getDashboardInfo();
     this.getDataModelStat();
+    this.getDiagTrend();
     this.getRecentChangeHistory();
   },
   mounted() {
@@ -470,6 +492,32 @@ export default {
             this.struct_series = [0, 0]; // 미진단
           }
           this.struct_pie_Key++;
+        }).catch(function() {});
+      } catch (e) { console.error(e); }
+    },
+    getDiagTrend() {
+      try {
+        axios.post(this.$APIURL.base + "api/diag/getDiagJobList", {}).then(result => {
+          var jobs = (result.data || [])
+            .filter(function(j) { return j.status === 'DONE' && j.totalCnt > 0; })
+            .slice(0, 5)
+            .reverse();
+          if (jobs.length > 0) {
+            var categories = [];
+            var data = [];
+            for (var i = 0; i < jobs.length; i++) {
+              var j = jobs[i];
+              var rate = Math.round((1 - j.resultCnt / j.totalCnt) * 100 * 10) / 10;
+              var dt = j.endDt || j.startDt || '';
+              categories.push(dt.substring(5, 10) || ('#' + (i + 1)));
+              data.push(rate);
+            }
+            this.diagTrendSeries = [{ name: '준수율', data: data }];
+            this.diagTrendOptions = Object.assign({}, this.diagTrendOptions, {
+              xaxis: Object.assign({}, this.diagTrendOptions.xaxis, { categories: categories })
+            });
+            this.diagTrendKey++;
+          }
         }).catch(function() {});
       } catch (e) { console.error(e); }
     },
@@ -689,8 +737,8 @@ export default {
 
 .chart_full {
   width: 100%;
-  max-width: 180px;
-  max-height: 180px;
+  max-width: 200px;
+  max-height: 200px;
   margin: 0 auto;
 }
 
