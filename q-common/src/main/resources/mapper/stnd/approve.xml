@@ -199,7 +199,7 @@
             UPDATE
               TB_DOMAIN
             SET
-               APRV_YN = 
+               APRV_YN =
 					      CASE WHEN 2 = #{aprvStat} THEN 'Y'
                     ELSE 'N'
                     END
@@ -208,4 +208,22 @@
             WHERE
               DOMAIN_ID = #{reqItemId}
   </update>
+
+  <!-- 용어 승인 시: 구성 단어 중 미승인 단어 조회 -->
+  <select id="selectUnapprovedWordsByTermsId" parameterType="String" resultType="hashmap">
+    SELECT w.WORD_ID as "wordId", w.WORD_NM as "wordNm"
+    FROM TB_TERMS_WORDS tw
+    JOIN TB_WORD w ON tw.WORD_ID = w.WORD_ID
+    WHERE tw.TERMS_ID = #{termsId}
+      AND w.APRV_YN = 'N'
+  </select>
+
+  <!-- 단어 반려 시: 해당 단어를 사용하는 미승인 용어 조회 -->
+  <select id="selectUnapprovedTermsByWordId" parameterType="String" resultType="hashmap">
+    SELECT t.TERMS_ID as "termsId", t.TERMS_NM as "termsNm"
+    FROM TB_TERMS_WORDS tw
+    JOIN TB_TERMS t ON tw.TERMS_ID = t.TERMS_ID
+    WHERE tw.WORD_ID = #{wordId}
+      AND t.APRV_YN = 'N'
+  </select>
 </mapper>

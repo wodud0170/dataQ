@@ -378,22 +378,10 @@ public class DataStandardController {
 			if (session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm()) != null) {
 				throw new Exception("terms(" + dataVo.getTermsNm() + ") is already registered");
 			}
-			// 구성 단어 승인 여부 체크
+			// 구성 단어 목록 확인 (승인 여부 체크는 용어 승인 시점에 수행)
 			List<StdTermsVo.Word> wordList = Arrays.asList(dataVo.getWordList());
 			if (wordList == null) {
 				throw new Exception("terms word list is invalid");
-			}
-			List<String> unapprovedWords = new ArrayList<>();
-			for (StdTermsVo.Word w : wordList) {
-				if (w.getWordId() != null) {
-					List<StdWordVo> wordInfoList = session.selectList("word.selectWordInfoById", w.getWordId());
-					if (!wordInfoList.isEmpty() && !"Y".equals(wordInfoList.get(0).getAprvYn())) {
-						unapprovedWords.add(wordInfoList.get(0).getWordNm());
-					}
-				}
-			}
-			if (!unapprovedWords.isEmpty()) {
-				throw new Exception("다음 단어가 아직 승인되지 않았습니다: " + String.join(", ", unapprovedWords));
 			}
 			// 분류어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 분류어여야 함
 			if (wordList.size() < 2) {
@@ -1384,6 +1372,17 @@ public class DataStandardController {
 	}
 
 	/**
+	 * 내 요청 현황 조회 API
+	 * - 로그인 사용자가 등록한 항목의 승인 상태 조회
+	 */
+	@PostMapping("/getMyRequestList")
+	public List<StdApproveStatVo> getMyRequestList(@RequestBody StdApproveStatVo.RetrieveCond retCond) {
+		log.info(">> getMyRequestList : {}", retCond);
+		retCond.setReqUserId(sessionService.getUserId());
+		return sqlSessionTemplate.selectList("approve.selectStdAprvStatList", retCond);
+	}
+
+	/**
 	 * 표준 승인/반려 처리 API (트랜잭션 사용)
 	 *
 	 * - 승인 대상별(TERMS, WORD, DOMAIN) APRV_YN 갱신
@@ -1397,6 +1396,7 @@ public class DataStandardController {
 		log.info(">> putStdAprvStat : {}", dataVos);
 
 		Response result = new Response();
+		List<Map<String, Object>> warnings = new ArrayList<>();
 
 		for (StdApproveStatVo dataVo : dataVos) {
 			dataVo.setId(StringUtils.getUUID());
@@ -1405,8 +1405,38 @@ public class DataStandardController {
 			SqlSession session = sqlSessionFactory.openSession();
 
 			try {
-				session.insert("approve.insertStdAprvStat", dataVo);
 				NDQualityStdObjectType objType = NDQualityStdObjectType.valueOf(dataVo.getReqTp());
+
+				// 용어 승인 시: 구성 단어 미승인 여부 체크
+				if (objType == NDQualityStdObjectType.TERMS
+						&& dataVo.getAprvStat() == NDQualityApproveStat.APPROVED.getValue()) {
+					List<Map<String, Object>> unapprovedWords = session.selectList(
+							"approve.selectUnapprovedWordsByTermsId", dataVo.getReqItemId());
+					if (unapprovedWords != null && !unapprovedWords.isEmpty()) {
+						List<String> wordNames = new ArrayList<>();
+						for (Map<String, Object> w : unapprovedWords) {
+							wordNames.add((String) w.get("wordNm"));
+						}
+						throw new Exception("다음 단어가 아직 승인되지 않았습니다: " + String.join(", ", wordNames)
+								+ ". 해당 단어를 먼저 승인해주세요.");
+					}
+				}
+
+				// 단어 반려 시: 연관 미승인 용어 경고
+				if (objType == NDQualityStdObjectType.WORD
+						&& dataVo.getAprvStat() == NDQualityApproveStat.REJECTED.getValue()) {
+					List<Map<String, Object>> relatedTerms = session.selectList(
+							"approve.selectUnapprovedTermsByWordId", dataVo.getReqItemId());
+					if (relatedTerms != null && !relatedTerms.isEmpty()) {
+						Map<String, Object> warning = new HashMap<>();
+						warning.put("wordId", dataVo.getReqItemId());
+						warning.put("wordNm", dataVo.getReqItemNm());
+						warning.put("relatedTerms", relatedTerms);
+						warnings.add(warning);
+					}
+				}
+
+				session.insert("approve.insertStdAprvStat", dataVo);
 				switch (objType) {
 					case TERMS:
 						session.update("approve.updateTermsAprvStat", dataVo);
@@ -1461,7 +1491,31 @@ public class DataStandardController {
 			}
 		}
 
+		// 단어 반려 시 연관 미승인 용어 경고 정보를 응답에 포함
+		if (!warnings.isEmpty() && result.getResultCode() == 200) {
+			StringBuilder warnMsg = new StringBuilder();
+			for (Map<String, Object> w : warnings) {
+				@SuppressWarnings("unchecked")
+				List<Map<String, Object>> relTerms = (List<Map<String, Object>>) w.get("relatedTerms");
+				List<String> termNames = new ArrayList<>();
+				for (Map<String, Object> t : relTerms) {
+					termNames.add((String) t.get("termsNm"));
+				}
+				warnMsg.append("단어 '").append(w.get("wordNm")).append("' 반려 시 연관 미승인 용어: ")
+						.append(String.join(", ", termNames)).append(". ");
+			}
+			result.setResultInfo(RestResult.CODE_200.getCode(), warnMsg.toString());
+		}
+
 		return Mono.just(result);
+	}
+
+	/**
+	 * 연관 미승인 용어 조회 API (단어 반려 시 프론트에서 사전 확인용)
+	 */
+	@GetMapping("/getRelatedUnapprovedTerms")
+	public List<Map<String, Object>> getRelatedUnapprovedTerms(@RequestParam String wordId) {
+		return sqlSessionTemplate.selectList("approve.selectUnapprovedTermsByWordId", wordId);
 	}
 
 	/**
@@ -1810,35 +1864,7 @@ public class DataStandardController {
 					}
 				}
 
-				// 구성 단어 승인 여부 체크
-				List<String> unapprovedWords = new ArrayList<>();
-				if (words != null) {
-					for (Map<String, Object> w : words) {
-						String wordId = (String) w.get("wordId");
-						if (wordId != null) {
-							List<StdWordVo> wordInfo = session.selectList("word.selectWordInfoById", wordId);
-							if (!wordInfo.isEmpty() && !"Y".equals(wordInfo.get(0).getAprvYn())) {
-								unapprovedWords.add(wordInfo.get(0).getWordNm());
-							}
-						} else {
-							// 신규 단어 → 비관리자는 APRV_YN='N'이므로 체크
-							Number newWordIndex = (Number) w.get("newWordIndex");
-							if (newWordIndex != null && !isAdmin) {
-								String nwId = newWordIdMap.get(newWordIndex.intValue());
-								if (nwId != null) {
-									List<StdWordVo> wordInfo = session.selectList("word.selectWordInfoById", nwId);
-									if (!wordInfo.isEmpty() && !"Y".equals(wordInfo.get(0).getAprvYn())) {
-										unapprovedWords.add(wordInfo.get(0).getWordNm());
-									}
-								}
-							}
-						}
-					}
-				}
-				if (!unapprovedWords.isEmpty()) {
-					throw new RuntimeException("다음 단어가 아직 승인되지 않았습니다: " + String.join(", ", unapprovedWords)
-							+ ". 먼저 단어 승인을 받은 후 용어를 등록해주세요.");
-				}
+				// 구성 단어 승인 여부 체크는 용어 승인 시점에 수행 (등록은 자유)
 
 				// 분류어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 분류어여야 함
 				if (words == null || words.size() < 2) {

@@ -12,6 +12,8 @@
                         :navDqSub2="navDqSub2" :navDqSub3="navDqSub3" :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3"
                         :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                         :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
+                        :navMyRequestGroup="navMyRequestGroup"
+                        :navCommunityGroup="navCommunityGroup"
                         @addTabItem="addTabItem" @addActiveContent="addActiveContent" @navAllGroupClose="navAllGroupClose"
                         @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                         @addNavSubGroupData="addNavSubGroupData" @resetSplit="resetSplit"
@@ -32,7 +34,9 @@
                 :navAndGroup="navAndGroup" :navDqSub1="navDqSub1" :navDqSub2="navDqSub2" :navDqSub3="navDqSub3"
                 :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3"
                 :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
-                :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
+                :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
+                        :navMyRequestGroup="navMyRequestGroup"
+                        :navCommunityGroup="navCommunityGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
                 @navAllGroupClose="navAllGroupClose" @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                 @addNavSubGroupData="addNavSubGroupData" />
             <router-view name="content" :isMobile="isMobile" :tab="tab" :drawer="drawer" :activeContent="activeContent"
@@ -70,6 +74,8 @@ export default {
         navDiagGroup: null,
         navStructDiagGroup: null,
         navAutoStdGroup: null,
+        navMyRequestGroup: null,
+        navCommunityGroup: null,
         navApprovalStatus: []// 대시보드에서 승인 페이지 호출 시 승인 상태를 저장하는 변수
     }),
     beforeDestroy() {
@@ -152,6 +158,12 @@ export default {
                 case "datamodelStatusColumn":
                 case "erwinImport":
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    break;
+                case "board":
+                    document.getElementById("communityGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    break;
+                case "myRequest":
+                    document.getElementById("myRequestGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
                 case "dataDiag":
                 case "dataDiagResult":
@@ -310,7 +322,11 @@ export default {
                 return;
             } else {
                 // group Active
-                if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory') {
+                if (tabName === 'board') {
+                    document.getElementById("communityGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                } else if (tabName === 'myRequest') {
+                    document.getElementById("myRequestGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                } else if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory') {
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
 
                 } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
@@ -350,6 +366,8 @@ export default {
             this.navDiagGroup = null;
             this.navStructDiagGroup = null;
             this.navAutoStdGroup = null;
+            this.navMyRequestGroup = null;
+            this.navCommunityGroup = null;
             this.navSubGropClose();
         },
         navSubGropClose() {
@@ -439,6 +457,24 @@ export default {
                         this.navAutoStdGroup = !this.navAutoStdGroup;
                     }
                     break;
+
+                case "myRequestGroup":
+
+                    if (this.navMyRequestGroup === null) {
+                        this.navMyRequestGroup = false;
+                    } else {
+                        this.navMyRequestGroup = !this.navMyRequestGroup;
+                    }
+                    break;
+
+                case "communityGroup":
+
+                    if (this.navCommunityGroup === null) {
+                        this.navCommunityGroup = false;
+                    } else {
+                        this.navCommunityGroup = !this.navCommunityGroup;
+                    }
+                    break;
             }
         },
         addNavSubGroupData(target) {
@@ -474,7 +510,13 @@ export default {
 
             this.navAllGroupClose();
 
-            if (tabitem === 'termRecommend') {
+            if (tabitem === 'board') {
+                this.navCommunityGroup = true;
+                return;
+            } else if (tabitem === 'myRequest') {
+                this.navMyRequestGroup = true;
+                return;
+            } else if (tabitem === 'termRecommend') {
                 this.navAutoStdGroup = true;
                 return;
             } else if (tabitem === 'dataDiag' || tabitem === 'dataDiagResult') {

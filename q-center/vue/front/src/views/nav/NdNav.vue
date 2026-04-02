@@ -329,6 +329,42 @@
 
                 </v-list-group> -->
 
+                <!-- 커뮤니티 -->
+                <v-list-group link v-cloak :value="navCommunityGroup" prepend-icon="mdi-forum"
+                    active-class="ndColor--text" id="communityGroup" title="커뮤니티"
+                    v-on:click.stop="addNavGroupData('communityGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">커뮤니티</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_board" href="#tab_board" active-class="ndColor--text"
+                        title="게시판"
+                        v-on:click.stop="addTabItem('게시판', 'board');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>게시판</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
+                <!-- 내 요청 -->
+                <v-list-group link v-cloak :value="navMyRequestGroup" prepend-icon="mdi-clipboard-list"
+                    active-class="ndColor--text" id="myRequestGroup" title="내 요청"
+                    v-on:click.stop="addNavGroupData('myRequestGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">내 요청</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_myRequest" href="#tab_myRequest" active-class="ndColor--text"
+                        title="내 요청 현황"
+                        v-on:click.stop="addTabItem('내 요청 현황', 'myRequest');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>내 요청 현황</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
                 <!-- 관리 -->
                 <v-list-group link v-cloak :value=" navMmGroup " prepend-icon="app_registration"
                     active-class="ndColor--text" id="mmGroup" title="관리" v-on:click.stop=" addNavGroupData('mmGroup'); ">
@@ -410,7 +446,9 @@ export default {
         'navDmGroup',
         'navDiagGroup',
         'navStructDiagGroup',
-        'navAutoStdGroup'],
+        'navAutoStdGroup',
+        'navMyRequestGroup',
+        'navCommunityGroup'],
     data: () => ({
         selectedList: null,
         wsLogShow: false,

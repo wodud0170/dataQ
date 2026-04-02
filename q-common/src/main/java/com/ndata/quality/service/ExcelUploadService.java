@@ -182,23 +182,17 @@ public class ExcelUploadService {
 						}
 					}
 
-					// 구성단어 유효성 검증 (insert 전에 먼저 확인)
+					// 구성단어 유효성 검증 (insert 전에 먼저 확인, 승인 여부는 용어 승인 시점에 체크)
 					String[] wordEngAbrvNms = stdTermsVo.getTermsEngAbrvNm().split("_");
 					List<String> invalidWords = new ArrayList<>();
-					List<String> unapprovedWords = new ArrayList<>();
 					for (String wordEngAbrvNm : wordEngAbrvNms) {
 						StdWordVo wordVo = session.selectOne("word.selectWordByEngAbrvNm", wordEngAbrvNm);
 						if (wordVo == null) {
 							invalidWords.add(wordEngAbrvNm);
-						} else if (!"Y".equals(wordVo.getAprvYn())) {
-							unapprovedWords.add(wordEngAbrvNm);
 						}
 					}
 					if (!invalidWords.isEmpty()) {
 						throw new Exception(String.format("단어(%s)가 유효하지 않음", String.join(", ", invalidWords)));
-					}
-					if (!unapprovedWords.isEmpty()) {
-						throw new Exception(String.format("단어 미승인: %s", String.join(", ", unapprovedWords)));
 					}
 
 					// 분류어 검증: 마지막 단어가 분류어(WORD_CLSF_YN='Y')여야 함

@@ -230,6 +230,18 @@
                     <changeHistory :key="changeHistoryKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'board'" id="tab_board" class="tab_contents"
+                :class="{ active: this.activeContent === 'board' }">
+                <keep-alive>
+                    <board :key="boardKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'myRequest'" id="tab_myRequest" class="tab_contents"
+                :class="{ active: this.activeContent === 'myRequest' }">
+                <keep-alive>
+                    <myRequest :key="myRequestKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'globalSearch'" id="tab_globalSearch" class="tab_contents"
                 :class="{ active: this.activeContent === 'globalSearch' }">
                 <keep-alive>
@@ -269,6 +281,8 @@ import DSSchemaCompare from "../../components/DSSchemaCompare.vue"
 import DSErwinImport from "../../components/DSErwinImport.vue"
 import DSChangeHistory from "../../components/DSChangeHistory.vue"
 import DSGlobalSearch from "../../components/DSGlobalSearch.vue"
+import DSMyRequest from "../../components/DSMyRequest.vue"
+import DSBoard from "../../components/DSBoard.vue"
 import DQDQI from "./../../components/DQDQI.vue"
 import DQCTQ from "./../../components/DQCTQ.vue"
 import DQBR from "./../../components/DQBR.vue"
@@ -349,6 +363,8 @@ export default {
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
             changeHistoryKey: this.createUUID(),
+            boardKey: this.createUUID(),
+            myRequestKey: this.createUUID(),
             globalSearchKey: this.createUUID(),
         }
     },
@@ -386,6 +402,8 @@ export default {
         "scurrent": ANDscurrent,
         "qcurrent": ANDqcurrent,
         "changeHistory": DSChangeHistory,
+        "board": DSBoard,
+        "myRequest": DSMyRequest,
         "globalSearch": DSGlobalSearch
     },
     methods: {
@@ -493,6 +511,12 @@ export default {
                     break;
                 case "changeHistory":
                     this.changeHistoryKey = this.createUUID();
+                    break;
+                case "board":
+                    this.boardKey = this.createUUID();
+                    break;
+                case "myRequest":
+                    this.myRequestKey = this.createUUID();
                     break;
                 case "globalSearch":
                     this.globalSearchKey = this.createUUID();

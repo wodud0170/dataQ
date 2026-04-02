@@ -589,3 +589,33 @@ INSERT INTO TB_WORD_DICT (WORD_KOR, WORD_ENG, WORD_ABRV, DOMAIN_CLSF_NM) VALUES 
 INSERT INTO TB_WORD_DICT (WORD_KOR, WORD_ENG, WORD_ABRV, DOMAIN_CLSF_NM) VALUES ('주문', 'Order', 'ORDR', '') ON CONFLICT (WORD_KOR) DO NOTHING;
 INSERT INTO TB_WORD_DICT (WORD_KOR, WORD_ENG, WORD_ABRV, DOMAIN_CLSF_NM) VALUES ('결제', 'Payment', 'PYMT', '') ON CONFLICT (WORD_KOR) DO NOTHING;
 INSERT INTO TB_WORD_DICT (WORD_KOR, WORD_ENG, WORD_ABRV, DOMAIN_CLSF_NM) VALUES ('환불', 'Refund', 'RFND', '') ON CONFLICT (WORD_KOR) DO NOTHING;
+
+-- -------------------------------------------------------------
+-- 12. TB_BOARD
+--     커뮤니티 게시판 (공지사항/QNA)
+--     (세션: 승인프로세스 + 커뮤니티 기능 구현 시)
+-- -------------------------------------------------------------
+CREATE TABLE TB_BOARD (
+    BOARD_ID      VARCHAR(40)  NOT NULL,
+    BOARD_TYPE    VARCHAR(20)  NOT NULL,  -- NOTICE, QNA
+    TITLE         VARCHAR(200) NOT NULL,
+    CONTENT       TEXT,
+    CRET_USER_ID  VARCHAR(40),
+    CRET_DT       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UPDT_DT       TIMESTAMP,
+    VIEW_CNT      INTEGER DEFAULT 0,
+    CONSTRAINT PK_TB_BOARD PRIMARY KEY (BOARD_ID)
+);
+
+-- -------------------------------------------------------------
+-- 13. TB_BOARD_COMMENT
+--     게시판 댓글
+-- -------------------------------------------------------------
+CREATE TABLE TB_BOARD_COMMENT (
+    COMMENT_ID    VARCHAR(40) NOT NULL,
+    BOARD_ID      VARCHAR(40) NOT NULL,
+    CONTENT       TEXT,
+    CRET_USER_ID  VARCHAR(40),
+    CRET_DT       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT PK_TB_BOARD_COMMENT PRIMARY KEY (COMMENT_ID)
+);
