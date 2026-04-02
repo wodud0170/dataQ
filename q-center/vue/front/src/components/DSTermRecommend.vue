@@ -227,7 +227,7 @@
           <v-simple-table dense>
             <thead>
               <tr>
-                <th>한글명</th><th>영문약어</th><th>영문명</th><th>도메인분류</th><th>상태</th><th>등록</th>
+                <th>한글명</th><th>영문약어</th><th>영문명</th><th>상태</th><th>등록</th>
               </tr>
             </thead>
             <tbody>
@@ -245,12 +245,6 @@
                     style="max-width:150px"></v-text-field>
                   <span v-else-if="w.status === 'UNRECOGNIZED'" class="grey--text">-</span>
                   <span v-else>{{ w.selected && w.selected.wordEngNm || '-' }}</span>
-                </td>
-                <td>
-                  <v-text-field v-if="w.status === 'NEW'" v-model="w.newWord.domainClsfNm" dense hide-details
-                    style="max-width:100px"></v-text-field>
-                  <span v-else-if="w.status === 'UNRECOGNIZED'" class="grey--text">-</span>
-                  <span v-else>{{ w.selected && w.selected.domainClsfNm || '-' }}</span>
                 </td>
                 <td>
                   <v-chip v-if="w.status === 'UNRECOGNIZED'" x-small color="red" text-color="white">매칭불가</v-chip>
