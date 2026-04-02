@@ -119,6 +119,70 @@ def api_login(uid, pw):
     s.post(f"{BASE}/login", data={"id": uid, "password": pw}, allow_redirects=False)
     return s
 
+# ── 테스트 데이터 정리 ───────────────────────────────────
+# 테스트에서 사용하는 모든 데이터 이름 목록
+TEST_WORD_NAMES = ["품질검증단어", "품질일반단어", "품질승인단어", "품질반려단어", "품질미승인"]
+TEST_DOMAIN_NAMES = ["품질검증도메인"]
+TEST_GROUP_NAMES = ["품질검증그룹", "품질검증그룹수정"]
+TEST_CLSF_NAMES = ["품질검증분류", "품질검증분류수정"]
+
+def cleanup_test_data(session, label="정리"):
+    """이전 테스트 잔재 정리: 같은 이름의 데이터가 있으면 삭제"""
+    print(f"\n=== 테스트 데이터 {label} ===")
+    cleaned = 0
+
+    # 단어 정리
+    for wn in TEST_WORD_NAMES:
+        try:
+            rl = session.get(f"{BASE}/api/std/getWordInfoByNm", params={"wordNm": wn})
+            info = rl.json()
+            if info:
+                session.post(f"{BASE}/api/std/deleteWords", json=[{"id": info[0].get("id")}])
+                cleaned += 1
+                print(f"  [정리] 단어 '{wn}' 삭제")
+        except:
+            pass
+
+    # 도메인 정리
+    for dn in TEST_DOMAIN_NAMES:
+        try:
+            rl = session.get(f"{BASE}/api/std/getDomainInfoByNm", params={"domainNm": dn})
+            info = rl.json()
+            if info:
+                session.post(f"{BASE}/api/std/deleteDomains", json=[{"id": info[0].get("id")}])
+                cleaned += 1
+                print(f"  [정리] 도메인 '{dn}' 삭제")
+        except:
+            pass
+
+    # 도메인 분류 정리
+    for cn in TEST_CLSF_NAMES:
+        try:
+            rl = session.get(f"{BASE}/api/std/getDomainClassificationList")
+            for c in rl.json():
+                if c.get("domainClsfNm") == cn:
+                    session.post(f"{BASE}/api/std/deleteDomainClassifications", json=[{"id": c.get("id")}])
+                    cleaned += 1
+                    print(f"  [정리] 도메인 분류 '{cn}' 삭제")
+                    break
+        except:
+            pass
+
+    # 도메인 그룹 정리
+    for gn in TEST_GROUP_NAMES:
+        try:
+            rl = session.get(f"{BASE}/api/std/getDomainGroupList")
+            for g in rl.json():
+                if g.get("domainGrpNm") == gn:
+                    session.post(f"{BASE}/api/std/deleteDomainGroups", json=[{"id": g.get("id")}])
+                    cleaned += 1
+                    print(f"  [정리] 도메인 그룹 '{gn}' 삭제")
+                    break
+        except:
+            pass
+
+    print(f"  총 {cleaned}건 정리 완료")
+
 # ═══════════════════════════════════════════════════════════
 #  1. 인증 테스트 (1-1 ~ 1-5)
 # ═══════════════════════════════════════════════════════════
@@ -381,14 +445,14 @@ def test_word(session):
         add_result("3-4", "단어 상세 클릭", False, str(e))
 
     # 3-5 단어 신규 등록 (관리자)
-    test_word_nm = "블랙박스테스트단어"
-    test_word_eng = "BBTEST"
+    test_word_nm = "품질검증단어"
+    test_word_eng = "QLVRFY"
     created_word_id = None
     try:
         r = session.post(f"{BASE}/api/std/createWord", json={
             "wordNm": test_word_nm,
             "wordEngAbrvNm": test_word_eng,
-            "wordEngNm": "BlackBoxTest",
+            "wordEngNm": "QualityVerify",
             "wordDesc": "",
             "wordClsfYn": "N",
             "commStndYn": "N"
@@ -407,13 +471,13 @@ def test_word(session):
 
     # 3-6 일반 사용자 등록 → APRV_YN = 'N'
     user_session = api_login(USER_ID, USER_PW)
-    test_word_nm2 = "블랙박스일반사용자단어"
+    test_word_nm2 = "품질일반단어"
     created_word_id2 = None
     try:
         r = user_session.post(f"{BASE}/api/std/createWord", json={
             "wordNm": test_word_nm2,
-            "wordEngAbrvNm": "BBUSR",
-            "wordEngNm": "BlackBoxUserTest",
+            "wordEngAbrvNm": "QLGNRL",
+            "wordEngNm": "QualityGeneral",
             "wordDesc": "",
             "wordClsfYn": "N",
             "commStndYn": "N"
@@ -490,7 +554,7 @@ def test_word(session):
                 "id": created_word_id,
                 "wordNm": test_word_nm,
                 "wordEngAbrvNm": test_word_eng,
-                "wordEngNm": "BlackBoxTestUpdated",
+                "wordEngNm": "QualityVerifyUpdated",
                 "wordDesc": prev.get("wordDesc", ""),
                 "wordClsfYn": prev.get("wordClsfYn", "N"),
                 "commStndYn": prev.get("commStndYn", "N"),
@@ -638,23 +702,23 @@ def test_term(session):
         # Create an unapproved word first
         user_s = api_login(USER_ID, USER_PW)
         user_s.post(f"{BASE}/api/std/createWord", json={
-            "wordNm": "블랙미승인",
-            "wordEngAbrvNm": "BBUNAPRV",
-            "wordEngNm": "BBUnapproved",
+            "wordNm": "품질미승인",
+            "wordEngAbrvNm": "QLUNAPRV",
+            "wordEngNm": "QualityUnapproved",
             "wordDesc": "",
             "wordClsfYn": "N",
             "commStndYn": "N"
         })
-        rl = session.get(f"{BASE}/api/std/getWordInfoByNm", params={"wordNm": "블랙미승인"})
+        rl = session.get(f"{BASE}/api/std/getWordInfoByNm", params={"wordNm": "품질미승인"})
         info = rl.json()
         if info:
             unapproved_word = info[0]
             r = session.post(f"{BASE}/api/std/createTerms", json={
-                "termsNm": "블랙미승인테스트",
-                "termsEngAbrvNm": "BB_UNAPRV_TEST",
-                "termsEngNm": "BBUnapprovedTest",
+                "termsNm": "품질미승인테스트",
+                "termsEngAbrvNm": "QL_UNAPRV_TEST",
+                "termsEngNm": "QualityUnapprovedTest",
                 "wordList": [
-                    {"wordId": unapproved_word["id"], "wordNm": "블랙미승인", "wordEngAbrvNm": "BBUNAPRV", "termsWordOrd": 1}
+                    {"wordId": unapproved_word["id"], "wordNm": "품질미승인", "wordEngAbrvNm": "QLUNAPRV", "termsWordOrd": 1}
                 ]
             })
             data = r.json()
@@ -744,9 +808,9 @@ def test_domain(session):
         clsf_list = clsf_r.json()
         clsf_nm = clsf_list[0].get("domainClsfNm", "") if clsf_list else ""
         r = session.post(f"{BASE}/api/std/createDomain", json={
-            "domainNm": "블랙박스테스트도메인",
-            "domainEngAbrvNm": "BB_TEST_DOMAIN",
-            "domainEngNm": "BlackBoxTestDomain",
+            "domainNm": "품질검증도메인",
+            "domainEngAbrvNm": "QL_VRFY_DOMAIN",
+            "domainEngNm": "QualityVerifyDomain",
             "domainDesc": "테스트용",
             "domainGrpNm": grp_nm,
             "domainClsfNm": clsf_nm,
@@ -757,7 +821,7 @@ def test_domain(session):
         ok = str(data.get("code", data.get("resultCode", ""))) == "200"
         add_result("5-3", "도메인 신규 등록", ok, f"응답: {json.dumps(data, ensure_ascii=False)[:100]}")
         if ok:
-            rl = session.get(f"{BASE}/api/std/getDomainInfoByNm", params={"domainNm": "블랙박스테스트도메인"})
+            rl = session.get(f"{BASE}/api/std/getDomainInfoByNm", params={"domainNm": "품질검증도메인"})
             info = rl.json()
             if info:
                 created_domain_id = info[0].get("id")
@@ -769,9 +833,9 @@ def test_domain(session):
         if created_domain_id:
             r = session.post(f"{BASE}/api/std/updateDomain", json={
                 "id": created_domain_id,
-                "domainNm": "블랙박스테스트도메인",
-                "domainEngAbrvNm": "BB_TEST_DOMAIN",
-                "domainEngNm": "BlackBoxTestDomainUpd",
+                "domainNm": "품질검증도메인",
+                "domainEngAbrvNm": "QL_VRFY_DOMAIN",
+                "domainEngNm": "QualityVerifyDomainUpd",
                 "domainDesc": "수정됨",
                 "dataType": "VARCHAR",
                 "dataLength": "200"
@@ -909,7 +973,7 @@ def test_domain_group(session):
     try:
         # Create
         r = session.post(f"{BASE}/api/std/createDomainGroup", json={
-            "domainGrpNm": "BB테스트그룹",
+            "domainGrpNm": "품질검증그룹",
             "domainGrpDesc": "테스트",
             "commStndYn": "N"
         })
@@ -919,7 +983,7 @@ def test_domain_group(session):
         # Get ID
         rl = session.get(f"{BASE}/api/std/getDomainGroupList")
         for g in rl.json():
-            if g.get("domainGrpNm") == "BB테스트그룹":
+            if g.get("domainGrpNm") == "품질검증그룹":
                 created_grp_id = g.get("id")
                 break
 
@@ -929,7 +993,7 @@ def test_domain_group(session):
             # Update
             r2 = session.post(f"{BASE}/api/std/updateDomainGroup", json={
                 "id": created_grp_id,
-                "domainGrpNm": "BB테스트그룹수정",
+                "domainGrpNm": "품질검증그룹수정",
                 "domainGrpDesc": "수정됨",
                 "commStndYn": "N"
             })
@@ -963,7 +1027,7 @@ def test_domain_group(session):
         grp_list = grp_r.json()
         grp_nm = grp_list[0].get("domainGrpNm", "") if grp_list else ""
         r = session.post(f"{BASE}/api/std/createDomainClassification", json={
-            "domainClsfNm": "BB테스트분류",
+            "domainClsfNm": "품질검증분류",
             "domainClsfDesc": "테스트",
             "domainGrpNm": grp_nm
         })
@@ -972,7 +1036,7 @@ def test_domain_group(session):
 
         rl = session.get(f"{BASE}/api/std/getDomainClassificationList")
         for c in rl.json():
-            if c.get("domainClsfNm") == "BB테스트분류":
+            if c.get("domainClsfNm") == "품질검증분류":
                 created_clsf_id = c.get("id")
                 break
 
@@ -981,7 +1045,7 @@ def test_domain_group(session):
         if created_clsf_id:
             r2 = session.post(f"{BASE}/api/std/updateDomainClassification", json={
                 "id": created_clsf_id,
-                "domainClsfNm": "BB테스트분류수정",
+                "domainClsfNm": "품질검증분류수정",
                 "domainClsfDesc": "수정",
                 "domainGrpNm": grp_nm
             })
@@ -1358,9 +1422,9 @@ def test_approval(session):
         # Create an unapproved word for testing
         user_s = api_login(USER_ID, USER_PW)
         user_s.post(f"{BASE}/api/std/createWord", json={
-            "wordNm": "승인테스트단어",
-            "wordEngAbrvNm": "APRVTEST",
-            "wordEngNm": "ApprovalTest",
+            "wordNm": "품질승인단어",
+            "wordEngAbrvNm": "QLAPRV",
+            "wordEngNm": "QualityApproval",
             "wordDesc": "",
             "wordClsfYn": "N",
             "commStndYn": "N"
@@ -1370,7 +1434,7 @@ def test_approval(session):
         all_aprv = r.json()
         test_item = None
         for item in all_aprv:
-            if item.get("itemNm", "") == "승인테스트단어" or item.get("wordNm", "") == "승인테스트단어":
+            if item.get("itemNm", "") == "품질승인단어" or item.get("wordNm", "") == "품질승인단어":
                 test_item = item
                 break
 
@@ -1390,9 +1454,9 @@ def test_approval(session):
 
         # 13-4 반려 - create another test word
         user_s.post(f"{BASE}/api/std/createWord", json={
-            "wordNm": "반려테스트단어",
-            "wordEngAbrvNm": "REJTEST",
-            "wordEngNm": "RejectTest",
+            "wordNm": "품질반려단어",
+            "wordEngAbrvNm": "QLRJCT",
+            "wordEngNm": "QualityReject",
             "wordDesc": "",
             "wordClsfYn": "N",
             "commStndYn": "N"
@@ -1401,7 +1465,7 @@ def test_approval(session):
         all_aprv = r.json()
         reject_item = None
         for item in all_aprv:
-            if item.get("itemNm", "") == "반려테스트단어" or item.get("wordNm", "") == "반려테스트단어":
+            if item.get("itemNm", "") == "품질반려단어" or item.get("wordNm", "") == "품질반려단어":
                 reject_item = item
                 break
 
@@ -1418,7 +1482,7 @@ def test_approval(session):
             add_result("13-4", "승인 처리 (반려)", True, "반려 API 동작 확인 (대상 항목 미발견)")
 
         # Cleanup
-        for nm in ["승인테스트단어", "반려테스트단어"]:
+        for nm in ["품질승인단어", "품질반려단어"]:
             rl = session.get(f"{BASE}/api/std/getWordInfoByNm", params={"wordNm": nm})
             info = rl.json()
             if info:
@@ -1690,6 +1754,9 @@ def main():
         # API session
         admin_session = api_login(ADMIN_ID, ADMIN_PW)
 
+        # 테스트 시작 전 이전 잔재 정리
+        cleanup_test_data(admin_session, "사전 정리")
+
         # Dashboard
         test_dashboard_api(admin_session)
         test_dashboard_ui(driver)
@@ -1709,6 +1776,9 @@ def main():
         test_admin(admin_session)
         test_global_search(admin_session)
         test_erwin(admin_session)
+
+        # 테스트 종료 후 정리
+        cleanup_test_data(admin_session, "사후 정리")
 
     except Exception as e:
         print(f"\n[FATAL] 테스트 실행 중 오류: {e}")
