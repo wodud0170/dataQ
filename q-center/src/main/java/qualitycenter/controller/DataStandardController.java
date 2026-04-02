@@ -136,9 +136,9 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
-			// 영문약어에 언더바(_) 포함 여부 체크: 단어 영문약어에는 _ 사용 불가
-			if (dataVo.getWordEngAbrvNm() != null && dataVo.getWordEngAbrvNm().contains("_")) {
-				throw new Exception("단어 영문약어에 언더바(_)는 사용할 수 없습니다. 언더바는 용어(단어 조합)에서 구분자로 사용됩니다.");
+			// 영문약어 규격 체크: 대문자 영문(A-Z) + 숫자(0-9)만 허용
+			if (dataVo.getWordEngAbrvNm() != null && !dataVo.getWordEngAbrvNm().matches("^[A-Z0-9]+$")) {
+				throw new Exception("단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다. (입력값: " + dataVo.getWordEngAbrvNm() + ")");
 			}
 			// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
 			String forbiddenMsg = checkForbiddenWord(dataVo.getWordNm());
@@ -1633,10 +1633,10 @@ public class DataStandardController {
 			return res;
 		}
 
-		// 영문약어에 언더바(_) 포함 여부 체크
-		if (wordEngAbrvNm.contains("_")) {
+		// 영문약어 규격 체크: 대문자 영문(A-Z) + 숫자(0-9)만 허용
+		if (!wordEngAbrvNm.trim().matches("^[A-Z0-9]+$")) {
 			res.put("success", false);
-			res.put("message", "단어 영문약어에 언더바(_)는 사용할 수 없습니다. 언더바는 용어(단어 조합)에서 구분자로 사용됩니다.");
+			res.put("message", "단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다. (입력값: " + wordEngAbrvNm + ")");
 			return res;
 		}
 
