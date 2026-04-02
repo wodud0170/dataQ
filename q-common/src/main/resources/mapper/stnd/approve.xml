@@ -67,7 +67,7 @@
 				,'DOMAIN'			as reqTp		--도메인
 				,DOMAIN_ID			as reqItemId
 				,DOMAIN_NM			as reqItemNm
-				,DOMAIN_ENG_NM		as reqItemEngNm
+				,DOMAIN_NM			as reqItemEngNm
 				,0					as aprvStat		--요청됨
 				,CRET_USER_ID		as reqUserId
 				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
@@ -110,7 +110,7 @@
             WHEN A.REQ_TP = 'TERMS'
             	THEN (select TERMS_ENG_ABRV_NM from tb_terms where TERMS_ID = A.REQ_ITEM_ID)
             WHEN A.REQ_TP = 'DOMAIN'
-            	THEN (select DOMAIN_ENG_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
+            	THEN (select DOMAIN_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
             ELSE NULL
             END 				    	  as reqItemEngNm
             ,APRV_STAT		      as aprvStat
