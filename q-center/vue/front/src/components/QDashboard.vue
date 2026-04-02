@@ -42,7 +42,21 @@
 
       <!-- ===== 2. 데이터 모델 현황 ===== -->
       <v-card class="itemsWrapper">
-        <h2><v-icon>grading</v-icon>&nbsp;&nbsp;데이터 모델 현황</h2>
+        <div class="d-flex align-center">
+          <h2><v-icon>grading</v-icon>&nbsp;&nbsp;데이터 모델 현황</h2>
+          <v-spacer />
+          <v-select
+            v-model="selectedModelId"
+            :items="modelList"
+            item-text="dataModelNm"
+            item-value="dataModelId"
+            dense outlined hide-details
+            placeholder="전체"
+            clearable
+            style="max-width:200px; font-size:.8rem;"
+            @change="onModelFilterChange"
+          />
+        </div>
         <v-sheet class="chartWrapper_2">
           <!-- 모델 -->
           <v-card class="std-card std-card--sm">
@@ -230,6 +244,8 @@ export default {
     dataModelCnt: 0,
     objCnt: 0,
     attrCnt: 0,
+    modelList: [],
+    selectedModelId: null,
     //
     term_series: [],
     word_series: [],
@@ -417,6 +433,7 @@ export default {
   created() {
     // 대시보드 메뉴 선택 시 호출
     this.getDashboardInfo();
+    this.loadModelList();
     this.getDataModelStat();
     this.getDiagTrend();
     this.getRecentChangeHistory();
@@ -424,6 +441,20 @@ export default {
   mounted() {
   },
   methods: {
+    loadModelList() {
+      try {
+        axios.post(this.$APIURL.base + "api/dm/getDataModelStatsList", { schNm: null, schSysNm: null }).then(result => {
+          this.modelList = (result.data || []).map(function(item) {
+            return { dataModelId: item.dataModelId, dataModelNm: item.dataModelNm };
+          });
+        });
+      } catch (e) { console.error(e); }
+    },
+    onModelFilterChange() {
+      this.getDataModelStat();
+      this.getStructDiagRate();
+      this.getDiagTrend();
+    },
     getDashboardInfo() {
       try {
         axios.get(this.$APIURL.base + "api/search/getDashboardInfo").then(result => {
@@ -450,27 +481,35 @@ export default {
       }
     },
     getDataModelStat() {
+      var self = this;
       try {
-        axios.get(this.$APIURL.base + "api/search/getDataModelStat").then(result => {
-          let _data = result.data;
-
-          this.dataModelCnt = _data.dataModelCnt;
-          this.objCnt = _data.objCnt;
-          this.attrCnt = _data.attrCnt;
-          this.term_series = [_data.termsStndRate, (100 - _data.termsStndRate)];
-
-          this.term_pie_Key++;
-
-          // 구조 일치율 조회
-          this.getStructDiagRate();
-
-        }).catch(error => {
-          this.$swal.fire({
-            title: '대시보드 데이터 모델 현황 바인드 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-        });
+        axios.post(self.$APIURL.base + "api/dm/getDataModelStatsList", { schNm: null, schSysNm: null }).then(function(result) {
+          var allModels = result.data || [];
+          var filtered = allModels;
+          if (self.selectedModelId) {
+            filtered = allModels.filter(function(m) { return m.dataModelId === self.selectedModelId; });
+          }
+          // 합산
+          var totalObj = 0, totalAttr = 0, totalStndRate = 0, stndRateCnt = 0;
+          for (var i = 0; i < filtered.length; i++) {
+            var m = filtered[i];
+            if (m.dataModelStats) {
+              totalObj += m.dataModelStats.objCnt || 0;
+              totalAttr += m.dataModelStats.attrCnt || 0;
+            }
+            if (m.diagStndRate > 0) {
+              totalStndRate += m.diagStndRate;
+              stndRateCnt++;
+            }
+          }
+          self.dataModelCnt = filtered.length;
+          self.objCnt = totalObj;
+          self.attrCnt = totalAttr;
+          var avgRate = stndRateCnt > 0 ? Math.round(totalStndRate / stndRateCnt * 10) / 10 : 0;
+          self.term_series = [avgRate, (100 - avgRate)];
+          self.term_pie_Key++;
+          self.getStructDiagRate();
+        }).catch(function() {});
       } catch (error) {
         console.error(error);
       }
@@ -497,9 +536,14 @@ export default {
     },
     getDiagTrend() {
       try {
-        axios.post(this.$APIURL.base + "api/diag/getDiagJobList", {}).then(result => {
+        var self = this;
+        axios.post(self.$APIURL.base + "api/diag/getDiagJobList", {}).then(function(result) {
           var jobs = (result.data || [])
-            .filter(function(j) { return j.status === 'DONE' && j.totalCnt > 0; })
+            .filter(function(j) {
+              if (j.status !== 'DONE' || j.totalCnt <= 0) return false;
+              if (self.selectedModelId && j.dataModelId !== self.selectedModelId) return false;
+              return true;
+            })
             .slice(0, 5)
             .reverse();
           if (jobs.length > 0) {
@@ -512,11 +556,11 @@ export default {
               categories.push(dt.substring(5, 10) || ('#' + (i + 1)));
               data.push(rate);
             }
-            this.diagTrendSeries = [{ name: '준수율', data: data }];
-            this.diagTrendOptions = Object.assign({}, this.diagTrendOptions, {
-              xaxis: Object.assign({}, this.diagTrendOptions.xaxis, { categories: categories })
+            self.diagTrendSeries = [{ name: '준수율', data: data }];
+            self.diagTrendOptions = Object.assign({}, self.diagTrendOptions, {
+              xaxis: Object.assign({}, self.diagTrendOptions.xaxis, { categories: categories })
             });
-            this.diagTrendKey++;
+            self.diagTrendKey++;
           }
         }).catch(function() {});
       } catch (e) { console.error(e); }
