@@ -227,12 +227,16 @@
           <v-simple-table dense>
             <thead>
               <tr>
-                <th>한글명</th><th>영문약어</th><th>영문명</th><th>상태</th><th>등록</th>
+                <th>한글명</th><th>영문약어</th><th>영문명</th><th>상태</th><th>등록</th><th style="width:40px;"></th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(w, wi) in currentEditWords" :key="wi">
-                <td>{{ w.wordNm }}</td>
+                <td>
+                  <v-text-field v-if="w.status === 'NEW' || w.status === 'UNRECOGNIZED'" v-model="w.wordNm" dense hide-details
+                    style="max-width:100px"></v-text-field>
+                  <span v-else>{{ w.wordNm }}</span>
+                </td>
                 <td>
                   <v-text-field v-if="w.status === 'NEW' || w.status === 'UNRECOGNIZED'" v-model="w.newWord.wordEngAbrvNm" dense hide-details
                     @input="w.newWord.wordEngAbrvNm = (w.newWord.wordEngAbrvNm || '').toUpperCase()"
@@ -254,9 +258,21 @@
                     @click="registerSingleWord(w)">단어등록</v-btn>
                   <v-icon v-if="w._registered" small color="green">mdi-check-circle</v-icon>
                 </td>
+                <td>
+                  <v-btn icon x-small color="red" @click="removeEditWord(wi)" title="삭제">
+                    <v-icon x-small>mdi-close</v-icon>
+                  </v-btn>
+                </td>
               </tr>
             </tbody>
           </v-simple-table>
+          <div class="d-flex align-center mt-2" style="gap:8px;">
+            <v-text-field v-model="newWordInput" dense outlined hide-details placeholder="추가할 한글 단어명"
+              style="max-width:200px;" @keyup.enter="addEditWord"></v-text-field>
+            <v-btn x-small color="primary" outlined @click="addEditWord">
+              <v-icon x-small left>mdi-plus</v-icon>단어 추가
+            </v-btn>
+          </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -291,6 +307,7 @@ export default {
       editDialog: false,
       editingItem: null,
       editSplitMode: 0,  // 0=1순위, 1=2순위
+      newWordInput: '',  // 단어 추가 입력
 
       // Step 4
       registerResult: null,
@@ -440,9 +457,33 @@ export default {
       if (!words) return '';
       return words.map(function(w) { return w.wordNm; }).join('+');
     },
+    removeEditWord: function(index) {
+      var words = this.currentEditWords;
+      if (words.length <= 1) {
+        this.$swal.fire({ title: '최소 1개 단어는 필요합니다.', icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
+      words.splice(index, 1);
+      this.recalcItemStatus(this.editingItem);
+    },
+    addEditWord: function() {
+      var nm = (this.newWordInput || '').trim();
+      if (!nm) return;
+      var newWord = {
+        wordNm: nm,
+        status: 'UNRECOGNIZED',
+        candidates: [],
+        selected: null,
+        newWord: { wordEngAbrvNm: '', wordEngNm: '', domainClsfNm: '' }
+      };
+      this.currentEditWords.push(newWord);
+      this.newWordInput = '';
+      this.recalcItemStatus(this.editingItem);
+    },
     editItem: function(item) {
       this.editingItem = item;
       this.editSplitMode = 0;
+      this.newWordInput = '';
       this.editDialog = true;
     },
     registerSingleWord: function(w) {
