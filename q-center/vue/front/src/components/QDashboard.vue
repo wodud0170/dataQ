@@ -689,8 +689,9 @@ export default {
 
 .chart_full {
   width: 100%;
-  flex: 1;
-  min-height: 0;
+  max-width: 180px;
+  max-height: 180px;
+  margin: 0 auto;
 }
 
 /* ===== 3. 승인 현황 카드 ===== */
