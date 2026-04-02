@@ -51,8 +51,7 @@
             item-text="dataModelNm"
             item-value="dataModelId"
             dense outlined hide-details
-            placeholder="전체"
-            clearable
+            placeholder="데이터 모델 선택"
             style="max-width:200px; font-size:.8rem;"
             @change="onModelFilterChange"
           />
@@ -442,11 +441,15 @@ export default {
   },
   methods: {
     loadModelList() {
+      var self = this;
       try {
-        axios.post(this.$APIURL.base + "api/dm/getDataModelStatsList", { schNm: null, schSysNm: null }).then(result => {
-          this.modelList = (result.data || []).map(function(item) {
+        axios.post(self.$APIURL.base + "api/dm/getDataModelStatsList", { schNm: null, schSysNm: null }).then(function(result) {
+          self.modelList = (result.data || []).map(function(item) {
             return { dataModelId: item.dataModelId, dataModelNm: item.dataModelNm };
           });
+          if (self.modelList.length > 0 && !self.selectedModelId) {
+            self.selectedModelId = self.modelList[0].dataModelId;
+          }
         });
       } catch (e) { console.error(e); }
     },
