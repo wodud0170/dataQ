@@ -1623,15 +1623,21 @@ public class DataStandardController {
 
 			log.info("[TermAnalysis] NN tokens for '{}': {}", cleanName, nnTokens);
 
-			// 후보 토큰 세트 구성 (OKT + TB_WORD에서 입력에 포함된 단어)
+			// 후보 토큰 세트 구성 (OKT + TB_WORD + TB_WORD_DICT에서 입력에 포함된 단어)
 			Set<String> candidateSet = new LinkedHashSet<>(nnTokens);
 			for (String wordNm : wordsByNm.keySet()) {
 				if (wordNm.length() >= 2 && cleanName.contains(wordNm)) {
 					candidateSet.add(wordNm);
 				}
 			}
+			for (String dictNm : wordDict.keySet()) {
+				if (dictNm.length() >= 2 && cleanName.contains(dictNm)) {
+					candidateSet.add(dictNm);
+				}
+			}
 
-			// 1순위: TB_WORD > DICT > OKT longest
+			// 1순위: DP 기반 최적 분리
+			log.info("[TermAnalysis] candidateSet size for '{}': {}", cleanName, candidateSet.size());
 			List<String> primaryTokens = dpSplit(cleanName, candidateSet, wordsByNm, wordDict);
 			log.info("[TermAnalysis] 1순위 for '{}': {}", cleanName, primaryTokens);
 
@@ -2085,7 +2091,8 @@ public class DataStandardController {
 
 			// 모든 후보 토큰 시도
 			for (String c : candidates) {
-				if (c.equals(input)) continue; // 전체 입력과 동일한 토큰 제외
+				// 전체 입력이 하나의 등록 단어인 경우는 허용
+				if (c.equals(input) && !wordsByNm.containsKey(c) && !wordDict.containsKey(c)) continue;
 				if (i + c.length() <= n && input.startsWith(c, i)) {
 					int score = calculateTokenScore(c, wordsByNm, wordDict);
 					if (dp[i] + score > dp[i + c.length()]) {
