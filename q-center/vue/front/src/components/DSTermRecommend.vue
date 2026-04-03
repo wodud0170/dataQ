@@ -215,7 +215,7 @@
     <!-- Edit dialog for PARTIAL items -->
     <v-dialog v-model="editDialog" max-width="750">
       <v-card v-if="editingItem">
-        <v-card-title>단어 정보 수정 - {{ editingItem.inputNm }}</v-card-title>
+        <v-card-title>단어 정보 수정</v-card-title>
         <v-card-text>
           <!-- 분리 방법 선택 (2순위가 있을 때만 표시) -->
           <div v-if="editingItem.alternativeWords && editingItem.alternativeWords.length" class="mb-3">
@@ -273,6 +273,15 @@
               <v-icon x-small left>mdi-plus</v-icon>단어 추가
             </v-btn>
           </div>
+          <!-- 실시간 조합 미리보기 -->
+          <v-sheet class="mt-3 pa-3" style="background:#F5F7FA; border-radius:8px;">
+            <div class="d-flex align-center" style="gap:8px;">
+              <span style="font-size:.8rem; color:#546E7A; font-weight:600;">용어 미리보기:</span>
+              <span style="font-size:.95rem; font-weight:700; color:#1A237E;">{{ editPreviewKor }}</span>
+              <span style="font-size:.8rem; color:#9E9E9E;">→</span>
+              <span style="font-size:.95rem; font-weight:700; color:#3F51B5;">{{ editPreviewEng }}</span>
+            </div>
+          </v-sheet>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -339,6 +348,23 @@ export default {
         return this.editingItem.alternativeWords;
       }
       return this.editingItem.words || [];
+    },
+    editPreviewKor: function() {
+      return this.currentEditWords.map(function(w) { return w.wordNm || ''; }).join('');
+    },
+    editPreviewEng: function() {
+      var parts = [];
+      for (var i = 0; i < this.currentEditWords.length; i++) {
+        var w = this.currentEditWords[i];
+        if (w.status === 'MATCHED' && w.selected) {
+          parts.push(w.selected.wordEngAbrvNm || '?');
+        } else if (w.newWord && w.newWord.wordEngAbrvNm) {
+          parts.push(w.newWord.wordEngAbrvNm);
+        } else {
+          parts.push('?');
+        }
+      }
+      return parts.join('_');
     },
     filteredResults: function() {
       var self = this;
@@ -468,7 +494,11 @@ export default {
     },
     addEditWord: function() {
       var nm = (this.newWordInput || '').trim();
-      if (!nm) return;
+      if (!nm) {
+        this.$swal.fire({ title: '추가할 한글 단어명을 입력해주세요.', icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
+      var self = this;
       var newWord = {
         wordNm: nm,
         status: 'UNRECOGNIZED',
@@ -476,9 +506,52 @@ export default {
         selected: null,
         newWord: { wordEngAbrvNm: '', wordEngNm: '', domainClsfNm: '' }
       };
-      this.currentEditWords.push(newWord);
-      this.newWordInput = '';
-      this.recalcItemStatus(this.editingItem);
+      // TB_WORD에서 먼저 조회
+      axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', { params: { wordNm: nm } }).then(function(res) {
+        var info = res.data;
+        if (info && info.length > 0) {
+          // 등록된 단어
+          newWord.status = 'MATCHED';
+          newWord.selected = {
+            wordId: info[0].id,
+            wordNm: info[0].wordNm,
+            wordEngAbrvNm: info[0].wordEngAbrvNm,
+            wordEngNm: info[0].wordEngNm,
+            domainClsfNm: info[0].domainClsfNm || ''
+          };
+          newWord.candidates = [newWord.selected];
+          self.currentEditWords.push(newWord);
+          self.newWordInput = '';
+          self.recalcItemStatus(self.editingItem);
+          self.$swal.fire({ title: '등록된 단어입니다.', text: nm + ' → ' + info[0].wordEngAbrvNm, icon: 'success', timer: 1500, confirmButtonText: '확인' });
+        } else {
+          // 미등록 → DICT에서 추천 조회
+          axios.post(self.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm] }).then(function(res2) {
+            var data = res2.data;
+            if (data && data.length > 0 && data[0].words && data[0].words.length > 0) {
+              var w = data[0].words[0];
+              if (w.newWord) {
+                newWord.newWord.wordEngAbrvNm = w.newWord.wordEngAbrvNm || '';
+                newWord.newWord.wordEngNm = w.newWord.wordEngNm || '';
+              }
+            }
+            self.currentEditWords.push(newWord);
+            self.newWordInput = '';
+            self.recalcItemStatus(self.editingItem);
+            if (newWord.newWord.wordEngAbrvNm) {
+              self.$swal.fire({ title: '사전 기반 자동 추천', text: nm + ' → ' + newWord.newWord.wordEngAbrvNm + ' (수정 가능)', icon: 'info', timer: 2000, confirmButtonText: '확인' });
+            }
+          }).catch(function() {
+            self.currentEditWords.push(newWord);
+            self.newWordInput = '';
+            self.recalcItemStatus(self.editingItem);
+          });
+        }
+      }).catch(function() {
+        self.currentEditWords.push(newWord);
+        self.newWordInput = '';
+        self.recalcItemStatus(self.editingItem);
+      });
     },
     editItem: function(item) {
       this.editingItem = item;
