@@ -401,4 +401,12 @@
 		SELECT WORD_KOR AS "wordKor", WORD_ENG AS "wordEng", WORD_ABRV AS "wordAbrv", DOMAIN_CLSF_NM AS "domainClsfNm"
 		FROM TB_WORD_DICT
 	</select>
+
+	<!-- 단어명으로 DICT 단건 조회 (실시간 입력 조회용) -->
+	<select id="selectWordDictByNm" parameterType="String" resultType="java.util.HashMap">
+		SELECT WORD_KOR AS "wordKor", WORD_ENG AS "wordEng", WORD_ABRV AS "wordAbrv", DOMAIN_CLSF_NM AS "domainClsfNm"
+		FROM TB_WORD_DICT
+		WHERE WORD_KOR = #{wordNm}
+		LIMIT 1
+	</select>
 </mapper>

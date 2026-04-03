@@ -144,6 +144,32 @@
         </v-col>
       </v-row>
 
+      <!-- 반려 상태: 재요청 버튼 -->
+      <v-row v-if="detailItem.aprvStatRaw === 3" class="mt-2">
+        <v-col>
+          <v-btn color="primary" @click="reRequestApproval(detailItem)">
+            <v-icon small class="mr-1">mdi-refresh</v-icon> 재요청 (승인대기로 변경)
+          </v-btn>
+        </v-col>
+      </v-row>
+
+      <!-- 승인 이력 -->
+      <v-divider class="my-3" v-if="approvalHistory.length > 0"></v-divider>
+      <div v-if="approvalHistory.length > 0">
+        <div class="text-caption font-weight-bold mb-1">승인 이력</div>
+        <v-simple-table dense>
+          <thead><tr><th>상태</th><th>처리자</th><th>처리일</th><th>사유</th></tr></thead>
+          <tbody>
+            <tr v-for="(h, hi) in approvalHistory" :key="hi">
+              <td><v-chip x-small :color="h.aprvStat == 3 ? 'red' : h.aprvStat == 2 ? 'green' : 'orange'" text-color="white">{{ h.aprvStatNm }}</v-chip></td>
+              <td>{{ h.aprvUserId || h.reqUserId || '-' }}</td>
+              <td>{{ h.aprvStatUpdtDt || h.reqCretDt || '-' }}</td>
+              <td>{{ h.aprvStatUpdtRsn || '-' }}</td>
+            </tr>
+          </tbody>
+        </v-simple-table>
+      </div>
+
       <!-- 단어 반려 시 연관 용어 경고 -->
       <v-alert v-if="relatedTermsWarning.length > 0" type="warning" dense outlined class="mt-3">
         이 단어를 사용하는 미승인 용어가 있습니다:
@@ -201,6 +227,8 @@ export default {
     // 일괄 반려
     batchRejectDialogShow: false,
     batchRejectReason: '',
+    // 승인 이력
+    approvalHistory: [],
     approvalHeaders: [
       { text: '항목명', align: 'center', sortable: false, value: 'reqItemNm' },
       { text: '영문명', align: 'center', sortable: false, value: 'reqItemEngNm' },
@@ -274,6 +302,7 @@ export default {
       this.showRejectInput = false;
       this.rejectReason = '';
       this.relatedTermsWarning = [];
+      this.approvalHistory = [];
       this.selectedItem = [item];
 
       let reqTpRaw = item._reqTpRaw;
@@ -284,6 +313,40 @@ export default {
       } else if (reqTpRaw === 'DOMAIN') {
         this.getDomainDetail(item.reqItemNm);
       }
+      // 승인 이력 조회
+      if (item.reqItemId) {
+        axios.get(this.$APIURL.base + "api/std/getApprovalHistory", { params: { reqItemId: item.reqItemId, reqTp: reqTpRaw } })
+          .then(res => { this.approvalHistory = res.data || []; })
+          .catch(() => {});
+      }
+    },
+    reRequestApproval(item) {
+      let tpMap = { '도메인': 'DOMAIN', '용어': 'TERMS', '단어': 'WORD' };
+      let reqTp = tpMap[item.reqTp] || item._reqTpRaw || item.reqTp;
+      this.$swal.fire({
+        title: '재요청',
+        text: "'" + item.reqItemNm + "' 항목을 승인대기 상태로 재요청합니다.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '재요청',
+        cancelButtonText: '취소'
+      }).then(result => {
+        if (!result.isConfirmed) return;
+        axios.post(this.$APIURL.base + "api/std/reRequestApproval", {
+          reqTp: reqTp,
+          reqItemId: item.reqItemId
+        }).then(res => {
+          if (res.data.success) {
+            this.$swal.fire({ title: '재요청 완료', icon: 'success', timer: 1500, showConfirmButton: false });
+            this.detailItem = null;
+            this.getApprovalData();
+          } else {
+            this.$swal.fire({ title: '실패', text: res.data.message, icon: 'error', confirmButtonText: '확인' });
+          }
+        }).catch(() => {
+          this.$swal.fire({ title: '서버 오류', icon: 'error', confirmButtonText: '확인' });
+        });
+      });
     },
     getTermDetail(nm) {
       axios.get(this.$APIURL.base + "api/std/getTermsInfoByNm", { params: { termsNm: nm } })

@@ -19,6 +19,7 @@
         ,''           as aprvStatUpdtRsn
 			from TB_TERMS
 			where APRV_YN = 'N'
+				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = TERMS_ID AND s.REQ_TP = 'TERMS')
     <if test="reqUserId != null">
         		AND CRET_USER_ID = #{reqUserId}
     </if>
@@ -48,6 +49,7 @@
         ,''           as aprvStatUpdtRsn
 			from TB_WORD
 			where APRV_YN = 'N'
+				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = WORD_ID AND s.REQ_TP = 'WORD')
     <if test="reqUserId != null">
         		AND CRET_USER_ID = #{reqUserId}
     </if>
@@ -77,6 +79,7 @@
         ,''           as aprvStatUpdtRsn
 			from TB_DOMAIN
 			where APRV_YN = 'N'
+				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = DOMAIN_ID AND s.REQ_TP = 'DOMAIN')
     <if test="reqUserId != null">
         		AND CRET_USER_ID = #{reqUserId}
     </if>
@@ -91,16 +94,16 @@
         		AND CRET_DT &lt;= #{to}
     </if>
       union all
-			select 
-             REQ_ID              as id
-            ,REQ_TP			         as reqTp
-            ,REQ_ITEM_ID         as reqItemId
+			select
+             A.REQ_ID              as id
+            ,A.REQ_TP			         as reqTp
+            ,A.REQ_ITEM_ID         as reqItemId
             ,CASE
-            WHEN A.REQ_TP = 'WORD'  	-- WORD
+            WHEN A.REQ_TP = 'WORD'
             	THEN (select WORD_NM from tb_word where WORD_ID = A.REQ_ITEM_ID)
-            WHEN A.REQ_TP = 'TERMS' 	-- TERMS
+            WHEN A.REQ_TP = 'TERMS'
             	THEN (select TERMS_NM from tb_terms where TERMS_ID = A.REQ_ITEM_ID)
-            WHEN A.REQ_TP = 'DOMAIN'	-- DOMAIN
+            WHEN A.REQ_TP = 'DOMAIN'
             	THEN (select DOMAIN_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
             ELSE NULL
             END 				    	  as reqItemNm
@@ -113,15 +116,20 @@
             	THEN (select DOMAIN_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
             ELSE NULL
             END 				    	  as reqItemEngNm
-            ,APRV_STAT		      as aprvStat
-            ,REQ_USER_ID	      as reqUserId
-            ,to_char(to_timestamp(REQ_CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
-				    ,to_char(to_timestamp(REQ_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqUpdtDt
-            ,APRV_USER_ID       as aprvUserId
-            ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt
-            ,APRV_STAT_UPDT_RSN as aprvStatUpdtRsn
+            ,A.APRV_STAT		      as aprvStat
+            ,A.REQ_USER_ID	      as reqUserId
+            ,to_char(to_timestamp(A.REQ_CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
+				    ,to_char(to_timestamp(A.REQ_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqUpdtDt
+            ,A.APRV_USER_ID       as aprvUserId
+            ,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt
+            ,A.APRV_STAT_UPDT_RSN as aprvStatUpdtRsn
 			from TB_APRV_STATS A
-			where REQ_ID is not null 
+			inner join (
+				select REQ_ITEM_ID, REQ_TP, MAX(APRV_STAT_UPDT_DT) as max_dt
+				from TB_APRV_STATS
+				group by REQ_ITEM_ID, REQ_TP
+			) latest ON A.REQ_ITEM_ID = latest.REQ_ITEM_ID AND A.REQ_TP = latest.REQ_TP AND A.APRV_STAT_UPDT_DT = latest.max_dt
+			where A.REQ_ID is not null 
     <if test="reqUserId != null">
         		AND REQ_USER_ID = #{reqUserId}
     </if>
@@ -225,5 +233,20 @@
     JOIN TB_TERMS t ON tw.TERMS_ID = t.TERMS_ID
     WHERE tw.WORD_ID = #{wordId}
       AND t.APRV_YN = 'N'
+  </select>
+
+  <!-- 항목별 승인 이력 조회 (시간순) -->
+  <select id="selectApprovalHistoryByItem" parameterType="hashmap" resultType="hashmap">
+    SELECT REQ_ID as "reqId",
+           APRV_STAT as "aprvStat",
+           CASE APRV_STAT WHEN 0 THEN '요청' WHEN 2 THEN '승인' WHEN 3 THEN '반려' ELSE '기타' END as "aprvStatNm",
+           APRV_USER_ID as "aprvUserId",
+           to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as "aprvStatUpdtDt",
+           APRV_STAT_UPDT_RSN as "aprvStatUpdtRsn",
+           REQ_USER_ID as "reqUserId",
+           to_char(to_timestamp(REQ_CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as "reqCretDt"
+    FROM TB_APRV_STATS
+    WHERE REQ_ITEM_ID = #{reqItemId} AND REQ_TP = #{reqTp}
+    ORDER BY APRV_STAT_UPDT_DT DESC
   </select>
 </mapper>

@@ -68,6 +68,7 @@ public class TermAnalysisResult {
         private String wordEngAbrvNm;
         private String wordEngNm;
         private String domainClsfNm;
+        private String wordClsfYn;
         private int score;
         private boolean selected;
     }

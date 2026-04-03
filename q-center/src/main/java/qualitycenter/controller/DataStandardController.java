@@ -262,8 +262,60 @@ public class DataStandardController {
 	 * @return 해당 단어 정보 목록 (동음이의어 포함)
 	 */
 	@RequestMapping(value = "/getWordInfoByNm", method = RequestMethod.GET)
-	public List<StdWordVo> getWordInfoByNm(String wordNm) {
+	public List<StdWordVo> getWordInfoByNm(@RequestParam("wordNm") String wordNm) {
 		return sqlSessionTemplate.selectList("word.selectWordInfoByNm", wordNm);
+	}
+
+	/**
+	 * 단어명으로 TB_WORD + TB_WORD_DICT 동시 조회 (실시간 입력 조회용, 경량)
+	 */
+	@RequestMapping(value = "/lookupWord", method = RequestMethod.GET)
+	public Map<String, Object> lookupWord(@RequestParam("wordNm") String wordNm) {
+		Map<String, Object> result = new HashMap<>();
+		if (wordNm == null || wordNm.trim().isEmpty()) {
+			result.put("found", false);
+			return result;
+		}
+		// 1. TB_WORD 조회
+		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", wordNm.trim());
+		if (words != null && !words.isEmpty()) {
+			StdWordVo w = words.get(0);
+			result.put("found", true);
+			result.put("source", "WORD");
+			result.put("wordId", w.getId());
+			result.put("wordNm", w.getWordNm());
+			result.put("wordEngAbrvNm", w.getWordEngAbrvNm());
+			result.put("wordEngNm", w.getWordEngNm());
+			result.put("domainClsfNm", w.getDomainClsfNm());
+			result.put("wordClsfYn", w.getWordClsfYn());
+			return result;
+		}
+		// 2. TB_WORD_DICT 조회
+		Map<String, Object> dict = sqlSessionTemplate.selectOne("word.selectWordDictByNm", wordNm.trim());
+		if (dict != null) {
+			String dictAbrv = dict.get("wordAbrv") != null ? ((String) dict.get("wordAbrv")).trim() : "";
+			// 영문약어가 TB_WORD에 이미 등록되어 있으면 중복 경고
+			boolean abrvDuplicate = false;
+			if (!dictAbrv.isEmpty()) {
+				StdWordVo existing = sqlSessionTemplate.selectOne("word.selectWordByEngAbrvNm", dictAbrv);
+				if (existing != null) {
+					abrvDuplicate = true;
+				}
+			}
+			result.put("found", true);
+			result.put("source", "DICT");
+			result.put("wordNm", wordNm.trim());
+			result.put("wordEngAbrvNm", dictAbrv);
+			result.put("wordEngNm", dict.get("wordEng") != null ? dict.get("wordEng") : "");
+			result.put("domainClsfNm", "");
+			if (abrvDuplicate) {
+				result.put("abrvDuplicate", true);
+				result.put("abrvDuplicateMsg", "영문약어 '" + dictAbrv + "'는 이미 다른 단어에 등록되어 있습니다.");
+			}
+			return result;
+		}
+		result.put("found", false);
+		return result;
 	}
 
 	/**
@@ -1511,6 +1563,49 @@ public class DataStandardController {
 	}
 
 	/**
+	 * 반려 항목 재요청 API
+	 * - TB_APRV_STATS에 APRV_STAT=0 (재요청) 레코드 삽입
+	 * - 기존 반려 이력은 유지
+	 */
+	@RequestMapping(value = "/reRequestApproval", method = RequestMethod.POST)
+	public Map<String, Object> reRequestApproval(@RequestBody Map<String, Object> body) {
+		Map<String, Object> res = new HashMap<>();
+		String reqTp = (String) body.get("reqTp");
+		String reqItemId = (String) body.get("reqItemId");
+
+		if (reqTp == null || reqItemId == null) {
+			res.put("success", false);
+			res.put("message", "필수 파라미터 누락");
+			return res;
+		}
+
+		StdApproveStatVo vo = new StdApproveStatVo();
+		vo.setId(StringUtils.getUUID());
+		vo.setReqTp(reqTp);
+		vo.setReqItemId(reqItemId);
+		vo.setAprvStat(0); // 재요청 (승인대기)
+		vo.setReqUserId(sessionService.getUserId());
+		vo.setAprvStatUpdtRsn("재요청");
+
+		sqlSessionTemplate.insert("approve.insertStdAprvStat", vo);
+
+		res.put("success", true);
+		res.put("message", "재요청이 완료되었습니다.");
+		return res;
+	}
+
+	/**
+	 * 반려 항목의 승인 이력 조회 API
+	 */
+	@GetMapping("/getApprovalHistory")
+	public List<Map<String, Object>> getApprovalHistory(@RequestParam String reqItemId, @RequestParam String reqTp) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("reqItemId", reqItemId);
+		params.put("reqTp", reqTp);
+		return sqlSessionTemplate.selectList("approve.selectApprovalHistoryByItem", params);
+	}
+
+	/**
 	 * 연관 미승인 용어 조회 API (단어 반려 시 프론트에서 사전 확인용)
 	 */
 	@GetMapping("/getRelatedUnapprovedTerms")
@@ -1731,6 +1826,7 @@ public class DataStandardController {
 			res.put("wordEngAbrvNm", existWord.getWordEngAbrvNm());
 			res.put("wordEngNm", existWord.getWordEngNm());
 			res.put("domainClsfNm", existWord.getDomainClsfNm());
+			res.put("wordClsfYn", existWord.getWordClsfYn());
 			return res;
 		}
 
@@ -1769,6 +1865,7 @@ public class DataStandardController {
 		res.put("wordEngAbrvNm", wordVo.getWordEngAbrvNm());
 		res.put("wordEngNm", wordVo.getWordEngNm());
 		res.put("domainClsfNm", wordVo.getDomainClsfNm());
+		res.put("wordClsfYn", wordVo.getWordClsfYn());
 		if (synonymMsg != null) {
 			res.put("warning", synonymMsg);
 		}
@@ -2124,6 +2221,93 @@ public class DataStandardController {
 		if (result.isEmpty()) {
 			result.add(input);
 		}
+		// 후처리: 연속 1글자 토큰을 병합 후 알려진 단어 재탐색
+		result = mergeAndResplit(result, wordsByNm, wordDict);
+		return result;
+	}
+
+	/**
+	 * 후처리: 연속 1글자 토큰을 병합한 뒤 TB_WORD/DICT 단어를 재탐색
+	 * 예: [코, 일시, 발, 제, 목] → "코"(1글자) 병합 대상 → 주변 재탐색
+	 * 예: [시, 발, 제, 목] → 병합 "시발제목" → 재분리 → [시발, 제목]
+	 */
+	private List<String> mergeAndResplit(List<String> tokens,
+			Map<String, List<StdWordVo>> wordsByNm,
+			Map<String, Map<String, Object>> wordDict) {
+		if (tokens.size() <= 1) return tokens;
+
+		List<String> merged = new ArrayList<>();
+		int i = 0;
+		while (i < tokens.size()) {
+			if (tokens.get(i).length() == 1) {
+				// 연속 1글자 토큰 수집
+				StringBuilder sb = new StringBuilder();
+				while (i < tokens.size() && tokens.get(i).length() == 1) {
+					sb.append(tokens.get(i));
+					i++;
+				}
+				String chunk = sb.toString();
+				// 병합된 청크에서 알려진 단어를 greedy longest match로 추출
+				List<String> resplit = resplitChunk(chunk, wordsByNm, wordDict);
+				merged.addAll(resplit);
+			} else {
+				merged.add(tokens.get(i));
+				i++;
+			}
+		}
+		return merged;
+	}
+
+	/**
+	 * 1글자 토큰 병합 청크를 greedy longest match로 재분리
+	 */
+	private List<String> resplitChunk(String chunk,
+			Map<String, List<StdWordVo>> wordsByNm,
+			Map<String, Map<String, Object>> wordDict) {
+		List<String> result = new ArrayList<>();
+		int pos = 0;
+		while (pos < chunk.length()) {
+			String bestMatch = null;
+			int bestLen = 0;
+			int bestScore = 0;
+			// 현재 위치에서 가능한 모든 길이의 서브스트링 시도 (긴 것부터)
+			for (int len = chunk.length() - pos; len >= 2; len--) {
+				String sub = chunk.substring(pos, pos + len);
+				int score = 0;
+				if (wordsByNm.containsKey(sub)) {
+					score = 10000 + len * 100;
+				} else if (wordDict.containsKey(sub)) {
+					score = 5000 + len * 100;
+				}
+				if (score > bestScore) {
+					bestScore = score;
+					bestMatch = sub;
+					bestLen = len;
+				}
+			}
+			if (bestMatch != null) {
+				// 매칭 전 남은 1글자들을 하나로 합쳐서 추가
+				result.add(bestMatch);
+				pos += bestLen;
+			} else {
+				// 매칭 불가 → 1글자씩 진행하되 연속된 미매칭을 하나로 합침
+				int start = pos;
+				while (pos < chunk.length()) {
+					pos++;
+					// 다음 위치에서 2글자 이상 매칭 가능한지 확인
+					boolean hasMatch = false;
+					for (int len = Math.min(chunk.length() - pos, 10); len >= 2; len--) {
+						String sub = chunk.substring(pos, pos + len);
+						if (wordsByNm.containsKey(sub) || wordDict.containsKey(sub)) {
+							hasMatch = true;
+							break;
+						}
+					}
+					if (hasMatch) break;
+				}
+				result.add(chunk.substring(start, pos));
+			}
+		}
 		return result;
 	}
 
@@ -2272,6 +2456,7 @@ public class DataStandardController {
 					c.setWordEngAbrvNm(w.getWordEngAbrvNm());
 					c.setWordEngNm(w.getWordEngNm());
 					c.setDomainClsfNm(w.getDomainClsfNm());
+					c.setWordClsfYn(w.getWordClsfYn());
 					int score = 0;
 					Integer usage = usageMap.get(w.getWordNm());
 					if (usage != null) score += usage * 100;

@@ -134,6 +134,12 @@
                     <schemaCompare :key="schemaCompareKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'structDiag'" id="tab_structDiag" class="tab_contents"
+                :class="{ active: this.activeContent === 'structDiag' }">
+                <keep-alive>
+                    <structDiag :key="structDiagKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'termRecommend'" id="tab_termRecommend" class="tab_contents"
                 :class="{ active: this.activeContent === 'termRecommend' }">
                 <keep-alive>
@@ -278,6 +284,7 @@ import DSDataDiag from "../../components/DSDataDiag.vue"
 import DSDataDiagResult from "../../components/DSDataDiagResult.vue"
 import DSTermRecommend from "../../components/DSTermRecommend.vue"
 import DSSchemaCompare from "../../components/DSSchemaCompare.vue"
+import DSStructDiag from "../../components/DSStructDiag.vue"
 import DSErwinImport from "../../components/DSErwinImport.vue"
 import DSChangeHistory from "../../components/DSChangeHistory.vue"
 import DSGlobalSearch from "../../components/DSGlobalSearch.vue"
@@ -348,6 +355,7 @@ export default {
             dataDiagResultKey: this.createUUID(),
             termRecommendKey: this.createUUID(),
             schemaCompareKey: this.createUUID(),
+            structDiagKey: this.createUUID(),
             dqiKey: this.createUUID(),
             ctqKey: this.createUUID(),
             dqbrKey: this.createUUID(),
@@ -386,6 +394,7 @@ export default {
         "dataDiagResult": DSDataDiagResult,
         "termRecommend": DSTermRecommend,
         "schemaCompare": DSSchemaCompare,
+        "structDiag": DSStructDiag,
         "erwinImport": DSErwinImport,
         "dqi": DQDQI,
         "ctq": DQCTQ,
@@ -466,6 +475,9 @@ export default {
                     break;
                 case "schemaCompare":
                     this.schemaCompareKey = this.createUUID();
+                    break;
+                case "structDiag":
+                    this.structDiagKey = this.createUUID();
                     break;
                 case "dqi":
                     this.dqiKey = this.createUUID();

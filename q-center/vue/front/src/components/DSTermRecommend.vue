@@ -81,7 +81,7 @@
             </v-btn>
             <v-btn small color="primary" class="white--text ml-2" @click="registerAll"
               :disabled="approvedCount === 0">
-              <v-icon left small>mdi-database-plus</v-icon>등록 실행
+              <v-icon left small>mdi-database-plus</v-icon>용어 등록
             </v-btn>
             <v-btn small outlined @click="currentStep = 1" class="ml-2">
               <v-icon left small>mdi-arrow-left</v-icon>다시 입력
@@ -105,12 +105,18 @@
               <v-chip :color="statusColor(item.status)" x-small dark>{{ statusText(item.status) }}</v-chip>
             </template>
 
+            <template v-slot:[`header.words`]>
+              <span>구성단어</span>
+              <v-chip x-small color="green" text-color="white" class="ml-2" style="height:16px; font-size:.6rem;">등록</v-chip>
+              <v-chip x-small color="orange" text-color="white" style="height:16px; font-size:.6rem;">사전</v-chip>
+              <v-chip x-small color="red" text-color="white" style="height:16px; font-size:.6rem;">미인식</v-chip>
+            </template>
             <!-- Words display -->
             <template v-slot:[`item.words`]="{ item }">
               <span v-if="item.status === 'REGISTERED'">-</span>
               <span v-else>
                 <v-chip v-for="(w, wi) in item.words" :key="wi" x-small
-                  :color="w.status === 'NEW' ? 'orange' : 'green'" text-color="white" class="mr-1">
+                  :color="w.status === 'MATCHED' ? 'green' : w.status === 'NEW' ? 'orange' : 'red'" text-color="white" class="mr-1">
                   {{ w.wordNm }}
                 </v-chip>
               </span>
@@ -148,11 +154,13 @@
             <!-- Action column -->
             <template v-slot:[`item.action`]="{ item }">
               <span v-if="item.status === 'REGISTERED'" class="grey--text text-caption">기등록</span>
-              <v-btn v-else-if="item.status === 'PARTIAL' || item.status === 'FAILED'" x-small color="orange" dark @click="editItem(item)">
-                <v-icon x-small left>mdi-pencil</v-icon>수정
-              </v-btn>
-              <v-icon v-else-if="item._approved" color="green" small>mdi-check-circle</v-icon>
-              <v-btn v-else x-small color="green" dark @click="approveItem(item)">승인</v-btn>
+              <template v-else>
+                <v-icon v-if="item._approved" color="green" small class="mr-1">mdi-check-circle</v-icon>
+                <v-btn x-small :color="item._approved ? 'grey' : 'orange'" :dark="!item._approved"
+                  :outlined="item._approved" @click="editItem(item)">
+                  <v-icon x-small left>mdi-pencil</v-icon>{{ item._approved ? '재수정' : '수정' }}
+                </v-btn>
+              </template>
             </template>
           </v-data-table>
         </v-card>
@@ -234,11 +242,19 @@
               <tr v-for="(w, wi) in currentEditWords" :key="wi">
                 <td>
                   <v-text-field v-if="w.status === 'NEW' || w.status === 'UNRECOGNIZED'" v-model="w.wordNm" dense hide-details
-                    style="max-width:100px" @input="onWordNmInput(w)"></v-text-field>
-                  <span v-else>{{ w.wordNm }}</span>
+                    style="max-width:100px" @input="onWordNmInput(w)" @change="onWordNmInput(w)"
+                    @compositionend="onWordNmInput(w)"></v-text-field>
+                  <span v-else>{{ w.wordNm }}
+                    <v-btn icon x-small @click="unlockWord(w)" title="수정" class="ml-1">
+                      <v-icon x-small>mdi-pencil</v-icon>
+                    </v-btn>
+                  </span>
                 </td>
                 <td>
-                  <v-text-field v-if="w.status === 'NEW' || w.status === 'UNRECOGNIZED'" v-model="w.newWord.wordEngAbrvNm" dense hide-details
+                  <v-text-field v-if="w.status === 'NEW' || w.status === 'UNRECOGNIZED'" v-model="w.newWord.wordEngAbrvNm" dense
+                    :hide-details="!w._abrvDupMsg && !w._dictHint"
+                    :error-messages="w._abrvDupMsg || ''"
+                    :messages="(!w._abrvDupMsg && w._dictHint) ? w._dictHint : ''"
                     @input="w.newWord.wordEngAbrvNm = (w.newWord.wordEngAbrvNm || '').toUpperCase()"
                     style="max-width:120px"></v-text-field>
                   <span v-else>{{ w.selected && w.selected.wordEngAbrvNm || '-' }}</span>
@@ -487,43 +503,72 @@ export default {
       var self = this;
       var nm = (w.wordNm || '').trim();
       if (!nm || nm.length < 1) return;
+      // 같은 값 재요청 방지
+      if (w._lastLookup === nm) return;
       // 디바운스: 이전 타이머 취소
       if (w._dictTimer) clearTimeout(w._dictTimer);
       w._dictTimer = setTimeout(function() {
-        // 1. TB_WORD에서 조회
-        axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', { params: { wordNm: nm } }).then(function(res) {
-          var info = res.data;
-          if (info && info.length > 0) {
-            // 등록된 단어 발견 → MATCHED로 전환
-            w.status = 'MATCHED';
-            w.selected = {
-              wordId: info[0].id,
-              wordNm: info[0].wordNm,
-              wordEngAbrvNm: info[0].wordEngAbrvNm,
-              wordEngNm: info[0].wordEngNm,
-              domainClsfNm: info[0].domainClsfNm || ''
-            };
-            w.candidates = [w.selected];
-            self.$set(w, '_registered', true);
-            self.recalcItemStatus(self.editingItem);
-          } else {
-            // 2. DICT에서 추천 조회
-            axios.post(self.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm] }).then(function(res2) {
-              var data = res2.data;
-              if (data && data.length > 0 && data[0].words && data[0].words.length > 0) {
-                var dictWord = data[0].words[0];
-                if (dictWord.newWord) {
-                  self.$set(w.newWord, 'wordEngAbrvNm', dictWord.newWord.wordEngAbrvNm || '');
-                  self.$set(w.newWord, 'wordEngNm', dictWord.newWord.wordEngNm || '');
-                }
+        w._lastLookup = nm;
+        // 경량 API: TB_WORD + TB_WORD_DICT 동시 조회
+        axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: nm } }).then(function(res) {
+          var data = res.data;
+          if (data && data.found) {
+            if (data.source === 'WORD') {
+              // TB_WORD에 등록된 단어 → MATCHED로 전환
+              self.$set(w, 'status', 'MATCHED');
+              self.$set(w, 'selected', {
+                wordId: data.wordId,
+                wordNm: data.wordNm,
+                wordEngAbrvNm: data.wordEngAbrvNm,
+                wordEngNm: data.wordEngNm,
+                domainClsfNm: data.domainClsfNm || '',
+                wordClsfYn: data.wordClsfYn || 'N'
+              });
+              self.$set(w, 'candidates', [w.selected]);
+              self.$set(w, '_registered', true);
+              self.$set(w, '_dictHint', '');
+              self.$set(w, '_abrvDupMsg', '');
+              self.recalcItemStatus(self.editingItem);
+            } else {
+              // DICT에서 발견 → 영문약어/영문명 자동입력
+              if (!w.newWord) self.$set(w, 'newWord', {});
+              self.$set(w.newWord, 'wordEngAbrvNm', data.wordEngAbrvNm || '');
+              self.$set(w.newWord, 'wordEngNm', data.wordEngNm || '');
+              self.$set(w, '_dictHint', "'" + nm + "' 사전 추천: " + (data.wordEngAbrvNm || ''));
+              // 영문약어 중복 경고
+              if (data.abrvDuplicate) {
+                self.$set(w, '_abrvDupMsg', data.abrvDuplicateMsg);
+                self.$set(w, '_dictHint', '');
               } else {
-                self.$set(w.newWord, 'wordEngAbrvNm', '');
-                self.$set(w.newWord, 'wordEngNm', '');
+                self.$set(w, '_abrvDupMsg', '');
               }
-            }).catch(function() {});
+            }
+          } else {
+            // 미발견 → 영문 필드 초기화
+            if (!w.newWord) self.$set(w, 'newWord', {});
+            self.$set(w.newWord, 'wordEngAbrvNm', '');
+            self.$set(w.newWord, 'wordEngNm', '');
+            self.$set(w, '_dictHint', '');
+            self.$set(w, '_abrvDupMsg', '');
           }
-        }).catch(function() {});
-      }, 300);
+        }).catch(function(err) {
+          console.error('lookupWord error:', err);
+        });
+      }, 400);
+    },
+    unlockWord: function(w) {
+      // MATCHED 상태를 NEW로 전환하여 다시 편집 가능하게
+      var engAbrv = (w.selected && w.selected.wordEngAbrvNm) || '';
+      var engNm = (w.selected && w.selected.wordEngNm) || '';
+      this.$set(w, 'status', 'NEW');
+      this.$set(w, 'selected', null);
+      this.$set(w, 'candidates', []);
+      this.$set(w, '_registered', false);
+      this.$set(w, '_lastLookup', '');
+      if (!w.newWord) this.$set(w, 'newWord', {});
+      this.$set(w.newWord, 'wordEngAbrvNm', engAbrv);
+      this.$set(w.newWord, 'wordEngNm', engNm);
+      this.recalcItemStatus(this.editingItem);
     },
     removeEditWord: function(index) {
       var words = this.currentEditWords;
@@ -629,7 +674,8 @@ export default {
             wordNm: res.data.wordNm,
             wordEngAbrvNm: res.data.wordEngAbrvNm,
             wordEngNm: res.data.wordEngNm,
-            domainClsfNm: res.data.domainClsfNm || ''
+            domainClsfNm: res.data.domainClsfNm || '',
+            wordClsfYn: res.data.wordClsfYn || 'N'
           };
           w.candidates = [w.selected];
           // 전체 상태 재판정
@@ -677,7 +723,6 @@ export default {
     },
     confirmEdit: function() {
       var item = this.editingItem;
-      var activeWords = this.currentEditWords;
 
       // 2순위 선택 시 item.words를 alternativeWords로 교체
       if (this.editSplitMode === 1 && item.alternativeWords && item.alternativeWords.length) {
@@ -685,38 +730,98 @@ export default {
         item.alternativeWords = null;
       }
 
-      if (item && item.words) {
-        // UNRECOGNIZED 단어가 있는지 체크
-        var unrecognized = [];
-        var unregistered = [];
-        for (var j = 0; j < item.words.length; j++) {
-          var nw = item.words[j];
-          if (nw.status === 'UNRECOGNIZED') {
-            unrecognized.push(nw.wordNm);
-          } else if ((nw.status === 'NEW' || nw.status === 'UNRECOGNIZED') && !nw._registered) {
-            unregistered.push(nw.wordNm);
+      var words = this.currentEditWords;
+      if (!words || words.length === 0) return;
+
+      // 검증: 모든 단어가 영문약어를 가지고 있는지 체크
+      var missingAbrv = [];
+      var unregistered = [];
+      for (var j = 0; j < words.length; j++) {
+        var w = words[j];
+        var abrv = '';
+        if (w.status === 'MATCHED' && w.selected) {
+          abrv = w.selected.wordEngAbrvNm || '';
+        } else {
+          abrv = (w.newWord && w.newWord.wordEngAbrvNm) || '';
+          if (!w._registered) {
+            unregistered.push(w.wordNm);
           }
         }
-        if (unregistered.length > 0) {
+        if (!abrv.trim()) {
+          missingAbrv.push(w.wordNm);
+        }
+      }
+
+      if (missingAbrv.length > 0) {
+        this.$swal.fire({
+          title: '영문약어 누락',
+          text: '다음 단어의 영문약어를 입력해주세요: ' + missingAbrv.join(', '),
+          icon: 'warning', confirmButtonText: '확인'
+        });
+        return;
+      }
+
+      if (unregistered.length > 0) {
+        this.$swal.fire({
+          title: '미등록 단어',
+          text: '다음 단어를 먼저 [단어등록] 해주세요: ' + unregistered.join(', '),
+          icon: 'warning', confirmButtonText: '확인'
+        });
+        return;
+      }
+
+      // 분류어 검증: 마지막 단어가 분류어(WORD_CLSF_YN='Y')인지 서버에서 확인
+      if (words.length >= 2) {
+        var lastW = words[words.length - 1];
+        var lastWordId = null;
+        if (lastW.status === 'MATCHED' && lastW.selected) {
+          lastWordId = lastW.selected.wordId;
+        }
+        if (lastWordId) {
+          var self = this;
+          axios.get(self.$APIURL.base + 'api/std/getWordInfoById', { params: { wordId: lastWordId } }).then(function(res) {
+            var info = res.data;
+            if (info && info.length > 0 && info[0].wordClsfYn === 'Y') {
+              self.doConfirmEditFinish(item, words);
+            } else {
+              self.$swal.fire({
+                title: '분류어 필요',
+                text: '용어의 마지막 단어는 분류어여야 합니다. (현재: ' + lastW.wordNm + ')\n명, 코드, 번호, 일자 등 분류어를 마지막에 배치해주세요.',
+                icon: 'warning', confirmButtonText: '확인'
+              });
+            }
+          });
+          return; // 비동기이므로 여기서 중단, 콜백에서 계속
+        } else {
+          // 마지막 단어가 미등록이면 분류어 아님
           this.$swal.fire({
-            title: '미등록 단어 있음',
-            text: '다음 단어를 먼저 등록해주세요: ' + unregistered.join(', '),
-            icon: 'warning',
-            confirmButtonText: '확인'
+            title: '분류어 필요',
+            text: '용어의 마지막 단어는 분류어여야 합니다. (현재: ' + lastW.wordNm + ')\n명, 코드, 번호, 일자 등 분류어를 마지막에 배치해주세요.',
+            icon: 'warning', confirmButtonText: '확인'
           });
           return;
         }
-        var parts = [];
-        for (var i = 0; i < item.words.length; i++) {
-          var w = item.words[i];
-          if (w.status === 'MATCHED' && w.selected) {
-            parts.push(w.selected.wordEngAbrvNm);
-          } else if (w.status === 'NEW' && w.newWord) {
-            parts.push(w.newWord.wordEngAbrvNm);
-          }
-        }
-        item.recommendedEngAbrvNm = parts.join('_');
       }
+
+      this.doConfirmEditFinish(item, words);
+    },
+    doConfirmEditFinish: function(item, words) {
+      // 한글명 재조합 (구성단어 이어붙이기)
+      var korParts = [];
+      var engParts = [];
+      for (var i = 0; i < words.length; i++) {
+        var wd = words[i];
+        korParts.push(wd.wordNm || '');
+        if (wd.status === 'MATCHED' && wd.selected) {
+          engParts.push(wd.selected.wordEngAbrvNm);
+        } else if (wd.newWord && wd.newWord.wordEngAbrvNm) {
+          engParts.push(wd.newWord.wordEngAbrvNm);
+        }
+      }
+      item.inputNm = korParts.join('');
+      item.termName = korParts.join('');
+      item.recommendedEngAbrvNm = engParts.join('_');
+
       this.$set(item, '_approved', true);
       this.editDialog = false;
     },
@@ -735,7 +840,10 @@ export default {
             var w = r.words[j];
             if (w.status === 'MATCHED' && w.selected) {
               wordIds.push({ wordId: w.selected.wordId, wordOrd: j });
-            } else if (w.status === 'NEW' && w.newWord) {
+            } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w._registered && w.selected) {
+              // 수정 다이얼로그에서 단어등록 완료된 경우
+              wordIds.push({ wordId: w.selected.wordId, wordOrd: j });
+            } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w.newWord) {
               wordIds.push({ wordId: null, wordOrd: j, newWordIndex: newWords.length });
               newWords.push({
                 wordNm: w.wordNm,
