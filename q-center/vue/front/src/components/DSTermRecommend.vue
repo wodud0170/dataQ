@@ -234,7 +234,7 @@
               <tr v-for="(w, wi) in currentEditWords" :key="wi">
                 <td>
                   <v-text-field v-if="w.status === 'NEW' || w.status === 'UNRECOGNIZED'" v-model="w.wordNm" dense hide-details
-                    style="max-width:100px"></v-text-field>
+                    style="max-width:100px" @input="onWordNmInput(w)"></v-text-field>
                   <span v-else>{{ w.wordNm }}</span>
                 </td>
                 <td>
@@ -482,6 +482,48 @@ export default {
     summarizeSplit: function(words) {
       if (!words) return '';
       return words.map(function(w) { return w.wordNm; }).join('+');
+    },
+    onWordNmInput: function(w) {
+      var self = this;
+      var nm = (w.wordNm || '').trim();
+      if (!nm || nm.length < 1) return;
+      // 디바운스: 이전 타이머 취소
+      if (w._dictTimer) clearTimeout(w._dictTimer);
+      w._dictTimer = setTimeout(function() {
+        // 1. TB_WORD에서 조회
+        axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', { params: { wordNm: nm } }).then(function(res) {
+          var info = res.data;
+          if (info && info.length > 0) {
+            // 등록된 단어 발견 → MATCHED로 전환
+            w.status = 'MATCHED';
+            w.selected = {
+              wordId: info[0].id,
+              wordNm: info[0].wordNm,
+              wordEngAbrvNm: info[0].wordEngAbrvNm,
+              wordEngNm: info[0].wordEngNm,
+              domainClsfNm: info[0].domainClsfNm || ''
+            };
+            w.candidates = [w.selected];
+            self.$set(w, '_registered', true);
+            self.recalcItemStatus(self.editingItem);
+          } else {
+            // 2. DICT에서 추천 조회
+            axios.post(self.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm] }).then(function(res2) {
+              var data = res2.data;
+              if (data && data.length > 0 && data[0].words && data[0].words.length > 0) {
+                var dictWord = data[0].words[0];
+                if (dictWord.newWord) {
+                  self.$set(w.newWord, 'wordEngAbrvNm', dictWord.newWord.wordEngAbrvNm || '');
+                  self.$set(w.newWord, 'wordEngNm', dictWord.newWord.wordEngNm || '');
+                }
+              } else {
+                self.$set(w.newWord, 'wordEngAbrvNm', '');
+                self.$set(w.newWord, 'wordEngNm', '');
+              }
+            }).catch(function() {});
+          }
+        }).catch(function() {});
+      }, 300);
     },
     removeEditWord: function(index) {
       var words = this.currentEditWords;
