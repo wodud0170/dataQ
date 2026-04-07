@@ -435,7 +435,7 @@ public class DataStandardController {
 			if (wordList == null) {
 				throw new Exception("terms word list is invalid");
 			}
-			// 분류어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 분류어여야 함
+			// 형식단어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 형식단어여야 함
 			if (wordList.size() < 2) {
 				throw new Exception("용어는 최소 2개 이상의 단어로 구성되어야 합니다");
 			}
@@ -443,7 +443,7 @@ public class DataStandardController {
 			if (lastWord.getWordId() != null) {
 				List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWord.getWordId());
 				if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
-					throw new Exception("용어의 마지막 단어는 분류어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
+					throw new Exception("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
 				}
 			}
 			// 신규 용어 등록
@@ -1969,7 +1969,7 @@ public class DataStandardController {
 
 				// 구성 단어 승인 여부 체크는 용어 승인 시점에 수행 (등록은 자유)
 
-				// 분류어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 분류어여야 함
+				// 형식단어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 형식단어여야 함
 				if (words == null || words.size() < 2) {
 					throw new RuntimeException("용어는 최소 2개 이상의 단어로 구성되어야 합니다");
 				}
@@ -1985,7 +1985,7 @@ public class DataStandardController {
 				if (lastWordId != null) {
 					List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWordId);
 					if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
-						throw new RuntimeException("용어의 마지막 단어는 분류어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
+						throw new RuntimeException("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
 					}
 				}
 

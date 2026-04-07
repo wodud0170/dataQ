@@ -14,7 +14,7 @@
                 </v-list-item>
 
                 <!-- 데이터 표준 사전 -->
-                <v-list-group link v-cloak :value=" navDsGroup " prepend-icon="task" active-class="ndColor--text"
+                <v-list-group link v-cloak :value=" navDsGroup " prepend-icon="mdi-book-open-page-variant" active-class="ndColor--text"
                     id="dsGroup" title="데이터 표준 사전" v-on:click.stop=" addNavGroupData('dsGroup'); ">
                     <template v-slot:activator>
                         <v-list-item-content>
@@ -155,12 +155,12 @@
 
                 </v-list-group>
 
-                <!-- 표준화 진단 -->
+                <!-- 표준 진단 -->
                 <v-list-group link v-cloak :value="navDiagGroup" prepend-icon="search" active-class="ndColor--text"
-                    id="diagGroup" title="표준화 진단" v-on:click.stop="addNavGroupData('diagGroup');">
+                    id="diagGroup" title="표준 진단" v-on:click.stop="addNavGroupData('diagGroup');">
                     <template v-slot:activator>
                         <v-list-item-content>
-                            <v-list-item-title :ripple="false">표준화 진단</v-list-item-title>
+                            <v-list-item-title :ripple="false">표준 진단</v-list-item-title>
                         </v-list-item-content>
                     </template>
 
@@ -182,25 +182,25 @@
 
                 <!-- 구조 진단 -->
                 <v-list-group link v-cloak :value="navStructDiagGroup" prepend-icon="mdi-database-search" active-class="ndColor--text"
-                    id="structDiagGroup" title="구조 진단" v-on:click.stop="addNavGroupData('structDiagGroup');">
+                    id="structDiagGroup" title="구조 변경 진단" v-on:click.stop="addNavGroupData('structDiagGroup');">
                     <template v-slot:activator>
                         <v-list-item-content>
-                            <v-list-item-title :ripple="false">구조 진단</v-list-item-title>
+                            <v-list-item-title :ripple="false">구조 변경 진단</v-list-item-title>
                         </v-list-item-content>
                     </template>
 
                     <v-list-item link id="nav_structDiag" href="#tab_structDiag"
-                        active-class="ndColor--text" title="진단 실행/이력"
-                        v-on:click.stop="addTabItem('진단 실행/이력', 'structDiag');">
+                        active-class="ndColor--text" title="진단 실행"
+                        v-on:click.stop="addTabItem('진단 실행', 'structDiag');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>진단 실행/이력</v-list-item-title>
+                        <v-list-item-title>진단 실행</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_schemaCompare" href="#tab_schemaCompare"
-                        active-class="ndColor--text" title="스키마 비교"
-                        v-on:click.stop="addTabItem('스키마 비교', 'schemaCompare');">
+                    <v-list-item link id="nav_structDiagResult" href="#tab_structDiagResult"
+                        active-class="ndColor--text" title="진단 결과"
+                        v-on:click.stop="addTabItem('진단 결과', 'structDiagResult');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>스키마 비교</v-list-item-title>
+                        <v-list-item-title>진단 결과</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
 
@@ -318,12 +318,12 @@
                         </v-list-item-content>
                     </template>
 
-                    <v-list-item link id="nav_scurrent" href="#tab_scurrent" active-class="ndColor--text" title="데이터 표준화 진단"
-                        v-on:click.stop=" addTabItem('데이터 표준화 진단', 'scurrent'); ">
+                    <v-list-item link id="nav_scurrent" href="#tab_scurrent" active-class="ndColor--text" title="데이터 표준 진단"
+                        v-on:click.stop=" addTabItem('데이터 표준 진단', 'scurrent'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
-                        <v-list-item-title>데이터 표준화 진단</v-list-item-title>
+                        <v-list-item-title>데이터 표준 진단</v-list-item-title>
                     </v-list-item>
 
                     <v-list-item link id="nav_qcurrent" href="#tab_qcurrent" active-class="ndColor--text" title="데이터 품질 현황"
@@ -351,24 +351,6 @@
                         v-on:click.stop="addTabItem('게시판', 'board');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>게시판</v-list-item-title>
-                    </v-list-item>
-                </v-list-group>
-
-                <!-- 내 요청 -->
-                <v-list-group link v-cloak :value="navMyRequestGroup" prepend-icon="mdi-clipboard-list"
-                    active-class="ndColor--text" id="myRequestGroup" title="내 요청"
-                    v-on:click.stop="addNavGroupData('myRequestGroup');">
-                    <template v-slot:activator>
-                        <v-list-item-content>
-                            <v-list-item-title :ripple="false">내 요청</v-list-item-title>
-                        </v-list-item-content>
-                    </template>
-
-                    <v-list-item link id="nav_myRequest" href="#tab_myRequest" active-class="ndColor--text"
-                        title="내 요청 현황"
-                        v-on:click.stop="addTabItem('내 요청 현황', 'myRequest');">
-                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>내 요청 현황</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
 
@@ -421,6 +403,31 @@
                         <v-list-item-title>시스템 정보</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
+
+                <!-- 마이페이지 -->
+                <v-list-group link v-cloak :value="navMyPageGroup" prepend-icon="mdi-account-circle"
+                    active-class="ndColor--text" id="myPageGroup" title="마이페이지"
+                    v-on:click.stop="addNavGroupData('myPageGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">마이페이지</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_myProfile" href="#tab_myProfile" active-class="ndColor--text"
+                        title="내 정보"
+                        v-on:click.stop="addTabItem('내 정보', 'myProfile');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>내 정보</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_myRequest" href="#tab_myRequest" active-class="ndColor--text"
+                        title="요청 현황"
+                        v-on:click.stop="addTabItem('요청 현황', 'myRequest');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>요청 현황</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
             </v-list>
         </v-list-item-group>
         <v-sheet class="wsLogViewer" v-model=" wsLogShow " :class=" { 'active': this.wsLogShow } ">
@@ -454,8 +461,8 @@ export default {
         'navDiagGroup',
         'navStructDiagGroup',
         'navAutoStdGroup',
-        'navMyRequestGroup',
-        'navCommunityGroup'],
+        'navCommunityGroup',
+        'navMyPageGroup'],
     data: () => ({
         selectedList: null,
         wsLogShow: false,
@@ -516,9 +523,13 @@ export default {
         eventBus.$on('openDiagResult', () => {
             this.addTabItem('진단 결과', 'dataDiagResult');
         });
+        eventBus.$on('openStructDiagResult', () => {
+            this.addTabItem('진단 결과', 'structDiagResult');
+        });
     },
     beforeDestroy() {
         eventBus.$off('openDiagResult');
+        eventBus.$off('openStructDiagResult');
     }
 }
 </script>

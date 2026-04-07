@@ -770,7 +770,7 @@ export default {
         return;
       }
 
-      // 분류어 검증: 마지막 단어가 분류어(WORD_CLSF_YN='Y')인지 서버에서 확인
+      // 형식단어 검증: 마지막 단어가 형식단어(WORD_CLSF_YN='Y')인지 서버에서 확인
       if (words.length >= 2) {
         var lastW = words[words.length - 1];
         var lastWordId = null;
@@ -785,18 +785,18 @@ export default {
               self.doConfirmEditFinish(item, words);
             } else {
               self.$swal.fire({
-                title: '분류어 필요',
-                text: '용어의 마지막 단어는 분류어여야 합니다. (현재: ' + lastW.wordNm + ')\n명, 코드, 번호, 일자 등 분류어를 마지막에 배치해주세요.',
+                title: '형식단어 필요',
+                text: '용어의 마지막 단어는 형식단어여야 합니다. (현재: ' + lastW.wordNm + ')\n명, 코드, 번호, 일자 등 형식단어를 마지막에 배치해주세요.',
                 icon: 'warning', confirmButtonText: '확인'
               });
             }
           });
           return; // 비동기이므로 여기서 중단, 콜백에서 계속
         } else {
-          // 마지막 단어가 미등록이면 분류어 아님
+          // 마지막 단어가 미등록이면 형식단어 아님
           this.$swal.fire({
-            title: '분류어 필요',
-            text: '용어의 마지막 단어는 분류어여야 합니다. (현재: ' + lastW.wordNm + ')\n명, 코드, 번호, 일자 등 분류어를 마지막에 배치해주세요.',
+            title: '형식단어 필요',
+            text: '용어의 마지막 단어는 형식단어여야 합니다. (현재: ' + lastW.wordNm + ')\n명, 코드, 번호, 일자 등 형식단어를 마지막에 배치해주세요.',
             icon: 'warning', confirmButtonText: '확인'
           });
           return;

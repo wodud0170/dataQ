@@ -12,7 +12,7 @@
                         :navDqSub2="navDqSub2" :navDqSub3="navDqSub3" :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3"
                         :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                         :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
-                        :navMyRequestGroup="navMyRequestGroup"
+                        :navMyPageGroup="navMyPageGroup"
                         :navCommunityGroup="navCommunityGroup"
                         @addTabItem="addTabItem" @addActiveContent="addActiveContent" @navAllGroupClose="navAllGroupClose"
                         @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
@@ -35,7 +35,7 @@
                 :navDsSub1="navDsSub1" :navDsSub2="navDsSub2" :navDsSub3="navDsSub3"
                 :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                 :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
-                        :navMyRequestGroup="navMyRequestGroup"
+                        :navMyPageGroup="navMyPageGroup"
                         :navCommunityGroup="navCommunityGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
                 @navAllGroupClose="navAllGroupClose" @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                 @addNavSubGroupData="addNavSubGroupData" />
@@ -74,14 +74,15 @@ export default {
         navDiagGroup: null,
         navStructDiagGroup: null,
         navAutoStdGroup: null,
-        navMyRequestGroup: null,
         navCommunityGroup: null,
+        navMyPageGroup: null,
         navApprovalStatus: []// 대시보드에서 승인 페이지 호출 시 승인 상태를 저장하는 변수
     }),
     beforeDestroy() {
         if (typeof window === 'undefined') return
 
         window.removeEventListener('resize', this.onResize, { passive: true })
+        window.removeEventListener('beforeunload', this.onBeforeUnload)
     },
     watch: {
         $route() {
@@ -99,6 +100,9 @@ export default {
 
         window.addEventListener('resize', this.onResize, { passive: true })
 
+        // F5/새로고침/탭 닫기 시 경고
+        window.addEventListener('beforeunload', this.onBeforeUnload)
+
         if (this.isMobile) {
             this.drawer = false;
         }
@@ -107,6 +111,14 @@ export default {
         onResize() {
             // 모바일의 기준은 디바이스의 가로 길이 916px로 함
             this.isMobile = window.innerWidth < 916
+        },
+        onBeforeUnload(e) {
+            if (window._skipBeforeUnload) {
+                window._skipBeforeUnload = false;
+                return;
+            }
+            e.preventDefault();
+            e.returnValue = '';
         },
         navIconClick(drawer) {
             this.drawer = drawer;
@@ -163,14 +175,15 @@ export default {
                     document.getElementById("communityGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
                 case "myRequest":
-                    document.getElementById("myRequestGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                case "myProfile":
+                    document.getElementById("myPageGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
                 case "dataDiag":
                 case "dataDiagResult":
                     document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
-                case "schemaCompare":
                 case "structDiag":
+                case "structDiagResult":
                     document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
                 case "dqi":
@@ -325,14 +338,14 @@ export default {
                 // group Active
                 if (tabName === 'board') {
                     document.getElementById("communityGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
-                } else if (tabName === 'myRequest') {
-                    document.getElementById("myRequestGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                } else if (tabName === 'myRequest' || tabName === 'myProfile') {
+                    document.getElementById("myPageGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                 } else if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory') {
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
 
                 } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
                     document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
-                } else if (tabName === 'schemaCompare' || tabName === 'structDiag') {
+                } else if (tabName === 'structDiag' || tabName === 'structDiagResult') {
                     document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                 } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'erwinImport') {
                     document.getElementById("dmGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
@@ -367,7 +380,7 @@ export default {
             this.navDiagGroup = null;
             this.navStructDiagGroup = null;
             this.navAutoStdGroup = null;
-            this.navMyRequestGroup = null;
+            this.navMyPageGroup = null;
             this.navCommunityGroup = null;
             this.navSubGropClose();
         },
@@ -459,12 +472,12 @@ export default {
                     }
                     break;
 
-                case "myRequestGroup":
+                case "myPageGroup":
 
-                    if (this.navMyRequestGroup === null) {
-                        this.navMyRequestGroup = false;
+                    if (this.navMyPageGroup === null) {
+                        this.navMyPageGroup = false;
                     } else {
-                        this.navMyRequestGroup = !this.navMyRequestGroup;
+                        this.navMyPageGroup = !this.navMyPageGroup;
                     }
                     break;
 
@@ -514,8 +527,8 @@ export default {
             if (tabitem === 'board') {
                 this.navCommunityGroup = true;
                 return;
-            } else if (tabitem === 'myRequest') {
-                this.navMyRequestGroup = true;
+            } else if (tabitem === 'myRequest' || tabitem === 'myProfile') {
+                this.navMyPageGroup = true;
                 return;
             } else if (tabitem === 'termRecommend') {
                 this.navAutoStdGroup = true;
@@ -523,7 +536,7 @@ export default {
             } else if (tabitem === 'dataDiag' || tabitem === 'dataDiagResult') {
                 this.navDiagGroup = true;
                 return;
-            } else if (tabitem === 'schemaCompare' || tabitem === 'structDiag') {
+            } else if (tabitem === 'structDiag' || tabitem === 'structDiagResult') {
                 this.navStructDiagGroup = true;
                 return;
             } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'erwinImport') {

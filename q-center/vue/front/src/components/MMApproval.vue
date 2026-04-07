@@ -85,7 +85,7 @@
           </v-col>
           <v-col cols="6">
             <div class="detail-row"><span class="detail-label">설명:</span> {{ detailData.wordDesc }}</div>
-            <div class="detail-row"><span class="detail-label">분류어:</span> {{ detailData.wordClsfYn }}</div>
+            <div class="detail-row"><span class="detail-label">형식단어:</span> {{ detailData.wordClsfYn }}</div>
             <div class="detail-row"><span class="detail-label">도메인분류:</span> {{ detailData.domainClsfNm }}</div>
           </v-col>
         </v-row>

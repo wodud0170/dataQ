@@ -10,6 +10,7 @@ public class AdminVo {
     private String password;
     private String name;
     private String email;
+    private String phone;
     private boolean admin;
     private List<String> roles;
     private int authGrpId;

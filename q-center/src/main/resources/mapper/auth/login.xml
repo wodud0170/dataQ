@@ -8,6 +8,7 @@
             PWD      as password,
             NM       as name,
             EMAIL    as email,
+            PHONE    as phone,
             ADM_YN   as admin
         FROM
             tb_user
@@ -73,6 +74,7 @@
         </if>
             NM    = #{name},
             EMAIL = #{email},
+            PHONE = #{phone},
             ADM_YN  = #{admin}
         WHERE
             USER_ID = #{id}

@@ -408,6 +408,8 @@ public class SessionService {
 			// user role
 			user.setAdmin(admin.isAdmin());
 			user.setName(admin.getName());
+			user.setEmail(admin.getEmail());
+			user.setPhone(admin.getPhone());
 			// 로그인 실패 횟수 초기화
 			initializeLogin(user.getId());
 		} else {

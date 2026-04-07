@@ -128,16 +128,16 @@
                     <dataDiagResult :key="dataDiagResultKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
-            <div v-if="this.activeContent === 'schemaCompare'" id="tab_schemaCompare" class="tab_contents"
-                :class="{ active: this.activeContent === 'schemaCompare' }">
-                <keep-alive>
-                    <schemaCompare :key="schemaCompareKey" :isMobile="isMobile" />
-                </keep-alive>
-            </div>
             <div v-if="this.activeContent === 'structDiag'" id="tab_structDiag" class="tab_contents"
                 :class="{ active: this.activeContent === 'structDiag' }">
                 <keep-alive>
                     <structDiag :key="structDiagKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'structDiagResult'" id="tab_structDiagResult" class="tab_contents"
+                :class="{ active: this.activeContent === 'structDiagResult' }">
+                <keep-alive>
+                    <structDiagResult :key="structDiagResultKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
             <div v-if="this.activeContent === 'termRecommend'" id="tab_termRecommend" class="tab_contents"
@@ -248,6 +248,12 @@
                     <myRequest :key="myRequestKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'myProfile'" id="tab_myProfile" class="tab_contents"
+                :class="{ active: this.activeContent === 'myProfile' }">
+                <keep-alive>
+                    <myProfile :key="myProfileKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'globalSearch'" id="tab_globalSearch" class="tab_contents"
                 :class="{ active: this.activeContent === 'globalSearch' }">
                 <keep-alive>
@@ -283,12 +289,14 @@ import DSDatamodelHistory from "../../components/DSDatamodelHistory.vue"
 import DSDataDiag from "../../components/DSDataDiag.vue"
 import DSDataDiagResult from "../../components/DSDataDiagResult.vue"
 import DSTermRecommend from "../../components/DSTermRecommend.vue"
-import DSSchemaCompare from "../../components/DSSchemaCompare.vue"
+// DSSchemaCompare는 DSStructDiagResult에 통합됨
 import DSStructDiag from "../../components/DSStructDiag.vue"
+import DSStructDiagResult from "../../components/DSStructDiagResult.vue"
 import DSErwinImport from "../../components/DSErwinImport.vue"
 import DSChangeHistory from "../../components/DSChangeHistory.vue"
 import DSGlobalSearch from "../../components/DSGlobalSearch.vue"
 import DSMyRequest from "../../components/DSMyRequest.vue"
+import DSMyProfile from "../../components/DSMyProfile.vue"
 import DSBoard from "../../components/DSBoard.vue"
 import DQDQI from "./../../components/DQDQI.vue"
 import DQCTQ from "./../../components/DQCTQ.vue"
@@ -354,8 +362,8 @@ export default {
             dataDiagKey: this.createUUID(),
             dataDiagResultKey: this.createUUID(),
             termRecommendKey: this.createUUID(),
-            schemaCompareKey: this.createUUID(),
             structDiagKey: this.createUUID(),
+            structDiagResultKey: this.createUUID(),
             dqiKey: this.createUUID(),
             ctqKey: this.createUUID(),
             dqbrKey: this.createUUID(),
@@ -373,6 +381,7 @@ export default {
             changeHistoryKey: this.createUUID(),
             boardKey: this.createUUID(),
             myRequestKey: this.createUUID(),
+            myProfileKey: this.createUUID(),
             globalSearchKey: this.createUUID(),
         }
     },
@@ -393,8 +402,8 @@ export default {
         "dataDiag": DSDataDiag,
         "dataDiagResult": DSDataDiagResult,
         "termRecommend": DSTermRecommend,
-        "schemaCompare": DSSchemaCompare,
         "structDiag": DSStructDiag,
+        "structDiagResult": DSStructDiagResult,
         "erwinImport": DSErwinImport,
         "dqi": DQDQI,
         "ctq": DQCTQ,
@@ -413,6 +422,7 @@ export default {
         "changeHistory": DSChangeHistory,
         "board": DSBoard,
         "myRequest": DSMyRequest,
+        "myProfile": DSMyProfile,
         "globalSearch": DSGlobalSearch
     },
     methods: {
@@ -479,6 +489,9 @@ export default {
                 case "structDiag":
                     this.structDiagKey = this.createUUID();
                     break;
+                case "structDiagResult":
+                    this.structDiagResultKey = this.createUUID();
+                    break;
                 case "dqi":
                     this.dqiKey = this.createUUID();
                     break;
@@ -529,6 +542,9 @@ export default {
                     break;
                 case "myRequest":
                     this.myRequestKey = this.createUUID();
+                    break;
+                case "myProfile":
+                    this.myProfileKey = this.createUUID();
                     break;
                 case "globalSearch":
                     this.globalSearchKey = this.createUUID();

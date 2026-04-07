@@ -22,8 +22,8 @@
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
               <!-- 승인 여부 추가 -->
-              <!-- 분류어 여부 필터 -->
-              <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">분류어</span>
+              <!-- 형식단어 여부 필터 -->
+              <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">형식단어</span>
               <v-select class="pr-4 pl-2" v-model="searchWordClsfYn" :items="wordClsfYnOptions"
                 item-text="text" item-value="value"
                 dense outlined hide-details single-line
@@ -69,6 +69,11 @@
             <span class="ndColor--text" :style="{ cursor: 'pointer' }" @click="showDetail(item)">{{
               item.wordNm
             }}</span>
+          </template>
+          <!-- 형식단어 여부 칩 -->
+          <template v-slot:[`item.wordClsfYn`]="{ item }">
+            <v-chip v-if="item.wordClsfYn === 'Y'" x-small color="indigo" text-color="white">형식단어</v-chip>
+            <span v-else class="grey--text text--lighten-1">-</span>
           </template>
           <!-- 데이터 없음 -->
           <template #top>
@@ -582,11 +587,11 @@ export default {
     searchEngWord: '',
     // 검색 승인 여부
     searchApproval: true,
-    // 분류어 여부 필터
+    // 형식단어 여부 필터
     searchWordClsfYn: '',
     wordClsfYnOptions: [
       { text: '전체', value: '' },
-      { text: '분류어', value: 'Y' },
+      { text: '형식단어', value: 'Y' },
       { text: '일반어', value: 'N' }
     ],
     // 등록 모달 보이기
@@ -667,7 +672,7 @@ export default {
       { text: '단어영문약어명', sortable: false, align: 'center', value: 'wordEngAbrvNm', width: '8%' },
       { text: '단어영문명', sortable: false, align: 'center', value: 'wordEngNm', width: '15%' },
       { text: '단어설명', sortable: false, align: 'center', value: 'wordDesc' },
-      { text: '형식단어여부', sortable: false, align: 'center', value: 'wordClsfYn', width: '7%' },
+      { text: '형식단어', sortable: false, align: 'center', value: 'wordClsfYn', width: '5%' },
       { text: '도메인분류명', sortable: false, align: 'center', value: 'domainClsfNm', width: '7%' },
     ],
     // 하단 테이블 헤더

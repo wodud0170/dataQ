@@ -1,5 +1,10 @@
 <template>
   <v-container fluid class="pa-2" style="height:100%; display:flex; flex-direction:column;">
+    <!-- 설명 -->
+    <v-sheet class="pa-2 mb-2 d-flex align-center" style="background:#F5F7FA; border-radius:4px; border:1px solid #E8EAF6;">
+      <v-icon small color="#3F51B5" class="mr-2">mdi-information-outline</v-icon>
+      <span style="font-size:.8rem; color:#546E7A;">데이터 모델의 컬럼이 표준 용어(단어+도메인)를 준수하는지 검사합니다.</span>
+    </v-sheet>
     <!-- 필터 바 -->
     <v-sheet class="d-flex align-center flex-wrap pa-2 mb-2" style="gap:8px; border:1px solid #e0e0e0; border-radius:4px;">
       <span class="filterLabel">데이터모델명</span>

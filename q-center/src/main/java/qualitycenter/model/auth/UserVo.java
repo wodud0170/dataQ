@@ -19,6 +19,8 @@ public class UserVo implements UserDetails {
 
     private String id;
     private String name;
+    private String email;
+    private String phone;
 
     @JsonIgnore
     private String password;

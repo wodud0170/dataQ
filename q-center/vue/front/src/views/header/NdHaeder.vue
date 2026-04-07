@@ -96,7 +96,19 @@ export default {
             });
         },
         goToMain() {
-            window.location.href = '/app/main'
+            this.$swal.fire({
+                title: '메인으로 이동',
+                text: '열려있는 모든 탭이 닫히며, 작업중인 내용은 저장되지 않습니다.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '이동',
+                cancelButtonText: '취소'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window._skipBeforeUnload = true;
+                    window.location.href = '/app/main';
+                }
+            });
         },
         goToUserPage() {
             this.addTabItem('사용자', 'user');
