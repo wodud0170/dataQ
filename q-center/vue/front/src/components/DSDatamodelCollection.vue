@@ -1029,7 +1029,8 @@ export default {
         const schemaRes = await axios.post(this.$APIURL.base + 'api/dm/getSchemaList', {
           dataModelDsId: item.dataModelDsId
         });
-        const allSchemas = schemaRes.data || [];
+        const allSchemas = schemaRes.data.schemas || [];
+        const currentUser = (schemaRes.data.currentUser || '').toUpperCase();
 
         // 2. 저장된 스키마 수집 필터 조회
         const filterRes = await axios.get(this.$APIURL.base + 'api/dm/getDataModelSchemas', {
@@ -1039,12 +1040,13 @@ export default {
         const savedMap = {};
         savedFilter.forEach(f => { savedMap[f.schemaNm] = f.useYn; });
 
-        // 3. 트리 구성: DB명(dataModelDsNm) → 스키마 목록
+        // 3. 트리 구성: 저장된 필터가 있으면 그걸 사용, 없으면 접속 유저만 기본 체크
         this.schemaTree = [{
           dbNm: item.dataModelDsNm,
           schemas: allSchemas.map(schemaNm => ({
             schemaNm,
-            useYn: savedMap[schemaNm] !== undefined ? savedMap[schemaNm] : 'N'
+            useYn: savedMap[schemaNm] !== undefined ? savedMap[schemaNm]
+              : (schemaNm.toUpperCase() === currentUser ? 'Y' : 'N')
           }))
         }];
 

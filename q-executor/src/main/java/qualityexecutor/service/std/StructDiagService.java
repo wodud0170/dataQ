@@ -132,6 +132,7 @@ public class StructDiagService implements Runnable {
                 ResultSet rs = dbHandler.executeSql(pstmt);
                 while (rs.next()) {
                     Map<String, Object> attr = new HashMap<>();
+                    attr.put("owner", schema);
                     attr.put("tableNm", rs.getString("objNm"));
                     attr.put("columnNm", rs.getString("attrNm"));
                     attr.put("dataType", rs.getString("dataType"));
@@ -154,14 +155,21 @@ public class StructDiagService implements Runnable {
 
             Set<String> prevTableSet = new HashSet<>();
             Set<String> currTableSet = new HashSet<>();
-            for (String key : prevMap.keySet()) prevTableSet.add(key.split("\\|")[0]);
-            for (String key : currMap.keySet()) currTableSet.add(key.split("\\|")[0]);
+            for (String key : prevMap.keySet()) {
+                String[] parts = key.split("\\|");
+                prevTableSet.add(parts[0] + "|" + parts[1]); // owner|tableNm
+            }
+            for (String key : currMap.keySet()) {
+                String[] parts = key.split("\\|");
+                currTableSet.add(parts[0] + "|" + parts[1]); // owner|tableNm
+            }
 
             // ADDED: 실제 DB에 있지만 수집 스냅샷에 없는 것
             for (Map.Entry<String, Map<String, Object>> entry : currMap.entrySet()) {
                 if (!prevMap.containsKey(entry.getKey())) {
                     Map<String, Object> curr = entry.getValue();
                     Map<String, Object> detail = new HashMap<>();
+                    detail.put("owner", curr.get("owner"));
                     detail.put("tableNm", curr.get("tableNm"));
                     detail.put("columnNm", curr.get("columnNm"));
                     detail.put("changeType", "ADDED");
@@ -181,6 +189,7 @@ public class StructDiagService implements Runnable {
                 if (!currMap.containsKey(entry.getKey())) {
                     Map<String, Object> prev = entry.getValue();
                     Map<String, Object> detail = new HashMap<>();
+                    detail.put("owner", prev.get("owner"));
                     detail.put("tableNm", prev.get("tableNm"));
                     detail.put("columnNm", prev.get("columnNm"));
                     detail.put("changeType", "DELETED");
@@ -206,6 +215,7 @@ public class StructDiagService implements Runnable {
 
                     if (typeChanged || lenChanged || nullableChanged) {
                         Map<String, Object> detail = new HashMap<>();
+                        detail.put("owner", curr.get("owner"));
                         detail.put("tableNm", curr.get("tableNm"));
                         detail.put("columnNm", curr.get("columnNm"));
                         detail.put("changeType", "MODIFIED");
@@ -278,7 +288,8 @@ public class StructDiagService implements Runnable {
     private Map<String, Map<String, Object>> toAttrMap(List<Map<String, Object>> attrs) {
         Map<String, Map<String, Object>> map = new LinkedHashMap<>();
         for (Map<String, Object> attr : attrs) {
-            String key = attr.get("tableNm") + "|" + attr.get("columnNm");
+            String owner = attr.get("owner") != null ? attr.get("owner").toString() : "";
+            String key = owner + "|" + attr.get("tableNm") + "|" + attr.get("columnNm");
             map.put(key, attr);
         }
         return map;
@@ -346,6 +357,7 @@ public class StructDiagService implements Runnable {
                 ResultSet rs = dbHandler.executeSql(pstmt);
                 while (rs.next()) {
                     Map<String, Object> attr = new HashMap<>();
+                    attr.put("owner", schema);
                     attr.put("tableNm", rs.getString("objNm"));
                     attr.put("columnNm", rs.getString("attrNm"));
                     attr.put("dataType", rs.getString("dataType"));

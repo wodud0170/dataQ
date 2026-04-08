@@ -240,6 +240,7 @@
             ,PRIVATE_KEY        as privateKey
             ,DB_NAME            as dbName
             ,RM_DIR             as rmDir
+            ,CONN_PROPS         as connProps
         FROM
             ndata.tb_data_source
   </select>

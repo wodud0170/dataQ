@@ -117,6 +117,8 @@ export default {
                 window._skipBeforeUnload = false;
                 return;
             }
+            // 메인 화면에서만 경고 (로그인 화면 제외)
+            if (!window.location.pathname.startsWith('/app/main')) return;
             e.preventDefault();
             e.returnValue = '';
         },
@@ -171,7 +173,8 @@ export default {
                 case "erwinImport":
                     document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
-                case "board":
+                case "boardNotice":
+                case "boardQna":
                     document.getElementById("communityGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                     break;
                 case "myRequest":
@@ -336,7 +339,7 @@ export default {
                 return;
             } else {
                 // group Active
-                if (tabName === 'board') {
+                if (tabName === 'boardNotice' || tabName === 'boardQna') {
                     document.getElementById("communityGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
                 } else if (tabName === 'myRequest' || tabName === 'myProfile') {
                     document.getElementById("myPageGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
@@ -524,7 +527,7 @@ export default {
 
             this.navAllGroupClose();
 
-            if (tabitem === 'board') {
+            if (tabitem === 'boardNotice' || tabitem === 'boardQna') {
                 this.navCommunityGroup = true;
                 return;
             } else if (tabitem === 'myRequest' || tabitem === 'myProfile') {

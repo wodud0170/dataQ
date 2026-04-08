@@ -236,10 +236,16 @@
                     <changeHistory :key="changeHistoryKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
-            <div v-if="this.activeContent === 'board'" id="tab_board" class="tab_contents"
-                :class="{ active: this.activeContent === 'board' }">
+            <div v-if="this.activeContent === 'boardNotice'" id="tab_boardNotice" class="tab_contents"
+                :class="{ active: this.activeContent === 'boardNotice' }">
                 <keep-alive>
-                    <board :key="boardKey" :isMobile="isMobile" />
+                    <board :key="boardNoticeKey" :isMobile="isMobile" boardType="NOTICE" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'boardQna'" id="tab_boardQna" class="tab_contents"
+                :class="{ active: this.activeContent === 'boardQna' }">
+                <keep-alive>
+                    <board :key="boardQnaKey" :isMobile="isMobile" boardType="QNA" />
                 </keep-alive>
             </div>
             <div v-if="this.activeContent === 'myRequest'" id="tab_myRequest" class="tab_contents"
@@ -379,7 +385,8 @@ export default {
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
             changeHistoryKey: this.createUUID(),
-            boardKey: this.createUUID(),
+            boardNoticeKey: this.createUUID(),
+            boardQnaKey: this.createUUID(),
             myRequestKey: this.createUUID(),
             myProfileKey: this.createUUID(),
             globalSearchKey: this.createUUID(),
@@ -537,8 +544,11 @@ export default {
                 case "changeHistory":
                     this.changeHistoryKey = this.createUUID();
                     break;
-                case "board":
-                    this.boardKey = this.createUUID();
+                case "boardNotice":
+                    this.boardNoticeKey = this.createUUID();
+                    break;
+                case "boardQna":
+                    this.boardQnaKey = this.createUUID();
                     break;
                 case "myRequest":
                     this.myRequestKey = this.createUUID();

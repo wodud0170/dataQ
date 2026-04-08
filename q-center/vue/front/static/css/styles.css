@@ -149,6 +149,13 @@ main {
     height: 20px;
 }
 
+.btn-sm {
+    height: 22px !important;
+    min-width: 50px !important;
+    padding: 0 8px !important;
+    font-size: .72rem !important;
+}
+
 .v-application a {
     text-decoration: none;
 }

@@ -3,7 +3,7 @@
     <!-- 설명 -->
     <v-sheet class="pa-2 mb-2 d-flex align-center" style="background:#F5F7FA; border-radius:4px; border:1px solid #E8EAF6;">
       <v-icon small color="#3F51B5" class="mr-2">mdi-information-outline</v-icon>
-      <span style="font-size:.8rem; color:#546E7A;">수집된 스키마 스냅샷과 현재 DBMS의 구조를 비교하여 변경점(테이블/컬럼 추가·변경·삭제)을 검사합니다.</span>
+      <span style="font-size:.8rem; color:#546E7A;">수집된 데이터 모델과 현재 DBMS의 구조를 비교하여 변경점(테이블/컬럼 추가·변경·삭제)을 검사합니다.</span>
     </v-sheet>
 
     <!-- 필터 바 -->
@@ -39,7 +39,8 @@
           <v-chip x-small :color="item.changeCnt > 0 ? 'orange' : 'green'" text-color="white">{{ item.changeCnt }}건</v-chip>
         </template>
         <template v-slot:item.actions="{ item }">
-          <v-btn v-if="item.status === 'DONE'" x-small color="teal" dark @click="goToResult(item)">결과보기</v-btn>
+          <v-btn v-if="item.status === 'DONE'" x-small color="teal" dark @click="goToResult(item)"
+            class="btn-sm">결과보기</v-btn>
         </template>
         <template v-slot:no-data>
           <span class="grey--text">진단 이력이 없습니다.</span>

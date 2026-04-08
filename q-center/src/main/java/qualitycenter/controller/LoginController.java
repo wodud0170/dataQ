@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ndata.common.NDConstant;
@@ -34,6 +35,13 @@ public class LoginController {
   @RequestMapping(value = "/getUser", method = RequestMethod.GET)
   public UserVo getUser() {
     return sessionService.getUser();
+  }
+
+  @RequestMapping(value = "/getUserDetail", method = RequestMethod.GET)
+  public AdminVo getUserDetail(@RequestParam String userId) {
+    return sessionService.getUserList().stream()
+        .filter(u -> u.getId().equals(userId))
+        .findFirst().orElse(null);
   }
 
   @RequestMapping(value = "/isAdmin", method = RequestMethod.GET)

@@ -224,12 +224,13 @@
 
 	<!-- 구조 진단용: clctId 기준 컬럼 스냅샷 (HashMap 반환) -->
 	<select id="selectDataModelAttrListByClctIdRaw" parameterType="String" resultType="java.util.HashMap">
-		SELECT A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm",
+		SELECT O.OBJ_OWNER AS "owner", A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm",
 			A.DATA_TYPE AS "dataType", A.DATA_LEN AS "dataLen",
 			A.NULLABLE_YN AS "nullableYn"
 		FROM TB_DATA_MODEL_ATTR A
+		INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_CLCT_ID = O.DM_CLCT_ID AND A.OBJ_NM = O.OBJ_NM
 		WHERE A.DM_CLCT_ID = #{clctId}
-		ORDER BY A.OBJ_NM, A.ATTR_NM
+		ORDER BY O.OBJ_OWNER, A.OBJ_NM, A.ATTR_NM
 	</select>
 
 	<!-- 데이터모델 정보 조회 (구조진단용) -->
@@ -551,4 +552,28 @@
 			GROUP BY A.DM_CLCT_ID, A.DM_ID
 	</insert>
 	-->
+
+	<!-- 대상 DB 스키마 목록 조회 SQL (DBMS 유형별) -->
+	<select id="selectSchemaListSql" parameterType="String" resultType="String">
+		SELECT
+		<choose>
+			<when test="_parameter == 'Oracle' or _parameter == 'Tibero'">
+				'SELECT USERNAME AS schemaNm FROM ALL_USERS WHERE USERNAME IN (SELECT DISTINCT OWNER FROM ALL_TABLES) ORDER BY USERNAME'
+			</when>
+			<when test="_parameter == 'MariaDB'">
+				'SELECT SCHEMA_NAME AS schemaNm FROM information_schema.SCHEMATA WHERE SCHEMA_NAME NOT IN (''information_schema'',''mysql'',''performance_schema'',''sys'') ORDER BY SCHEMA_NAME'
+			</when>
+			<when test="_parameter == 'Cubrid'">
+				'SELECT DISTINCT OWNER_NAME AS schemaNm FROM DB_CLASS WHERE is_system_class = ''NO'' AND CLASS_TYPE = ''CLASS'' ORDER BY OWNER_NAME'
+			</when>
+			<when test="_parameter == 'SQLServer'">
+				'SELECT name AS schemaNm FROM sys.schemas ORDER BY name'
+			</when>
+			<otherwise>
+				'SELECT schema_name AS schemaNm FROM information_schema.schemata ORDER BY schema_name'
+			</otherwise>
+		</choose>
+		AS sql
+	</select>
+
 </mapper>

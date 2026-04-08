@@ -111,7 +111,7 @@ export default {
             });
         },
         goToUserPage() {
-            this.addTabItem('사용자', 'user');
+            this.addTabItem('내 정보', 'myProfile');
         },
         executeSearch() {
             if (!this.searchKeyword || !this.searchKeyword.trim()) return;

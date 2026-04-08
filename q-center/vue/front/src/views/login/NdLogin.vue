@@ -1,5 +1,7 @@
 <template>
     <v-main class="login-main">
+        <!-- 회사 로고 (좌측 상단 고정) -->
+        <img src="./../../../static/images/narae_logo.png" class="company-logo" />
         <div class="login-wrapper">
             <!-- 좌측: 비주얼 패널 (데스크톱만) -->
             <div v-if="!isMobile" class="login-visual">
@@ -242,6 +244,16 @@ export default {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
     width: 100%; height: 100vh !important;
+}
+.company-logo {
+    position: absolute;
+    top: 20px;
+    left: 24px;
+    height: 64px;
+    width: auto;
+    z-index: 10;
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
 }
 
 .login-wrapper {

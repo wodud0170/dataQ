@@ -144,15 +144,6 @@
                         <v-list-item-title>데이터 모델 현황</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_erwinImport" href="#tab_erwinImport"
-                        active-class="ndColor--text" title="ERwin 임포트"
-                        v-on:click.stop="addTabItem('ERwin 임포트', 'erwinImport');">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>ERwin 임포트</v-list-item-title>
-                    </v-list-item>
-
                 </v-list-group>
 
                 <!-- 표준 진단 -->
@@ -346,11 +337,18 @@
                         </v-list-item-content>
                     </template>
 
-                    <v-list-item link id="nav_board" href="#tab_board" active-class="ndColor--text"
-                        title="게시판"
-                        v-on:click.stop="addTabItem('게시판', 'board');">
+                    <v-list-item link id="nav_boardNotice" href="#tab_boardNotice" active-class="ndColor--text"
+                        title="공지사항"
+                        v-on:click.stop="addTabItem('공지사항', 'boardNotice');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>게시판</v-list-item-title>
+                        <v-list-item-title>공지사항</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_boardQna" href="#tab_boardQna" active-class="ndColor--text"
+                        title="QNA"
+                        v-on:click.stop="addTabItem('QNA', 'boardQna');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>QNA</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
 

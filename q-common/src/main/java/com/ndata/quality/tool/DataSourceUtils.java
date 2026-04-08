@@ -25,7 +25,17 @@ public class DataSourceUtils {
 
     public DBHandler getDBHandler(DataSourceVo dataSource) throws ClassNotFoundException, SQLException {
 		dataSource.setPwd(securityUtils.decryptStr(dataSource.getPwd()));
-		return DBHandler.getDBHandler(dataSource);
+		// Oracle/Tibero Service Name: driverName을 임시 변경하여 drivers.xml 매칭
+		String origDriverName = dataSource.getDriverName();
+		if ("Service Name".equals(dataSource.getConnProps())) {
+			String dbmsTp = dataSource.getDbmsTp();
+			if ("Oracle".equals(dbmsTp) || "Tibero".equals(dbmsTp)) {
+				dataSource.setDriverName(dbmsTp + "(Service Name)");
+			}
+		}
+		DBHandler handler = DBHandler.getDBHandler(dataSource);
+		dataSource.setDriverName(origDriverName); // 원복
+		return handler;
 	}
 
 	public String getQueryString(String queryId) {

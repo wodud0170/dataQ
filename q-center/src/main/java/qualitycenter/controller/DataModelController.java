@@ -32,6 +32,7 @@ import com.ndata.common.handler.WebClientHandler;
 import com.ndata.datasource.dbms.ext.NamedParamStatement;
 import com.ndata.datasource.dbms.handler.DBHandler;
 import com.ndata.model.DataSourceVo;
+import com.ndata.quality.tool.DataSourceUtils;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityConstant;
 import com.ndata.quality.common.NDQualityRetrieveCond;
@@ -74,6 +75,9 @@ public class DataModelController {
 
 	@Autowired
 	SecurityManager securityUtils;
+
+	@Autowired
+	private DataSourceUtils dataSourceUtils;
 
 	@Autowired
 	private SqlSessionFactory sqlSessionFactory; // transaction 사용할 경우 사용
@@ -284,16 +288,25 @@ public class DataModelController {
 	 * @param dataVo 데이터모델 정보 (dataModelDsId 필수)
 	 * @return 스키마명 목록
 	 */
+	/**
+	 * 대상 DB 스키마 목록 조회
+	 * @return { schemas: [스키마명 목록], currentUser: 접속유저명 }
+	 */
 	@RequestMapping(value = "/getSchemaList", method = RequestMethod.POST)
-	public List<String> getSchemaList(@RequestBody StdDataModelVo dataVo) {
+	public Map<String, Object> getSchemaList(@RequestBody StdDataModelVo dataVo) {
 		log.info(">> getSchemaList : dsId={}", dataVo.getDataModelDsId());
+		Map<String, Object> result = new HashMap<>();
 		List<String> schemaList = new ArrayList<>();
+		String currentUser = "";
 		DBHandler dbHandler = null;
 		try {
 			DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dataVo.getDataModelDsId());
-			dataSource.setPwd(securityUtils.decryptStr(dataSource.getPwd()));
-			dbHandler = DBHandler.getDBHandler(dataSource);
-			String sql = getSchemaListSql(dataSource.getDbmsTp());
+			dbHandler = dataSourceUtils.getDBHandler(dataSource);
+			currentUser = dataSource.getUserId();
+
+			String sql = sqlSessionTemplate.selectOne("datamodel.selectSchemaListSql", dataSource.getDbmsTp());
+			if (sql == null) sql = "SELECT schema_name AS schemaNm FROM information_schema.schemata ORDER BY schema_name";
+
 			NamedParamStatement pstmt = dbHandler.namedParamStatement(sql);
 			java.sql.ResultSet rs = dbHandler.executeSql(pstmt);
 			while (rs.next()) {
@@ -308,39 +321,9 @@ public class DataModelController {
 				try { dbHandler.close(); } catch (Exception e) {}
 			}
 		}
-		return schemaList;
-	}
-
-	private String getSchemaListSql(String dbmsTp) {
-		if (dbmsTp == null) {
-			return "SELECT schema_name AS schemaNm FROM information_schema.schemata"
-				+ " WHERE schema_owner = current_user ORDER BY schema_name";
-		}
-		switch (dbmsTp) {
-			case "Oracle":
-				// 현재 접속 유저가 소유한 스키마만 반환
-				return "SELECT USER AS schemaNm FROM DUAL";
-			case "MariaDB":
-				// 현재 접속 유저가 접근 가능한 DB만 반환
-				return "SELECT SCHEMA_NAME AS schemaNm FROM information_schema.SCHEMATA"
-					+ " WHERE SCHEMA_NAME NOT IN ('information_schema','mysql','performance_schema','sys')"
-					+ " AND SCHEMA_NAME = DATABASE()"
-					+ " ORDER BY SCHEMA_NAME";
-			case "Cubrid":
-				// 현재 접속 유저가 소유한 오브젝트의 owner만 반환
-				return "SELECT DISTINCT OWNER_NAME AS schemaNm FROM DB_CLASS"
-					+ " WHERE is_system_class = 'NO' AND CLASS_TYPE = 'CLASS'"
-					+ " AND OWNER_NAME = CURRENT_USER ORDER BY OWNER_NAME";
-			case "MSSQL":
-				// 현재 접속 유저가 소유한 스키마만 반환
-				return "SELECT name AS schemaNm FROM sys.schemas WHERE principal_id = USER_ID() ORDER BY name";
-			case "PostgreSQL":
-			default:
-				// 현재 접속 유저가 소유한 스키마만 반환
-				return "SELECT schema_name AS schemaNm FROM information_schema.schemata"
-					+ " WHERE schema_owner = current_user"
-					+ " ORDER BY schema_name";
-		}
+		result.put("schemas", schemaList);
+		result.put("currentUser", currentUser);
+		return result;
 	}
 
 	/**

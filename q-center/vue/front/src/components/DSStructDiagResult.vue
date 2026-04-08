@@ -3,19 +3,24 @@
     <!-- 설명 -->
     <v-sheet class="pa-2 mb-2 d-flex align-center" style="background:#F5F7FA; border-radius:4px; border:1px solid #E8EAF6;">
       <v-icon small color="#3F51B5" class="mr-2">mdi-information-outline</v-icon>
-      <span style="font-size:.8rem; color:#546E7A;">수집된 스키마 스냅샷과 현재 DBMS의 구조를 비교하여 변경점(테이블/컬럼 추가·변경·삭제)을 검사합니다.</span>
+      <span style="font-size:.8rem; color:#546E7A;">수집된 데이터 모델과 현재 DBMS의 구조를 비교하여 변경점(테이블/컬럼 추가·변경·삭제)을 검사합니다.</span>
     </v-sheet>
 
     <!-- 검색조건 필터 바 -->
     <v-sheet class="d-flex align-center flex-wrap pa-2 mb-2" style="gap:8px; border:1px solid #E8EAF6; border-radius:4px;">
       <span class="filterLabel">데이터모델</span>
       <v-select v-model="selectedModelNm" :items="modelList" dense outlined hide-details clearable
-        placeholder="데이터모델 선택" style="width:250px; flex-grow:0;" @change="onModelChange" />
+        placeholder="데이터모델 선택" style="width:220px; flex-grow:0;" @change="onModelChange" />
 
-      <span class="filterLabel">진단일시</span>
+      <span class="filterLabel">수집일시</span>
+      <v-select v-model="selectedCollectDt" :items="collectDtList" dense outlined hide-details clearable
+        placeholder="수집일시 선택" style="width:350px; flex-grow:0;" :disabled="!selectedModelNm"
+        @change="onCollectDtChange" />
+
+      <span class="filterLabel">진단이력</span>
       <v-select v-model="selectedDiagId" :items="diagList" item-text="displayText" item-value="diagId"
-        dense outlined hide-details clearable placeholder="진단 이력 선택" style="width:350px; flex-grow:0;"
-        @change="loadResult" />
+        dense outlined hide-details clearable placeholder="진단이력 선택" style="width:350px; flex-grow:0;"
+        :disabled="!selectedCollectDt" @change="loadResult" />
     </v-sheet>
 
     <!-- 결과 영역 -->
@@ -103,6 +108,8 @@ export default {
       // 검색조건
       modelList: [],
       selectedModelNm: null,
+      collectDtList: [],
+      selectedCollectDt: null,
       diagList: [],
       selectedDiagId: null,
       // 결과
@@ -113,6 +120,7 @@ export default {
       changeList: [],
       changeTypeFilter: 'ALL',
       changeHeaders: [
+        { text: '오너', value: 'owner', width: '120px' },
         { text: '테이블명', value: 'tableNm', width: '180px' },
         { text: '컬럼명', value: 'columnNm', width: '180px' },
         { text: '변경유형', value: 'changeType', width: '110px' },
@@ -163,6 +171,7 @@ export default {
             diagId: h.diagId, diagDt: h.diagDt, dataModelNm: h.dataModelNm || '-',
             status: h.status || 'DONE', changeCnt: cnt,
             totalTables: h.totalTables || 0, totalColumns: h.totalColumns || 0,
+            prevCollectDt: h.prevCollectDt || '',
             displayText: h.diagDt + ' (' + cnt + '건 변경)',
           };
         });
@@ -172,7 +181,9 @@ export default {
           var target = self._allHistory.find(function(h) { return h.diagId === pendingDiagId; });
           if (target) {
             self.selectedModelNm = target.dataModelNm;
-            self.diagList = self._allHistory.filter(function(h) { return h.dataModelNm === target.dataModelNm && h.status === 'DONE'; });
+            self.onModelChange();
+            self.selectedCollectDt = target.prevCollectDt;
+            self.onCollectDtChange();
             self.selectedDiagId = target.diagId;
             self.loadResult();
           }
@@ -180,14 +191,32 @@ export default {
       });
     },
     onModelChange() {
+      this.selectedCollectDt = null;
       this.selectedDiagId = null;
+      this.collectDtList = [];
+      this.diagList = [];
       this.hasResult = false;
-      if (!this.selectedModelNm || !this._allHistory) {
-        this.diagList = [];
-        return;
-      }
+      if (!this.selectedModelNm || !this._allHistory) return;
+      // 해당 모델의 수집일시 목록 (중복 제거)
       var nm = this.selectedModelNm;
-      this.diagList = this._allHistory.filter(function(h) { return h.dataModelNm === nm && h.status === 'DONE'; });
+      var dtSet = {};
+      this._allHistory.forEach(function(h) {
+        if (h.dataModelNm === nm && h.status === 'DONE' && h.prevCollectDt) {
+          dtSet[h.prevCollectDt] = true;
+        }
+      });
+      this.collectDtList = Object.keys(dtSet).sort().reverse();
+    },
+    onCollectDtChange() {
+      this.selectedDiagId = null;
+      this.diagList = [];
+      this.hasResult = false;
+      if (!this.selectedCollectDt || !this._allHistory) return;
+      var nm = this.selectedModelNm;
+      var dt = this.selectedCollectDt;
+      this.diagList = this._allHistory.filter(function(h) {
+        return h.dataModelNm === nm && h.prevCollectDt === dt && h.status === 'DONE';
+      });
     },
     loadResult() {
       if (!this.selectedDiagId) return;

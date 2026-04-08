@@ -90,12 +90,13 @@ export default {
   },
   methods: {
     loadProfile() {
-      axios.get(this.$APIURL.base + 'api/login/getUser').then(res => {
+      var self = this;
+      axios.get(self.$APIURL.base + 'api/login/getUser').then(function(res) {
         if (res.data) {
-          this.userId = res.data.id || '';
-          this.userEmail = res.data.email || '';
-          this.userPhone = res.data.phone || '';
-          this.isAdmin = res.data.admin || false;
+          self.userId = res.data.id || '';
+          self.isAdmin = res.data.admin || false;
+          self.userEmail = res.data.email || '';
+          self.userPhone = res.data.phone || '';
         }
       });
     },

@@ -9,6 +9,13 @@
     <driverFile>lib/jdbc/ojdbc8-21.1.0.0.jar;lib/jdbc/orai18n-21.1.0.0.jar</driverFile>
   </driver>
   <driver>
+    <driverType>Oracle</driverType>
+    <driverName>Oracle(Service Name)</driverName>
+    <className>oracle.jdbc.driver.OracleDriver</className>
+    <urlType>jdbc:oracle:thin:@//%s:%d/%s</urlType>
+    <driverFile>lib/jdbc/ojdbc8-21.1.0.0.jar;lib/jdbc/orai18n-21.1.0.0.jar</driverFile>
+  </driver>
+  <driver>
     <driverType>Altibase</driverType>
     <driverName>Altibase</driverName>
     <className>Altibase.jdbc.driver.AltibaseDriver</className>
@@ -27,6 +34,13 @@
     <driverName>Tibero</driverName>
     <className>com.tmax.tibero.jdbc.TbDriver</className>
     <urlType>jdbc:tibero:thin:@%s:%d:%s</urlType>
+    <driverFile>lib/jdbc/tibero6-jdbc.jar</driverFile>
+  </driver>
+  <driver>
+    <driverType>Tibero</driverType>
+    <driverName>Tibero(Service Name)</driverName>
+    <className>com.tmax.tibero.jdbc.TbDriver</className>
+    <urlType>jdbc:tibero:thin:@//%s:%d/%s</urlType>
     <driverFile>lib/jdbc/tibero6-jdbc.jar</driverFile>
   </driver>
   <driver>

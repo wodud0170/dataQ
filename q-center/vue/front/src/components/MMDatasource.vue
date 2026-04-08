@@ -149,14 +149,26 @@
                 </v-col>
               </v-row>
 
+              <v-row v-if="addDatasource_dbmsTp === 'Oracle' || addDatasource_dbmsTp === 'Tibero'">
+                <v-col cols="4">
+                  <v-subheader class="reqText">접속 방식</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-select dense color="ndColor" v-model="addDatasource_connType"
+                    :items="['SID', 'Service Name']" hide-details
+                    :menu-props="{ top: false, offsetY: true }"></v-select>
+                </v-col>
+              </v-row>
+
               <v-row>
                 <v-col cols="4">
-                  <v-subheader class="reqText">데이터베이스명</v-subheader>
+                  <v-subheader class="reqText">{{ (addDatasource_dbmsTp === 'Oracle' || addDatasource_dbmsTp === 'Tibero') ? (addDatasource_connType === 'SID' ? 'SID' : 'Service Name') : '데이터베이스명' }}</v-subheader>
                 </v-col>
                 <v-col cols="8">
                   <v-text-field v-model="addDatasource_dbName" ref="addDatasource_dbName"
                     :rules="[() => !!addDatasource_dbName || '데이터베이스명은 필수 입력값입니다.']" clearable required dense
-                    color="ndColor"></v-text-field>
+                    color="ndColor"
+                    :placeholder="(addDatasource_dbmsTp === 'Oracle' || addDatasource_dbmsTp === 'Tibero') ? (addDatasource_connType === 'SID' ? 'XE' : 'XEPDB1') : ''"></v-text-field>
                 </v-col>
               </v-row>
 
@@ -275,14 +287,26 @@
                 </v-col>
               </v-row>
 
+              <v-row v-if="updateDatasource_dbmsTp === 'Oracle' || updateDatasource_dbmsTp === 'Tibero'">
+                <v-col cols="4">
+                  <v-subheader class="reqText">접속 방식</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-select dense color="ndColor" v-model="updateDatasource_connType"
+                    :items="['SID', 'Service Name']" hide-details
+                    :menu-props="{ top: false, offsetY: true }"></v-select>
+                </v-col>
+              </v-row>
+
               <v-row>
                 <v-col cols="4">
-                  <v-subheader class="reqText">데이터베이스명</v-subheader>
+                  <v-subheader class="reqText">{{ (updateDatasource_dbmsTp === 'Oracle' || updateDatasource_dbmsTp === 'Tibero') ? (updateDatasource_connType === 'SID' ? 'SID' : 'Service Name') : '데이터베이스명' }}</v-subheader>
                 </v-col>
                 <v-col cols="8">
                   <v-text-field v-model="updateDatasource_dbName" ref="updateDatasource_dbName"
                     :rules="[() => !!updateDatasource_dbName || '데이터베이스명은 필수 입력값입니다.']" clearable required dense
-                    color="ndColor"></v-text-field>
+                    color="ndColor"
+                    :placeholder="(updateDatasource_dbmsTp === 'Oracle' || updateDatasource_dbmsTp === 'Tibero') ? (updateDatasource_connType === 'SID' ? 'XE' : 'XEPDB1') : ''"></v-text-field>
                 </v-col>
               </v-row>
 
@@ -358,6 +382,7 @@ export default {
     addDatasource_charSet: null,
     addDatasource_privateKey: null,
     addDatasource_dbName: null,
+    addDatasource_connType: 'Service Name',
     // 수정 관련
     updateDatasource_id: null,
     updateDatasource_dsn: null,
@@ -371,6 +396,7 @@ export default {
     updateDatasource_charSet: null,
     updateDatasource_privateKey: null,
     updateDatasource_dbName: null,
+    updateDatasource_connType: 'Service Name',
     updateDatasource_rmDir: null,
     // dbmsTp 아이템
     datasourceDbmsTpItems: ['Oracle', 'Cubrid', 'SQLServer', 'Altibase', 'Goldilocks', 'Tibero', 'MariaDB', 'PostgreSQL', 'Custom'],
@@ -495,7 +521,9 @@ export default {
           "pwd": this.addDatasource_pwd,
           "dbName": this.addDatasource_dbName,
           "charSet": this.addDatasource_charSet,
+          "connProps": (this.addDatasource_dbmsTp === 'Oracle' || this.addDatasource_dbmsTp === 'Tibero') ? this.addDatasource_connType : null,
         }
+
 
         axios.post(this.$APIURL.base + "api/sysinfo/createDataSource", _obj)
           .then(res => {
@@ -552,9 +580,10 @@ export default {
           "pwd": this.updateDatasource_pwd,
           "dbName": this.updateDatasource_dbName,
           "charSet": this.updateDatasource_charSet,
+          "connProps": (this.updateDatasource_dbmsTp === 'Oracle' || this.updateDatasource_dbmsTp === 'Tibero') ? this.updateDatasource_connType : null,
         }
 
-        console.log(_obj)
+
         axios.post(this.$APIURL.base + "api/sysinfo/updateDataSource", _obj)
           .then(res => {
             console.log(res)
@@ -610,6 +639,8 @@ export default {
       this.updateDatasource_dbName = this.selectedItem[0].dbName;
       this.updateDatasource_rmDir = this.selectedItem[0].rmDir;
       this.updateDatasource_driverName = this.selectedItem[0].driverName;
+      this.datasourceDriverNameItems = [this.selectedItem[0].driverName];
+      this.updateDatasource_connType = this.selectedItem[0].connProps || 'SID';
     },
     getDatasourceData() {
       this.loadTable = true;
@@ -922,6 +953,7 @@ export default {
           "pwd": this.addDatasource_pwd,
           "dbName": this.addDatasource_dbName,
           "charSet": this.addDatasource_charSet,
+          "connProps": (this.addDatasource_dbmsTp === 'Oracle' || this.addDatasource_dbmsTp === 'Tibero') ? this.addDatasource_connType : null,
         }
 
       } else if (this.updateDatasourceModalShow) {
@@ -937,7 +969,14 @@ export default {
           "pwd": this.updateDatasource_pwd,
           "dbName": this.updateDatasource_dbName,
           "charSet": this.updateDatasource_charSet,
+          "connProps": (this.updateDatasource_dbmsTp === 'Oracle' || this.updateDatasource_dbmsTp === 'Tibero') ? this.updateDatasource_connType : null,
         }
+      }
+
+      if (this.addDatasourceModalShow) {
+
+      } else {
+
       }
 
       try {

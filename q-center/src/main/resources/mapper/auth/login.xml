@@ -20,6 +20,7 @@
             USER_ID  as id,
             NM       as name,
             EMAIL    as email,
+            PHONE    as phone,
             ADM_YN   as admin
         FROM
             tb_user
