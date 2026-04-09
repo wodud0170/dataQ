@@ -13,6 +13,7 @@
 		<result property="ver" column="VER"/>
 		<result property="structDiagYn" column="STRUCT_DIAG_YN"/>
 		<result property="structDiagDt" column="STRUCT_DIAG_DT_FMT"/>
+		<result property="structDiagRate" column="STRUCT_DIAG_RATE"/>
 		<result property="diagStndRate" column="DIAG_STND_RATE"/>
 		<result property="diagDt" column="DIAG_DT_FMT"/>
 		<collection property="dataModelStats" resultMap="stdDataModelStatsMap" />
@@ -31,6 +32,7 @@
 	<resultMap id="stdDataModelAttrMap" type="com.ndata.quality.model.std.StdDataModelAttrVo">
 		<result property="clctId" column="DM_CLCT_ID"/>
 		<result property="dataModelId" column="DM_ID"/>
+		<result property="objOwner" column="OBJ_OWNER"/>
 		<result property="objNm" column="OBJ_NM"/>
 		<result property="objNmKr" column="OBJ_NM_KR"/>
 		<result property="attrNm" column="ATTR_NM"/>
@@ -59,6 +61,7 @@
             ,A.VER
             ,COALESCE(A.STRUCT_DIAG_YN, 'N') as STRUCT_DIAG_YN
             ,to_char(A.STRUCT_DIAG_DT, 'YYYY-MM-DD HH24:MI') as STRUCT_DIAG_DT_FMT
+            ,COALESCE(SD.STRUCT_DIAG_RATE, -1) as STRUCT_DIAG_RATE
             ,COALESCE(D.DIAG_STND_RATE, 0) as DIAG_STND_RATE
             ,D.DIAG_DT_FMT
             ,B.DM_CLCT_ID
@@ -74,13 +77,27 @@
         LEFT OUTER JOIN (
             select J.DM_ID,
                 CASE WHEN J.TOTAL_CNT > 0
-                    THEN ROUND((1.0 - (J.RESULT_CNT::decimal / J.TOTAL_CNT)) * 100, 1)
+                    THEN ROUND(((J.TOTAL_CNT - COALESCE(IC.ISSUE_COL_CNT, 0))::decimal / J.TOTAL_CNT) * 100, 1)
                     ELSE 0 END as DIAG_STND_RATE,
                 to_char(to_timestamp(J.END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI') as DIAG_DT_FMT
             from TB_DIAG_JOB J
+            LEFT JOIN (
+                select DIAG_JOB_ID, COUNT(DISTINCT OBJ_NM || '.' || ATTR_NM) as ISSUE_COL_CNT
+                from TB_DIAG_RESULT
+                group by DIAG_JOB_ID
+            ) IC on IC.DIAG_JOB_ID = J.DIAG_JOB_ID
             where J.STATUS = 'DONE'
                 and J.END_DT = (select max(END_DT) from TB_DIAG_JOB where DM_ID = J.DM_ID and STATUS = 'DONE')
             ) D on A.DM_ID = D.DM_ID
+        LEFT OUTER JOIN (
+            select h.DATA_MODEL_ID,
+                CASE WHEN (h.TOTAL_TABLES + h.TOTAL_COLUMNS) > 0
+                    THEN ROUND((1.0 - (h.ADDED_TABLES + h.DELETED_TABLES + h.ADDED_COLUMNS + h.DELETED_COLUMNS + h.MODIFIED_COLUMNS)::decimal / (h.TOTAL_TABLES + h.TOTAL_COLUMNS)) * 100, 1)
+                    ELSE 100 END as STRUCT_DIAG_RATE
+            from TB_STRUCT_DIAG_HISTORY h
+            where h.STATUS = 'DONE'
+                and h.DIAG_DT = (select max(DIAG_DT) from TB_STRUCT_DIAG_HISTORY where DATA_MODEL_ID = h.DATA_MODEL_ID and STATUS = 'DONE')
+            ) SD on A.DM_ID = SD.DATA_MODEL_ID
         where A.USE_YN = 'Y'
     <if test="schNm != null">
             AND A.DM_NM ILIKE '%' || #{schNm} || '%'
@@ -200,9 +217,10 @@
 	</select>
 
 	<select id="selectDataModelAttrListByClctId" parameterType="String" resultMap="stdDataModelAttrMap">
-			select 
-				 A.OBJ_NM
-				,(select OBJ_NM_KR from TB_DATA_MODEL_OBJ 
+			select
+				 COALESCE(A.OBJ_OWNER, '') as OBJ_OWNER
+				,A.OBJ_NM
+				,(select OBJ_NM_KR from TB_DATA_MODEL_OBJ
 				  where DM_CLCT_ID = A.DM_CLCT_ID and OBJ_NM = A.OBJ_NM) as OBJ_NM_KR
 				,A.ATTR_NM			
 				,A.ATTR_NM_KR
@@ -392,7 +410,8 @@
            INSERT INTO TB_DATA_MODEL_ATTR
            (
              DM_CLCT_ID
-            ,DM_ID		
+            ,DM_ID
+			,OBJ_OWNER
 			,OBJ_NM
 			,ATTR_NM
 			,ATTR_NM_KR
@@ -413,6 +432,7 @@
            (
              #{clctId}
             ,#{dataModelId}
+            ,#{objOwner, jdbcType=VARCHAR}
             ,#{objNm, jdbcType=VARCHAR}
             ,#{attrNm, jdbcType=VARCHAR}
 			,#{attrNmKr, jdbcType=VARCHAR}

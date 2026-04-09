@@ -2010,6 +2010,7 @@ public class DataStandardController {
 				termsVo.setCommStndYn("N");
 				termsVo.setCretUserId(userId);
 				if (isAdmin) termsVo.setAprvYn("Y");
+				else termsVo.setAprvYn("N");
 				session.insert("terms.insertTerms", termsVo);
 
 				// 용어-단어 관계 등록

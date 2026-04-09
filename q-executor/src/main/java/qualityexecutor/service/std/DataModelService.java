@@ -173,6 +173,7 @@ public class DataModelService implements Runnable {
 				ResultSet rs = dbHandler.executeSql(pstmt);
 				while (rs.next()) {
 					stdDataModelAttrVo.setDataModelId(dataModelId);
+					stdDataModelAttrVo.setObjOwner(schemaNm);
 					stdDataModelAttrVo.setObjNm(rs.getString("objNm"));
 					stdDataModelAttrVo.setAttrNm(rs.getString("attrNm"));
 					stdDataModelAttrVo.setAttrNmKr(rs.getString("attrNmKr"));

@@ -108,7 +108,9 @@
                     AND S1.COLUMN_NAME = S2.COLUMN_NAME
                     AND S1.OWNER = S3.OWNER
                     AND S3.TABLE_TYPE = 'TABLE'
-                    AND S1.TABLE_NAME = S3.TABLE_NAME ) A,         
+                    AND S1.TABLE_NAME = S3.TABLE_NAME
+                    AND S1.TABLE_NAME IN (SELECT T.TABLE_NAME FROM ALL_TABLES T WHERE T.OWNER = S1.OWNER AND T.TABLESPACE_NAME NOT IN ('SYSTEM','SYSAUX'))
+                    AND S1.TABLE_NAME NOT LIKE '%TEMP%' ) A,         
                 (SELECT T1.OWNER, T1.TABLE_NAME, T2.COLUMN_NAME, 'Y' AS POS
                 FROM (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME   
                                 FROM USER_CONSTRAINTS

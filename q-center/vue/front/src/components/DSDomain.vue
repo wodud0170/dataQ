@@ -235,16 +235,6 @@
 
               <v-row>
                 <v-col cols="4">
-                  <v-subheader>요청 시스템</v-subheader>
-                </v-col>
-                <v-col cols="8">
-                  <treeselect v-model="addDomain_reqSysCd" :multiple="false" :options="systemNameList" placeholder="선택"
-                    ref="addDomain_reqSysCd" />
-                </v-col>
-              </v-row>
-
-              <v-row>
-                <v-col cols="4">
                   <v-subheader>저장 형식</v-subheader>
                 </v-col>
                 <v-col cols="8">
@@ -401,16 +391,6 @@
               </v-col>
               <v-col cols="8">
                 <v-text-field v-model="updateDomain_dataUnit" dense color="ndColor" placeholder="원"></v-text-field>
-              </v-col>
-            </v-row>
-
-            <v-row>
-              <v-col cols="4">
-                <v-subheader>요청 시스템</v-subheader>
-              </v-col>
-              <v-col cols="8">
-                <treeselect v-model="updateDomain_reqSysCd" :multiple="false" :options="systemNameList" placeholder="선택"
-                  ref="updateDomain_reqSysCd" />
               </v-col>
             </v-row>
 
@@ -704,7 +684,6 @@ export default {
       { text: '데이터 타입', sortable: false, align: 'center', value: 'dataType', width: '15%' },
       { text: '데이터 길이', sortable: false, align: 'center', value: 'dataLenDisplay' },
       { text: '데이터 단위', sortable: false, align: 'center', value: 'dataUnit', width: '15%' },
-      { text: '요청시스템', sortable: false, align: 'center', value: 'reqSysNm', width: '15%' },
       { text: '저장형식', sortable: false, align: 'center', value: 'storFmt', width: '15%' },
       { text: '표현형식', sortable: false, align: 'center', value: 'exprFmtLst' },
       { text: '허용값', sortable: false, align: 'center', value: 'allowValLst' },

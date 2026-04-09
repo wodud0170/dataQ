@@ -6,6 +6,7 @@ import lombok.Data;
 public class StdDataModelAttrVo {
 	private String clctId;
 	private String dataModelId;
+	private String objOwner;
 	private String objNm;
 	private String objNmKr;
 	private String attrNm;

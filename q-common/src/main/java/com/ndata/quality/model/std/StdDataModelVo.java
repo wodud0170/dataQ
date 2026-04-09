@@ -28,6 +28,7 @@ public class StdDataModelVo {
     // 구조 진단 결과
     private String structDiagYn;      // 구조진단 일치여부 (Y/N)
     private String structDiagDt;      // 구조진단 최종 실행일시
+    private double structDiagRate;    // 구조진단 일치율 (%)
 
     // 표준화 진단 결과 (최신 Job 기준)
     private double diagStndRate;      // 표준화 진단 준수율 (%)

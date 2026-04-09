@@ -74,11 +74,11 @@
 
               <v-row>
                 <v-col cols="4">
-                  <v-subheader class="reqText">DSN</v-subheader>
+                  <v-subheader class="reqText">데이터소스명</v-subheader>
                 </v-col>
                 <v-col cols="8">
                   <v-text-field v-model="addDatasource_dsn" ref="addDatasource_dsn"
-                    :rules="[() => !!addDatasource_dsn || 'DSN은 필수 입력값입니다.']" clearable required dense
+                    :rules="[() => !!addDatasource_dsn || '데이터소스명은 필수 입력값입니다.']" clearable required dense
                     color="ndColor"></v-text-field>
                 </v-col>
               </v-row>
@@ -212,11 +212,11 @@
 
               <v-row>
                 <v-col cols="4">
-                  <v-subheader class="reqText">DSN</v-subheader>
+                  <v-subheader class="reqText">데이터소스명</v-subheader>
                 </v-col>
                 <v-col cols="8">
                   <v-text-field v-model="updateDatasource_dsn" ref="updateDatasource_dsn"
-                    :rules="[() => !!updateDatasource_dsn || 'DSN은 필수 입력값입니다.']" clearable required dense
+                    :rules="[() => !!updateDatasource_dsn || '데이터소스명은 필수 입력값입니다.']" clearable required dense
                     color="ndColor"></v-text-field>
                 </v-col>
               </v-row>
@@ -407,7 +407,7 @@ export default {
     // 상단 테이블 헤더
     datasourceGroupHeaders: [
       { text: '구분', align: 'center', sortable: false, value: 'dsTpNm' },
-      { text: 'DSN', sortable: false, align: 'center', value: 'dsn' },
+      { text: '데이터소스명', sortable: false, align: 'center', value: 'dsn' },
       { text: '서버주소', sortable: false, align: 'center', value: 'svrAddr' },
       { text: '포트', sortable: false, align: 'center', value: 'port' },
       { text: '사용자', sortable: false, align: 'center', value: 'userId' },
@@ -874,7 +874,7 @@ export default {
 
       if (this.addDatasourceModalShow) {
         if (this.addDatasource_dsn === null || this.addDatasource_dsn === '') {
-          _attr = 'DSN';
+          _attr = '데이터소스명';
         } else if (this.addDatasource_dsTp === null || this.addDatasource_dsTp === '') {
           _attr = '데이터 베이스 소스 타입';
         } else if (this.addDatasource_dbmsTp === null || this.addDatasource_dbmsTp === '') {
@@ -897,7 +897,7 @@ export default {
 
       } else if (this.updateDatasourceModalShow) {
         if (this.updateDatasource_dsn === null || this.updateDatasource_dsn === '') {
-          _attr = 'DSN';
+          _attr = '데이터소스명';
         } else if (this.updateDatasource_dsTp === null || this.updateDatasource_dsTp === '') {
           _attr = '데이터 베이스 소스 타입';
         } else if (this.updateDatasource_dbmsTp === null || this.updateDatasource_dbmsTp === '') {

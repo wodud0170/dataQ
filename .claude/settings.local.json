@@ -3,7 +3,20 @@
     "allow": [
       "Bash(find c:UsersnaraedataDesktopdataQ -name *.java -path *com/ndata/model*)",
       "Bash(find c:UsersnaraedataDesktopdataQ -name *.jar)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(grep -i \"\\\\.java$\")",
+      "Bash(npx vue-cli-service:*)",
+      "Bash(npm run:*)",
+      "Bash(find c:/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center -name index.html -path */dist/*)",
+      "Bash(find c:/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center -name webpack* -o -name vue.config*)",
+      "Bash(ls -la c:/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center/src/main/resources/static/static/js/app.*.js)",
+      "Bash(python3 -c \"import openpyxl; print\\(''ok''\\)\")",
+      "Bash(pip install:*)",
+      "Bash(python -c \"import openpyxl; print\\(''ok''\\)\")",
+      "Bash(npx webpack:*)",
+      "WebSearch",
+      "WebFetch(domain:blog.b2en.com)",
+      "WebFetch(domain:wise.co.kr)"
     ]
   }
 }

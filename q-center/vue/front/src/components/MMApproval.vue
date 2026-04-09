@@ -3,13 +3,12 @@
     <!-- 상태별 칩 필터 -->
     <v-sheet class="pa-4" style="background: #ffffff; border-bottom: 1px solid #E8EAF6;">
       <v-row align="center" no-gutters>
-        <v-chip-group v-model="activeStatusFilter" mandatory active-class="ndColor white--text">
-          <v-chip filter outlined value="REQUESTED">승인대기 ({{ statusCounts.requested }})</v-chip>
-          <v-chip filter outlined value="CHECKING">검토 ({{ statusCounts.checking }})</v-chip>
-          <v-chip filter outlined value="APPROVED">승인완료 ({{ statusCounts.approved }})</v-chip>
-          <v-chip filter outlined value="REJECTED">반려 ({{ statusCounts.rejected }})</v-chip>
-          <v-chip filter outlined value="ALL">전체 ({{ approvalAllItems.length }})</v-chip>
-        </v-chip-group>
+        <v-btn-toggle v-model="activeStatusFilter" mandatory dense class="mr-2">
+          <v-btn small value="REQUESTED" :color="activeStatusFilter === 'REQUESTED' ? 'indigo' : ''" :dark="activeStatusFilter === 'REQUESTED'">승인대기 ({{ statusCounts.requested }})</v-btn>
+          <v-btn small value="APPROVED" :color="activeStatusFilter === 'APPROVED' ? 'green' : ''" :dark="activeStatusFilter === 'APPROVED'">승인완료 ({{ statusCounts.approved }})</v-btn>
+          <v-btn small value="REJECTED" :color="activeStatusFilter === 'REJECTED' ? 'red' : ''" :dark="activeStatusFilter === 'REJECTED'">반려 ({{ statusCounts.rejected }})</v-btn>
+          <v-btn small value="ALL" :color="activeStatusFilter === 'ALL' ? 'grey darken-1' : ''" :dark="activeStatusFilter === 'ALL'">전체 ({{ approvalAllItems.length }})</v-btn>
+        </v-btn-toggle>
       </v-row>
     </v-sheet>
 

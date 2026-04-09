@@ -46,11 +46,14 @@
     <v-data-table id="dmTable_table" :headers="dmTabledetaileHeaders" :items="dmTableItems"
       :page.sync="page" :items-per-page="itemsPerPage" hide-default-footer
       item-key="objNm" class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요.">
+      <template #[`item.objNm`]="{ item }">
+        <a class="ndColor--text" style="cursor:pointer; text-decoration:underline;" @click="goToColumn(item)">{{ item.objNm }}</a>
+      </template>
       <template #top>
         <v-progress-linear v-show="loadTable" color="indigo darken-2" indeterminate />
       </template>
       <template #no-data>
-        <v-alert v-show="!loadTable">데이터가 존재하지 않습니다.</v-alert>
+        <v-alert v-show="!loadTable" class="text-center">데이터가 존재하지 않습니다.</v-alert>
         <span v-show="loadTable">잠시만 기다려주세요.</span>
       </template>
     </v-data-table>
@@ -66,6 +69,7 @@
 
 <script>
 import axios from 'axios';
+import { eventBus } from '../eventBus';
 
 export default {
   name: 'DSDatamodelStatusTable',
@@ -163,6 +167,46 @@ export default {
         this.loadTable = false;
       });
     },
+    _applyPendingView(pending) {
+      var self = this;
+      var apply = function() {
+        self.selectedModelId = pending.modelId;
+        var _to = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
+        var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
+        axios.post(self.$APIURL.base + "api/dm/getDataModelClctList", {
+          'schId': pending.modelId, 'from': _from, 'to': _to
+        }).then(function(res) {
+          var sorted = res.data.slice().sort(function(a, b) { return b.clctStartDt.localeCompare(a.clctStartDt); });
+          self.clctList = sorted.map(function(item, index) {
+            return Object.assign({}, item, {
+              clctDisplayDt: index === 0 ? item.clctStartDt + ' (최신)' : item.clctStartDt,
+            });
+          });
+          self.selectedClctId = pending.clctId || (self.clctList.length > 0 ? self.clctList[0].clctId : null);
+          self.$nextTick(function() { self.load(); });
+        });
+      };
+      if (this.modelList.length > 0) {
+        apply();
+      } else {
+        axios.post(this.$APIURL.base + "api/dm/getDataModelStatsList", {
+          'schNm': null
+        }).then(function(res) {
+          self.modelList = res.data.map(function(item) {
+            return { dataModelId: item.dataModelId, dataModelNm: item.dataModelNm };
+          });
+          apply();
+        });
+      }
+    },
+    goToColumn(item) {
+      eventBus.pendingColumnView = {
+        modelId: this.selectedModelId,
+        clctId: this.selectedClctId,
+        tableNm: item.objNm,
+      };
+      eventBus.$emit('openColumnView');
+    },
     tableDataDownload() {
       axios.get(this.$APIURL.base + "api/dm/downloadDataModelObjs", {
         params: { 'clctId': this.selectedClctId },
@@ -187,6 +231,13 @@ export default {
   },
   mounted() {
     this.$resizableGrid();
+  },
+  activated() {
+    if (eventBus.pendingTableView) {
+      var pending = eventBus.pendingTableView;
+      eventBus.pendingTableView = null;
+      this._applyPendingView(pending);
+    }
   },
 }
 </script>

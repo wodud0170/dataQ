@@ -1,0 +1,344 @@
+2026-03-30 15:05:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:05:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:05:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:05:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:06:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:06:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:06:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:06:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:07:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:07:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilterInternal(218) : Securing GET /api/login/checkSession
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(104) : Set SecurityContextHolder to empty SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.LoginController#checkSession()
+2026-03-30 15:07:37 [DEBUG] [AnonymousAuthenticationFilter.java]doFilter(100) : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractSecurityInterceptor.java]beforeInvocation(210) : Authorized filter invocation [GET /api/login/checkSession] with attributes [permitAll]
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilter(333) : Secured GET /api/login/checkSession
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : GET "/api/login/checkSession", parameters={}
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.LoginController#checkSession()
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilterInternal(218) : Securing GET /sockjs/info?t=1774850857374
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(104) : Set SecurityContextHolder to empty SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler@4df65e2b
+2026-03-30 15:07:37 [DEBUG] [AnonymousAuthenticationFilter.java]doFilter(100) : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractSecurityInterceptor.java]beforeInvocation(210) : Authorized filter invocation [GET /sockjs/info?t=1774850857374] with attributes [permitAll]
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilter(333) : Secured GET /sockjs/info?t=1774850857374
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : GET "/sockjs/info?t=1774850857374", parameters={masked}
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler@4df65e2b
+2026-03-30 15:07:37 [DEBUG] [AbstractSockJsService.java]handleRequest(412) : Processing transport request: GET http://127.0.0.1:28090/sockjs/info?t=1774850857374
+2026-03-30 15:07:37 [DEBUG] [FrameworkServlet.java]logResult(1131) : Completed 200 OK
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(120) : Cleared SecurityContextHolder to complete request
+2026-03-30 15:07:37 [DEBUG] [AbstractMessageConverterMethodProcessor.java]writeWithMessageConverters(268) : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json, application/json, application/*+json]
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : Writing [true]
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [FrameworkServlet.java]logResult(1131) : Completed 200 OK
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilterInternal(218) : Securing GET /api/login/checkSession
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(120) : Cleared SecurityContextHolder to complete request
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(104) : Set SecurityContextHolder to empty SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.LoginController#checkSession()
+2026-03-30 15:07:37 [DEBUG] [AnonymousAuthenticationFilter.java]doFilter(100) : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractSecurityInterceptor.java]beforeInvocation(210) : Authorized filter invocation [GET /api/login/checkSession] with attributes [permitAll]
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilter(333) : Secured GET /api/login/checkSession
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : GET "/api/login/checkSession", parameters={}
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilterInternal(218) : Securing GET /sockjs/172/1gzorkwf/websocket
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.LoginController#checkSession()
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(104) : Set SecurityContextHolder to empty SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler@4df65e2b
+2026-03-30 15:07:37 [DEBUG] [AbstractMessageConverterMethodProcessor.java]writeWithMessageConverters(268) : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json, application/json, application/*+json]
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : Writing [true]
+2026-03-30 15:07:37 [DEBUG] [AnonymousAuthenticationFilter.java]doFilter(100) : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractSecurityInterceptor.java]beforeInvocation(210) : Authorized filter invocation [GET /sockjs/172/1gzorkwf/websocket] with attributes [permitAll]
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilter(333) : Secured GET /sockjs/172/1gzorkwf/websocket
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : GET "/sockjs/172/1gzorkwf/websocket", parameters={}
+2026-03-30 15:07:37 [DEBUG] [FrameworkServlet.java]logResult(1131) : Completed 200 OK
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler@4df65e2b
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(120) : Cleared SecurityContextHolder to complete request
+2026-03-30 15:07:37 [DEBUG] [AbstractSockJsService.java]handleRequest(482) : Processing transport request: GET http://127.0.0.1:28090/sockjs/172/1gzorkwf/websocket
+2026-03-30 15:07:37 [ERROR] [HttpHandshakeInterceptor.java]beforeHandshake(40) : Websocket handshake refused because of not authenticated request from 127.0.0.1
+2026-03-30 15:07:37 [DEBUG] [HttpSessionEventPublisher.java]extracted(85) : Publishing event: org.springframework.security.web.session.HttpSessionCreatedEvent[source=org.apache.catalina.session.StandardSessionFacade@3781966]
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: HttpSessionCreatedEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: HttpSessionCreatedEvent
+2026-03-30 15:07:37 [DEBUG] [FrameworkServlet.java]logResult(1131) : Completed 101 SWITCHING_PROTOCOLS
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(120) : Cleared SecurityContextHolder to complete request
+2026-03-30 15:07:37 [DEBUG] [LoggingWebSocketHandlerDecorator.java]afterConnectionEstablished(46) : New WebSocketServerSockJsSession[id=1gzorkwf]
+2026-03-30 15:07:37 [INFO ] [WebSocketHandlerImpl.java]afterConnectionEstablished(47) : >> HttpSession : [49AEFDE7E304D01BEBB56F7881BD78A5] saved
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilterInternal(218) : Securing GET /api/search/getDashboardInfo
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilterInternal(218) : Securing GET /api/search/getDataModelStat
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilterInternal(218) : Securing GET /api/search/getTopDataModelList
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(104) : Set SecurityContextHolder to empty SecurityContext
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(104) : Set SecurityContextHolder to empty SecurityContext
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(104) : Set SecurityContextHolder to empty SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.SearchController#getDataModelStat()
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.SearchController#getTopDataModelList()
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.SearchController#getDashboardInfo()
+2026-03-30 15:07:37 [DEBUG] [AnonymousAuthenticationFilter.java]doFilter(100) : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AnonymousAuthenticationFilter.java]doFilter(100) : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AnonymousAuthenticationFilter.java]doFilter(100) : Set SecurityContextHolder to anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [AbstractSecurityInterceptor.java]beforeInvocation(210) : Authorized filter invocation [GET /api/search/getDataModelStat] with attributes [permitAll]
+2026-03-30 15:07:37 [DEBUG] [AbstractSecurityInterceptor.java]beforeInvocation(210) : Authorized filter invocation [GET /api/search/getDashboardInfo] with attributes [permitAll]
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilter(333) : Secured GET /api/search/getDataModelStat
+2026-03-30 15:07:37 [DEBUG] [AbstractSecurityInterceptor.java]beforeInvocation(210) : Authorized filter invocation [GET /api/search/getTopDataModelList] with attributes [permitAll]
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilter(333) : Secured GET /api/search/getDashboardInfo
+2026-03-30 15:07:37 [DEBUG] [FilterChainProxy.java]doFilter(333) : Secured GET /api/search/getTopDataModelList
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : GET "/api/search/getDataModelStat", parameters={}
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : GET "/api/search/getDashboardInfo", parameters={}
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : GET "/api/search/getTopDataModelList", parameters={}
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.SearchController#getDataModelStat()
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.SearchController#getDashboardInfo()
+2026-03-30 15:07:37 [DEBUG] [AbstractHandlerMapping.java]getHandler(522) : Mapped to qualitycenter.controller.SearchController#getTopDataModelList()
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Creating a new SqlSession
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Creating a new SqlSession
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Creating a new SqlSession
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7f53a362] was not registered for synchronization because synchronization is not active
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7b547427] was not registered for synchronization because synchronization is not active
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@414e65e7] was not registered for synchronization because synchronization is not active
+2026-03-30 15:07:37 [DEBUG] [DataSourceUtils.java]doGetConnection(116) : Fetching JDBC Connection from DataSource
+2026-03-30 15:07:37 [DEBUG] [DataSourceUtils.java]doGetConnection(116) : Fetching JDBC Connection from DataSource
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : JDBC Connection [HikariProxyConnection@625506900 wrapping org.postgresql.jdbc.PgConnection@6259497e] will not be managed by Spring
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : JDBC Connection [HikariProxyConnection@1036635656 wrapping org.postgresql.jdbc.PgConnection@2b7115a3] will not be managed by Spring
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : ==>  Preparing: select distinct A.DM_NM as dataModelNm ,ROUND(COALESCE(B.TOTAL_STND_RATE,0),2) as totalStndRate ,COALESCE(B.TERMS_STND_RATE,0) as termsStndRate ,COALESCE(B.WORD_STND_RATE,0) as wordStndRate ,COALESCE(B.DOMAIN_STND_RATE,0) as domainStndRate from TB_DATA_MODEL A LEFT OUTER JOIN ( select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID ,(S.TERMS_STND_RATE+S.WORD_STND_RATE+S.DOMAIN_STND_RATE)/3::NUMERIC as TOTAL_STND_RATE ,S.TERMS_STND_RATE, S.WORD_STND_RATE, S.DOMAIN_STND_RATE, T.CLCT_END_DT as CLCT_DT from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T where S.DM_CLCT_ID = T.DM_CLCT_ID and T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID) ) B on A.DM_ID = B.DM_ID where A.USE_YN = 'Y' order by totalStndRate desc limit 10 
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : ==>  Preparing: select count(A.DM_ID) as dataModelCnt ,sum(COALESCE(B.OBJ_CNT,0)) as objCnt ,sum(COALESCE(B.ATTR_CNT,0)) as attrCnt ,ROUND(avg(COALESCE(B.TOTAL_STND_RATE,0)),2) as totalStndRate ,ROUND(avg(COALESCE(B.TERMS_STND_RATE,0)),2) as termsStndRate ,ROUND(avg(COALESCE(B.WORD_STND_RATE,0)),2) as wordStndRate ,ROUND(avg(COALESCE(B.DOMAIN_STND_RATE,0)),2) as domainStndRate from TB_DATA_MODEL A LEFT OUTER JOIN ( select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID ,(S.TERMS_STND_RATE+S.WORD_STND_RATE+S.DOMAIN_STND_RATE)/3::NUMERIC as TOTAL_STND_RATE ,S.TERMS_STND_RATE, S.WORD_STND_RATE, S.DOMAIN_STND_RATE, T.CLCT_END_DT as CLCT_DT from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T where S.DM_CLCT_ID = T.DM_CLCT_ID and T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID) ) B on A.DM_ID = B.DM_ID where A.USE_YN = 'Y' 
+2026-03-30 15:07:37 [DEBUG] [DataSourceUtils.java]doGetConnection(116) : Fetching JDBC Connection from DataSource
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : JDBC Connection [HikariProxyConnection@1112778444 wrapping org.postgresql.jdbc.PgConnection@25b6febd] will not be managed by Spring
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : ==>  Preparing: select (select count(*) from TB_TERMS where APRV_YN = 'Y') as termsCnt, (select count(*) from TB_WORD where APRV_YN = 'Y') as wordCnt, (select count(*) from TB_DOMAIN where APRV_YN = 'Y') as domainCnt, (select (select count(*) from TB_TERMS where APRV_YN = 'N' ) + (select count(*) from TB_WORD where APRV_YN = 'N' ) + (select count(*) from TB_DOMAIN where APRV_YN = 'N' ) from DUAL) as aprvStatRequestedCnt, (select count(*) from TB_APRV_STATS where APRV_STAT = 1 ) as aprvStatCheckingCnt, (select count(*) from TB_APRV_STATS where APRV_STAT = 2 ) as aprvStatApprovedCnt, (select count(*) from TB_APRV_STATS where APRV_STAT = 3 ) as aprvStatRejectedCnt from DUAL 
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : ==> Parameters: 
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : ==> Parameters: 
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : ==> Parameters: 
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : <==      Total: 1
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : <==      Total: 1
+2026-03-30 15:07:37 [DEBUG] [BaseJdbcLogger.java]debug(159) : <==      Total: 1
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Committing JDBC Connection [HikariProxyConnection@625506900 wrapping org.postgresql.jdbc.PgConnection@6259497e]
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Committing JDBC Connection [HikariProxyConnection@1036635656 wrapping org.postgresql.jdbc.PgConnection@2b7115a3]
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Committing JDBC Connection [HikariProxyConnection@1112778444 wrapping org.postgresql.jdbc.PgConnection@25b6febd]
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@414e65e7]
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7b547427]
+2026-03-30 15:07:37 [DEBUG] [Logger.java]debug(49) : Closing non transactional SqlSession [org.apache.ibatis.session.defaults.DefaultSqlSession@7f53a362]
+2026-03-30 15:07:37 [DEBUG] [AbstractMessageConverterMethodProcessor.java]writeWithMessageConverters(268) : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json, application/json, application/*+json]
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : Writing [[{totalStndRate=0.00, dataModelNm=회사오라클테스트, domainStndRate=0.00, termsStndRate=0.00, wordStndRate=0. (truncated)...]
+2026-03-30 15:07:37 [DEBUG] [AbstractMessageConverterMethodProcessor.java]writeWithMessageConverters(268) : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json, application/json, application/*+json]
+2026-03-30 15:07:37 [DEBUG] [AbstractMessageConverterMethodProcessor.java]writeWithMessageConverters(268) : Using 'application/json', given [application/json, text/plain, */*] and supported [application/json, application/*+json, application/json, application/*+json]
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : Writing [{totalStndRate=0.00, objCnt=41, domainStndRate=0.00, attrCnt=433, dataModelCnt=1, termsStndRate=0.00 (truncated)...]
+2026-03-30 15:07:37 [DEBUG] [LogFormatUtils.java]traceDebug(119) : Writing [{domainCnt=126, aprvStatRequestedCnt=1, termsCnt=13159, aprvStatApprovedCnt=0, wordCnt=3283, aprvSta (truncated)...]
+2026-03-30 15:07:37 [INFO ] [WebSocketConfiguration.java]preSend(146) : [header] User=space, SessionId=1gzorkwf
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionConnectEvent
+2026-03-30 15:07:37 [DEBUG] [CompositeLog.java]debug(127) : Processing CONNECT user=space session=1gzorkwf
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionConnectEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionConnectedEvent
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionConnectedEvent
+2026-03-30 15:07:37 [DEBUG] [FrameworkServlet.java]logResult(1131) : Completed 200 OK
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(120) : Cleared SecurityContextHolder to complete request
+2026-03-30 15:07:37 [DEBUG] [CompositeLog.java]debug(127) : Processing SUBSCRIBE /topic/onMessage id=sub-1774850857809-704 session=1gzorkwf
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionSubscribeEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionSubscribeEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionSubscribeEvent
+2026-03-30 15:07:37 [DEBUG] [AbstractMethodMessageHandler.java]handleMessage(453) : Searching methods to handle SUBSCRIBE /user/exchange/amq.direct/message.window id=sub-1774850857809-533 session=1gzorkwf, lookupDestination='/exchange/amq.direct/message.window'
+2026-03-30 15:07:37 [DEBUG] [AbstractMethodMessageHandler.java]handleNoMatch(547) : No matching message handler methods.
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionSubscribeEvent
+2026-03-30 15:07:37 [DEBUG] [CompositeLog.java]debug(127) : Processing SUBSCRIBE destination=/exchange/amq.direct/message.window-user1gzorkwf subscriptionId=sub-1774850857809-533 session=1gzorkwf user=space attributes[1] payload=byte[0]
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [FrameworkServlet.java]logResult(1131) : Completed 200 OK
+2026-03-30 15:07:37 [DEBUG] [FrameworkServlet.java]logResult(1131) : Completed 200 OK
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: ServletRequestHandledEvent
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(120) : Cleared SecurityContextHolder to complete request
+2026-03-30 15:07:37 [DEBUG] [HttpSessionSecurityContextRepository.java]saveContext(360) : Did not store anonymous SecurityContext
+2026-03-30 15:07:37 [DEBUG] [SecurityContextPersistenceFilter.java]doFilter(120) : Cleared SecurityContextHolder to complete request
+2026-03-30 15:07:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:07:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:08:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:08:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:08:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:08:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:09:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:09:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:09:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:09:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:10:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:10:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:10:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:10:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:11:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:11:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:11:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:11:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:12:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:12:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:12:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:12:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:13:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:13:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:13:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:13:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:14:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:14:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:14:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:14:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:14:49 [DEBUG] [LoggingWebSocketHandlerDecorator.java]afterConnectionClosed(70) : WebSocketServerSockJsSession[id=1gzorkwf] closed with CloseStatus[code=1001, reason=null]
+2026-03-30 15:14:49 [INFO ] [WebSocketHandlerImpl.java]afterConnectionClosed(71) : >> HttpSession : [49AEFDE7E304D01BEBB56F7881BD78A5] removed
+2026-03-30 15:14:49 [DEBUG] [SubProtocolWebSocketHandler.java]clearSession(526) : Clearing session 1gzorkwf
+2026-03-30 15:14:49 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionDisconnectEvent
+2026-03-30 15:14:49 [DEBUG] [EnableEncryptablePropertiesBeanFactoryPostProcessor.java]onApplicationEvent(64) : Application Event Raised: SessionDisconnectEvent
+2026-03-30 15:14:49 [DEBUG] [CompositeLog.java]debug(127) : Processing DISCONNECT session=1gzorkwf
+2026-03-30 15:14:49 [DEBUG] [SubProtocolWebSocketHandler.java]handleMessage(360) : No session for GenericMessage [payload=byte[0], headers={simpMessageType=DISCONNECT_ACK, simpDisconnectMessage=GenericMessage [payload=byte[0], headers={simpMessageType=DISCONNECT, stompCommand=DISCONNECT, simpSessionAttributes={org.springframework.messaging.simp.SimpAttributes.COMPLETED=true, sessionId=49AEFDE7E304D01BEBB56F7881BD78A5}, simpUser=qualitycenter.config.SocketDestinationPrincipal@70c4bb61, simpSessionId=1gzorkwf}], simpUser=qualitycenter.config.SocketDestinationPrincipal@70c4bb61, simpSessionId=1gzorkwf}]
+2026-03-30 15:14:58 [DEBUG] [TransportHandlingSockJsService.java]lambda$scheduleSessionTask$0(398) : Closed 1 sessions: [1gzorkwf]
+2026-03-30 15:15:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:15:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:15:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:15:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:16:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:16:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:16:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:16:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:17:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:17:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:17:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:17:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:18:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:18:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:18:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:18:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:19:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:19:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:19:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:19:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:20:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:20:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:20:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:20:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:21:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:21:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:21:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:21:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:22:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:22:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:22:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:22:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:23:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:23:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:23:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:23:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:24:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:24:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:24:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:24:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:25:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:25:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:25:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:25:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:26:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:26:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:26:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:26:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:27:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:27:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:27:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:27:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:28:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:28:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:28:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:28:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:29:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:29:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:29:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:29:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:30:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:30:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:30:38 [DEBUG] [PoolBase.java]quietlyCloseConnection(134) : HikariPool-1 - Closing connection org.postgresql.jdbc.PgConnection@2b7115a3: (connection has passed maxLifetime)
+2026-03-30 15:30:38 [DEBUG] [HikariPool.java]call(729) : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@2adf2188
+2026-03-30 15:30:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:30:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:30:59 [DEBUG] [PoolBase.java]quietlyCloseConnection(134) : HikariPool-1 - Closing connection org.postgresql.jdbc.PgConnection@648bf486: (connection has passed maxLifetime)
+2026-03-30 15:30:59 [DEBUG] [HikariPool.java]call(729) : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@361960ef
+2026-03-30 15:31:03 [DEBUG] [PoolBase.java]quietlyCloseConnection(134) : HikariPool-1 - Closing connection org.postgresql.jdbc.PgConnection@6259497e: (connection has passed maxLifetime)
+2026-03-30 15:31:03 [DEBUG] [HikariPool.java]call(729) : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@38de985c
+2026-03-30 15:31:04 [DEBUG] [PoolBase.java]quietlyCloseConnection(134) : HikariPool-1 - Closing connection org.postgresql.jdbc.PgConnection@25b6febd: (connection has passed maxLifetime)
+2026-03-30 15:31:04 [DEBUG] [HikariPool.java]call(729) : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@3ce10b9f
+2026-03-30 15:31:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:31:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:31:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:31:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:32:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:32:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:32:10 [INFO ] [WebSocketMessageBrokerStats.java]lambda$initLoggingTask$0(128) : WebSocketSession[1 current WS(1)-HttpStream(0)-HttpPoll(0), 2 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(2)-CONNECTED(2)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 15], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 3], sockJsScheduler[pool size = 16, active threads = 1, queued tasks = 2, completed tasks = 600]
+2026-03-30 15:32:39 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:32:39 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:33:09 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:33:09 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:33:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:33:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:34:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:34:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:34:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:34:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:35:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:35:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:35:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:35:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:36:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:36:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:36:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:36:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:37:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:37:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:37:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:37:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:38:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:38:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:38:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:38:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:39:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:39:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:39:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:39:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:40:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:40:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:40:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:40:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:41:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:41:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:41:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:41:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:42:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:42:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:42:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:42:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:43:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:43:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:43:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:43:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:44:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:44:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:44:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:44:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:45:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:45:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:45:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:45:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:46:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:46:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:46:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:46:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:47:10 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:47:10 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.
+2026-03-30 15:47:40 [DEBUG] [HikariPool.java]logPoolState(421) : HikariPool-1 - Pool stats (total=4, active=0, idle=4, waiting=0)
+2026-03-30 15:47:40 [DEBUG] [HikariPool.java]fillPool(518) : HikariPool-1 - Fill pool skipped, pool is at sufficient level.

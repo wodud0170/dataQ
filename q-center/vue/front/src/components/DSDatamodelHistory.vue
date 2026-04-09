@@ -3,12 +3,6 @@
     <!-- 검색과 버튼 영역 -->
     <v-sheet class="filterWrapper px-4 pt-3 pb-2">
       <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '6px' }">
-        <span class="filterLabel">시스템명</span>
-        <v-autocomplete v-model="selectedSystem" :items="systemList"
-          clearable dense outlined hide-details
-          class="filterInput" :style="{ width: '180px' }" color="ndColor" placeholder="시스템 선택"
-          @change="onSystemChange">
-        </v-autocomplete>
         <span class="filterLabel">데이터 모델명</span>
         <v-autocomplete v-model="selectedModel" :items="filteredModelList"
           item-text="dataModelNm" item-value="dataModelNm"
@@ -75,7 +69,6 @@
             <!-- 모델명 -->
             <span v-if="ci === 'dataModelNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <!-- 시스템명 -->
-            <span v-else-if="ci === 'dataModelSysNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <!-- 데이터소스 -->
             <span v-else-if="ci === 'dataModelDsNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <!-- 수집시작일시 -->
@@ -147,7 +140,6 @@ export default {
     tableViewLengthList: [10, 20, 30, 40, 50],
     historyHeaders: [
       { text: '데이터\n모델명',  align: 'center', sortable: false, value: 'dataModelNm' },
-      { text: '시스템명',       align: 'center', sortable: false, value: 'dataModelSysNm' },
       { text: '데이터소스',     align: 'center', sortable: false, value: 'dataModelDsNm' },
       { text: '수집\n시작일시', align: 'center', sortable: false, value: 'clctStartDt' },
       { text: '수집\n완료일시', align: 'center', sortable: false, value: 'clctEndDt' },
@@ -203,7 +195,7 @@ export default {
       const result = {};
       _.forEach(rows, (i, key) => {
         if (i === null) i = '';
-        if (key === 'dataModelNm' || key === 'dataModelSysNm' || key === 'dataModelDsNm' ||
+        if (key === 'dataModelNm' || key === 'dataModelDsNm' ||
           key === 'clctStartDt' || key === 'clctEndDt' || key === 'clctCmptnYn' ||
           key === 'objCnt' || key === 'attrCnt') {
           result[key] = i;

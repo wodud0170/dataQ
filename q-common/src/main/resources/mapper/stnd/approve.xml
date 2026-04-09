@@ -167,8 +167,8 @@
             ,#{reqItemId}
             ,#{aprvStat}
             ,#{reqUserId, jdbcType=VARCHAR}
-            ,#{reqCretDt, jdbcType=VARCHAR}
-			      ,#{reqUpdtDt, jdbcType=VARCHAR}
+            ,COALESCE(#{reqCretDt, jdbcType=VARCHAR}, to_char(now(), 'YYYYMMDDHH24MISS'))
+            ,COALESCE(#{reqUpdtDt, jdbcType=VARCHAR}, to_char(now(), 'YYYYMMDDHH24MISS'))
             ,#{aprvUserId, jdbcType=VARCHAR}
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{aprvStatUpdtRsn, jdbcType=VARCHAR}

@@ -397,17 +397,6 @@
 
                 <v-row>
                   <v-col cols="4">
-                    <v-subheader>요청 시스템</v-subheader>
-                  </v-col>
-                  <v-col cols="8">
-                    <!-- <v-text-field v-model="addTerm_reqSysCd" dense color="ndColor"></v-text-field> -->
-                    <treeselect v-model="addTerm_reqSysCd" :multiple="false" :options="systemNameList" placeholder="선택"
-                  ref="addTerm_reqSysCd" />
-                  </v-col>
-                </v-row>
-
-                <v-row>
-                  <v-col cols="4">
                     <v-subheader>이음동의어 목록</v-subheader>
                   </v-col>
 
@@ -669,17 +658,6 @@
                       <v-textarea clearable dense color="ndColor" rows="1" v-model="updateTerm_termDesc"
                         ref="updateTerm_termDesc" placeholder="사람이나 기계 등이 움직이거나 행동을 시작한 날짜"
                         :rules="[() => !!updateTerm_termDesc || '용어 설명은 필수 입력값입니다.']"></v-textarea>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader>요청 시스템</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <treeselect v-model="updateTerm_reqSysCd" :multiple="false" :options="systemNameList" placeholder="선택"
-                  ref="updateTerm_reqSysCd" />
-                      <!-- <v-text-field v-model="updateTerm_reqSysCd" dense color="ndColor"></v-text-field> -->
                     </v-col>
                   </v-row>
 
@@ -1015,8 +993,6 @@ export default {
       { text: '담당기관명', sortable: false, align: 'center', value: 'chrgOrg', width: '15%' },
       { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn', width: '15%' },
       { text: '제정차수', sortable: false, align: 'center', value: 'magntdOrd', width: '15%' },
-      // { text: '요청시스템', sortable: false, align: 'center', value: 'reqSysCd', width: '15%' },
-      { text: '요청시스템', sortable: false, align: 'center', value: 'reqSysNm', width: '15%' },
       { text: '승인여부', sortable: false, align: 'center', value: 'aprvYn', width: '15%' },
       { text: '승인상태수정일시', sortable: false, align: 'center', value: 'aprvStatUpdtDt', width: '15%' },
       { text: '생성일시', sortable: false, align: 'center', value: 'cretDt', width: '15%' },

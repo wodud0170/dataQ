@@ -1,19 +1,13 @@
 <template>
   <v-main>
     <Split direction="vertical" :style="{ overflow: 'hidden' }">
-      <SplitArea :size="50" :style="{ overflow: 'hidden', position: 'relative' }">
+      <SplitArea :size="100" :style="{ overflow: 'hidden', position: 'relative' }">
         <!-- 검색과 버튼 영역 -->
         <v-sheet class="splitTopWrapper pt-4 pb-4"
           v-bind:style="[isMobile ? { 'flex-direction': 'column' } : { 'flex-direction': 'row' }]">
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px' }">
-              <span :style="{ fontSize: '.875rem' }">시스템명</span>
-              <!-- 시스템명 입력 필드 -->
-              <v-text-field class="pr-4 pl-4" v-model="searchSystem" v-on:keyup.enter="getDataModelStatsList"
-                @click:clear="clearSystemMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
-                color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
-              </v-text-field>
               <span :style="{ fontSize: '.875rem' }">모델명</span>
               <!-- 모델명 입력 필드 -->
               <v-text-field class="pr-4 pl-4" v-model="searchModel" v-on:keyup.enter="getDataModelStatsList"
@@ -68,53 +62,41 @@
             <tr>
               <td v-for="(c, ci) in getRows(props.item)" :key="ci"
                 :style="{ padding: '0px', backgroundColor: '#ffffff' }">
-                <!-- 클릭 가능한 요소 생성 -->
-                <span v-if="ci === 'dataModelNm'" class="ndColor--text" :style="{ cursor: 'pointer', margin: '0px 16px' }"
-                  @click="showDetail(props.item)">{{ c }}</span>
-                <!-- 시스템명 -->
-                <span v-else-if="ci === 'dataModelSysNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
+                <span v-if="ci === 'dataModelNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
                 <!-- 데이터 소스 -->
                 <span v-else-if="ci === 'dataModelDsNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
                 <!-- 테이블 개수 -->
                 <span v-else-if="ci === 'objCnt'" :style="{ margin: '0px 16px' }">{{ c }}</span>
                 <!-- 컬럼 개수 -->
                 <span v-else-if="ci === 'attrCnt'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                <!-- 수집일시 셀 - 버튼 추가 -->
-                <template v-else-if="ci === 'clctDt'">
-                  <div :style="{ display: 'flex', alignItems: 'center', justifyContent: 'space-around' }">
-                    <span :style="{ margin: '0px 16px', width: 'calc(100% - 40px)' }">{{ c }}</span>
-                    <!-- 수집일시 데이터가 없으면 선택 버튼 보이지 않기 -->
-                    <v-btn v-if="c.length > 0" class="gradient" title="수집일시" v-on:click="showCltList(props.item)"
-                      :style="{ width: '40px', height: '25px !important', padding: '0 5px', minWidth: '45px', marginRight: '16px !important' }">선택</v-btn>
-                  </div>
-                </template>
-                <!-- 구조 진단 -->
-                <template v-else-if="ci === 'structDiag'">
-                  <div :style="{ textAlign: 'center', padding: '4px 8px' }">
-                    <v-chip v-if="props.item.structDiagYn === 'Y'" x-small color="green" text-color="white" :title="'구조진단 ' + props.item.structDiagDt">
-                      <v-icon x-small left>mdi-check</v-icon>일치
-                    </v-chip>
-                    <v-chip v-else-if="props.item.structDiagDt" x-small color="orange" text-color="white" :title="'구조진단 ' + props.item.structDiagDt">
-                      <v-icon x-small left>mdi-alert</v-icon>불일치
-                    </v-chip>
-                    <span v-else class="grey--text text-caption">미진단</span>
-                    <div v-if="props.item.structDiagDt" class="text-caption grey--text" style="font-size:.65rem;">{{ props.item.structDiagDt }}</div>
-                  </div>
-                </template>
-                <!-- 표준 준수율 -->
+                <!-- 수집일시 -->
+                <span v-else-if="ci === 'clctDt'" :style="{ margin: '0px 16px' }">{{ c || '-' }}</span>
+                <!-- 최신 표준화 진단일시 -->
+                <span v-else-if="ci === 'diagDt'" :style="{ margin: '0px 16px' }">{{ c || '-' }}</span>
+                <!-- 최신 구조변경 진단일시 -->
+                <span v-else-if="ci === 'structDiagDt'" :style="{ margin: '0px 16px' }">{{ c || '-' }}</span>
+                <!-- 표준화 준수율 -->
                 <template v-else-if="ci === 'diagStndRate'">
                   <div :style="{ textAlign: 'center', padding: '4px 8px' }">
                     <template v-if="props.item.diagDt">
                       <v-chip x-small :color="props.item.diagStndRate >= 90 ? 'green' : props.item.diagStndRate >= 70 ? 'orange' : 'red'" text-color="white">
                         {{ props.item.diagStndRate }}%
                       </v-chip>
-                      <div class="text-caption grey--text" style="font-size:.65rem;">{{ props.item.diagDt }}</div>
                     </template>
                     <span v-else class="grey--text text-caption">미진단</span>
                   </div>
                 </template>
-                <!-- 버전 -->
-                <span v-else-if="ci === 'ver'" :style="{ margin: '0px 16px' }">{{ c }}</span>
+                <!-- 구조진단 일치율 -->
+                <template v-else-if="ci === 'structDiagRate'">
+                  <div :style="{ textAlign: 'center', padding: '4px 8px' }">
+                    <template v-if="props.item.structDiagRate != null">
+                      <v-chip x-small :color="props.item.structDiagRate >= 90 ? 'green' : props.item.structDiagRate >= 70 ? 'orange' : 'red'" text-color="white">
+                        {{ props.item.structDiagRate }}%
+                      </v-chip>
+                    </template>
+                    <span v-else class="grey--text text-caption">미진단</span>
+                  </div>
+                </template>
                 <!-- 일반 아이템 -->
                 <!-- <span v-else :style="{ margin: '0px 16px' }">{{ c }}</span> -->
               </td>
@@ -140,306 +122,10 @@
           </div>
         </v-sheet>
       </SplitArea>
-      <SplitArea :size="50" :style="{ overflow: 'hidden', position: 'relative' }">
-        <v-sheet>
-          <!-- 논리/물리 모델 전환 + 탭 -->
-          <v-sheet class="d-flex align-center" style="background-color: rgba(0,0,0,0.1);">
-            <v-tabs :value="this.detailTab" class="tabsStyle" background-color="transparent" style="flex: 1;">
-              <v-tab v-for="item in detailTab" :tabindex="item.index" :key="item.index" class="tabBgColor"
-                active-class="activeTabBgColor" v-on:click.stop="addActiveDetail(item.name, item.index)"
-                :style="{ borderRight: '1px solid rgba(255,255,255, 0.4) !important' }">
-                {{ item.title }}
-              </v-tab>
-            </v-tabs>
-            <v-btn-toggle v-model="modelViewMode" mandatory dense class="mr-2" style="height:30px;">
-              <v-btn x-small value="physical" :color="modelViewMode === 'physical' ? 'indigo' : ''" :dark="modelViewMode === 'physical'">물리</v-btn>
-              <v-btn x-small value="logical" :color="modelViewMode === 'logical' ? 'indigo' : ''" :dark="modelViewMode === 'logical'">논리</v-btn>
-            </v-btn-toggle>
-          </v-sheet>
-        </v-sheet>
-        <!-- 탭별 콘텐츠 -->
-        <v-sheet v-if="activeDetailTab === 'tab1'" class="tabContentsWrapper">
-          <!-- 테이블 탭 콘텐츠 -->
-          <div class="split_bottom" v-if="selectedItem.length != 0">
-            <v-sheet class="splitBottomWrapper"></v-sheet>
-            <!-- 테이블 -->
-            <v-sheet class="tabContents">
-              <v-sheet class="splitTopWrapper"
-                v-bind:style="[isMobile ? { 'flex-direction': 'column' } : { 'flex-direction': 'row' }]"
-                :style="{ justifyContent: 'flex-start' }">
-                <!-- 타이틀 -->
-                <v-sheet class="splitBottomSpanWrapper px-4 pt-4 pb-4 font-weight-bold">
-                  <span class="splitBottomSpan"
-                    :style="{ maxWidth: '88%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }">'{{
-                      detailDataModelName
-                    }}'</span>
-                  <span class="splitBottomSpan" :style="{ minWidth: '20%' }"> &nbsp;테이블 정보</span>
-                </v-sheet>
-
-                <!-- 검색 -->
-                <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-                  <v-row :style="{ alignItems: 'center', margin: '0px' }">
-                    <span :style="{ fontSize: '.875rem' }">테이블명</span>
-                    <!-- 테이블명 입력 필드 -->
-                    <v-text-field class="pr-4 pl-4" v-model="searchTable" v-on:keyup.enter="getDataModelObjListByObjNm"
-                      @click:clear="clearScTableMessage" clearable prepend-icon="" clear-icon="mdi-close-circle"
-                      type="text" color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
-                    </v-text-field>
-                    <!-- 검색 버튼 -->
-                    <v-btn class="gradient" title="검색" v-on:click="getDataModelObjListByObjNm"
-                      :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
-                  </v-row>
-                </v-sheet>
-
-                <!-- 다운로드 버튼 -->
-                <v-sheet class="pr-4 pl-4" :style="{ marginLeft: 'auto' }">
-                  <v-btn class="gradient" v-on:click="tableDataDownload()">다운로드</v-btn>
-                </v-sheet>
-              </v-sheet>
-              <!-- 테이블 데이터 목록 -->
-              <v-data-table id="dmTable_table" :headers="currentTableHeaders" :items="dmTableItems" :page.sync="tb_page"
-                :items-per-page="tb_itemsPerPage" hide-default-footer item-key="tableid" class="px-4 pb-3"
-                :loading="tb_loadTable" loading-text="잠시만 기다려주세요.">
-                <!-- 클릭 가능한 아이템 설정 : 테이블 한글명  -->
-                <!-- <template v-slot:[`item.objNmKr`]="{ item }">
-                  <span class="ndColor--text" :style="{ cursor: 'pointer' }">{{
-                    item.objNmKr
-                  }}</span>
-                </template> -->
-                <!-- 데이터 없음 -->
-                <template #top>
-                  <v-progress-linear v-show="tb_loadTable" color="indigo darken-2" indeterminate />
-                </template>
-                <template #no-data>
-                  <v-alert v-show="!tb_loadTable">
-                    데이터가 존재하지 않습니다.
-                  </v-alert>
-                  <span v-show="tb_loadTable">잠시만 기다려주세요.</span>
-                </template>
-              </v-data-table>
-
-              <v-sheet class="dmTable_table_wrap">
-                <!-- 페이지네이션 -->
-                <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="tb_pageCount > 1">
-                  <v-pagination v-model="tb_page" :length="tb_pageCount" prev-icon="mdi-menu-left"
-                    next-icon="mdi-menu-right" color="ndColor" :total-visible="10"></v-pagination>
-                </div>
-              </v-sheet>
-            </v-sheet>
-          </div>
-        </v-sheet>
-        <v-sheet v-else class="tabContentsWrapper">
-          <!-- 컬럼 탭 콘텐츠 -->
-          <div class="split_bottom" v-if="selectedItem.length != 0">
-            <v-sheet class="splitBottomWrapper"></v-sheet>
-            <!-- 테이블 -->
-            <v-sheet class="tabContents">
-              <v-sheet class="splitTopWrapper" :style="{ justifyContent: 'flex-start' }"
-                v-bind:style="[isMobile ? { 'flex-direction': 'column' } : { 'flex-direction': 'row' }]">
-                <v-sheet class="splitBottomSpanWrapper px-4 pt-4 pb-4 font-weight-bold">
-                  <span class="splitBottomSpan"
-                    :style="{ maxWidth: '88%', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }">'{{
-                      detailDataModelName
-                    }}'</span>
-                  <span class="splitBottomSpan" :style="{ minWidth: '20%' }"> &nbsp;컬럼 정보</span>
-                </v-sheet>
-                <!-- 검색 -->
-                <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-                  <v-row :style="{ alignItems: 'center', margin: '0px' }">
-                    <!-- 테이블명 입력 필드 -->
-                    <span :style="{ fontSize: '.875rem' }">테이블명</span>
-                    <v-text-field class="pr-4 pl-4" v-model="searchTable"
-                      v-on:keyup.enter="getDataModelAttrListByRetreiveCond()" @click:clear="clearScTableMessage" clearable
-                      prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor" single-line dense outlined
-                      hide-details :style="{ width: '200px' }">
-                    </v-text-field>
-                    <!-- 컬럼명 입력 필드 -->
-                    <span :style="{ fontSize: '.875rem' }">컬럼명</span>
-                    <v-text-field class="pr-4 pl-4" v-model="searchColumn"
-                      v-on:keyup.enter="getDataModelAttrListByRetreiveCond()" @click:clear="clearScColumnMessage"
-                      clearable prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor" single-line
-                      dense outlined hide-details :style="{ width: '200px' }">
-                    </v-text-field>
-                    <!-- 체크박스 -->
-                    <span :style="{ fontSize: '.875rem', paddingRight:'15px' }">표준여부</span>
-                    <v-checkbox class="checkboxStyle" hide-details v-model="statusListArray" label="표준" color="ndColor" value="Y"></v-checkbox>
-                    <v-checkbox class="checkboxStyle" hide-details v-model="statusListArray" label="비표준" color="ndColor" value="N"></v-checkbox>
-                    <!-- 검색 버튼 -->
-                    <v-btn class="gradient" title="검색" v-on:click="getDataModelAttrListByRetreiveCond()"
-                      :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
-                  </v-row>
-                </v-sheet>
-                <!-- 다운로드 버튼 -->
-                <v-sheet class="pr-4 pl-4" :style="{ marginLeft: 'auto' }">
-                  <v-btn class="gradient" v-on:click="columnDataDownload()">다운로드</v-btn>
-                </v-sheet>
-
-              </v-sheet>
-              <!-- 컬럼 목록 -->
-              <v-data-table id="clTable_table" :headers="currentColumnHeaders" :items="dmColumnItems"
-                :page.sync="cl_page" :items-per-page="cl_itemsPerPage" hide-default-footer hide-default-header
-                item-key="tableid" class="px-4 pb-3" :loading="cl_loadTable" loading-text="잠시만 기다려주세요.">
-
-                <!-- thead -->
-                <template #header="">
-                  <!-- <template v-slot:header="{props}"> -->
-                  <thead class="v-data-table-header">
-                    <tr>
-                      <th v-for="(h, i) in currentColumnHeaders" :key="i"
-                        class="text-center parent-header td-border-style" :rowspan="h.children ? 1 : 2"
-                        :colspan="h.children ? h.children.length : 1">
-                        <pre>{{ h.text }}</pre>
-                      </th>
-                    </tr>
-                    <tr>
-                      <!-- sub thead -->
-                      <th v-for="(h1, i1) in clTb_getSubHeader(currentColumnHeaders)" :key="i1"
-                        class="text-center child-header td-border-style"
-                        :style="{ borderTop: '0px', borderLeft: '0px', backgroundColor: 'rgba(63, 81, 181, 0.08)' }">
-                        <pre>{{ h1.text }}</pre>
-                      </th>
-                    </tr>
-                  </thead>
-                </template>
-                <template #item="props">
-                  <tr>
-                    <td v-for="(c, ci) in clTb_getRows(props.item)" :key="ci"
-                      :style="{ padding: '0px', backgroundColor: '#ffffff' }">
-                      <!-- 테이블명 -->
-                      <span v-if="ci === 'objNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                      <!-- 테이블 한글명 -->
-                      <span v-else-if="ci === 'objNmKr'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                      <!-- 컬럼명 -->
-                      <span v-else-if="ci === 'attrNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                      <!-- 컬럼 한글명 -->
-                      <span v-else-if="ci === 'attrNmKr'" class="ndColor--text"
-                        :style="{ cursor: 'pointer', margin: '0px 16px' }" @click="showTermData(props.item)">{{ c
-                        }}</span>
-                      <!-- 데이터 타입 -->
-                      <span v-else-if="ci === 'dataType'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                      <!-- 데이터 길이 -->
-                      <span v-else-if="ci === 'dataLen'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                      <!-- 데이터 소수점 길이 -->
-                      <span v-else-if="ci === 'dataDecimalLen'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                      <!-- Null 여부 -->
-                      <p v-else-if="ci === 'nullableYn'" :style="{ textAlign: 'center', margin: '0px 16px' }">{{ c }}</p>
-
-                      <!-- [숨김] 수집 시 표준검사 제거에 따라 표준여부 셀 비활성화 — 원복 시 주석 해제 -->
-                      <!-- <template v-else-if="ci === 'termsStndYn'">
-                        <p :style="{ textAlign: 'center', margin: '0px 5px' }">{{ c }}</p>
-                      </template>
-                      <template v-else-if="ci === 'domainStndYn'">
-                        <p :style="{ textAlign: 'center', margin: '0px 5px' }">{{ c }}</p>
-                      </template>
-                      <template v-else-if="ci === 'wordLst'">
-                        <p v-for="(line, index) in c" :key="index" :style="{ textAlign: 'center', margin: '0px 5px' }">
-                          {{ line }}
-                        </p>
-                      </template> -->
-
-                      <!-- PK 여부 -->
-                      <p v-else-if="ci === 'pkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
-                      <!-- FK 여부 -->
-                      <p v-else-if="ci === 'fkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
-                      <!-- 디폴트 값 -->
-                      <span v-else-if="ci === 'defaultVal'" :style="{ margin: '0px 16px' }">{{ c }}</span>
-                    </td>
-                  </tr>
-                </template>
-
-                <!-- 클릭 가능한 아이템 설정 : 테이블명  -->
-                <template v-slot:[`item.attrNmKr`]="{ item }">
-                  <span class="ndColor--text" :style="{ cursor: 'pointer' }">{{
-                    item.attrNmKr
-                  }}</span>
-                </template>
-
-                <!-- 데이터 없음 -->
-                <template #top>
-                  <v-progress-linear v-show="cl_loadTable" color="indigo darken-2" indeterminate />
-                </template>
-                <template #no-data>
-                  <v-alert v-show="!cl_loadTable">
-                    데이터가 존재하지 않습니다.
-                  </v-alert>
-                  <span v-show="cl_loadTable">잠시만 기다려주세요.</span>
-                </template>
-              </v-data-table>
-
-              <v-sheet class="dmTable_table_wrap">
-                <!-- 페이지네이션 -->
-                <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="cl_pageCount > 1">
-                  <v-pagination v-model="cl_page" :length="cl_pageCount" prev-icon="mdi-menu-left"
-                    next-icon="mdi-menu-right" color="ndColor" :total-visible="10"></v-pagination>
-                </div>
-              </v-sheet>
-            </v-sheet>
-          </div>
-        </v-sheet>
-
-      </SplitArea>
     </Split>
 
-    <!-- show DataModel Collection Date List Modal -->
-    <v-dialog max-width="800" v-model="showDmCltDateModal">
-      <NdModal id="dmCltDateModal" @hide="hideModal('dmCdl')" @submit="submitDialog('dmCdl')" :footer-submit="true"
-        header-title="데이터모델 수집 목록 선택" footer-hide-title="취소" footer-submit-title="확인">
-        <template v-slot:body>
-          <v-container fluid :style="{ padding: '0', height: '100%' }">
-            <v-row :style="{ alignItems: 'center', margin: '0px' }">
-              <v-col cols="2">
-                <v-subheader>조회 기간</v-subheader>
-              </v-col>
-              <v-col cols="6">
-                <v-menu ref="dmCdlPicker" v-model="dmCdlPicker" :close-on-content-click="false"
-                  :return-value.sync="dmCdlDate" transition="scale-transition" offset-y min-width="auto" color="ndColor">
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-text-field hide-details v-model="dateRangeText" color="ndColor" prepend-icon="mdi-calendar"
-                      readonly dense v-bind="attrs" v-on="on"></v-text-field>
-                  </template>
-                  <v-date-picker id="dmcltPicker" no-title range show-current color="ndColor" v-model="dmCdlDate"
-                    scrollable>
-                    <v-spacer></v-spacer>
-                    <v-btn text color="ndColor" @click="dmCdlPicker = false">
-                      취소
-                    </v-btn>
-                    <v-btn text color="ndColor" @click="$refs.dmCdlPicker.save(dmCdlDate)">
-                      저장
-                    </v-btn></v-date-picker>
-                </v-menu>
+    <!-- 하단 상세 제거됨: 테이블/컬럼 상세는 별도 메뉴에서 확인 가능 -->
 
-              </v-col>
-              <!-- 검색 버튼 -->
-              <v-col cols="2" :style="{ marginBottom: '15px' }">
-                <v-btn class="gradient" title="검색" v-on:click="searchDataModelClctList()"
-                  :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
-              </v-col>
-            </v-row>
-            <!-- 테이블 영역 -->
-            <v-sheet class="dmCdlList_table_wrap">
-              <v-data-table id="dmCdlList_table" :headers="dmCdlListHeaders" :items="dmCdlListItems" :single-select="true"
-                v-model="dmCdlListSelected" :page.sync="dmCdl_page" :items-per-page="dmCdl_itemsPerPage"
-                hide-default-footer show-select item-key="index" class="px-4 pb-3">
-                <!-- 데이터 없음 -->
-                <template v-slot:no-data>
-                  <v-alert>
-                    데이터가 존재하지 않습니다.
-                  </v-alert>
-                </template>
-              </v-data-table>
-            </v-sheet>
-            <v-sheet class="pagination_wrapper">
-              <!-- 페이지네이션 -->
-              <div class="text-center px-4 pt-4 pb-4 pagination_wrap">
-                <!-- <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="dmCdl_pageCount > 1"> -->
-                <v-pagination v-model="dmCdl_page" :length="dmCdl_pageCount" prev-icon="mdi-menu-left"
-                  next-icon="mdi-menu-right" color="ndColor" :total-visible="10"></v-pagination>
-              </div>
-            </v-sheet>
-          </v-container>
-        </template>
-      </NdModal>
-    </v-dialog>
 
     <!-- term data Modal -->
     <v-dialog max-width="800" v-model="termDataModalShow">
@@ -588,15 +274,15 @@ export default {
     termDataModalShow: false,
     // 상단 테이블 헤더
     dataModelHeaders: [
-      { text: '데이터\n모델명', align: 'center', sortable: false, value: 'dataModelNm' },
-      { text: '시스템명', sortable: false, align: 'center', value: 'dataModelSysNm' },
+      { text: '데이터 모델명', align: 'center', sortable: false, value: 'dataModelNm' },
       { text: '데이터소스', sortable: false, align: 'center', value: 'dataModelDsNm' },
       { text: '테이블\n개수', sortable: false, align: 'center', value: 'objCnt' },
       { text: '컬럼\n개수', sortable: false, align: 'center', value: 'attrCnt' },
-      { text: '수집일시', sortable: false, align: 'center', value: 'clctDt' },
-      { text: '구조\n진단', sortable: false, align: 'center', value: 'structDiag' },
-      { text: '표준\n준수율', sortable: false, align: 'center', value: 'diagStndRate' },
-      { text: '버전', sortable: false, align: 'center', value: 'ver' },
+      { text: '최신\n수집일시', sortable: false, align: 'center', value: 'clctDt' },
+      { text: '최신\n표준화 진단일시', sortable: false, align: 'center', value: 'diagDt' },
+      { text: '최신\n구조변경 진단일시', sortable: false, align: 'center', value: 'structDiagDt' },
+      { text: '표준화\n준수율', sortable: false, align: 'center', value: 'diagStndRate' },
+      { text: '구조진단\n일치율', sortable: false, align: 'center', value: 'structDiagRate' },
     ],
     // 탭 활성화
     activeDetailTab: 'tab1',
@@ -654,7 +340,6 @@ export default {
       { text: '담당기관명', sortable: false, align: 'center', value: 'chrgOrg', width: '15%' },
       { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn', width: '15%' },
       { text: '제정차수', sortable: false, align: 'center', value: 'magntdOrd', width: '15%' },
-      { text: '요청시스템', sortable: false, align: 'center', value: 'reqSysNm', width: '15%' },
       { text: '승인여부', sortable: false, align: 'center', value: 'aprvYn', width: '15%' },
       { text: '승인상태수정일시', sortable: false, align: 'center', value: 'aprvStatUpdtDt', width: '15%' },
       { text: '생성일시', sortable: false, align: 'center', value: 'cretDt', width: '15%' },
@@ -915,25 +600,10 @@ export default {
       return result;
     },
     getRows(rows) {
+      const keyOrder = ['dataModelNm', 'dataModelDsNm', 'objCnt', 'attrCnt', 'clctDt', 'diagDt', 'structDiagDt', 'diagStndRate', 'structDiagRate'];
       const result = {};
-      _.forEach(rows, (i, key) => {
-        // value가 null인경우 오류 발생. ''로 변경
-        if (i === null) {
-          i = '';
-        }
-        if (i.children) {
-          _.forEach(i.children, (i1, key1) => {
-            result["c" + key1] = i1;
-          });
-        } else {
-          // 테이블 헤더에 있는 값만 가져오기
-          if (key === 'dataModelNm' || key === 'dataModelSysNm' || key === 'dataModelDsNm' || key === 'objCnt' || key === 'attrCnt' ||
-            key === 'clctDt' || key === 'ver') {
-            result[key] = i
-          } else {
-            return;
-          }
-        };
+      keyOrder.forEach(key => {
+        result[key] = rows[key] != null ? rows[key] : '';
       });
       return result;
     },
@@ -1107,16 +777,10 @@ export default {
           schNm = this.searchModel
         }
 
-        let schSysNm = null;
-        if (this.searchSystem !== '') {
-          schSysNm = this.searchSystem
-        }
-
         let _url = this.$APIURL.base + "api/dm/getDataModelStatsList";
 
         axios.post(_url, {
-          'schNm': schNm,
-          'schSysNm': schSysNm
+          'schNm': schNm
         }).then((res) => {
           console.log(res.data)
 
@@ -1129,16 +793,14 @@ export default {
             let _obj = {};
 
             _obj.dataModelNm = _data[i].dataModelNm;
-            _obj.dataModelSysNm = _data[i].dataModelSysNm;
             _obj.dataModelDsNm = _data[i].dataModelDsNm;
             _obj.objCnt = _data[i].dataModelStats ? _data[i].dataModelStats.objCnt : 0;
             _obj.attrCnt = _data[i].dataModelStats ? _data[i].dataModelStats.attrCnt : 0;
             _obj.clctDt = _data[i].dataModelStats ? _data[i].dataModelStats.clctDt : '';
-            _obj.structDiagYn = _data[i].structDiagYn || 'N';
+            _obj.diagDt = _data[i].diagDt || '';
             _obj.structDiagDt = _data[i].structDiagDt || '';
             _obj.diagStndRate = _data[i].diagStndRate || 0;
-            _obj.diagDt = _data[i].diagDt || '';
-            _obj.ver = _data[i].ver;
+            _obj.structDiagRate = _data[i].structDiagRate >= 0 ? _data[i].structDiagRate : null;
             _obj.dataModelId = _data[i].dataModelId;
             _obj.clctId = _data[i].dataModelStats ? _data[i].dataModelStats.clctId : '';
 
@@ -1279,12 +941,10 @@ export default {
           for (let i = 0; i < this.dmStatusItems.length; i++) {
             if (this.dmStatusItems[i].dataModelId === _data.dataModelStats.dataModelId) {
               this.dmStatusItems[i].dataModelNm = _data.dataModelNm;
-              this.dmStatusItems[i].dataModelSysNm = _data.dataModelSysNm;
               this.dmStatusItems[i].dataModelDsNm = _data.dataModelDsNm;
               this.dmStatusItems[i].objCnt = _data.dataModelStats ? _data.dataModelStats.objCnt : 0;
               this.dmStatusItems[i].attrCnt = _data.dataModelStats ? _data.dataModelStats.attrCnt : 0;
               this.dmStatusItems[i].clctDt = _data.dataModelStats ? _data.dataModelStats.clctDt : '';
-              this.dmStatusItems[i].ver = _data.ver;
               this.dmStatusItems[i].dataModelId = _data.dataModelId;
               this.dmStatusItems[i].clctId = _data.dataModelStats ? _data.dataModelStats.clctId : '';
             }

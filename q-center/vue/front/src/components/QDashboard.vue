@@ -58,17 +58,18 @@
         </div>
         <v-sheet class="chartWrapper_2">
           <!-- 모델 -->
-          <v-card class="std-card std-card--sm">
+          <v-card class="std-card std-card--sm std-card--clickable" @click="goToModelStatus">
             <div class="std-card__icon std-card__icon--sm" style="background: linear-gradient(135deg, #3F51B5, #7986CB);">
               <v-icon dark>mdi-database</v-icon>
             </div>
             <div class="std-card__content">
               <div class="std-card__label">모델</div>
-              <div class="std-card__value std-card__value--sm">{{ dataModelCnt }}<span class="std-card__unit">건</span></div>
+              <div class="std-card__value" style="font-size:.95rem;" v-if="selectedModelNm">{{ selectedModelNm }}</div>
+              <div class="std-card__value std-card__value--sm" v-else>{{ dataModelCnt }}<span class="std-card__unit">건</span></div>
             </div>
           </v-card>
           <!-- 테이블 -->
-          <v-card class="std-card std-card--sm">
+          <v-card class="std-card std-card--sm std-card--clickable" @click="goToTable">
             <div class="std-card__icon std-card__icon--sm" style="background: linear-gradient(135deg, #303F9F, #7986CB);">
               <v-icon dark>mdi-table</v-icon>
             </div>
@@ -78,7 +79,7 @@
             </div>
           </v-card>
           <!-- 컬럼 -->
-          <v-card class="std-card std-card--sm">
+          <v-card class="std-card std-card--sm std-card--clickable" @click="goToColumn">
             <div class="std-card__icon std-card__icon--sm" style="background: linear-gradient(135deg, #283593, #7986CB);">
               <v-icon dark>mdi-view-column</v-icon>
             </div>
@@ -106,7 +107,7 @@
 
           <!-- 진단 추이 -->
           <div class="donut-chart-wrapper" style="flex:1.3;">
-            <div class="donut-chart-title">진단 준수율 추이</div>
+            <div class="donut-chart-title">표준 진단 준수율 추이</div>
             <apexchart type="line" height="170" :options="diagTrendOptions" :series="diagTrendSeries"
               :key="diagTrendKey"></apexchart>
           </div>
@@ -221,6 +222,7 @@
 
 <script>
 import axios from "axios";
+import { eventBus } from '../eventBus';
 import VueApexCharts from 'vue-apexcharts'
 
 export default {
@@ -245,6 +247,8 @@ export default {
     attrCnt: 0,
     modelList: [],
     selectedModelId: null,
+    selectedModelNm: '',
+    selectedClctId: null,
     //
     term_series: [],
     word_series: [],
@@ -433,8 +437,6 @@ export default {
     // 대시보드 메뉴 선택 시 호출
     this.getDashboardInfo();
     this.loadModelList();
-    this.getDataModelStat();
-    this.getDiagTrend();
     this.getRecentChangeHistory();
   },
   mounted() {
@@ -450,6 +452,8 @@ export default {
           if (self.modelList.length > 0 && !self.selectedModelId) {
             self.selectedModelId = self.modelList[0].dataModelId;
           }
+          self.getDataModelStat();
+          self.getDiagTrend();
         });
       } catch (e) { console.error(e); }
     },
@@ -506,6 +510,8 @@ export default {
             }
           }
           self.dataModelCnt = filtered.length;
+          self.selectedModelNm = (self.selectedModelId && filtered.length === 1) ? filtered[0].dataModelNm : '';
+          self.selectedClctId = (filtered.length === 1 && filtered[0].dataModelStats) ? filtered[0].dataModelStats.clctId : null;
           self.objCnt = totalObj;
           self.attrCnt = totalAttr;
           var avgRate = stndRateCnt > 0 ? Math.round(totalStndRate / stndRateCnt * 10) / 10 : 0;
@@ -538,13 +544,18 @@ export default {
       } catch (e) { console.error(e); }
     },
     getDiagTrend() {
+      if (!this.selectedModelId) {
+        this.diagTrendSeries = [{ name: '준수율', data: [] }];
+        this.diagTrendKey++;
+        return;
+      }
       try {
         var self = this;
         axios.post(self.$APIURL.base + "api/diag/getDiagJobList", {}).then(function(result) {
           var jobs = (result.data || [])
             .filter(function(j) {
               if (j.status !== 'DONE' || j.totalCnt <= 0) return false;
-              if (self.selectedModelId && j.dataModelId !== self.selectedModelId) return false;
+              if (j.dataModelId !== self.selectedModelId) return false;
               return true;
             })
             .slice(0, 5)
@@ -554,7 +565,7 @@ export default {
             var data = [];
             for (var i = 0; i < jobs.length; i++) {
               var j = jobs[i];
-              var rate = Math.round((1 - j.resultCnt / j.totalCnt) * 100 * 10) / 10;
+              var rate = Math.round((j.totalCnt - j.issueColCnt) / j.totalCnt * 100 * 10) / 10;
               var dt = j.endDt || j.startDt || '';
               categories.push(dt.substring(5, 10) || ('#' + (i + 1)));
               data.push(rate);
@@ -601,6 +612,28 @@ export default {
     getTargetTypeLabel(type) {
       var map = { 'WORD': '단어', 'TERM': '용어', 'DOMAIN': '도메인', 'CODE': '코드', 'CODE_DATA': '코드데이터' };
       return map[type] || type;
+    },
+    goToModelStatus() {
+      this.addTabItem('현황', 'datamodelStatus');
+    },
+    goToTable() {
+      if (this.selectedModelId && this.selectedClctId) {
+        eventBus.pendingTableView = {
+          modelId: this.selectedModelId,
+          clctId: this.selectedClctId,
+        };
+      }
+      this.addTabItem('테이블', 'datamodelStatusTable');
+    },
+    goToColumn() {
+      if (this.selectedModelId && this.selectedClctId) {
+        eventBus.pendingColumnView = {
+          modelId: this.selectedModelId,
+          clctId: this.selectedClctId,
+          tableNm: '',
+        };
+      }
+      this.addTabItem('컬럼', 'datamodelStatusColumn');
     },
     addTabItem(title, name) {
       // 1. 탭과 네비게이션을 동기화
@@ -743,6 +776,13 @@ export default {
 
 .std-card--sm {
   height: calc(80% - 16px);
+}
+.std-card--clickable {
+  cursor: pointer;
+  transition: box-shadow .2s;
+}
+.std-card--clickable:hover {
+  box-shadow: 0 4px 12px rgba(63,81,181,.3) !important;
 }
 
 /* ===== 2. 데이터 모델 현황 ===== */

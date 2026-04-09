@@ -32,7 +32,7 @@
 
           <!-- Direct text input -->
           <v-textarea v-model="inputText" outlined auto-grow rows="6"
-            placeholder="한글명을 줄바꿈으로 구분하여 입력하세요&#10;예:&#10;기준일자&#10;사용자코드명&#10;월별정산금액"
+            placeholder="한글명을 줄바꿈으로 구분하여 입력하세요, 공백은 무시됩니다"
             label="직접 입력 (줄바꿈 구분)" color="ndColor"
             @paste="onPaste">
           </v-textarea>

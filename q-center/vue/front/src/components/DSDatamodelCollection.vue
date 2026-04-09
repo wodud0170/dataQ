@@ -1,5 +1,9 @@
 <template>
   <v-main>
+    <v-sheet class="pa-2 d-flex align-center" style="background:#F5F7FA; border-bottom:1px solid #E8EAF6;">
+      <v-icon small color="#3F51B5" class="mr-2">mdi-information-outline</v-icon>
+      <span style="font-size:.8rem; color:#546E7A;">수집 시 시스템 테이블은 제외됩니다.</span>
+    </v-sheet>
     <Split direction="vertical" :style="{ overflow: 'hidden' }">
       <SplitArea :size="50" :style="{ overflow: 'hidden', position: 'relative' }">
         <!-- 검색과 버튼 영역 -->
@@ -8,13 +12,6 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px' }">
-              <!-- 시스템명 입력 필드 -->
-              <span :style="{ fontSize: '.875rem' }">시스템명</span>
-              <v-text-field class="pr-4 pl-4" v-model="searchSystem" v-on:keyup.enter="getDataModel"
-                @click:clear="searchSystem = ''" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
-                color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
-              </v-text-field>
-              <!-- 시스템명 입력 필드 -->
               <span :style="{ fontSize: '.875rem' }">모델명</span>
               <v-text-field class="pr-4 pl-4" v-model="searchModel" v-on:keyup.enter="getDataModel"
                 @click:clear="searchModel = ''" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
@@ -217,21 +214,6 @@
                   color="ndColor"></v-text-field>
               </v-col>
             </v-row>
-            <!-- 시스템명 -->
-            <v-row>
-              <v-col cols="4">
-                <v-subheader class="reqText">시스템명</v-subheader>
-              </v-col>
-              <v-col cols="8">
-
-                <treeselect v-model="add_dataModelSysCd" :multiple="false" :options="dataModelSysList" placeholder="선택" />
-
-                <!-- <v-select dense required color="ndColor" v-model="add_dataModelSysCd" :items="dataModelSysList"
-                  item-text="sysNm" item-value="sysCd" ref="add_dataModelSysCd" :placeholder="'선택'"
-                  name="add_dataModelSysCd" :rules="[v => !!v || '시스템명은 필수 입력값입니다.']"
-                  :menu-props="{ top: false, offsetY: true }" v-on:change="resetDataSourceItems()"></v-select> -->
-              </v-col>
-            </v-row>
             <!-- 데이터 소스 -->
             <v-row>
               <v-col cols="4">
@@ -274,21 +256,6 @@
                 <v-text-field v-model="update_dataModelNm" ref="update_dataModelNm" name="update_dataModelNm"
                   :rules="[() => !!update_dataModelNm || '데이터모델명은 필수 입력값입니다.']" clearable required dense
                   placeholder="데이터모델명" color="ndColor"></v-text-field>
-              </v-col>
-            </v-row>
-            <!-- 시스템명 -->
-            <v-row>
-              <v-col cols="4">
-                <v-subheader class="reqText">시스템명</v-subheader>
-              </v-col>
-              <v-col cols="8">
-                <treeselect v-model="update_dataModelSysCd" :multiple="false" :options="dataModelSysList" placeholder="선택"
-                  ref="update_dataModelSysCd" />
-
-                <!-- <v-select dense required color="ndColor" v-model="update_dataModelSysCd" :items="dataModelSysList"
-                  item-text="sysNm" item-value="sysCd" ref="update_dataModelSysCd" :placeholder="'선택'"
-                  name="update_dataModelSysCd" :rules="[v => !!v || '시스템명은 필수 입력값입니다.']"
-                  :menu-props="{ top: false, offsetY: true }" v-on:change="resetDataSourceItems()"></v-select> -->
               </v-col>
             </v-row>
             <!-- 데이터 소스 -->
@@ -387,7 +354,6 @@ export default {
     // 데이터모델 테이블 헤더
     dataModelHeaders: [
       { text: '데이터 모델명', align: 'center', sortable: false, value: 'dataModelNm' },
-      { text: '시스템명', sortable: false, align: 'center', value: 'dataModelSysNm' },
       { text: '데이터소스', sortable: false, align: 'center', value: 'dataModelDsNm' },
       { text: '버전', sortable: false, align: 'center', value: 'dataModelVer' },
       { text: '수집 시작일시', align: 'center', sortable: false, value: 'clctStartDt' },
@@ -397,7 +363,6 @@ export default {
     // 하단 테이블 헤더
     detaileHeaders: [
       { text: '데이터 모델명', align: 'center', sortable: false, value: 'dataModelNm' },
-      { text: '시스템명', sortable: false, align: 'center', value: 'dataModelSysNm' },
       { text: '데이터소스', sortable: false, align: 'center', value: 'dataModelDsNm' },
       { text: '버전', sortable: false, align: 'center', value: 'dataModelVer' },
       { text: '수집 시작일시', align: 'center', sortable: false, value: 'clctStartDt' },
@@ -793,29 +758,7 @@ export default {
       this.update_dataSource = null;
     },
     getDataSourceList() {
-      let _sysCd = null;
-
-      if (this.addDataModelModal) {
-        _sysCd = this.add_dataModelSysCd;
-
-        // 시스템을 먼저 선택하여 비교 대상이 되는 데이터 소스 리스트 가지고 오기
-        if (!_sysCd) {
-          this.$swal.fire({
-            title: '먼저 시스템을 선택해주세요.',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-          return;
-        }
-      } else if (this.updateDataModelModal) {
-        _sysCd = this.update_dataModelSysCd;
-      }
-
-      axios.get(this.$APIURL.base + "api/sysinfo/getDataSourceListBySysCd", {
-        params: {
-          'sysCd': _sysCd
-        }
-      }).then((res) => {
+      axios.get(this.$APIURL.base + "api/sysinfo/getDataSourceList").then((res) => {
         // console.log(res)
         let _data = res.data;
         let _dataSourceList = [];
@@ -858,8 +801,6 @@ export default {
         if (this.add_dataModelNm === null) {
           _attr = '데이터 모델명은';
           this.$refs.add_dataModelNm.focus()
-        } else if (this.add_dataModelSysCd === null) {
-          _attr = '시스템명은';
         } else if (this.add_dataSource === null) {
           _attr = '데이터 소스는'
           this.$refs.add_dataSource.focus()
@@ -882,8 +823,6 @@ export default {
         if (this.update_dataModelNm === null) {
           _attr = '데이터 모델명은';
           this.$refs.update_dataModelNm.focus()
-        } else if (this.update_dataModelSysCd === null) {
-          _attr = '시스템명은';
         } else if (this.update_dataSource === null || this.update_dataSource === '') {
           _attr = '데이터 소스는'
           this.$refs.update_dataSource.focus()

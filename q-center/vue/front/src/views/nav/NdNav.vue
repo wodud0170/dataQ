@@ -393,13 +393,6 @@
                         <v-list-item-title>데이터 소스</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_system" href="#tab_system" active-class="ndColor--text" title="시스템 정보"
-                        v-on:click.stop=" addTabItem('시스템 정보', 'system'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>시스템 정보</v-list-item-title>
-                    </v-list-item>
                 </v-list-group>
 
                 <!-- 마이페이지 -->
@@ -524,10 +517,14 @@ export default {
         eventBus.$on('openStructDiagResult', () => {
             this.addTabItem('진단 결과', 'structDiagResult');
         });
+        eventBus.$on('openColumnView', () => {
+            this.addTabItem('컬럼', 'datamodelStatusColumn');
+        });
     },
     beforeDestroy() {
         eventBus.$off('openDiagResult');
         eventBus.$off('openStructDiagResult');
+        eventBus.$off('openColumnView');
     }
 }
 </script>

@@ -71,14 +71,15 @@ export default {
       historyLoading: false,
       historyList: [],
       historyHeaders: [
-        { text: '진단일시',   value: 'diagDt',       width: '180px' },
-        { text: '데이터모델', value: 'dataModelNm',   width: '200px' },
-        { text: '상태',       value: 'status',       width: '90px' },
-        { text: '변경건수',   value: 'changeCnt',    width: '100px' },
-        { text: '전체테이블', value: 'totalTables',   width: '100px' },
-        { text: '전체컬럼',   value: 'totalColumns',  width: '100px' },
-        { text: '실행자',     value: 'cretUserId',   width: '120px' },
-        { text: '결과',       value: 'actions',      width: '55px', sortable: false, align: 'center' },
+        { text: '진단일시',       value: 'diagDt',         width: '150px' },
+        { text: '데이터모델',     value: 'dataModelNm',    width: '180px' },
+        { text: '데이터 모델\n수집일시', value: 'prevCollectDt',  width: '160px' },
+        { text: '상태',           value: 'status',         width: '80px' },
+        { text: '변경건수',       value: 'changeCnt',      width: '90px' },
+        { text: '테이블 개수',    value: 'totalTables',    width: '90px' },
+        { text: '컬럼 개수',      value: 'totalColumns',   width: '90px' },
+        { text: '실행자',         value: 'cretUserId',     width: '100px' },
+        { text: '결과',           value: 'actions',        width: '55px', sortable: false, align: 'center' },
       ],
       snackbar: false, snackbarMsg: '', snackbarColor: 'info',
     };
@@ -180,7 +181,8 @@ export default {
         self.historyList = (res.data || []).map(function(h) {
           return {
             diagId: h.diagId, diagDt: h.diagDt, dataModelId: h.dataModelId,
-            dataModelNm: h.dataModelNm || '-', status: h.status || 'DONE',
+            dataModelNm: h.dataModelNm || '-', prevCollectDt: h.prevCollectDt || '-',
+            status: h.status || 'DONE',
             totalTables: h.totalTables || 0, totalColumns: h.totalColumns || 0,
             changeCnt: (h.addedTables||0)+(h.addedColumns||0)+(h.modifiedColumns||0)+(h.deletedTables||0)+(h.deletedColumns||0),
             cretUserId: h.cretUserId,

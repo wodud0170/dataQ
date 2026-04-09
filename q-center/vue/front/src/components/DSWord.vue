@@ -202,16 +202,6 @@
               </v-row>
 
               <v-row>
-                  <v-col cols="4">
-                    <v-subheader>요청 시스템</v-subheader>
-                  </v-col>
-                  <v-col cols="8">
-                    <treeselect v-model="addWord_reqSysCd" :multiple="false" :options="systemNameList" placeholder="선택"
-                  ref="addWord_reqSysCd" />
-                  </v-col>
-                </v-row>
-
-              <v-row>
                 <v-col cols="4">
                   <v-subheader>도메인 분류명</v-subheader>
                 </v-col>
@@ -354,16 +344,6 @@
                   :rules="[() => !!updateWord_wordDesc || '단어 설명은 필수 입력값입니다.']"></v-textarea>
               </v-col>
             </v-row>
-
-            <v-row>
-                  <v-col cols="4">
-                    <v-subheader>요청 시스템</v-subheader>
-                  </v-col>
-                  <v-col cols="8">
-                    <treeselect v-model="updateWord_reqSysCd" :multiple="false" :options="systemNameList" placeholder="선택"
-                  ref="updateWord_reqSysCd" />
-                  </v-col>
-                </v-row>
 
             <v-row>
               <v-col cols="4">
@@ -683,7 +663,6 @@ export default {
       { text: '단어설명', sortable: false, align: 'center', value: 'wordDesc' },
       { text: '형식단어여부', sortable: false, align: 'center', value: 'wordClsfYn' },
       { text: '도메인분류명', sortable: false, align: 'center', value: 'domainClsfNm' },
-      { text: '요청시스템', sortable: false, align: 'center', value: 'reqSysNm' },
       { text: '이음동의어목록', sortable: false, align: 'center', value: 'allophSynmLst' },
       { text: '금칙어목록', sortable: false, align: 'center', value: 'forbdnWordLst' },
       { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn' },

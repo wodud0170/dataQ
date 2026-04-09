@@ -13,6 +13,7 @@ public class StdDiagJobVo {
     private int totalCnt;
     private int processCnt;
     private int resultCnt;
+    private int issueColCnt;      // 이슈가 있는 고유 컬럼 수
     private String cretDt;
     private String cretUserId;
     private String startDt;

@@ -45,6 +45,7 @@
         <result property="totalCnt"     column="TOTAL_CNT"/>
         <result property="processCnt"   column="PROCESS_CNT"/>
         <result property="resultCnt"    column="RESULT_CNT"/>
+        <result property="issueColCnt"  column="ISSUE_COL_CNT"/>
         <result property="cretDt"       column="CRET_DT"/>
         <result property="cretUserId"   column="CRET_USER_ID"/>
         <result property="startDt"      column="START_DT"/>
@@ -103,6 +104,7 @@
             ,J.TOTAL_CNT
             ,J.PROCESS_CNT
             ,J.RESULT_CNT
+            ,COALESCE(IC.ISSUE_COL_CNT, 0) as ISSUE_COL_CNT
             ,to_char(to_timestamp(J.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
             ,J.CRET_USER_ID
             ,to_char(to_timestamp(J.START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as START_DT
@@ -111,6 +113,11 @@
         FROM TB_DIAG_JOB J
         JOIN TB_DATA_MODEL M ON J.DM_ID = M.DM_ID
         JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
+        LEFT JOIN (
+            SELECT DIAG_JOB_ID, COUNT(DISTINCT OBJ_NM || '.' || ATTR_NM) as ISSUE_COL_CNT
+            FROM TB_DIAG_RESULT
+            GROUP BY DIAG_JOB_ID
+        ) IC ON IC.DIAG_JOB_ID = J.DIAG_JOB_ID
         WHERE J.STATUS != 'STOPPED'
         <if test="schNm != null">
             AND M.DM_NM ILIKE '%' || #{schNm} || '%'

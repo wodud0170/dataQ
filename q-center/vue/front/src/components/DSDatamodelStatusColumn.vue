@@ -91,7 +91,8 @@
         <tr>
           <td v-for="(c, ci) in getRows(props.item)" :key="ci"
             :style="{ padding: '0px', backgroundColor: '#ffffff' }">
-            <span v-if="ci === 'objNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
+            <span v-if="ci === 'objOwner'" :style="{ margin: '0px 16px' }">{{ c }}</span>
+            <span v-else-if="ci === 'objNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'objNmKr'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'attrNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'attrNmKr'" class="ndColor--text"
@@ -168,6 +169,7 @@
 
 <script>
 import axios from 'axios';
+import { eventBus } from '../eventBus';
 import NdModal from "./../views/modal/NdModal.vue"
 import _ from "lodash"
 
@@ -204,6 +206,7 @@ export default {
     termDetailItem: [],
     termLoading: false,
     dmColumnDetaileHeaders: [
+      { text: '소유자', align: 'center', sortable: false, value: 'objOwner', width: '100px' },
       { text: '테이블명', align: 'center', sortable: false, value: 'objNm' },
       { text: '테이블 한글명', sortable: false, align: 'center', value: 'objNmKr' },
       { text: '컬럼명', sortable: false, align: 'center', value: 'attrNm' },
@@ -235,7 +238,6 @@ export default {
       { text: '담당기관명', sortable: false, align: 'center', value: 'chrgOrg' },
       { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn' },
       { text: '제정차수', sortable: false, align: 'center', value: 'magntdOrd' },
-      { text: '요청시스템', sortable: false, align: 'center', value: 'reqSysNm' },
       { text: '승인여부', sortable: false, align: 'center', value: 'aprvYn' },
       { text: '승인상태수정일시', sortable: false, align: 'center', value: 'aprvStatUpdtDt' },
       { text: '생성일시', sortable: false, align: 'center', value: 'cretDt' },
@@ -318,7 +320,7 @@ export default {
       return data.map(item => {
         const _wordLst = (item.wordLst || []).map((w, i) => w + " : " + (item.wordStndLst || [])[i]);
         return {
-          objNm: item.objNm, objNmKr: item.objNmKr, attrNm: item.attrNm, attrNmKr: item.attrNmKr,
+          objOwner: item.objOwner, objNm: item.objNm, objNmKr: item.objNmKr, attrNm: item.attrNm, attrNmKr: item.attrNmKr,
           dataType: item.dataType, dataLen: item.dataLen, dataDecimalLen: item.dataDecimalLen,
           nullableYn: item.nullableYn, termsStndYn: item.termsStndYn, domainStndYn: item.domainStndYn,
           wordLst: _wordLst, pkYn: item.pkYn, fkYn: item.fkYn, defaultVal: item.defaultVal,
@@ -357,20 +359,48 @@ export default {
         this.$swal.fire({ title: '컬럼 정보 다운로드 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
       });
     },
+    _applyPendingView(pending) {
+      const apply = () => {
+        this.selectedModelId = pending.modelId;
+        const _to = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
+        const _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
+        axios.post(this.$APIURL.base + "api/dm/getDataModelClctList", {
+          'schId': pending.modelId, 'from': _from, 'to': _to
+        }).then((res) => {
+          const sorted = res.data.slice().sort((a, b) => b.clctStartDt.localeCompare(a.clctStartDt));
+          this.clctList = sorted.map((item, index) => ({
+            ...item,
+            clctDisplayDt: index === 0 ? item.clctStartDt + ' (최신)' : item.clctStartDt,
+          }));
+          this.selectedClctId = pending.clctId;
+          this.searchTable = pending.tableNm || '';
+          this.$nextTick(() => { this.load(); });
+        });
+      };
+      if (this.modelList.length > 0) {
+        apply();
+      } else {
+        axios.post(this.$APIURL.base + "api/dm/getDataModelStatsList", {
+          'schNm': null
+        }).then((res) => {
+          this.modelList = res.data.map(item => ({
+            dataModelId: item.dataModelId,
+            dataModelNm: item.dataModelNm,
+          }));
+          apply();
+        });
+      }
+    },
     getSubHeader(headers) {
       let result = [];
       headers.filter(i => i.children).forEach(v => { result = result.concat(v.children); });
       return result;
     },
     getRows(rows) {
+      const keys = ['objOwner','objNm','objNmKr','attrNm','attrNmKr','dataType','dataLen','dataDecimalLen',
+                     'nullableYn','pkYn','fkYn','defaultVal'];
       const result = {};
-      _.forEach(rows, (i, key) => {
-        if (i === null) i = '';
-        if (['objNm','objNmKr','attrNm','attrNmKr','dataType','dataLen','dataDecimalLen',
-             'nullableYn',/* 'termsStndYn','domainStndYn','wordLst', */ 'pkYn','fkYn','defaultVal'].includes(key)) {
-          result[key] = i;
-        }
-      });
+      keys.forEach(key => { result[key] = rows[key] != null ? rows[key] : ''; });
       return result;
     },
   },
@@ -379,6 +409,13 @@ export default {
   },
   mounted() {
     this.$resizableGrid();
+  },
+  activated() {
+    if (eventBus.pendingColumnView) {
+      const pending = eventBus.pendingColumnView;
+      eventBus.pendingColumnView = null;
+      this._applyPendingView(pending);
+    }
   },
 }
 </script>
