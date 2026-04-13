@@ -112,20 +112,20 @@
                     AND S1.TABLE_NAME IN (SELECT T.TABLE_NAME FROM ALL_TABLES T WHERE T.OWNER = S1.OWNER AND T.TABLESPACE_NAME NOT IN ('SYSTEM','SYSAUX'))
                     AND S1.TABLE_NAME NOT LIKE '%TEMP%' ) A,         
                 (SELECT T1.OWNER, T1.TABLE_NAME, T2.COLUMN_NAME, 'Y' AS POS
-                FROM (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME   
-                                FROM USER_CONSTRAINTS
+                FROM (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME
+                                FROM ALL_CONSTRAINTS
                             WHERE  CONSTRAINT_TYPE = 'P' )T1,
-                                (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME,  COLUMN_NAME, POSITION 
-                                FROM USER_CONS_COLUMNS ) T2
+                                (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME,  COLUMN_NAME, POSITION
+                                FROM ALL_CONS_COLUMNS ) T2
                         WHERE T1.OWNER = T2.OWNER
                             AND T1.TABLE_NAME = T2.TABLE_NAME
                             AND T1.CONSTRAINT_NAME = T2.CONSTRAINT_NAME  ) B,
                 (SELECT DISTINCT T1.OWNER, T1.TABLE_NAME, T2.COLUMN_NAME, 'Y' AS FK_POS
-                FROM (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME   
-                                FROM USER_CONSTRAINTS
+                FROM (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME
+                                FROM ALL_CONSTRAINTS
                             WHERE  CONSTRAINT_TYPE = 'R' )T1,
-                            (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME,  COLUMN_NAME, POSITION 
-                                FROM USER_CONS_COLUMNS ) T2
+                            (SELECT OWNER, TABLE_NAME, CONSTRAINT_NAME,  COLUMN_NAME, POSITION
+                                FROM ALL_CONS_COLUMNS ) T2
                         WHERE T1.OWNER = T2.OWNER
                             AND T1.TABLE_NAME = T2.TABLE_NAME
                             AND T1.CONSTRAINT_NAME = T2.CONSTRAINT_NAME  ) C            
@@ -165,6 +165,69 @@
                 AND     S1.TABLESPACE_NAME NOT IN ('SYSTEM' , 'SYSAUX')
                 AND     UPPER(S1.OWNER) = :owner          -- Owner명 입력
                 ORDER BY objOwner, objNm
+            ]]>
+        </query>
+    </named-native-query>
+
+    <!-- Oracle 인덱스 수집 -->
+    <named-native-query name="OracleGetIndexes">
+        <query>
+            <![CDATA[
+                SELECT
+                    I.OWNER             AS objOwner,
+                    I.TABLE_NAME        AS tableNm,
+                    I.INDEX_NAME        AS indexNm,
+                    I.INDEX_TYPE        AS indexType,
+                    I.UNIQUENESS        AS uniqueness,
+                    IC.COLUMN_NAME      AS columnNm,
+                    IC.COLUMN_POSITION  AS columnPos,
+                    IC.DESCEND          AS sortOrder,
+                    I.TABLESPACE_NAME   AS tablespaceNm
+                FROM ALL_INDEXES I
+                JOIN ALL_IND_COLUMNS IC
+                    ON I.OWNER = IC.INDEX_OWNER
+                    AND I.INDEX_NAME = IC.INDEX_NAME
+                WHERE UPPER(I.OWNER) = :owner
+                    AND I.TABLE_NAME NOT LIKE '%TEMP%'
+                    AND I.TABLE_NAME IN (SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = I.OWNER AND TABLESPACE_NAME NOT IN ('SYSTEM','SYSAUX'))
+                ORDER BY I.TABLE_NAME, I.INDEX_NAME, IC.COLUMN_POSITION
+            ]]>
+        </query>
+    </named-native-query>
+
+    <!-- Oracle 제약조건 수집 -->
+    <named-native-query name="OracleGetConstraints">
+        <query>
+            <![CDATA[
+                SELECT
+                    C.OWNER             AS objOwner,
+                    C.TABLE_NAME        AS tableNm,
+                    C.CONSTRAINT_NAME   AS constraintNm,
+                    C.CONSTRAINT_TYPE   AS constraintType,
+                    CC.COLUMN_NAME      AS columnNm,
+                    CC.POSITION         AS columnPos,
+                    R.OWNER             AS refOwner,
+                    R.TABLE_NAME        AS refTableNm,
+                    RC.COLUMN_NAME      AS refColumnNm,
+                    C.DELETE_RULE        AS deleteRule,
+                    C.STATUS            AS status,
+                    C.SEARCH_CONDITION  AS searchCondition
+                FROM ALL_CONSTRAINTS C
+                JOIN ALL_CONS_COLUMNS CC
+                    ON C.OWNER = CC.OWNER
+                    AND C.CONSTRAINT_NAME = CC.CONSTRAINT_NAME
+                LEFT JOIN ALL_CONSTRAINTS R
+                    ON C.R_OWNER = R.OWNER
+                    AND C.R_CONSTRAINT_NAME = R.CONSTRAINT_NAME
+                LEFT JOIN ALL_CONS_COLUMNS RC
+                    ON R.OWNER = RC.OWNER
+                    AND R.CONSTRAINT_NAME = RC.CONSTRAINT_NAME
+                    AND CC.POSITION = RC.POSITION
+                WHERE UPPER(C.OWNER) = :owner
+                    AND C.CONSTRAINT_TYPE IN ('P', 'R', 'U', 'C')
+                    AND C.TABLE_NAME NOT LIKE '%TEMP%'
+                    AND C.TABLE_NAME IN (SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER = C.OWNER AND TABLESPACE_NAME NOT IN ('SYSTEM','SYSAUX'))
+                ORDER BY C.TABLE_NAME, C.CONSTRAINT_TYPE, C.CONSTRAINT_NAME, CC.POSITION
             ]]>
         </query>
     </named-native-query>

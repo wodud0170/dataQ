@@ -220,6 +220,83 @@ public class DataModelService implements Runnable {
 			}
 			session.commit();
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "컬럼 정보 수집 완료 (" + totalAttrCnt + "개)");
+			// 3-1. INDEX (인덱스) 수집
+			int totalIndexCnt = 0;
+			try {
+				String indexQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetIndexes");
+				if (indexQuery != null) {
+					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "인덱스 정보 수집 중...");
+					int indexSeq = 1;
+					for (String schemaNm : schemas) {
+						NamedParamStatement pstmt = dbHandler.namedParamStatement(indexQuery);
+						pstmt.setString("owner", StringUtils.upperCase(schemaNm));
+						ResultSet rs = dbHandler.executeSql(pstmt);
+						while (rs.next()) {
+							java.util.Map<String, Object> param = new java.util.HashMap<>();
+							param.put("clctId", clctId);
+							param.put("seq", indexSeq++);
+							param.put("dataModelId", dataModelId);
+							param.put("objOwner", schemaNm);
+							param.put("tableNm", rs.getString("tableNm"));
+							param.put("indexNm", rs.getString("indexNm"));
+							param.put("indexType", rs.getString("indexType"));
+							param.put("uniqueness", rs.getString("uniqueness"));
+							param.put("columnNm", rs.getString("columnNm"));
+							param.put("columnPos", rs.getInt("columnPos"));
+							param.put("sortOrder", rs.getString("sortOrder"));
+							param.put("tablespaceNm", rs.getString("tablespaceNm"));
+							session.insert("datamodel.insertDataModelIndex", param);
+							totalIndexCnt++;
+						}
+						pstmt.close();
+						rs.close();
+					}
+					session.commit();
+					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "인덱스 정보 수집 완료 (" + totalIndexCnt + "개)");
+				}
+			} catch (Exception e) {
+				log.warn(">> index collect skipped: {}", e.getMessage());
+			}
+			// 3-2. CONSTRAINT (제약조건) 수집
+			int totalConstraintCnt = 0;
+			try {
+				String constraintQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetConstraints");
+				if (constraintQuery != null) {
+					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 중...");
+					int constraintSeq = 1;
+					for (String schemaNm : schemas) {
+						NamedParamStatement pstmt = dbHandler.namedParamStatement(constraintQuery);
+						pstmt.setString("owner", StringUtils.upperCase(schemaNm));
+						ResultSet rs = dbHandler.executeSql(pstmt);
+						while (rs.next()) {
+							java.util.Map<String, Object> param = new java.util.HashMap<>();
+							param.put("clctId", clctId);
+							param.put("seq", constraintSeq++);
+							param.put("dataModelId", dataModelId);
+							param.put("objOwner", schemaNm);
+							param.put("tableNm", rs.getString("tableNm"));
+							param.put("constraintNm", rs.getString("constraintNm"));
+							param.put("constraintType", rs.getString("constraintType"));
+							param.put("columnNm", rs.getString("columnNm"));
+							param.put("columnPos", rs.getInt("columnPos"));
+							param.put("refOwner", rs.getString("refOwner"));
+							param.put("refTableNm", rs.getString("refTableNm"));
+							param.put("refColumnNm", rs.getString("refColumnNm"));
+							param.put("deleteRule", rs.getString("deleteRule"));
+							param.put("status", rs.getString("status"));
+							try { param.put("searchCondition", rs.getString("searchCondition")); } catch (Exception ignore) {}
+							session.insert("datamodel.insertDataModelConstraint", param);
+							totalConstraintCnt++;
+						}
+						pstmt.close();
+						rs.close();
+					}
+					session.commit();
+					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 완료 (" + totalConstraintCnt + "개)");
+				}
+			} catch (Exception e) {
+				log.warn(">> constraint collect skipped: {}", e.getMessage());
+			}
 			// 4. 데이터 모델 통계 저장
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "통계 처리 중...");
 			stdDataModelStatsVo.setClctId(clctId);

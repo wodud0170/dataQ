@@ -445,6 +445,159 @@ class StructDiagTest {
 		}
 	}
 
+	// ========== 4. 엑셀 다운로드 데이터 구성 테스트 ==========
+
+	@Nested
+	@DisplayName("엑셀 다운로드 데이터 구성")
+	class ExcelExportTest {
+
+		@Test
+		@DisplayName("변경 데이터 → 엑셀 헤더/데이터 매핑 정상")
+		void excelDataMapping() {
+			List<Map<String, Object>> details = Arrays.asList(
+				makeDetail("TESTUSER", "TB_EMPLOYEE", "NICKNAME", "ADDED", null, "VARCHAR", null, 50L, null, null),
+				makeDetail("TESTUSER", "TB_DEPARTMENT", "DEPT_NM", "MODIFIED", "VARCHAR", "VARCHAR", 100L, 200L, "Y", "Y"),
+				makeDetail("TESTUSER", "TB_ATTENDANCE", "REMARK", "DELETED", "VARCHAR", null, 500L, null, "Y", null)
+			);
+
+			List<Map<String, Object>> excelRows = buildExcelData(details);
+
+			assertEquals(3, excelRows.size());
+
+			// ADDED 행 검증
+			Map<String, Object> addedRow = excelRows.get(0);
+			assertEquals(1, addedRow.get("HEADER1"));
+			assertEquals("TESTUSER", addedRow.get("HEADER2"));
+			assertEquals("TB_EMPLOYEE", addedRow.get("HEADER3"));
+			assertEquals("NICKNAME", addedRow.get("HEADER4"));
+			assertEquals("ADDED", addedRow.get("HEADER5"));
+			assertNull(addedRow.get("HEADER6"));  // 이전 타입 null
+			assertEquals("VARCHAR", addedRow.get("HEADER9"));
+			assertEquals(50L, addedRow.get("HEADER10"));
+
+			// MODIFIED 행 검증
+			Map<String, Object> modifiedRow = excelRows.get(1);
+			assertEquals("MODIFIED", modifiedRow.get("HEADER5"));
+			assertEquals("VARCHAR", modifiedRow.get("HEADER6"));
+			assertEquals(100L, modifiedRow.get("HEADER7"));
+			assertEquals(200L, modifiedRow.get("HEADER10"));
+
+			// DELETED 행 검증
+			Map<String, Object> deletedRow = excelRows.get(2);
+			assertEquals("DELETED", deletedRow.get("HEADER5"));
+			assertEquals("VARCHAR", deletedRow.get("HEADER6"));
+			assertNull(deletedRow.get("HEADER9"));  // 현재 타입 null
+		}
+
+		@Test
+		@DisplayName("빈 데이터 → 빈 엑셀 행")
+		void emptyData() {
+			List<Map<String, Object>> excelRows = buildExcelData(Collections.emptyList());
+			assertTrue(excelRows.isEmpty());
+		}
+
+		@Test
+		@DisplayName("헤더 구성 검증 (11개 컬럼)")
+		void headerStructure() {
+			List<String[]> headers = getStructDiagHeaders();
+			assertEquals(11, headers.size());
+			assertEquals("No", headers.get(0)[0]);
+			assertEquals("오너", headers.get(1)[0]);
+			assertEquals("테이블명", headers.get(2)[0]);
+			assertEquals("컬럼명", headers.get(3)[0]);
+			assertEquals("변경유형", headers.get(4)[0]);
+			assertEquals("이전 타입", headers.get(5)[0]);
+			assertEquals("이전 길이", headers.get(6)[0]);
+			assertEquals("이전 Nullable", headers.get(7)[0]);
+			assertEquals("현재 타입", headers.get(8)[0]);
+			assertEquals("현재 길이", headers.get(9)[0]);
+			assertEquals("현재 Nullable", headers.get(10)[0]);
+		}
+
+		@Test
+		@DisplayName("null 값 포함 데이터도 정상 매핑")
+		void nullValues() {
+			List<Map<String, Object>> details = Arrays.asList(
+				makeDetail(null, "TB_TEST", "COL1", "ADDED", null, "VARCHAR", null, 20L, null, "Y")
+			);
+			List<Map<String, Object>> excelRows = buildExcelData(details);
+
+			assertEquals(1, excelRows.size());
+			assertNull(excelRows.get(0).get("HEADER2")); // owner null
+			assertNull(excelRows.get(0).get("HEADER6")); // prevDataType null
+		}
+
+		@Test
+		@DisplayName("대량 데이터 매핑 (500건)")
+		void largeData() {
+			List<Map<String, Object>> details = new ArrayList<>();
+			for (int i = 0; i < 500; i++) {
+				details.add(makeDetail("OWNER", "TB_" + i, "COL", "ADDED", null, "VARCHAR", null, 20L, null, "Y"));
+			}
+			List<Map<String, Object>> excelRows = buildExcelData(details);
+
+			assertEquals(500, excelRows.size());
+			assertEquals(1, excelRows.get(0).get("HEADER1"));
+			assertEquals(500, excelRows.get(499).get("HEADER1"));
+		}
+	}
+
+	// ========== 엑셀 헬퍼 (ExcelDownloadService 로직 재현) ==========
+
+	private List<String[]> getStructDiagHeaders() {
+		return Arrays.asList(
+			new String[]{"No","5","RIGHT"},
+			new String[]{"오너","15","LEFT"},
+			new String[]{"테이블명","25","LEFT"},
+			new String[]{"컬럼명","25","LEFT"},
+			new String[]{"변경유형","12","CENTER"},
+			new String[]{"이전 타입","15","CENTER"},
+			new String[]{"이전 길이","10","RIGHT"},
+			new String[]{"이전 Nullable","12","CENTER"},
+			new String[]{"현재 타입","15","CENTER"},
+			new String[]{"현재 길이","10","RIGHT"},
+			new String[]{"현재 Nullable","12","CENTER"}
+		);
+	}
+
+	private List<Map<String, Object>> buildExcelData(List<Map<String, Object>> detailList) {
+		List<Map<String, Object>> list = new ArrayList<>();
+		for (int i = 0; i < detailList.size(); i++) {
+			Map<String, Object> d = detailList.get(i);
+			Map<String, Object> tempMap = new LinkedHashMap<>();
+			tempMap.put("HEADER1", i + 1);
+			tempMap.put("HEADER2", d.get("owner"));
+			tempMap.put("HEADER3", d.get("tableNm"));
+			tempMap.put("HEADER4", d.get("columnNm"));
+			tempMap.put("HEADER5", d.get("changeType"));
+			tempMap.put("HEADER6", d.get("prevDataType"));
+			tempMap.put("HEADER7", d.get("prevDataLen"));
+			tempMap.put("HEADER8", d.get("prevNullable"));
+			tempMap.put("HEADER9", d.get("currDataType"));
+			tempMap.put("HEADER10", d.get("currDataLen"));
+			tempMap.put("HEADER11", d.get("currNullable"));
+			list.add(tempMap);
+		}
+		return list;
+	}
+
+	private Map<String, Object> makeDetail(String owner, String tableNm, String columnNm, String changeType,
+			String prevDataType, String currDataType, Long prevDataLen, Long currDataLen,
+			String prevNullable, String currNullable) {
+		Map<String, Object> d = new HashMap<>();
+		d.put("owner", owner);
+		d.put("tableNm", tableNm);
+		d.put("columnNm", columnNm);
+		d.put("changeType", changeType);
+		d.put("prevDataType", prevDataType);
+		d.put("currDataType", currDataType);
+		d.put("prevDataLen", prevDataLen);
+		d.put("currDataLen", currDataLen);
+		d.put("prevNullable", prevNullable);
+		d.put("currNullable", currNullable);
+		return d;
+	}
+
 	// ========== diff 계산 로직 재현 (StructDiagController와 동일) ==========
 
 	static class DiffResult {

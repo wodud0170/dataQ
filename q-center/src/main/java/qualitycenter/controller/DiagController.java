@@ -88,6 +88,13 @@ public class DiagController {
     public Mono<Response> startDiag(HttpServletRequest request, @RequestBody StdDiagJobVo jobVo) {
         Response result = new Response();
         try {
+            // 중복 Job 체크: 동일 수집건에 READY/RUNNING 상태 Job이 있으면 거부
+            int activeCount = sqlSessionTemplate.selectOne("diag.selectActiveDiagJobCount", jobVo.getClctId());
+            if (activeCount > 0) {
+                result.setResultInfo(409, "이미 진행 중인 진단이 있습니다.");
+                return Mono.just(result);
+            }
+
             // Job 레코드 생성 (READY 상태)
             jobVo.setDiagJobId(StringUtils.getUUID());
             jobVo.setCretUserId(sessionService.getUserId());
@@ -109,6 +116,16 @@ public class DiagController {
                 .map(res -> {
                     res.setContents(jobVo.getDiagJobId());
                     return res;
+                })
+                .onErrorResume(e -> {
+                    // executor 호출 실패 시 READY 좀비 방지: Job 상태를 ERROR로 변경
+                    log.error(">> executor 호출 실패, Job을 ERROR로 변경: {}", jobVo.getDiagJobId(), e);
+                    StdDiagJobVo errorJob = new StdDiagJobVo();
+                    errorJob.setDiagJobId(jobVo.getDiagJobId());
+                    errorJob.setStatus("ERROR");
+                    sqlSessionTemplate.update("diag.updateDiagJobStatus", errorJob);
+                    result.setResultInfo(RestResult.CODE_500.getCode(), "진단 서버 연결 실패: " + e.getMessage());
+                    return Mono.just(result);
                 });
         } catch (Exception e) {
             log.error(">> startDiag failed", e);

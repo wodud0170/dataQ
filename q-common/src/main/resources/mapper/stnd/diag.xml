@@ -125,6 +125,13 @@
         ORDER BY J.CRET_DT DESC
     </select>
 
+    <!-- 동일 수집건에 대해 READY/RUNNING 상태인 Job 수 조회 (중복 방지용) -->
+    <select id="selectActiveDiagJobCount" parameterType="String" resultType="int">
+        SELECT COUNT(*) FROM TB_DIAG_JOB
+        WHERE DM_CLCT_ID = #{clctId}
+        AND STATUS IN ('READY', 'RUNNING')
+    </select>
+
     <select id="selectDiagJobById" parameterType="String" resultMap="diagJobMap">
         SELECT
              J.DIAG_JOB_ID

@@ -234,6 +234,170 @@ public class StructDiagService implements Runnable {
             for (String t : currTableSet) { if (!prevTableSet.contains(t)) addedTables++; }
             for (String t : prevTableSet) { if (!currTableSet.contains(t)) deletedTables++; }
 
+            // 4-1. 인덱스 Diff
+            List<Map<String, Object>> indexChanges = new ArrayList<>();
+            int addedIndexes = 0, modifiedIndexes = 0, deletedIndexes = 0, totalIndexes = 0;
+            List<Map<String, Object>> prevIndexes = sqlSessionTemplate.selectList(
+                    "datamodel.selectDataModelIndexListByClctId", targetClctId);
+            if (prevIndexes != null && !prevIndexes.isEmpty()) {
+                // 실제 DB 인덱스 읽기
+                String indexQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetIndexes");
+                List<Map<String, Object>> currIndexRows = new ArrayList<>();
+                if (indexQuery != null) {
+                    for (String schema : schemas) {
+                        NamedParamStatement ipstmt = dbHandler.namedParamStatement(indexQuery);
+                        ipstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
+                        ResultSet irs = dbHandler.executeSql(ipstmt);
+                        while (irs.next()) {
+                            Map<String, Object> row = new HashMap<>();
+                            row.put("owner", schema);
+                            row.put("tableNm", irs.getString("tableNm"));
+                            row.put("indexNm", irs.getString("indexNm"));
+                            row.put("indexType", irs.getString("indexType"));
+                            row.put("uniqueness", irs.getString("uniqueness"));
+                            row.put("columnNm", irs.getString("columnNm"));
+                            row.put("columnPos", irs.getInt("columnPos"));
+                            row.put("sortOrder", irs.getString("sortOrder"));
+                            currIndexRows.add(row);
+                        }
+                        ipstmt.close(); irs.close();
+                    }
+                }
+                // 인덱스를 owner|tableNm|indexNm 키로 그룹핑 → columnsStr 생성
+                Map<String, Map<String, Object>> prevIdxMap = toIndexMap(prevIndexes);
+                Map<String, Map<String, Object>> currIdxMap = toIndexMap(currIndexRows);
+                totalIndexes = currIdxMap.size();
+
+                for (Map.Entry<String, Map<String, Object>> e : currIdxMap.entrySet()) {
+                    if (!prevIdxMap.containsKey(e.getKey())) {
+                        Map<String, Object> d = new HashMap<>();
+                        Map<String, Object> c = e.getValue();
+                        d.put("owner", c.get("owner")); d.put("tableNm", c.get("tableNm"));
+                        d.put("indexNm", c.get("indexNm")); d.put("changeType", "ADDED");
+                        d.put("currIndexType", c.get("indexType")); d.put("currUniqueness", c.get("uniqueness"));
+                        d.put("currColumns", c.get("columnsStr"));
+                        indexChanges.add(d); addedIndexes++;
+                    }
+                }
+                for (Map.Entry<String, Map<String, Object>> e : prevIdxMap.entrySet()) {
+                    if (!currIdxMap.containsKey(e.getKey())) {
+                        Map<String, Object> d = new HashMap<>();
+                        Map<String, Object> p = e.getValue();
+                        d.put("owner", p.get("owner")); d.put("tableNm", p.get("tableNm"));
+                        d.put("indexNm", p.get("indexNm")); d.put("changeType", "DELETED");
+                        d.put("prevIndexType", p.get("indexType")); d.put("prevUniqueness", p.get("uniqueness"));
+                        d.put("prevColumns", p.get("columnsStr"));
+                        indexChanges.add(d); deletedIndexes++;
+                    }
+                }
+                for (Map.Entry<String, Map<String, Object>> e : currIdxMap.entrySet()) {
+                    if (prevIdxMap.containsKey(e.getKey())) {
+                        Map<String, Object> p = prevIdxMap.get(e.getKey());
+                        Map<String, Object> c = e.getValue();
+                        boolean changed = !nullSafeEquals(p.get("indexType"), c.get("indexType"))
+                                || !nullSafeEquals(p.get("uniqueness"), c.get("uniqueness"))
+                                || !nullSafeEquals(p.get("columnsStr"), c.get("columnsStr"));
+                        if (changed) {
+                            Map<String, Object> d = new HashMap<>();
+                            d.put("owner", c.get("owner")); d.put("tableNm", c.get("tableNm"));
+                            d.put("indexNm", c.get("indexNm")); d.put("changeType", "MODIFIED");
+                            d.put("prevIndexType", p.get("indexType")); d.put("currIndexType", c.get("indexType"));
+                            d.put("prevUniqueness", p.get("uniqueness")); d.put("currUniqueness", c.get("uniqueness"));
+                            d.put("prevColumns", p.get("columnsStr")); d.put("currColumns", c.get("columnsStr"));
+                            indexChanges.add(d); modifiedIndexes++;
+                        }
+                    }
+                }
+                log.info(">> StructDiag: 인덱스 diff 완료 - added={}, modified={}, deleted={}", addedIndexes, modifiedIndexes, deletedIndexes);
+            }
+
+            // 4-2. 제약조건 Diff
+            List<Map<String, Object>> constraintChanges = new ArrayList<>();
+            int addedConstraints = 0, modifiedConstraints = 0, deletedConstraints = 0, totalConstraints = 0;
+            List<Map<String, Object>> prevConstraints = sqlSessionTemplate.selectList(
+                    "datamodel.selectDataModelConstraintListByClctId", targetClctId);
+            if (prevConstraints != null && !prevConstraints.isEmpty()) {
+                String constraintQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetConstraints");
+                List<Map<String, Object>> currConstraintRows = new ArrayList<>();
+                if (constraintQuery != null) {
+                    for (String schema : schemas) {
+                        NamedParamStatement cpstmt = dbHandler.namedParamStatement(constraintQuery);
+                        cpstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
+                        ResultSet crs = dbHandler.executeSql(cpstmt);
+                        while (crs.next()) {
+                            Map<String, Object> row = new HashMap<>();
+                            row.put("owner", schema);
+                            row.put("tableNm", crs.getString("tableNm"));
+                            row.put("constraintNm", crs.getString("constraintNm"));
+                            row.put("constraintType", crs.getString("constraintType"));
+                            row.put("columnNm", crs.getString("columnNm"));
+                            row.put("columnPos", crs.getInt("columnPos"));
+                            row.put("refTableNm", crs.getString("refTableNm"));
+                            row.put("refColumnNm", crs.getString("refColumnNm"));
+                            row.put("deleteRule", crs.getString("deleteRule"));
+                            row.put("status", crs.getString("status"));
+                            currConstraintRows.add(row);
+                        }
+                        cpstmt.close(); crs.close();
+                    }
+                }
+                Map<String, Map<String, Object>> prevCstMap = toConstraintMap(prevConstraints);
+                Map<String, Map<String, Object>> currCstMap = toConstraintMap(currConstraintRows);
+                totalConstraints = currCstMap.size();
+
+                for (Map.Entry<String, Map<String, Object>> e : currCstMap.entrySet()) {
+                    if (!prevCstMap.containsKey(e.getKey())) {
+                        Map<String, Object> d = new HashMap<>();
+                        Map<String, Object> c = e.getValue();
+                        d.put("owner", c.get("owner")); d.put("tableNm", c.get("tableNm"));
+                        d.put("constraintNm", c.get("constraintNm")); d.put("changeType", "ADDED");
+                        d.put("currConstraintType", c.get("constraintType"));
+                        d.put("currColumns", c.get("columnsStr"));
+                        d.put("currRefTable", c.get("refTableNm")); d.put("currRefColumns", c.get("refColumnsStr"));
+                        d.put("currDeleteRule", c.get("deleteRule")); d.put("currStatus", c.get("status"));
+                        constraintChanges.add(d); addedConstraints++;
+                    }
+                }
+                for (Map.Entry<String, Map<String, Object>> e : prevCstMap.entrySet()) {
+                    if (!currCstMap.containsKey(e.getKey())) {
+                        Map<String, Object> d = new HashMap<>();
+                        Map<String, Object> p = e.getValue();
+                        d.put("owner", p.get("owner")); d.put("tableNm", p.get("tableNm"));
+                        d.put("constraintNm", p.get("constraintNm")); d.put("changeType", "DELETED");
+                        d.put("prevConstraintType", p.get("constraintType"));
+                        d.put("prevColumns", p.get("columnsStr"));
+                        d.put("prevRefTable", p.get("refTableNm")); d.put("prevRefColumns", p.get("refColumnsStr"));
+                        d.put("prevDeleteRule", p.get("deleteRule")); d.put("prevStatus", p.get("status"));
+                        constraintChanges.add(d); deletedConstraints++;
+                    }
+                }
+                for (Map.Entry<String, Map<String, Object>> e : currCstMap.entrySet()) {
+                    if (prevCstMap.containsKey(e.getKey())) {
+                        Map<String, Object> p = prevCstMap.get(e.getKey());
+                        Map<String, Object> c = e.getValue();
+                        boolean changed = !nullSafeEquals(p.get("constraintType"), c.get("constraintType"))
+                                || !nullSafeEquals(p.get("columnsStr"), c.get("columnsStr"))
+                                || !nullSafeEquals(p.get("refTableNm"), c.get("refTableNm"))
+                                || !nullSafeEquals(p.get("refColumnsStr"), c.get("refColumnsStr"))
+                                || !nullSafeEquals(p.get("deleteRule"), c.get("deleteRule"))
+                                || !nullSafeEquals(p.get("status"), c.get("status"));
+                        if (changed) {
+                            Map<String, Object> d = new HashMap<>();
+                            d.put("owner", c.get("owner")); d.put("tableNm", c.get("tableNm"));
+                            d.put("constraintNm", c.get("constraintNm")); d.put("changeType", "MODIFIED");
+                            d.put("prevConstraintType", p.get("constraintType")); d.put("currConstraintType", c.get("constraintType"));
+                            d.put("prevColumns", p.get("columnsStr")); d.put("currColumns", c.get("columnsStr"));
+                            d.put("prevRefTable", p.get("refTableNm")); d.put("currRefTable", c.get("refTableNm"));
+                            d.put("prevRefColumns", p.get("refColumnsStr")); d.put("currRefColumns", c.get("refColumnsStr"));
+                            d.put("prevDeleteRule", p.get("deleteRule")); d.put("currDeleteRule", c.get("deleteRule"));
+                            d.put("prevStatus", p.get("status")); d.put("currStatus", c.get("status"));
+                            constraintChanges.add(d); modifiedConstraints++;
+                        }
+                    }
+                }
+                log.info(">> StructDiag: 제약조건 diff 완료 - added={}, modified={}, deleted={}", addedConstraints, modifiedConstraints, deletedConstraints);
+            }
+
             // 5. 결과 저장
             Map<String, Object> historyParam = new HashMap<>();
             historyParam.put("diagId", diagId);
@@ -247,6 +411,14 @@ public class StructDiagService implements Runnable {
             historyParam.put("modifiedColumns", modifiedColumns);
             historyParam.put("deletedTables", deletedTables);
             historyParam.put("deletedColumns", deletedColumns);
+            historyParam.put("totalIndexes", totalIndexes);
+            historyParam.put("addedIndexes", addedIndexes);
+            historyParam.put("modifiedIndexes", modifiedIndexes);
+            historyParam.put("deletedIndexes", deletedIndexes);
+            historyParam.put("totalConstraints", totalConstraints);
+            historyParam.put("addedConstraints", addedConstraints);
+            historyParam.put("modifiedConstraints", modifiedConstraints);
+            historyParam.put("deletedConstraints", deletedConstraints);
             sqlSessionTemplate.update("structdiag.updateStructDiagResult", historyParam);
 
             int seq = 1;
@@ -255,18 +427,31 @@ public class StructDiagService implements Runnable {
                 change.put("seq", seq++);
                 sqlSessionTemplate.insert("structdiag.insertStructDiagDetail", change);
             }
+            int idxSeq = 1;
+            for (Map<String, Object> ic : indexChanges) {
+                ic.put("diagId", diagId);
+                ic.put("seq", idxSeq++);
+                sqlSessionTemplate.insert("structdiag.insertStructDiagIndexDetail", ic);
+            }
+            int cstSeq = 1;
+            for (Map<String, Object> cc : constraintChanges) {
+                cc.put("diagId", diagId);
+                cc.put("seq", cstSeq++);
+                sqlSessionTemplate.insert("structdiag.insertStructDiagConstraintDetail", cc);
+            }
 
             updateStatus("DONE");
 
             // TB_DATA_MODEL에 구조진단 결과 반영
-            boolean isMatch = (changes.size() == 0);
+            int totalChanges = changes.size() + indexChanges.size() + constraintChanges.size();
+            boolean isMatch = (totalChanges == 0);
             Map<String, Object> dmUpdateParam = new HashMap<>();
             dmUpdateParam.put("dataModelId", dataModelId);
             dmUpdateParam.put("structDiagYn", isMatch ? "Y" : "N");
             sqlSessionTemplate.update("structdiag.updateDataModelStructDiag", dmUpdateParam);
 
-            log.info("[StructDiag] 완료 - diagId={}, 수집스냅샷({}) vs 실제DB, 변경={}건, 일치={}",
-                    diagId, targetClctId, changes.size(), isMatch);
+            log.info("[StructDiag] 완료 - diagId={}, 컬럼변경={}건, 인덱스변경={}건, 제약조건변경={}건, 일치={}",
+                    diagId, changes.size(), indexChanges.size(), constraintChanges.size(), isMatch);
 
         } catch (Exception e) {
             log.error(">> StructDiagService error: diagId={}", diagId, e);
@@ -293,6 +478,98 @@ public class StructDiagService implements Runnable {
             map.put(key, attr);
         }
         return map;
+    }
+
+    /**
+     * 인덱스 행들을 owner|tableNm|indexNm 키로 그룹핑하여 columnsStr 생성
+     */
+    private Map<String, Map<String, Object>> toIndexMap(List<Map<String, Object>> rows) {
+        // 1단계: owner|tableNm|indexNm 기준으로 행 그룹핑
+        Map<String, List<Map<String, Object>>> grouped = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            String owner = row.get("owner") != null ? row.get("owner").toString()
+                    : (row.get("objOwner") != null ? row.get("objOwner").toString() : "");
+            String key = owner + "|" + row.get("tableNm") + "|" + row.get("indexNm");
+            if (!grouped.containsKey(key)) grouped.put(key, new ArrayList<>());
+            grouped.get(key).add(row);
+        }
+        // 2단계: 그룹별로 columnsStr 조합
+        Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+        for (Map.Entry<String, List<Map<String, Object>>> e : grouped.entrySet()) {
+            List<Map<String, Object>> cols = e.getValue();
+            cols.sort((a, b) -> {
+                int pa = a.get("columnPos") != null ? Integer.parseInt(a.get("columnPos").toString()) : 0;
+                int pb = b.get("columnPos") != null ? Integer.parseInt(b.get("columnPos").toString()) : 0;
+                return pa - pb;
+            });
+            StringBuilder sb = new StringBuilder();
+            for (Map<String, Object> col : cols) {
+                if (sb.length() > 0) sb.append(",");
+                sb.append(col.get("columnNm")).append("(").append(col.get("columnPos"));
+                String sort = col.get("sortOrder") != null ? col.get("sortOrder").toString() : "ASC";
+                sb.append(",").append(sort).append(")");
+            }
+            Map<String, Object> first = cols.get(0);
+            Map<String, Object> info = new HashMap<>();
+            String owner = first.get("owner") != null ? first.get("owner").toString()
+                    : (first.get("objOwner") != null ? first.get("objOwner").toString() : "");
+            info.put("owner", owner);
+            info.put("tableNm", first.get("tableNm"));
+            info.put("indexNm", first.get("indexNm"));
+            info.put("indexType", first.get("indexType"));
+            info.put("uniqueness", first.get("uniqueness"));
+            info.put("columnsStr", sb.toString());
+            result.put(e.getKey(), info);
+        }
+        return result;
+    }
+
+    /**
+     * 제약조건 행들을 owner|tableNm|constraintNm 키로 그룹핑하여 columnsStr/refColumnsStr 생성
+     */
+    private Map<String, Map<String, Object>> toConstraintMap(List<Map<String, Object>> rows) {
+        Map<String, List<Map<String, Object>>> grouped = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            String owner = row.get("owner") != null ? row.get("owner").toString()
+                    : (row.get("objOwner") != null ? row.get("objOwner").toString() : "");
+            String key = owner + "|" + row.get("tableNm") + "|" + row.get("constraintNm");
+            if (!grouped.containsKey(key)) grouped.put(key, new ArrayList<>());
+            grouped.get(key).add(row);
+        }
+        Map<String, Map<String, Object>> result = new LinkedHashMap<>();
+        for (Map.Entry<String, List<Map<String, Object>>> e : grouped.entrySet()) {
+            List<Map<String, Object>> cols = e.getValue();
+            cols.sort((a, b) -> {
+                int pa = a.get("columnPos") != null ? Integer.parseInt(a.get("columnPos").toString()) : 0;
+                int pb = b.get("columnPos") != null ? Integer.parseInt(b.get("columnPos").toString()) : 0;
+                return pa - pb;
+            });
+            StringBuilder colSb = new StringBuilder();
+            StringBuilder refSb = new StringBuilder();
+            for (Map<String, Object> col : cols) {
+                if (colSb.length() > 0) colSb.append(",");
+                colSb.append(col.get("columnNm")).append("(").append(col.get("columnPos")).append(")");
+                if (col.get("refColumnNm") != null) {
+                    if (refSb.length() > 0) refSb.append(",");
+                    refSb.append(col.get("refColumnNm"));
+                }
+            }
+            Map<String, Object> first = cols.get(0);
+            Map<String, Object> info = new HashMap<>();
+            String owner = first.get("owner") != null ? first.get("owner").toString()
+                    : (first.get("objOwner") != null ? first.get("objOwner").toString() : "");
+            info.put("owner", owner);
+            info.put("tableNm", first.get("tableNm"));
+            info.put("constraintNm", first.get("constraintNm"));
+            info.put("constraintType", first.get("constraintType"));
+            info.put("columnsStr", colSb.toString());
+            info.put("refTableNm", first.get("refTableNm"));
+            info.put("refColumnsStr", refSb.length() > 0 ? refSb.toString() : null);
+            info.put("deleteRule", first.get("deleteRule"));
+            info.put("status", first.get("status"));
+            result.put(e.getKey(), info);
+        }
+        return result;
     }
 
     /**

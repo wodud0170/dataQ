@@ -41,7 +41,7 @@
         </span>
       </v-chip>
 
-      <v-btn small color="primary" :disabled="!selectedClctId || isRunning" @click="startDiag">
+      <v-btn small color="primary" :disabled="!selectedClctId || isRunning || starting" :loading="starting" @click="startDiag">
         진단 시작
       </v-btn>
       <v-btn small color="error" :disabled="!isRunning" @click="stopDiag">
@@ -126,6 +126,7 @@ export default {
       selectedClctId: null,
       jobList: [],
       currentJob: null,
+      starting: false,
       pollTimer: null,
       page: 1,
       itemsPerPage: 20,
@@ -202,7 +203,8 @@ export default {
       });
     },
     startDiag() {
-      if (!this.selectedModel || !this.selectedClctId) return;
+      if (!this.selectedModel || !this.selectedClctId || this.starting) return;
+      this.starting = true;
       const body = {
         clctId: this.selectedClctId,
         dataModelId: this.selectedModel,
@@ -217,7 +219,8 @@ export default {
         } else {
           this.showSnackbar('진단 시작 실패: ' + (res.data && res.data.resultMessage), 'error');
         }
-      }).catch(() => this.showSnackbar('서버 오류', 'error'));
+      }).catch(() => this.showSnackbar('서버 오류', 'error'))
+        .finally(() => { this.starting = false; });
     },
     stopDiag() {
       if (!this.currentJob) return;

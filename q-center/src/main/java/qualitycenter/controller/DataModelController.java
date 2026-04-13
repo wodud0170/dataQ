@@ -249,6 +249,18 @@ public class DataModelController {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", clctId);
 	}
 
+	/** 수집된 인덱스 목록 조회 (수집 ID 기준) */
+	@RequestMapping(value = "/getDataModelIndexListByClctId", method = RequestMethod.GET)
+	public List<java.util.Map<String, Object>> getDataModelIndexListByClctId(String clctId) {
+		return sqlSessionTemplate.selectList("datamodel.selectDataModelIndexListByClctId", clctId);
+	}
+
+	/** 수집된 제약조건 목록 조회 (수집 ID 기준) */
+	@RequestMapping(value = "/getDataModelConstraintListByClctId", method = RequestMethod.GET)
+	public List<java.util.Map<String, Object>> getDataModelConstraintListByClctId(String clctId) {
+		return sqlSessionTemplate.selectList("datamodel.selectDataModelConstraintListByClctId", clctId);
+	}
+
 	/**
 	 * 데이터모델 속성(컬럼) 검색 - 조건별 조회
 	 *

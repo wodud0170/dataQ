@@ -35,8 +35,14 @@
         <template v-slot:item.status="{ item }">
           <v-chip x-small :color="statusColor(item.status)" text-color="white">{{ statusLabel(item.status) }}</v-chip>
         </template>
-        <template v-slot:item.changeCnt="{ item }">
-          <v-chip x-small :color="item.changeCnt > 0 ? 'orange' : 'green'" text-color="white">{{ item.changeCnt }}건</v-chip>
+        <template v-slot:item.colChangeCnt="{ item }">
+          <v-chip x-small :color="item.colChangeCnt > 0 ? 'orange' : 'green'" text-color="white">{{ item.colChangeCnt }}건</v-chip>
+        </template>
+        <template v-slot:item.idxChangeCnt="{ item }">
+          <v-chip x-small :color="item.idxChangeCnt > 0 ? 'orange' : 'green'" text-color="white">{{ item.idxChangeCnt }}건</v-chip>
+        </template>
+        <template v-slot:item.cstChangeCnt="{ item }">
+          <v-chip x-small :color="item.cstChangeCnt > 0 ? 'orange' : 'green'" text-color="white">{{ item.cstChangeCnt }}건</v-chip>
         </template>
         <template v-slot:item.actions="{ item }">
           <v-btn v-if="item.status === 'DONE'" x-small color="teal" dark @click="goToResult(item)"
@@ -75,7 +81,9 @@ export default {
         { text: '데이터모델',     value: 'dataModelNm',    width: '180px' },
         { text: '데이터 모델\n수집일시', value: 'prevCollectDt',  width: '160px' },
         { text: '상태',           value: 'status',         width: '80px' },
-        { text: '변경건수',       value: 'changeCnt',      width: '90px' },
+        { text: '컬럼 변경',      value: 'colChangeCnt',   width: '85px' },
+        { text: '인덱스 변경',    value: 'idxChangeCnt',   width: '85px' },
+        { text: '제약조건 변경',  value: 'cstChangeCnt',   width: '95px' },
         { text: '테이블 개수',    value: 'totalTables',    width: '90px' },
         { text: '컬럼 개수',      value: 'totalColumns',   width: '90px' },
         { text: '실행자',         value: 'cretUserId',     width: '100px' },
@@ -160,8 +168,11 @@ export default {
           var data = res.data;
           if (data && data.status === 'DONE') {
             self.executing = false;
-            var cnt = (data.addedTables||0)+(data.addedColumns||0)+(data.modifiedColumns||0)+(data.deletedTables||0)+(data.deletedColumns||0);
-            self.showSnackbar('진단 완료: ' + (cnt > 0 ? cnt + '건 변경' : '변경 없음'), cnt > 0 ? 'warning' : 'success');
+            var colCnt = (data.addedTables||0)+(data.addedColumns||0)+(data.modifiedColumns||0)+(data.deletedTables||0)+(data.deletedColumns||0);
+            var idxCnt = (data.addedIndexes||0)+(data.modifiedIndexes||0)+(data.deletedIndexes||0);
+            var cstCnt = (data.addedConstraints||0)+(data.modifiedConstraints||0)+(data.deletedConstraints||0);
+            var total = colCnt + idxCnt + cstCnt;
+            self.showSnackbar('진단 완료: ' + (total > 0 ? '컬럼 ' + colCnt + ', 인덱스 ' + idxCnt + ', 제약조건 ' + cstCnt : '변경 없음'), total > 0 ? 'warning' : 'success');
             self.loadHistory();
           } else if (data && data.status === 'ERROR') {
             self.executing = false;
@@ -184,7 +195,9 @@ export default {
             dataModelNm: h.dataModelNm || '-', prevCollectDt: h.prevCollectDt || '-',
             status: h.status || 'DONE',
             totalTables: h.totalTables || 0, totalColumns: h.totalColumns || 0,
-            changeCnt: (h.addedTables||0)+(h.addedColumns||0)+(h.modifiedColumns||0)+(h.deletedTables||0)+(h.deletedColumns||0),
+            colChangeCnt: (h.addedTables||0)+(h.addedColumns||0)+(h.modifiedColumns||0)+(h.deletedTables||0)+(h.deletedColumns||0),
+            idxChangeCnt: (h.addedIndexes||0)+(h.modifiedIndexes||0)+(h.deletedIndexes||0),
+            cstChangeCnt: (h.addedConstraints||0)+(h.modifiedConstraints||0)+(h.deletedConstraints||0),
             cretUserId: h.cretUserId,
           };
         });

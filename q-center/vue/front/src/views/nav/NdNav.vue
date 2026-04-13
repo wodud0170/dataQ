@@ -117,6 +117,24 @@
                         <v-list-item-title>컬럼</v-list-item-title>
                     </v-list-item>
 
+                    <v-list-item link id="nav_datamodelStatusIndex" href="#tab_datamodelStatusIndex"
+                        active-class="ndColor--text" title="인덱스"
+                        v-on:click.stop="addTabItem('인덱스', 'datamodelStatusIndex');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>인덱스</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_datamodelStatusConstraint" href="#tab_datamodelStatusConstraint"
+                        active-class="ndColor--text" title="제약조건"
+                        v-on:click.stop="addTabItem('제약조건', 'datamodelStatusConstraint');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>제약조건</v-list-item-title>
+                    </v-list-item>
+
                     <v-list-item link id="nav_datamodelCollection" href="#tab_datamodelCollection"
                         active-class="ndColor--text" title="데이터 모델 수집"
                         v-on:click.stop="addTabItem('데이터 모델 수집', 'datamodelCollection');">
@@ -205,10 +223,10 @@
                     </template>
 
                     <v-list-item link id="nav_termRecommend" href="#tab_termRecommend"
-                        active-class="ndColor--text" title="표준화 추천"
-                        v-on:click.stop="addTabItem('표준화 추천', 'termRecommend');">
+                        active-class="ndColor--text" title="컬럼 표준화"
+                        v-on:click.stop="addTabItem('컬럼 표준화', 'termRecommend');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>표준화 추천</v-list-item-title>
+                        <v-list-item-title>컬럼 표준화</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
 

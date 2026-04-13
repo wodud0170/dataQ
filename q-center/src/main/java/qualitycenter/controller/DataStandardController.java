@@ -1982,11 +1982,12 @@ public class DataStandardController {
 						lastWordId = newWordIdMap.get(lastNewWordIndex.intValue());
 					}
 				}
-				if (lastWordId != null) {
-					List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWordId);
-					if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
-						throw new RuntimeException("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
-					}
+				if (lastWordId == null) {
+					throw new RuntimeException("마지막 단어의 ID를 확인할 수 없습니다. 단어 등록 후 다시 시도해주세요.");
+				}
+				List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWordId);
+				if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
+					throw new RuntimeException("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
 				}
 
 				// 도메인 유효성 체크
@@ -2032,13 +2033,12 @@ public class DataStandardController {
 								tw.setWordId(newWordIdMap.get(newWordIndex.intValue()));
 							}
 						}
-						// wordNm은 selectWordInfoById로 조회하지 않고, 단어 테이블에서 가져와야 하지만
-						// insertTermsWords에 필요하므로 간단히 처리
-						if (tw.getWordId() != null) {
-							List<StdWordVo> wordInfo = session.selectList("word.selectWordInfoById", tw.getWordId());
-							if (!wordInfo.isEmpty()) {
-								tw.setWordNm(wordInfo.get(0).getWordNm());
-							}
+						if (tw.getWordId() == null) {
+							throw new RuntimeException("단어 ID를 확인할 수 없습니다. 단어 등록 후 다시 시도해주세요. (순서: " + tw.getWordOrd() + ")");
+						}
+						List<StdWordVo> wordInfo = session.selectList("word.selectWordInfoById", tw.getWordId());
+						if (!wordInfo.isEmpty()) {
+							tw.setWordNm(wordInfo.get(0).getWordNm());
 						}
 						wordList.add(tw);
 					}

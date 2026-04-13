@@ -19,6 +19,14 @@
 		<result property="status" column="STATUS"/>
 		<result property="cretUserId" column="CRET_USER_ID"/>
 		<result property="dataModelNm" column="DATA_MODEL_NM"/>
+		<result property="totalIndexes" column="TOTAL_INDEXES"/>
+		<result property="addedIndexes" column="ADDED_INDEXES"/>
+		<result property="modifiedIndexes" column="MODIFIED_INDEXES"/>
+		<result property="deletedIndexes" column="DELETED_INDEXES"/>
+		<result property="totalConstraints" column="TOTAL_CONSTRAINTS"/>
+		<result property="addedConstraints" column="ADDED_CONSTRAINTS"/>
+		<result property="modifiedConstraints" column="MODIFIED_CONSTRAINTS"/>
+		<result property="deletedConstraints" column="DELETED_CONSTRAINTS"/>
 	</resultMap>
 
 	<resultMap id="structDiagDetailMap" type="java.util.HashMap">
@@ -56,7 +64,15 @@
 			ADDED_COLUMNS = #{addedColumns},
 			MODIFIED_COLUMNS = #{modifiedColumns},
 			DELETED_TABLES = #{deletedTables},
-			DELETED_COLUMNS = #{deletedColumns}
+			DELETED_COLUMNS = #{deletedColumns},
+			TOTAL_INDEXES = #{totalIndexes},
+			ADDED_INDEXES = #{addedIndexes},
+			MODIFIED_INDEXES = #{modifiedIndexes},
+			DELETED_INDEXES = #{deletedIndexes},
+			TOTAL_CONSTRAINTS = #{totalConstraints},
+			ADDED_CONSTRAINTS = #{addedConstraints},
+			MODIFIED_CONSTRAINTS = #{modifiedConstraints},
+			DELETED_CONSTRAINTS = #{deletedConstraints}
 		WHERE DIAG_ID = #{diagId}
 	</update>
 
@@ -86,7 +102,10 @@
 			to_char(h.PREV_COLLECT_DT, 'YYYY-MM-DD HH24:MI:SS') AS PREV_COLLECT_DT,
 			h.TOTAL_TABLES, h.TOTAL_COLUMNS,
 			h.ADDED_TABLES, h.ADDED_COLUMNS, h.MODIFIED_COLUMNS,
-			h.DELETED_TABLES, h.DELETED_COLUMNS, h.STATUS, h.CRET_USER_ID,
+			h.DELETED_TABLES, h.DELETED_COLUMNS,
+			h.TOTAL_INDEXES, h.ADDED_INDEXES, h.MODIFIED_INDEXES, h.DELETED_INDEXES,
+			h.TOTAL_CONSTRAINTS, h.ADDED_CONSTRAINTS, h.MODIFIED_CONSTRAINTS, h.DELETED_CONSTRAINTS,
+			h.STATUS, h.CRET_USER_ID,
 			dm.DM_NM AS DATA_MODEL_NM
 		FROM TB_STRUCT_DIAG_HISTORY h
 		LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DATA_MODEL_ID
@@ -110,7 +129,10 @@
 			to_char(h.PREV_COLLECT_DT, 'YYYY-MM-DD HH24:MI:SS') AS PREV_COLLECT_DT,
 			h.TOTAL_TABLES, h.TOTAL_COLUMNS,
 			h.ADDED_TABLES, h.ADDED_COLUMNS, h.MODIFIED_COLUMNS,
-			h.DELETED_TABLES, h.DELETED_COLUMNS, h.STATUS, h.CRET_USER_ID,
+			h.DELETED_TABLES, h.DELETED_COLUMNS,
+			h.TOTAL_INDEXES, h.ADDED_INDEXES, h.MODIFIED_INDEXES, h.DELETED_INDEXES,
+			h.TOTAL_CONSTRAINTS, h.ADDED_CONSTRAINTS, h.MODIFIED_CONSTRAINTS, h.DELETED_CONSTRAINTS,
+			h.STATUS, h.CRET_USER_ID,
 			dm.DM_NM AS DATA_MODEL_NM
 		FROM TB_STRUCT_DIAG_HISTORY h
 		LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DATA_MODEL_ID
@@ -120,7 +142,9 @@
 	<!-- 스키마별 최신 구조 진단 상태 조회 (뱃지용) -->
 	<select id="selectLatestStructDiagStatus" parameterType="java.util.HashMap" resultMap="structDiagHistoryMap">
 		SELECT DIAG_ID, DS_ID, DATA_MODEL_ID, SCHEMA_NM, to_char(DIAG_DT, 'YYYY-MM-DD HH24:MI:SS') AS DIAG_DT, STATUS,
-			ADDED_TABLES + ADDED_COLUMNS + MODIFIED_COLUMNS + DELETED_TABLES + DELETED_COLUMNS AS TOTAL_CHANGES,
+			ADDED_TABLES + ADDED_COLUMNS + MODIFIED_COLUMNS + DELETED_TABLES + DELETED_COLUMNS
+				+ ADDED_INDEXES + MODIFIED_INDEXES + DELETED_INDEXES
+				+ ADDED_CONSTRAINTS + MODIFIED_CONSTRAINTS + DELETED_CONSTRAINTS AS TOTAL_CHANGES,
 			TOTAL_TABLES, TOTAL_COLUMNS,
 			ADDED_TABLES, ADDED_COLUMNS, MODIFIED_COLUMNS, DELETED_TABLES, DELETED_COLUMNS,
 			CRET_USER_ID
@@ -140,6 +164,63 @@
 			STRUCT_DIAG_DT = CURRENT_TIMESTAMP
 		WHERE DM_ID = #{dataModelId}
 	</update>
+
+	<!-- 인덱스 변경 상세 저장 -->
+	<insert id="insertStructDiagIndexDetail" parameterType="java.util.HashMap">
+		INSERT INTO TB_STRUCT_DIAG_INDEX_DETAIL (
+			DIAG_ID, SEQ, OWNER, TABLE_NM, INDEX_NM, CHANGE_TYPE,
+			PREV_INDEX_TYPE, CURR_INDEX_TYPE, PREV_UNIQUENESS, CURR_UNIQUENESS,
+			PREV_COLUMNS, CURR_COLUMNS
+		) VALUES (
+			#{diagId}, #{seq}, #{owner}, #{tableNm}, #{indexNm}, #{changeType},
+			#{prevIndexType}, #{currIndexType}, #{prevUniqueness}, #{currUniqueness},
+			#{prevColumns}, #{currColumns}
+		)
+	</insert>
+
+	<!-- 제약조건 변경 상세 저장 -->
+	<insert id="insertStructDiagConstraintDetail" parameterType="java.util.HashMap">
+		INSERT INTO TB_STRUCT_DIAG_CONSTRAINT_DETAIL (
+			DIAG_ID, SEQ, OWNER, TABLE_NM, CONSTRAINT_NM, CHANGE_TYPE,
+			PREV_CONSTRAINT_TYPE, CURR_CONSTRAINT_TYPE,
+			PREV_COLUMNS, CURR_COLUMNS,
+			PREV_REF_TABLE, CURR_REF_TABLE, PREV_REF_COLUMNS, CURR_REF_COLUMNS,
+			PREV_DELETE_RULE, CURR_DELETE_RULE, PREV_STATUS, CURR_STATUS
+		) VALUES (
+			#{diagId}, #{seq}, #{owner}, #{tableNm}, #{constraintNm}, #{changeType},
+			#{prevConstraintType}, #{currConstraintType},
+			#{prevColumns}, #{currColumns},
+			#{prevRefTable}, #{currRefTable}, #{prevRefColumns}, #{currRefColumns},
+			#{prevDeleteRule}, #{currDeleteRule}, #{prevStatus}, #{currStatus}
+		)
+	</insert>
+
+	<!-- 인덱스 변경 상세 조회 -->
+	<select id="selectStructDiagIndexDetailList" parameterType="String" resultType="java.util.HashMap">
+		SELECT DIAG_ID AS "diagId", SEQ AS "seq", OWNER AS "owner",
+			TABLE_NM AS "tableNm", INDEX_NM AS "indexNm", CHANGE_TYPE AS "changeType",
+			PREV_INDEX_TYPE AS "prevIndexType", CURR_INDEX_TYPE AS "currIndexType",
+			PREV_UNIQUENESS AS "prevUniqueness", CURR_UNIQUENESS AS "currUniqueness",
+			PREV_COLUMNS AS "prevColumns", CURR_COLUMNS AS "currColumns"
+		FROM TB_STRUCT_DIAG_INDEX_DETAIL
+		WHERE DIAG_ID = #{diagId}
+		ORDER BY TABLE_NM, INDEX_NM
+	</select>
+
+	<!-- 제약조건 변경 상세 조회 -->
+	<select id="selectStructDiagConstraintDetailList" parameterType="String" resultType="java.util.HashMap">
+		SELECT DIAG_ID AS "diagId", SEQ AS "seq", OWNER AS "owner",
+			TABLE_NM AS "tableNm", CONSTRAINT_NM AS "constraintNm", CHANGE_TYPE AS "changeType",
+			PREV_CONSTRAINT_TYPE AS "prevConstraintType", CURR_CONSTRAINT_TYPE AS "currConstraintType",
+			PREV_COLUMNS AS "prevColumns", CURR_COLUMNS AS "currColumns",
+			PREV_REF_TABLE AS "prevRefTable", CURR_REF_TABLE AS "currRefTable",
+			PREV_REF_COLUMNS AS "prevRefColumns", CURR_REF_COLUMNS AS "currRefColumns",
+			PREV_DELETE_RULE AS "prevDeleteRule", CURR_DELETE_RULE AS "currDeleteRule",
+			PREV_STATUS AS "prevStatus", CURR_STATUS AS "currStatus"
+		FROM TB_STRUCT_DIAG_CONSTRAINT_DETAIL
+		WHERE DIAG_ID = #{diagId}
+		ORDER BY TABLE_NM, CONSTRAINT_NM
+	</select>
 
 	<!-- 최신 수집 이력 2건 조회 (구조 진단에서 자동 prev/curr 결정용) -->
 	<select id="selectRecentClctIds" parameterType="String" resultType="java.util.HashMap">

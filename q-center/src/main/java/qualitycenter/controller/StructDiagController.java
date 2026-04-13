@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityConstant;
+import com.ndata.quality.service.ExcelDownloadService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +47,9 @@ public class StructDiagController {
 
 	@Autowired
 	private SqlSessionTemplate sqlSessionTemplate;
+
+	@Autowired
+	private ExcelDownloadService excelDownloadService;
 
 	/**
 	 * 구조 진단 실행
@@ -122,14 +127,18 @@ public class StructDiagController {
 		return sqlSessionTemplate.selectList("structdiag.selectStructDiagHistoryList");
 	}
 
-	/** 특정 진단 결과 (요약 + 상세) */
+	/** 특정 진단 결과 (요약 + 상세: 컬럼/인덱스/제약조건) */
 	@GetMapping("/result/{diagId}")
 	public Map<String, Object> getResult(@PathVariable String diagId) {
 		Map<String, Object> result = new HashMap<>();
 		Map<String, Object> history = sqlSessionTemplate.selectOne("structdiag.selectStructDiagHistoryById", diagId);
 		List<Map<String, Object>> details = sqlSessionTemplate.selectList("structdiag.selectStructDiagDetailList", diagId);
+		List<Map<String, Object>> indexDetails = sqlSessionTemplate.selectList("structdiag.selectStructDiagIndexDetailList", diagId);
+		List<Map<String, Object>> constraintDetails = sqlSessionTemplate.selectList("structdiag.selectStructDiagConstraintDetailList", diagId);
 		result.put("history", history);
 		result.put("details", details);
+		result.put("indexDetails", indexDetails);
+		result.put("constraintDetails", constraintDetails);
 		return result;
 	}
 
@@ -165,6 +174,37 @@ public class StructDiagController {
 			log.error(">> compareSchema failed", e);
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 			return Mono.just(result);
+		}
+	}
+
+	/** 구조 진단 결과 엑셀 다운로드 */
+	@GetMapping("/downloadResult")
+	public void downloadResult(HttpServletRequest request, HttpServletResponse response, String diagId) {
+		log.info(">> download struct diag result excel: diagId={}", diagId);
+		try {
+			excelDownloadService.getStructDiagResultExcel(diagId, request, response);
+		} catch (Exception e) {
+			log.error(">> download struct diag result excel failed: {}", e.getMessage());
+		}
+	}
+
+	/** 구조 진단 인덱스 변경 결과 엑셀 다운로드 */
+	@GetMapping("/downloadIndexResult")
+	public void downloadIndexResult(HttpServletRequest request, HttpServletResponse response, String diagId) {
+		try {
+			excelDownloadService.getStructDiagIndexResultExcel(diagId, request, response);
+		} catch (Exception e) {
+			log.error(">> download struct diag index result excel failed: {}", e.getMessage());
+		}
+	}
+
+	/** 구조 진단 제약조건 변경 결과 엑셀 다운로드 */
+	@GetMapping("/downloadConstraintResult")
+	public void downloadConstraintResult(HttpServletRequest request, HttpServletResponse response, String diagId) {
+		try {
+			excelDownloadService.getStructDiagConstraintResultExcel(diagId, request, response);
+		} catch (Exception e) {
+			log.error(">> download struct diag constraint result excel failed: {}", e.getMessage());
 		}
 	}
 

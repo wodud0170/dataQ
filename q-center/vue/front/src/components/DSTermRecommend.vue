@@ -39,7 +39,7 @@
 
           <div class="d-flex justify-space-between align-center mt-2">
             <span class="grey--text">입력: {{ parsedNames.length }}건</span>
-            <v-btn color="ndColor" class="white--text" :disabled="parsedNames.length === 0" @click="startAnalysis">
+            <v-btn color="ndColor" class="white--text" :disabled="parsedNames.length === 0 || isAnalyzing" :loading="isAnalyzing" @click="startAnalysis">
               <v-icon left>mdi-magnify</v-icon>분석 시작
             </v-btn>
           </div>
@@ -80,7 +80,7 @@
               <v-icon left small>mdi-check-all</v-icon>전체 승인 ({{ approvableCount }}건)
             </v-btn>
             <v-btn small color="primary" class="white--text ml-2" @click="registerAll"
-              :disabled="approvedCount === 0">
+              :disabled="approvedCount === 0 || isRegistering" :loading="isRegistering">
               <v-icon left small>mdi-database-plus</v-icon>용어 등록
             </v-btn>
             <v-btn small outlined @click="currentStep = 1" class="ml-2">
@@ -318,6 +318,8 @@ export default {
   data: function() {
     return {
       currentStep: 1,
+      isAnalyzing: false,
+      isRegistering: false,
 
       // Step 1
       inputText: '',
@@ -453,6 +455,8 @@ export default {
     },
     startAnalysis: function() {
       var self = this;
+      if (self.isAnalyzing) return;
+      self.isAnalyzing = true;
       self.currentStep = 2;
       self.analysisResults = [];
       self.selectedItems = [];
@@ -471,6 +475,8 @@ export default {
         var msg = (err.response && err.response.data && err.response.data.message) || '분석 중 오류가 발생했습니다.';
         self.$swal.fire({ title: '분석 실패', text: msg, icon: 'error', confirmButtonText: '확인' });
         self.currentStep = 1;
+      }).finally(function() {
+        self.isAnalyzing = false;
       });
     },
     countByStatus: function(status) {
@@ -881,6 +887,7 @@ export default {
       }).then(function(result) {
         if (!result.value) return;
 
+        self.isRegistering = true;
         axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: items })
           .then(function(res) {
             self.registerResult = res.data;
@@ -888,6 +895,8 @@ export default {
           }).catch(function(err) {
             var msg = (err.response && err.response.data && err.response.data.message) || '등록 중 오류가 발생했습니다.';
             self.$swal.fire({ title: '등록 실패', text: msg, icon: 'error', confirmButtonText: '확인' });
+          }).finally(function() {
+            self.isRegistering = false;
           });
       });
     },

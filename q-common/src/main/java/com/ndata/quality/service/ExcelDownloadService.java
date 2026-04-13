@@ -453,6 +453,142 @@ public class ExcelDownloadService {
         IOUtils.copy(stream, response.getOutputStream());
     }
 
+    //구조진단 결과 다운로드
+    public void getStructDiagResultExcel(String diagId, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        List<Map<String, Object>> detailList = sqlSessionTemplate.selectList("structdiag.selectStructDiagDetailList", diagId);
+        long listSize = detailList.size();
+
+        List<String[]> headers = Arrays.asList(
+            new String[]{"No","5","RIGHT"},
+            new String[]{"오너","15","LEFT"},
+            new String[]{"테이블명","25","LEFT"},
+            new String[]{"컬럼명","25","LEFT"},
+            new String[]{"변경유형","12","CENTER"},
+            new String[]{"이전 타입","15","CENTER"},
+            new String[]{"이전 길이","10","RIGHT"},
+            new String[]{"이전 Nullable","12","CENTER"},
+            new String[]{"현재 타입","15","CENTER"},
+            new String[]{"현재 길이","10","RIGHT"},
+            new String[]{"현재 Nullable","12","CENTER"}
+        );
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < listSize; i++) {
+            Map<String, Object> d = detailList.get(i);
+            Map<String, Object> tempMap = new LinkedHashMap<>();
+            tempMap.put("HEADER1", i + 1);
+            tempMap.put("HEADER2", d.get("owner"));
+            tempMap.put("HEADER3", d.get("tableNm"));
+            tempMap.put("HEADER4", d.get("columnNm"));
+            tempMap.put("HEADER5", d.get("changeType"));
+            tempMap.put("HEADER6", d.get("prevDataType"));
+            tempMap.put("HEADER7", d.get("prevDataLen"));
+            tempMap.put("HEADER8", d.get("prevNullable"));
+            tempMap.put("HEADER9", d.get("currDataType"));
+            tempMap.put("HEADER10", d.get("currDataLen"));
+            tempMap.put("HEADER11", d.get("currNullable"));
+            list.add(tempMap);
+        }
+        log.info(">> struct diag excel export size={}", list.size());
+
+        String fileName = "구조진단결과_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
+    //구조진단 인덱스 변경 결과 다운로드
+    public void getStructDiagIndexResultExcel(String diagId, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        List<Map<String, Object>> detailList = sqlSessionTemplate.selectList("structdiag.selectStructDiagIndexDetailList", diagId);
+        long listSize = detailList.size();
+
+        List<String[]> headers = Arrays.asList(
+            new String[]{"No","5","RIGHT"},
+            new String[]{"오너","15","LEFT"},
+            new String[]{"테이블명","25","LEFT"},
+            new String[]{"인덱스명","25","LEFT"},
+            new String[]{"변경유형","12","CENTER"},
+            new String[]{"이전 타입","15","CENTER"},
+            new String[]{"이전 유니크","12","CENTER"},
+            new String[]{"이전 구성컬럼","30","LEFT"},
+            new String[]{"현재 타입","15","CENTER"},
+            new String[]{"현재 유니크","12","CENTER"},
+            new String[]{"현재 구성컬럼","30","LEFT"}
+        );
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < listSize; i++) {
+            Map<String, Object> d = detailList.get(i);
+            Map<String, Object> tempMap = new LinkedHashMap<>();
+            tempMap.put("HEADER1", i + 1);
+            tempMap.put("HEADER2", d.get("owner"));
+            tempMap.put("HEADER3", d.get("tableNm"));
+            tempMap.put("HEADER4", d.get("indexNm"));
+            tempMap.put("HEADER5", d.get("changeType"));
+            tempMap.put("HEADER6", d.get("prevIndexType"));
+            tempMap.put("HEADER7", d.get("prevUniqueness"));
+            tempMap.put("HEADER8", d.get("prevColumns"));
+            tempMap.put("HEADER9", d.get("currIndexType"));
+            tempMap.put("HEADER10", d.get("currUniqueness"));
+            tempMap.put("HEADER11", d.get("currColumns"));
+            list.add(tempMap);
+        }
+        log.info(">> struct diag index excel export size={}", list.size());
+
+        String fileName = "구조진단결과_인덱스_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
+    //구조진단 제약조건 변경 결과 다운로드
+    public void getStructDiagConstraintResultExcel(String diagId, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        List<Map<String, Object>> detailList = sqlSessionTemplate.selectList("structdiag.selectStructDiagConstraintDetailList", diagId);
+        long listSize = detailList.size();
+
+        List<String[]> headers = Arrays.asList(
+            new String[]{"No","5","RIGHT"},
+            new String[]{"오너","15","LEFT"},
+            new String[]{"테이블명","25","LEFT"},
+            new String[]{"제약조건명","25","LEFT"},
+            new String[]{"변경유형","12","CENTER"},
+            new String[]{"이전 유형","10","CENTER"},
+            new String[]{"이전 구성컬럼","25","LEFT"},
+            new String[]{"이전 참조테이블","20","LEFT"},
+            new String[]{"이전 참조컬럼","20","LEFT"},
+            new String[]{"현재 유형","10","CENTER"},
+            new String[]{"현재 구성컬럼","25","LEFT"},
+            new String[]{"현재 참조테이블","20","LEFT"},
+            new String[]{"현재 참조컬럼","20","LEFT"}
+        );
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < listSize; i++) {
+            Map<String, Object> d = detailList.get(i);
+            Map<String, Object> tempMap = new LinkedHashMap<>();
+            tempMap.put("HEADER1", i + 1);
+            tempMap.put("HEADER2", d.get("owner"));
+            tempMap.put("HEADER3", d.get("tableNm"));
+            tempMap.put("HEADER4", d.get("constraintNm"));
+            tempMap.put("HEADER5", d.get("changeType"));
+            tempMap.put("HEADER6", d.get("prevConstraintType"));
+            tempMap.put("HEADER7", d.get("prevColumns"));
+            tempMap.put("HEADER8", d.get("prevRefTable"));
+            tempMap.put("HEADER9", d.get("prevRefColumns"));
+            tempMap.put("HEADER10", d.get("currConstraintType"));
+            tempMap.put("HEADER11", d.get("currColumns"));
+            tempMap.put("HEADER12", d.get("currRefTable"));
+            tempMap.put("HEADER13", d.get("currRefColumns"));
+            list.add(tempMap);
+        }
+        log.info(">> struct diag constraint excel export size={}", list.size());
+
+        String fileName = "구조진단결과_제약조건_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
     public static Map<String, Object> setExcelMap(List<String[]> headers, List<Map<String, Object>> dataList, String fileName) {
         Map<String, Object> excelMap = new HashMap<>();
         excelMap.put("headers", headers.stream().map(d -> d[0]).collect(Collectors.toList()));

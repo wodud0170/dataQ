@@ -98,6 +98,18 @@
                     <datamodelStatusColumn :key="datamodelStatusColumnKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'datamodelStatusIndex'" id="tab_datamodelStatusIndex" class="tab_contents"
+                :class="{ active: this.activeContent === 'datamodelStatusIndex' }">
+                <keep-alive>
+                    <datamodelStatusIndex :key="datamodelStatusIndexKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'datamodelStatusConstraint'" id="tab_datamodelStatusConstraint" class="tab_contents"
+                :class="{ active: this.activeContent === 'datamodelStatusConstraint' }">
+                <keep-alive>
+                    <datamodelStatusConstraint :key="datamodelStatusConstraintKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'datamodelCollection'" id="tab_datamodelCollection" class="tab_contents"
                 :class="{ active: this.activeContent === 'datamodelCollection' }">
                 <keep-alive>
@@ -290,6 +302,8 @@ import DSDomainClassification from "./../../components/DSDomainClassification.vu
 import DSDatamodelStatus from "../../components/DSDatamodelStatus.vue"
 import DSDatamodelStatusTable from "../../components/DSDatamodelStatusTable.vue"
 import DSDatamodelStatusColumn from "../../components/DSDatamodelStatusColumn.vue"
+import DSDatamodelStatusIndex from "../../components/DSDatamodelStatusIndex.vue"
+import DSDatamodelStatusConstraint from "../../components/DSDatamodelStatusConstraint.vue"
 import DSDatamodelCollection from "../../components/DSDatamodelCollection.vue"
 import DSDatamodelHistory from "../../components/DSDatamodelHistory.vue"
 import DSDataDiag from "../../components/DSDataDiag.vue"
@@ -362,6 +376,8 @@ export default {
             datamodelStatusKey: this.createUUID(),
             datamodelStatusTableKey: this.createUUID(),
             datamodelStatusColumnKey: this.createUUID(),
+            datamodelStatusIndexKey: this.createUUID(),
+            datamodelStatusConstraintKey: this.createUUID(),
             datamodelCollectionKey: this.createUUID(),
             datamodelHistoryKey: this.createUUID(),
             erwinImportKey: this.createUUID(),
@@ -404,6 +420,8 @@ export default {
         "datamodelStatus": DSDatamodelStatus,
         "datamodelStatusTable": DSDatamodelStatusTable,
         "datamodelStatusColumn": DSDatamodelStatusColumn,
+        "datamodelStatusIndex": DSDatamodelStatusIndex,
+        "datamodelStatusConstraint": DSDatamodelStatusConstraint,
         "datamodelCollection": DSDatamodelCollection,
         "datamodelHistory": DSDatamodelHistory,
         "dataDiag": DSDataDiag,
@@ -471,6 +489,12 @@ export default {
                     break;
                 case "datamodelStatusColumn":
                     this.datamodelStatusColumnKey = this.createUUID();
+                    break;
+                case "datamodelStatusIndex":
+                    this.datamodelStatusIndexKey = this.createUUID();
+                    break;
+                case "datamodelStatusConstraint":
+                    this.datamodelStatusConstraintKey = this.createUUID();
                     break;
                 case "datamodelCollection":
                     this.datamodelCollectionKey = this.createUUID();
