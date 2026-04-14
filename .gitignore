@@ -37,3 +37,6 @@ build/
 **/vue/front/node/
 **/vue/front/node_modules/
 !/vue/front/build/
+
+# local DB docker image (contains sensitive user data)
+dataq-db/

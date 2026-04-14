@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -29,6 +30,8 @@ import com.ndata.module.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import com.ndata.quality.model.std.StdCodeDataVo;
+import com.ndata.quality.model.std.StdDomainClassificationVo;
+import com.ndata.quality.model.std.StdDomainGroupVo;
 import com.ndata.quality.model.std.StdDomainVo;
 import com.ndata.quality.model.std.StdTermsVo;
 import com.ndata.quality.model.std.StdWordVo;
@@ -139,12 +142,19 @@ public class ExcelUploadService {
 	 * @throws Exception Excel 파싱 실패 시
 	 */
 	public UploadResult uploadTermsList(String userId, MultipartFile multiPart) throws Exception {
+		return uploadTermsList(userId, multiPart, null);
+	}
+
+	public UploadResult uploadTermsList(String userId, MultipartFile multiPart, BiConsumer<Integer,Integer> progressCallback) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 
 		try {
 			ExcelSheetHandler sheetHandler = readExcel(multiPart);
 			List<List<String>> excelDatas = sheetHandler.getRows();
+			int total = excelDatas.size();
+			int processed = 0;
+			int progressInterval = 1000;
 
 			for (List<String> dataRow : excelDatas) {
 				StdTermsVo stdTermsVo = new StdTermsVo();
@@ -196,9 +206,7 @@ public class ExcelUploadService {
 					}
 
 					// 분류어 검증: 마지막 단어가 분류어(WORD_CLSF_YN='Y')여야 함
-					if (wordEngAbrvNms.length < 2) {
-						throw new Exception("용어는 최소 2개 이상의 단어로 구성되어야 합니다");
-					}
+					// 단일 단어 용어도 허용 (그 자체가 형식단어면 유효)
 					String lastEngAbrv = wordEngAbrvNms[wordEngAbrvNms.length - 1];
 					StdWordVo lastWordVo = session.selectOne("word.selectWordByEngAbrvNm", lastEngAbrv);
 					if (lastWordVo != null && !"Y".equals(lastWordVo.getWordClsfYn())) {
@@ -227,6 +235,10 @@ public class ExcelUploadService {
 					String detail = String.format("용어(%s): %s", stdTermsVo.getTermsNm() != null ? stdTermsVo.getTermsNm() : dataRow.get(2), e.getMessage());
 					log.error("upload terms row failed: {}", detail);
 					result.addFail(detail);
+				}
+				processed++;
+				if (progressCallback != null && (processed % progressInterval == 0 || processed == total)) {
+					try { progressCallback.accept(processed, total); } catch (Exception ignored) {}
 				}
 			}
 		} finally {
@@ -363,7 +375,9 @@ public class ExcelUploadService {
 					result.addSuccess();
 				} catch (Exception e) {
 					session.rollback();
-					String detail = String.format("도메인(%s): %s", stdDomainVo.getDomainNm() != null ? stdDomainVo.getDomainNm() : dataRow.get(4), e.getMessage());
+					String domainNm = stdDomainVo.getDomainNm() != null ? stdDomainVo.getDomainNm() : dataRow.get(4);
+					String reason = translateDomainInsertError(e, stdDomainVo);
+					String detail = String.format("도메인(%s): %s", domainNm, reason);
 					log.error("upload domains row failed: {}", detail);
 					result.addFail(detail);
 				}
@@ -374,6 +388,135 @@ public class ExcelUploadService {
 		// 일괄 등록 이력 저장
 		saveUploadHistory(userId, "DOMAIN", "도메인", result);
 		return result;
+	}
+
+	/**
+	 * 도메인 그룹 Excel 일괄 등록
+	 *
+	 * <p>각 행을 파싱하여 도메인 그룹을 등록한다. 이미 존재하면 Skip.
+	 * 컬럼: [No, 도메인그룹명, 표준여부]</p>
+	 */
+	public UploadResult uploadDomainGroups(String userId, MultipartFile multiPart) throws Exception {
+		SqlSession session = sqlSessionFactory.openSession();
+		UploadResult result = new UploadResult();
+
+		try {
+			ExcelSheetHandler sheetHandler = readExcel(multiPart);
+			List<List<String>> excelDatas = sheetHandler.getRows();
+
+			for (List<String> dataRow : excelDatas) {
+				StdDomainGroupVo vo = new StdDomainGroupVo();
+				try {
+					String grpNm = dataRow.size() > 1 ? dataRow.get(1) : null;
+					if (grpNm == null || grpNm.trim().isEmpty()) {
+						throw new Exception("도메인 그룹명이 비어 있습니다");
+					}
+					if (session.selectOne("domain.selectDomainGroupByNm", grpNm) != null) {
+						result.addSkip();
+						continue;
+					}
+					vo.setId(StringUtils.getUUID());
+					vo.setDomainGrpNm(grpNm);
+					vo.setCommStndYn(dataRow.size() > 2 && checkInvalidVal(dataRow.get(2)) != null ? dataRow.get(2) : "N");
+					vo.setCretUserId(userId);
+					session.insert("domain.insertDomainGroup", vo);
+					session.commit();
+					result.addSuccess();
+				} catch (Exception e) {
+					session.rollback();
+					String detail = String.format("도메인그룹(%s): %s",
+							vo.getDomainGrpNm() != null ? vo.getDomainGrpNm() : "?", e.getMessage());
+					log.error("upload domain groups row failed: {}", detail);
+					result.addFail(detail);
+				}
+			}
+		} finally {
+			session.close();
+		}
+		saveUploadHistory(userId, "DOMAIN_GRP", "도메인그룹", result);
+		return result;
+	}
+
+	/**
+	 * 도메인 분류 Excel 일괄 등록
+	 *
+	 * <p>각 행을 파싱하여 도메인 분류를 등록한다. 이미 존재하면 Skip.
+	 * 컬럼: [No, 도메인그룹명, 도메인분류명, 표준여부]
+	 * 도메인 그룹이 없으면 FK 에러를 사용자가 이해할 수 있는 메시지로 변환.</p>
+	 */
+	public UploadResult uploadDomainClsfs(String userId, MultipartFile multiPart) throws Exception {
+		SqlSession session = sqlSessionFactory.openSession();
+		UploadResult result = new UploadResult();
+
+		try {
+			ExcelSheetHandler sheetHandler = readExcel(multiPart);
+			List<List<String>> excelDatas = sheetHandler.getRows();
+
+			for (List<String> dataRow : excelDatas) {
+				StdDomainClassificationVo vo = new StdDomainClassificationVo();
+				try {
+					String grpNm = dataRow.size() > 1 ? dataRow.get(1) : null;
+					String clsfNm = dataRow.size() > 2 ? dataRow.get(2) : null;
+					if (clsfNm == null || clsfNm.trim().isEmpty()) {
+						throw new Exception("도메인 분류명이 비어 있습니다");
+					}
+					if (grpNm == null || grpNm.trim().isEmpty()) {
+						throw new Exception("도메인 그룹명이 비어 있습니다");
+					}
+					if (session.selectOne("domain.selectDomainClsfByNm", clsfNm) != null) {
+						result.addSkip();
+						continue;
+					}
+					vo.setId(StringUtils.getUUID());
+					vo.setDomainGrpNm(grpNm);
+					vo.setDomainClsfNm(clsfNm);
+					vo.setCommStndYn(dataRow.size() > 3 && checkInvalidVal(dataRow.get(3)) != null ? dataRow.get(3) : "N");
+					vo.setCretUserId(userId);
+					session.insert("domain.insertDomainClassification", vo);
+					session.commit();
+					result.addSuccess();
+				} catch (Exception e) {
+					session.rollback();
+					String reason = translateDomainClsfInsertError(e, vo);
+					String detail = String.format("도메인분류(%s): %s",
+							vo.getDomainClsfNm() != null ? vo.getDomainClsfNm() : "?", reason);
+					log.error("upload domain clsfs row failed: {}", detail);
+					result.addFail(detail);
+				}
+			}
+		} finally {
+			session.close();
+		}
+		saveUploadHistory(userId, "DOMAIN_CLSF", "도메인분류", result);
+		return result;
+	}
+
+	// 도메인 분류 INSERT 실패 메시지 변환. FK 위반(존재하지 않는 도메인 그룹) 감지.
+	private String translateDomainClsfInsertError(Exception e, StdDomainClassificationVo vo) {
+		String msg = e.getMessage();
+		if (msg == null) {
+			return "알 수 없는 오류";
+		}
+		if (msg.contains("tb_domain_clsf_fk_1") || msg.contains("(domain_grp_nm)")) {
+			return "도메인 그룹 '" + vo.getDomainGrpNm() + "'이(가) 등록되지 않았습니다";
+		}
+		return msg;
+	}
+
+	// 도메인 INSERT 실패 메시지를 사용자가 알기 쉬운 형태로 변환.
+	// FK 위반(도메인 그룹/분류 미등록)을 우선 감지하여 친절한 메시지로 바꾸고, 그 외는 원본 메시지 반환.
+	private String translateDomainInsertError(Exception e, StdDomainVo vo) {
+		String msg = e.getMessage();
+		if (msg == null) {
+			return "알 수 없는 오류";
+		}
+		if (msg.contains("tb_domain_fk_1") || msg.contains("(domain_grp_nm)")) {
+			return "도메인 그룹 '" + vo.getDomainGrpNm() + "'이(가) 등록되지 않았습니다";
+		}
+		if (msg.contains("tb_domain_fk_2") || msg.contains("(domain_clsf_nm)")) {
+			return "도메인 분류 '" + vo.getDomainClsfNm() + "'이(가) 등록되지 않았습니다";
+		}
+		return msg;
 	}
 
 	// 일괄 등록 이력 저장 헬퍼

@@ -1191,15 +1191,8 @@ export default {
       this.isUploading = true;
       this.collectiveTermModalShow = true;
 
-      // 60초 타임아웃 폴백 (WebSocket 메시지 미수신 시 자동 해제)
-      if (this._uploadTimer) clearTimeout(this._uploadTimer);
-      this._uploadTimer = setTimeout(() => {
-        if (this.isUploading) {
-          this._addUploadLog('ERROR', 'WebSocket 응답 없음 - 결과를 직접 확인해주세요.');
-          this.isUploading = false;
-          this.getTermData();
-        }
-      }, 60000);
+      // 180초 하트비트 타임아웃: 메시지 받을 때마다 리셋됨 (_resetUploadTimer)
+      this._resetUploadTimer();
 
       const _url = this.$APIURL.base + "api/std/uploadTermsList";
       const formData = new FormData();
@@ -1227,6 +1220,10 @@ export default {
       if (!this.collectiveTermModalShow) return;
       if (!msg.data || !msg.data.startsWith('[용어]')) return;
       const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
+      // 하트비트: 메시지 수신 시 타임아웃 리셋 (완료 메시지 전까지)
+      if (this.isUploading && !msg.data.includes('완료 -')) {
+        this._resetUploadTimer();
+      }
       this._addUploadLog(level, msg.data);
       // 실패 항목 수집: "[용어] 실패: 용어(기준일자): 구성단어(BASS) 미등록" 형태
       if (level === 'ERROR' && msg.data.includes('실패:')) {
@@ -1262,6 +1259,16 @@ export default {
           timer: 3000
         });
       }
+    },
+    _resetUploadTimer() {
+      if (this._uploadTimer) clearTimeout(this._uploadTimer);
+      this._uploadTimer = setTimeout(() => {
+        if (this.isUploading) {
+          this._addUploadLog('ERROR', 'WebSocket 응답 없음 - 결과를 직접 확인해주세요.');
+          this.isUploading = false;
+          this.getTermData();
+        }
+      }, 180000);
     },
     forceCloseUploadModal() {
       this.isUploading = false;

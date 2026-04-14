@@ -389,4 +389,12 @@
     </foreach>
   </delete>
 
+  <select id="selectDomainGroupByNm" parameterType="String" resultType="String">
+    SELECT DOMAIN_GRP_NM FROM TB_DOMAIN_GRP WHERE DOMAIN_GRP_NM = #{domainGrpNm}
+  </select>
+
+  <select id="selectDomainClsfByNm" parameterType="String" resultType="String">
+    SELECT DOMAIN_CLSF_NM FROM TB_DOMAIN_CLSF WHERE DOMAIN_CLSF_NM = #{domainClsfNm}
+  </select>
+
 </mapper>

@@ -12,8 +12,38 @@
         <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
         <v-btn class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
         <v-btn class="gradient" v-on:click="domainGroupRemoveItem()" title="삭제">삭제</v-btn>
+        <v-btn class="gradient" v-on:click="domainGroupExcelFileUpload()" title="일괄등록">일괄등록</v-btn>
+        <input type="file" id="inputDomainGroupUpload" ref="file" accept=".xlsx,.xls"
+          @change="readExcelFile($event)" :style="{ display: 'none' }" />
+        <v-btn class="gradient" v-on:click="domainGroupListDownload()" title="다운로드">다운로드</v-btn>
       </v-row>
     </v-sheet>
+
+    <!-- 일괄등록 Modal -->
+    <v-dialog max-width="520" v-model="collectiveModalShow" persistent>
+      <v-card>
+        <v-card-title class="pb-2" :style="{ fontSize: '1rem', fontWeight: 'bold' }">
+          <v-icon left color="ndColor">mdi-upload</v-icon>
+          도메인 그룹 일괄등록 진행
+        </v-card-title>
+        <v-progress-linear v-if="isUploading" indeterminate color="ndColor" height="3"></v-progress-linear>
+        <v-card-text class="pt-3 pb-2">
+          <div ref="uploadLogBox"
+            :style="{ maxHeight: '280px', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.82rem', background: '#f8f8f8', border: '1px solid #e0e0e0', borderRadius: '4px', padding: '10px 12px' }">
+            <div v-for="(log, i) in uploadLogs" :key="i"
+              :style="{ color: log.level === 'ERROR' ? '#d32f2f' : log.level === 'DONE' ? '#1976d2' : '#333', fontWeight: log.level === 'DONE' ? 'bold' : 'normal', lineHeight: '1.7' }">
+              <span :style="{ color: '#999', marginRight: '8px' }">{{ log.time }}</span>{{ log.msg }}
+            </div>
+            <div v-if="uploadLogs.length === 0" :style="{ color: '#999' }">대기 중...</div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn v-if="!isUploading" color="ndColor" text @click="collectiveModalShow = false">닫기</v-btn>
+          <span v-else :style="{ fontSize: '0.8rem', color: '#999', paddingRight: '12px' }">완료될 때까지 기다려주세요...</span>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-sheet class="tableSpt">
       <!-- 총 개수와 테이블 표시 개수 변경 영역 -->
       <v-sheet>
@@ -124,6 +154,7 @@
 <script>
 import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
+import { eventBus } from '../eventBus';
 
 export default {
   name: 'DSDomainGroup',
@@ -167,6 +198,12 @@ export default {
     ],
     // 테이블 편의성 관련
     tableViewLengthList: [10, 20, 30, 40, 50],
+    // 일괄등록 관련
+    collectiveModalShow: false,
+    isUploading: false,
+    uploadLogs: [],
+    excelFile: null,
+    _uploadTimer: null,
   }),
   computed: {
     domainGroupItems() {
@@ -196,6 +233,10 @@ export default {
   created() {
     // 데이터 표준 메뉴의 도메인 - 도메인 그룹 선택 시 domainGroup data를 불러온다.
     this.getDomainGroupData();
+    eventBus.$on('NOTICE', this.onUploadNotice);
+  },
+  beforeDestroy() {
+    eventBus.$off('NOTICE', this.onUploadNotice);
   },
   methods: {
     setListPage() {
@@ -495,6 +536,95 @@ export default {
     },
     resetDetail() {
       this.selectedItem = [];
+    },
+    domainGroupExcelFileUpload() {
+      let fileUpload = document.getElementById('inputDomainGroupUpload');
+      if (fileUpload != null) fileUpload.click();
+    },
+    readExcelFile(event) {
+      const file = event.target.files[0];
+      if (file === undefined) return;
+      this.excelFile = this.$refs.file.files[0];
+
+      this.uploadLogs = [];
+      this.isUploading = true;
+      this.collectiveModalShow = true;
+
+      if (this._uploadTimer) clearTimeout(this._uploadTimer);
+      this._uploadTimer = setTimeout(() => {
+        if (this.isUploading) {
+          this._addUploadLog('ERROR', 'WebSocket 응답 없음 - 결과를 직접 확인해주세요.');
+          this.isUploading = false;
+          this.getDomainGroupData();
+        }
+      }, 60000);
+
+      const _url = this.$APIURL.base + "api/std/uploadDomainGroups";
+      const formData = new FormData();
+      formData.append('file', this.excelFile);
+      const headers = { 'Content-Type': 'multipart/form-data' };
+
+      axios.post(_url, formData, { headers }).catch(() => {
+        this._addUploadLog('ERROR', '서버 연결 오류 - API 확인 필요');
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+      });
+
+      document.getElementById('inputDomainGroupUpload').value = '';
+    },
+    onUploadNotice(msg) {
+      if (!this.collectiveModalShow) return;
+      if (!msg.data || !msg.data.startsWith('[도메인그룹]')) return;
+      const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
+      this._addUploadLog(level, msg.data);
+      if (msg.data.includes('완료 -')) {
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+        this.getDomainGroupData();
+        const summary = msg.data.replace('[도메인그룹] ', '');
+        const failMatch = summary.match(/실패:\s*(\d+)건/);
+        const failCount = failMatch ? parseInt(failMatch[1]) : 0;
+        this.$swal.fire({
+          title: '도메인 그룹 일괄등록 완료',
+          text: summary,
+          icon: failCount > 0 ? 'warning' : 'success',
+          showConfirmButton: false,
+          timer: 3000
+        });
+      }
+    },
+    _addUploadLog(level, msg) {
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 8);
+      this.uploadLogs.push({ level, msg, time });
+      this.$nextTick(() => {
+        const box = this.$refs.uploadLogBox;
+        if (box) box.scrollTop = box.scrollHeight;
+      });
+    },
+    domainGroupListDownload() {
+      let _keyWord = this.searchGrpNm && this.searchGrpNm.length !== 0 ? this.searchGrpNm : null;
+      try {
+        axios.get(this.$APIURL.base + "api/std/downloadDomainGroups", {
+          params: { 'searchKey': _keyWord },
+          responseType: 'blob',
+          headers: { "Accept": "application/vnd.ms-excel" }
+        }).then(response => {
+          const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/csv" }));
+          const link = document.createElement("a");
+          link.href = url;
+          let _today = this.$getToday();
+          link.setAttribute("download", `도메인그룹_${_today}.xlsx`);
+          document.body.appendChild(link);
+          link.click();
+          window.URL.revokeObjectURL(url);
+          link.remove();
+        }).catch(() => {
+          this.$swal.fire({ title: '도메인 그룹 다운로드 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
+        });
+      } catch (error) {
+        console.log('도메인 그룹 다운로드 실패 :', error);
+      }
     }
   },
   mounted() {

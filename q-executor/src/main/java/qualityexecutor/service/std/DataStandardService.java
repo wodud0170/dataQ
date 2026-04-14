@@ -21,6 +21,8 @@ public class DataStandardService implements Runnable {
 	public static final String JOB_TYPE_CODE_INFO = "uploadCodeInfoList";
 	public static final String JOB_TYPE_CODE_DATA = "uploadCodeDataList";
 	public static final String JOB_TYPE_DOMAINS = "uploadDomains";
+	public static final String JOB_TYPE_DOMAIN_GRPS = "uploadDomainGroups";
+	public static final String JOB_TYPE_DOMAIN_CLSFS = "uploadDomainClsfs";
 
 	private String jobType;
 	private String userId;
@@ -63,8 +65,14 @@ public class DataStandardService implements Runnable {
 			case JOB_TYPE_DOMAINS:
 				uploadDomains(userId, ssId, multiPart);
 				break;
+			case JOB_TYPE_DOMAIN_GRPS:
+				uploadDomainGroups(userId, ssId, multiPart);
+				break;
+			case JOB_TYPE_DOMAIN_CLSFS:
+				uploadDomainClsfs(userId, ssId, multiPart);
+				break;
 		}
-	}	
+	}
 
 	//단어 일괄 저장
 	public void uploadWords(String userId, String ssId, MultipartFile multiPart) {
@@ -88,7 +96,9 @@ public class DataStandardService implements Runnable {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[용어] 일괄등록 시작");
-			UploadResult result = excelUploadService.uploadTermsList(userId, multiPart);
+			UploadResult result = excelUploadService.uploadTermsList(userId, multiPart, (processed, total) -> {
+				try { stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, String.format("[용어] 진행 중 - %d/%d건", processed, total)); } catch (Exception ignored) {}
+			});
 			this.lastResult = result;
 			sendUploadResult(ssId, "[용어]", result);
 			if (result.getSuccessCount() > 0) {
@@ -149,6 +159,40 @@ public class DataStandardService implements Runnable {
 			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[도메인] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[도메인] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadDomains failed.", e);
+		}
+	}
+
+	//도메인 그룹 일괄 저장
+	public void uploadDomainGroups(String userId, String ssId, MultipartFile multiPart) {
+		log.info(">> websocket SSID={}, userId={}", ssId, userId);
+		try {
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[도메인그룹] 일괄등록 시작");
+			UploadResult result = excelUploadService.uploadDomainGroups(userId, multiPart);
+			sendUploadResult(ssId, "[도메인그룹]", result);
+			if (result.getSuccessCount() > 0) {
+				stompSessionService.sendNotice(WsNoticeLevel.INFO, "도메인 그룹이 일괄저장되었습니다.");
+			}
+		} catch (Exception e) {
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[도메인그룹] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[도메인그룹] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			log.error(">> uploadDomainGroups failed.", e);
+		}
+	}
+
+	//도메인 분류 일괄 저장
+	public void uploadDomainClsfs(String userId, String ssId, MultipartFile multiPart) {
+		log.info(">> websocket SSID={}, userId={}", ssId, userId);
+		try {
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[도메인분류] 일괄등록 시작");
+			UploadResult result = excelUploadService.uploadDomainClsfs(userId, multiPart);
+			sendUploadResult(ssId, "[도메인분류]", result);
+			if (result.getSuccessCount() > 0) {
+				stompSessionService.sendNotice(WsNoticeLevel.INFO, "도메인 분류가 일괄저장되었습니다.");
+			}
+		} catch (Exception e) {
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[도메인분류] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[도메인분류] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			log.error(">> uploadDomainClsfs failed.", e);
 		}
 	}
 

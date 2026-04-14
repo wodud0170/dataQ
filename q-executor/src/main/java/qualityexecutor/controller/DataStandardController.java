@@ -133,6 +133,36 @@ public class DataStandardController extends DataControllerBase {
     	return Mono.just(result);
     }
 
+    @PostMapping(value = "/uploadDomainGroups", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Mono<Response> uploadDomainGroups(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
+                     @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
+                     @RequestParam("file") MultipartFile multiPart) {
+    	Response result = new Response();
+    	log.info(">> uploadDomainGroups started : {}", multiPart.getOriginalFilename());
+    	try {
+			startService(new DataStandardService("uploadDomainGroups", userId, socketSessionId, multiPart));
+	    	result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+    	return Mono.just(result);
+    }
+
+    @PostMapping(value = "/uploadDomainClsfs", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Mono<Response> uploadDomainClsfs(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
+                     @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
+                     @RequestParam("file") MultipartFile multiPart) {
+    	Response result = new Response();
+    	log.info(">> uploadDomainClsfs started : {}", multiPart.getOriginalFilename());
+    	try {
+			startService(new DataStandardService("uploadDomainClsfs", userId, socketSessionId, multiPart));
+	    	result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+    	return Mono.just(result);
+    }
+
     // 표준화 추천 - 용어 분석
     @PostMapping(value = "/analyzeTermsBatch")
     public List<TermAnalysisResult> analyzeTermsBatch(@RequestBody Map<String, List<String>> request) {

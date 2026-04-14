@@ -435,9 +435,9 @@ public class DataStandardController {
 			if (wordList == null) {
 				throw new Exception("terms word list is invalid");
 			}
-			// 형식단어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 형식단어여야 함
-			if (wordList.size() < 2) {
-				throw new Exception("용어는 최소 2개 이상의 단어로 구성되어야 합니다");
+			// 형식단어 검증: 마지막 단어는 형식단어여야 함 (단일 단어 용어도 허용)
+			if (wordList.isEmpty()) {
+				throw new Exception("용어는 최소 1개 이상의 단어로 구성되어야 합니다");
 			}
 			StdTermsVo.Word lastWord = wordList.get(wordList.size() - 1);
 			if (lastWord.getWordId() != null) {
@@ -1046,10 +1046,26 @@ public class DataStandardController {
 			}
 		} catch (Exception e) {
 			log.error(">> createDomain failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), translateDomainInsertError(e, dataVo));
 		}
 
 		return Mono.just(result);
+	}
+
+	// 도메인 INSERT/UPDATE 실패 메시지를 사용자가 알기 쉬운 형태로 변환.
+	// FK 위반(도메인 그룹/분류 미등록)을 우선 감지하여 친절한 메시지로 바꿈.
+	private String translateDomainInsertError(Exception e, StdDomainVo vo) {
+		String msg = e.getMessage();
+		if (msg == null) {
+			return "알 수 없는 오류";
+		}
+		if (msg.contains("tb_domain_fk_1") || msg.contains("(domain_grp_nm)")) {
+			return "도메인 그룹 '" + vo.getDomainGrpNm() + "'이(가) 등록되지 않았습니다";
+		}
+		if (msg.contains("tb_domain_fk_2") || msg.contains("(domain_clsf_nm)")) {
+			return "도메인 분류 '" + vo.getDomainClsfNm() + "'이(가) 등록되지 않았습니다";
+		}
+		return msg;
 	}
 
 	/**
@@ -1075,7 +1091,7 @@ public class DataStandardController {
 					prevValue, dataVo.toString(), "도메인 수정: " + dataVo.getDomainNm());
 		} catch (Exception e) {
 			log.error(">> updateDomain failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), translateDomainInsertError(e, dataVo));
 		}
 
 		return Mono.just(result);
@@ -1404,6 +1420,62 @@ public class DataStandardController {
 	}
 
 	/**
+	 * 도메인 그룹 Excel 일괄 업로드 - q-executor로 전달
+	 */
+	@RequestMapping(value = "/uploadDomainGroups", method = RequestMethod.POST)
+	public Mono<Response> uploadDomainGroups(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
+		log.info(">> started uploadDomainGroups file : {}", excelFile.getOriginalFilename());
+		WebClientHandler webClientHandler = new WebClientHandler(
+				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadDomainGroups", MediaType.MULTIPART_FORM_DATA_VALUE);
+		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
+				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		log.info(">> finished uploadDomainGroups file : {}", excelFile.getOriginalFilename());
+		return mResponse;
+	}
+
+	/**
+	 * 도메인 그룹 목록 Excel 다운로드
+	 */
+	@RequestMapping(value = "/downloadDomainGroups", method = RequestMethod.GET)
+	public void downloadDomainGroups(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+		log.info(">> download domain groups excel started : {}", searchKey);
+		try {
+			excelDownloadService.getDomainGroupsExcel(searchKey, request, response);
+		} catch (Exception e) {
+			log.error(">> download domain groups excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	/**
+	 * 도메인 분류 Excel 일괄 업로드 - q-executor로 전달
+	 */
+	@RequestMapping(value = "/uploadDomainClsfs", method = RequestMethod.POST)
+	public Mono<Response> uploadDomainClsfs(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
+		log.info(">> started uploadDomainClsfs file : {}", excelFile.getOriginalFilename());
+		WebClientHandler webClientHandler = new WebClientHandler(
+				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadDomainClsfs", MediaType.MULTIPART_FORM_DATA_VALUE);
+		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
+				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		log.info(">> finished uploadDomainClsfs file : {}", excelFile.getOriginalFilename());
+		return mResponse;
+	}
+
+	/**
+	 * 도메인 분류 목록 Excel 다운로드
+	 */
+	@RequestMapping(value = "/downloadDomainClsfs", method = RequestMethod.GET)
+	public void downloadDomainClsfs(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+		log.info(">> download domain clsfs excel started : {}", searchKey);
+		try {
+			excelDownloadService.getDomainClsfsExcel(searchKey, request, response);
+		} catch (Exception e) {
+			log.error(">> download domain clsfs excel failed : {}", e.getMessage());
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	/**
 	 * 표준 승인 요청 목록 조회
 	 *
 	 * - 관리자: 전체 목록 조회
@@ -1583,7 +1655,7 @@ public class DataStandardController {
 		vo.setId(StringUtils.getUUID());
 		vo.setReqTp(reqTp);
 		vo.setReqItemId(reqItemId);
-		vo.setAprvStat(0); // 재요청 (승인대기)
+		vo.setAprvStat((short) 0); // 재요청 (승인대기)
 		vo.setReqUserId(sessionService.getUserId());
 		vo.setAprvStatUpdtRsn("재요청");
 
@@ -1969,9 +2041,9 @@ public class DataStandardController {
 
 				// 구성 단어 승인 여부 체크는 용어 승인 시점에 수행 (등록은 자유)
 
-				// 형식단어 검증: 용어는 최소 2개 이상의 단어로 구성되어야 하며, 마지막 단어는 형식단어여야 함
-				if (words == null || words.size() < 2) {
-					throw new RuntimeException("용어는 최소 2개 이상의 단어로 구성되어야 합니다");
+				// 형식단어 검증: 마지막 단어는 형식단어여야 함 (단일 단어 용어도 허용)
+				if (words == null || words.isEmpty()) {
+					throw new RuntimeException("용어는 최소 1개 이상의 단어로 구성되어야 합니다");
 				}
 				Map<String, Object> lastWordEntry = words.get(words.size() - 1);
 				String lastWordId = (String) lastWordEntry.get("wordId");

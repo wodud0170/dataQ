@@ -26,6 +26,8 @@ import com.ndata.quality.model.std.StdCodeInfoVo;
 import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelObjVo;
 import com.ndata.quality.model.std.StdDomainVo;
+import com.ndata.quality.model.std.StdDomainGroupVo;
+import com.ndata.quality.model.std.StdDomainClassificationVo;
 import com.ndata.quality.model.std.StdTermsVo;
 import com.ndata.quality.model.std.StdWordVo;
 import com.ndata.quality.tool.ExcelExportHandler;
@@ -343,6 +345,74 @@ public class ExcelDownloadService {
         Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
 
         // 엑셀데이터 생성
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
+    //도메인 그룹
+    public void getDomainGroupsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+        retrieveCond.setSchAprvYn("Y");
+        if (StringUtils.isNotEmpty(searchKey)) {
+            retrieveCond.setSchNm(searchKey);
+        }
+        List<StdDomainGroupVo> voLst = sqlSessionTemplate.selectList("domain.selectDomainGroupList", retrieveCond);
+        long listSize = voLst.size();
+
+        List<String[]> headers = Arrays.asList(
+            new String[]{"No","5","RIGHT"},
+            new String[]{"도메인그룹명","30","LEFT"},
+            new String[]{"표준여부","10","CENTER"}
+        );
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < listSize; i++) {
+            StdDomainGroupVo dataVo = voLst.get(i);
+            Map<String, Object> tempMap = new LinkedHashMap<>();
+            tempMap.put("HEADER1", i+1);
+            tempMap.put("HEADER2", dataVo.getDomainGrpNm());
+            tempMap.put("HEADER3", dataVo.getCommStndYn());
+            list.add(tempMap);
+        }
+        log.info(">> excel export size={}", list.size());
+
+        String fileName = "도메인그룹_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
+    //도메인 분류
+    public void getDomainClsfsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+        retrieveCond.setSchAprvYn("Y");
+        if (StringUtils.isNotEmpty(searchKey)) {
+            retrieveCond.setSchNm(searchKey);
+        }
+        List<StdDomainClassificationVo> voLst = sqlSessionTemplate.selectList("domain.selectDomainClassificationList", retrieveCond);
+        long listSize = voLst.size();
+
+        List<String[]> headers = Arrays.asList(
+            new String[]{"No","5","RIGHT"},
+            new String[]{"도메인그룹명","30","LEFT"},
+            new String[]{"도메인분류명","30","LEFT"},
+            new String[]{"표준여부","10","CENTER"}
+        );
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < listSize; i++) {
+            StdDomainClassificationVo dataVo = voLst.get(i);
+            Map<String, Object> tempMap = new LinkedHashMap<>();
+            tempMap.put("HEADER1", i+1);
+            tempMap.put("HEADER2", dataVo.getDomainGrpNm());
+            tempMap.put("HEADER3", dataVo.getDomainClsfNm());
+            tempMap.put("HEADER4", dataVo.getCommStndYn());
+            list.add(tempMap);
+        }
+        log.info(">> excel export size={}", list.size());
+
+        String fileName = "도메인분류_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
         ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
         IOUtils.copy(stream, response.getOutputStream());
     }
