@@ -26,6 +26,11 @@
             clearable
         ></v-text-field>
 
+        <span v-show="!isMobile" class="mr-3" style="font-size:.8rem; color:#455A64;">
+            로그인 사용자 : <strong>{{ loginUserId }}</strong> 님
+            <v-chip x-small :color="loginIsAdmin ? 'indigo' : 'grey'" text-color="white" class="ml-1">{{ loginIsAdmin ? '관리자' : '일반' }}</v-chip>
+        </span>
+
         <v-menu bottom rounded offset-y :max-width="isMobile ? '120px' : '150px'" transition="slide-y-transition">
             <template v-slot:activator="{ on }">
                 <!-- header의 오른쪽 아바타입니다. 모바일 이외의 화면에서 사이즈를 지정합니다. -->
@@ -61,6 +66,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import { eventBus } from './../../eventBus.js'
 
 export default {
@@ -68,7 +74,18 @@ export default {
     props: ['isMobile', 'drawer','tabs'],
     data: () => ({
         searchKeyword: '',
+        loginUserId: '',
+        loginIsAdmin: false,
     }),
+    mounted() {
+        var self = this;
+        var loginData = JSON.parse(sessionStorage.getItem('loginStatus'));
+        if (loginData && loginData.id) {
+            self.loginUserId = loginData.id;
+            axios.get(self.$APIURL.base + 'api/login/isAdmin', { params: { user: loginData.id } })
+                .then(function(res) { self.loginIsAdmin = res.data === true; });
+        }
+    },
     methods: {
         navIconClick() {
             if (this.isMobile) {
@@ -81,19 +98,11 @@ export default {
             }
         },
         showAlert() {
-            this.$swal.fire({
-                title: '로그아웃 되었습니다.',
-                confirmButtonText: '확인',
-                confirmButtonColor: '#3F51B5',
-                icon: 'success',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // 세션 삭제
-                    sessionStorage.removeItem("loginStatus");
-                    // 확인 버튼 클릭 후 동작 지정
-                    location.href = "/";
-                }
-            });
+            window._skipBeforeUnload = true;
+            // 세션 삭제
+            sessionStorage.removeItem("loginStatus");
+            // 로그인 화면으로 이동
+            location.href = "/";
         },
         goToMain() {
             this.$swal.fire({

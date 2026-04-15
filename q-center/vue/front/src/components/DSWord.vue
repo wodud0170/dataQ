@@ -203,37 +203,45 @@
 
               <v-row>
                 <v-col cols="4">
-                  <v-subheader>도메인 분류명</v-subheader>
-                </v-col>
-                <v-col cols="8">
-                  <v-autocomplete dense required color="ndColor" v-model="addWord_domainClsfNm" :placeholder="'선택'"
-                    :items="domainClassificationItems" :menu-props="{ top: false, offsetY: true }">
-                    <template v-slot:no-data>
-                      <v-list-item>
-                        <v-list-item-title>
-
-                        </v-list-item-title>
-                      </v-list-item>
-                    </template>
-                  </v-autocomplete>
-                </v-col>
-              </v-row>
-
-              <v-row>
-                <v-col cols="4">
-                  <v-subheader>형식 단어 여부</v-subheader>
+                  <v-subheader>형식 단어 여부
+                    <v-tooltip bottom max-width="360">
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-icon small color="grey" class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                      </template>
+                      <span>형식 단어는 용어의 마지막에 위치하여 데이터 도메인(타입/길이)을 결정하는 단어입니다.<br/>
+                        · 모든 용어는 반드시 형식 단어로 끝나야 합니다.<br/>
+                        · 형식 단어는 단독으로 용어 등록이 가능합니다. (예: "명", "코드", "일자")</span>
+                    </v-tooltip>
+                  </v-subheader>
                 </v-col>
                 <v-col cols="8">
                   <v-radio-group v-model="addWord_wordClsfYn" row mandatory dense hide-details>
-                    <v-radio color="ndColor" label="Y" value="Y" checked></v-radio>
-                    <v-radio color="ndColor" label="N" value="N"></v-radio>
+                    <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                    <v-radio color="ndColor" label="N" value="N" checked></v-radio>
                   </v-radio-group>
+                </v-col>
+              </v-row>
+              <v-row v-if="addWord_wordClsfYn === 'Y'">
+                <v-col cols="4">
+                  <v-subheader class="reqText">도메인 분류명</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-autocomplete dense color="ndColor" v-model="addWord_domainClsfNm" placeholder="선택 (필수)"
+                    :items="domainClassificationItems" :menu-props="{ top: false, offsetY: true }" clearable>
+                  </v-autocomplete>
                 </v-col>
               </v-row>
               <!-- <hr> -->
               <v-row>
                 <v-col cols="4">
-                  <v-subheader>이음동의어 목록</v-subheader>
+                  <v-subheader>이음동의어
+                    <v-tooltip bottom max-width="320">
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-icon small color="grey" class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                      </template>
+                      <span>같은 의미를 가진 다른 표현의 단어를 등록합니다.<br/>예: "사용자"의 이음동의어 → "유저", "이용자"</span>
+                    </v-tooltip>
+                  </v-subheader>
                 </v-col>
 
                 <v-col cols="8">
@@ -251,7 +259,14 @@
 
               <v-row>
                 <v-col cols="4">
-                  <v-subheader>금칙어 목록</v-subheader>
+                  <v-subheader>금칙어
+                    <v-tooltip bottom max-width="320">
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-icon small color="grey" class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                      </template>
+                      <span>이 단어 대신 사용하면 안 되는 비표준 표현을 등록합니다.<br/>금칙어로 등록된 단어는 신규 등록이 차단됩니다.<br/>예: "주소"의 금칙어 → "어드레스", "ADDR"</span>
+                    </v-tooltip>
+                  </v-subheader>
                 </v-col>
 
                 <v-col cols="8">
@@ -273,8 +288,8 @@
                 </v-col>
                 <v-col cols="8">
                   <v-radio-group v-model="addWord_commStndYn" row mandatory dense hide-details>
-                    <v-radio color="ndColor" label="Y" value="Y" checked></v-radio>
-                    <v-radio color="ndColor" label="N" value="N"></v-radio>
+                    <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                    <v-radio color="ndColor" label="N" value="N" checked></v-radio>
                   </v-radio-group>
                 </v-col>
               </v-row>
@@ -347,39 +362,45 @@
 
             <v-row>
               <v-col cols="4">
-                <v-subheader>도메인 분류명</v-subheader>
-              </v-col>
-              <v-col cols="8">
-                <v-autocomplete dense required color="ndColor" v-model="updateWord_domainClsfNm" :placeholder="'선택'"
-                  :items="domainClassificationItems" :menu-props="{ top: false, offsetY: true }">
-                  <template v-slot:no-data>
-                    <v-list-item>
-                      <v-list-item-title>
-
-                      </v-list-item-title>
-                    </v-list-item>
-                  </template>
-                </v-autocomplete>
-
-
-              </v-col>
-            </v-row>
-
-            <v-row>
-              <v-col cols="4">
-                <v-subheader>형식 단어 여부</v-subheader>
+                <v-subheader>형식 단어 여부
+                  <v-tooltip bottom max-width="360">
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-icon small color="grey" class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                    </template>
+                    <span>형식 단어는 용어의 마지막에 위치하여 데이터 도메인(타입/길이)을 결정하는 단어입니다.<br/>
+                      · 모든 용어는 반드시 형식 단어로 끝나야 합니다.<br/>
+                      · 형식 단어는 단독으로 용어 등록이 가능합니다. (예: "명", "코드", "일자")</span>
+                  </v-tooltip>
+                </v-subheader>
               </v-col>
               <v-col cols="8">
                 <v-radio-group v-model="updateWord_wordClsfYn" row mandatory dense hide-details>
-                  <v-radio color="ndColor" label="Y" value="Y" checked></v-radio>
-                  <v-radio color="ndColor" label="N" value="N"></v-radio>
+                  <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                  <v-radio color="ndColor" label="N" value="N" checked></v-radio>
                 </v-radio-group>
+              </v-col>
+            </v-row>
+            <v-row v-if="updateWord_wordClsfYn === 'Y'">
+              <v-col cols="4">
+                <v-subheader class="reqText">도메인 분류명</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-autocomplete dense color="ndColor" v-model="updateWord_domainClsfNm" placeholder="선택 (필수)"
+                  :items="domainClassificationItems" :menu-props="{ top: false, offsetY: true }" clearable>
+                </v-autocomplete>
               </v-col>
             </v-row>
             <!-- <hr> -->
             <v-row>
               <v-col cols="4">
-                <v-subheader>이음동의어 목록</v-subheader>
+                <v-subheader>이음동의어
+                  <v-tooltip bottom max-width="320">
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-icon small color="grey" class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                    </template>
+                    <span>같은 의미를 가진 다른 표현의 단어를 등록합니다.<br/>예: "사용자"의 이음동의어 → "유저", "이용자"</span>
+                  </v-tooltip>
+                </v-subheader>
               </v-col>
 
               <v-col cols="8">
@@ -397,7 +418,14 @@
 
             <v-row>
               <v-col cols="4">
-                <v-subheader>금칙어 목록</v-subheader>
+                <v-subheader>금칙어
+                  <v-tooltip bottom max-width="320">
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-icon small color="grey" class="ml-1" v-bind="attrs" v-on="on">mdi-help-circle-outline</v-icon>
+                    </template>
+                    <span>이 단어 대신 사용하면 안 되는 비표준 표현을 등록합니다.<br/>금칙어로 등록된 단어는 신규 등록이 차단됩니다.<br/>예: "주소"의 금칙어 → "어드레스", "ADDR"</span>
+                  </v-tooltip>
+                </v-subheader>
               </v-col>
 
               <v-col cols="8">
@@ -419,8 +447,8 @@
               </v-col>
               <v-col cols="8">
                 <v-radio-group v-model="updateWord_commStndYn" row mandatory dense hide-details>
-                  <v-radio color="ndColor" label="Y" value="Y" checked></v-radio>
-                  <v-radio color="ndColor" label="N" value="N"></v-radio>
+                  <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                  <v-radio color="ndColor" label="N" value="N" checked></v-radio>
                 </v-radio-group>
               </v-col>
             </v-row>
@@ -541,6 +569,12 @@ export default {
     Treeselect
   },
   watch: {
+    addWord_wordClsfYn(val) {
+      if (val !== 'Y') this.addWord_domainClsfNm = null;
+    },
+    updateWord_wordClsfYn(val) {
+      if (val !== 'Y') this.updateWord_domainClsfNm = null;
+    },
     addWordModalShow(val) {
       val || this.hideModal('add')
     },
@@ -876,6 +910,9 @@ export default {
       }
     },
     resetAddWordTextfield() {
+      this.addWord_wordClsfYn = "N";
+      this.addWord_commStndYn = "N";
+      this.addWord_domainClsfNm = null;
       this.addWord_allophSynmLst_arr = [{ id: 'alloph_0', value: '', addBtnView: true, removeBtnView: false }];
       this.addWord_allophSynmLst_count = 0;
       this.addWord_forbdnWordLst_arr = [{ id: 'forbdnWord_0', value: '', addBtnView: true, removeBtnView: false }];
@@ -1239,7 +1276,11 @@ export default {
     hideModal(value) {
       if (value === 'add') {
         this.addWordModalShow = false;
-        this.$refs.form.reset();
+        this.addWord_wordNm = null;
+        this.addWord_wordEngAbrvNm = null;
+        this.addWord_wordEngNm = null;
+        this.addWord_wordDesc = null;
+        this.addWord_magntdOrd = null;
         this.resetAddWordTextfield();
       } else if (value === 'update') {
         this.updateWordModalShow = false;

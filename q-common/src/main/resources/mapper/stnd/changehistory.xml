@@ -6,10 +6,10 @@
 	<insert id="insertChangeHistory" parameterType="java.util.HashMap">
 		INSERT INTO TB_CHANGE_HISTORY (
 			CHANGE_ID, CHANGE_TYPE, TARGET_TYPE, TARGET_ID, TARGET_NM,
-			CHANGE_CNT, SUMMARY, PREV_VALUE, CURR_VALUE, CHANGE_USER_ID, CHANGE_DT
+			CHANGE_CNT, SUMMARY, PREV_VALUE, CURR_VALUE, CHANGE_USER_ID, CHANGE_DT, CHANGE_SOURCE
 		) VALUES (
 			#{changeId}, #{changeType}, #{targetType}, #{targetId}, #{targetNm},
-			#{changeCnt}, #{summary}, #{prevValue}, #{currValue}, #{changeUserId}, CURRENT_TIMESTAMP
+			#{changeCnt}, #{summary}, #{prevValue}, #{currValue}, #{changeUserId}, CURRENT_TIMESTAMP, #{changeSource}
 		)
 	</insert>
 
@@ -34,7 +34,8 @@
 			CHANGE_CNT AS "changeCnt",
 			SUMMARY AS "summary",
 			CHANGE_USER_ID AS "changeUserId",
-			TO_CHAR(CHANGE_DT, 'YYYY-MM-DD HH24:MI:SS') AS "changeDt"
+			TO_CHAR(CHANGE_DT, 'YYYY-MM-DD HH24:MI:SS') AS "changeDt",
+			CHANGE_SOURCE AS "changeSource"
 		FROM TB_CHANGE_HISTORY
 		WHERE 1=1
 		<if test="targetType != null and targetType != ''">
@@ -42,6 +43,9 @@
 		</if>
 		<if test="changeType != null and changeType != ''">
 			AND CHANGE_TYPE = #{changeType}
+		</if>
+		<if test="changeSource != null and changeSource != ''">
+			AND CHANGE_SOURCE = #{changeSource}
 		</if>
 		<if test="fromDt != null and fromDt != ''">
 			AND CHANGE_DT >= TO_TIMESTAMP(#{fromDt}, 'YYYY-MM-DD')
@@ -65,7 +69,8 @@
 			PREV_VALUE AS "prevValue",
 			CURR_VALUE AS "currValue",
 			CHANGE_USER_ID AS "changeUserId",
-			TO_CHAR(CHANGE_DT, 'YYYY-MM-DD HH24:MI:SS') AS "changeDt"
+			TO_CHAR(CHANGE_DT, 'YYYY-MM-DD HH24:MI:SS') AS "changeDt",
+			CHANGE_SOURCE AS "changeSource"
 		FROM TB_CHANGE_HISTORY
 		WHERE CHANGE_ID = #{changeId}
 	</select>

@@ -65,11 +65,14 @@
     <!-- 상세 패널 (인라인) -->
     <v-sheet v-if="detailItem" class="mx-4 mb-4 pa-4" outlined style="border-radius: 8px;">
       <v-row>
-        <v-col cols="12">
+        <v-col>
           <div class="text-subtitle-1 font-weight-bold mb-2">
             <v-chip small class="mr-2" :color="getTypeColor(detailItem._reqTpRaw)">{{ detailItem._reqTpLabel }}</v-chip>
             {{ detailItem._itemNm || '-' }}
           </div>
+        </v-col>
+        <v-col cols="auto">
+          <v-btn icon small @click="detailItem = null"><v-icon>mdi-close</v-icon></v-btn>
         </v-col>
       </v-row>
       <v-divider class="mb-3"></v-divider>
@@ -244,7 +247,6 @@ export default {
       let items = this.approvalAllItems;
       return {
         requested: items.filter(i => i.aprvStatRaw === 0).length,
-        checking: items.filter(i => i.aprvStatRaw === 1).length,
         approved: items.filter(i => i.aprvStatRaw === 2).length,
         rejected: items.filter(i => i.aprvStatRaw === 3).length,
       };
@@ -252,7 +254,6 @@ export default {
     filteredItems() {
       let items = this.approvalAllItems;
       if (this.activeStatusFilter === 'REQUESTED') items = items.filter(i => i.aprvStatRaw === 0);
-      else if (this.activeStatusFilter === 'CHECKING') items = items.filter(i => i.aprvStatRaw === 1);
       else if (this.activeStatusFilter === 'APPROVED') items = items.filter(i => i.aprvStatRaw === 2);
       else if (this.activeStatusFilter === 'REJECTED') items = items.filter(i => i.aprvStatRaw === 3);
       if (this.typeFilter !== '전체') items = items.filter(i => i.reqTp === this.typeFilter);
@@ -277,14 +278,12 @@ export default {
   methods: {
     getStatusChipColor(stat) {
       if (stat === 0) return 'orange lighten-4';
-      if (stat === 1) return 'blue lighten-4';
       if (stat === 2) return 'green lighten-4';
       if (stat === 3) return 'red lighten-4';
       return 'grey lighten-3';
     },
     getStatusTextColor(stat) {
       if (stat === 0) return 'orange darken-3';
-      if (stat === 1) return 'blue darken-3';
       if (stat === 2) return 'green darken-3';
       if (stat === 3) return 'red darken-3';
       return 'grey darken-1';
@@ -302,7 +301,6 @@ export default {
       this.rejectReason = '';
       this.relatedTermsWarning = [];
       this.approvalHistory = [];
-      this.selectedItem = [item];
 
       let reqTpRaw = item._reqTpRaw;
       if (reqTpRaw === 'TERMS') {
@@ -416,7 +414,7 @@ export default {
       this.updateApproval(items, 'REJECTED', '연관 단어 반려로 인한 자동 반려');
     },
     updateApproval(items, aprvStat, reason) {
-      let statMap = { 'REQUESTED': 0, 'CHECKING': 1, 'APPROVED': 2, 'REJECTED': 3 };
+      let statMap = { 'REQUESTED': 0, 'APPROVED': 2, 'REJECTED': 3 };
       let tpMap = { '도메인': 'DOMAIN', '용어': 'TERMS', '단어': 'WORD' };
 
       let arr = items.map(item => ({
@@ -474,8 +472,7 @@ export default {
             for (let i = 0; i < res.data.length; i++) {
               let raw = res.data[i].aprvStat;
               res.data[i].aprvStatRaw = raw;
-              if (raw === 0) res.data[i].aprvStat = "요청";
-              else if (raw === 1) res.data[i].aprvStat = "검토";
+              if (raw === 0) res.data[i].aprvStat = "승인대기";
               else if (raw === 2) res.data[i].aprvStat = "승인";
               else if (raw === 3) res.data[i].aprvStat = "반려";
 

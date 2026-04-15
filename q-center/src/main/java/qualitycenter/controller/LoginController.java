@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -83,7 +84,7 @@ public class LoginController {
   }
 
   @RequestMapping(value = "/createUser", method = RequestMethod.POST)
-  public Mono<Response> createUser(AdminVo user) throws Exception {
+  public Mono<Response> createUser(@RequestBody AdminVo user) throws Exception {
     log.info(">> create user={}", user);
     Response result = new Response();
 		try {
@@ -107,7 +108,7 @@ public class LoginController {
   }
 
   @RequestMapping(value = "/updateUser", method = RequestMethod.POST)
-  public Mono<Response> updateUser(AdminVo user) throws Exception {
+  public Mono<Response> updateUser(@RequestBody AdminVo user) throws Exception {
     log.info(">> update user={}", user);
     Response result = new Response();
 		try {

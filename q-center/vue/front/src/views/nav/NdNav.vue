@@ -370,8 +370,8 @@
                     </v-list-item>
                 </v-list-group>
 
-                <!-- 관리 -->
-                <v-list-group link v-cloak :value=" navMmGroup " prepend-icon="app_registration"
+                <!-- 관리 (관리자만) -->
+                <v-list-group v-if="isAdmin" link v-cloak :value=" navMmGroup " prepend-icon="app_registration"
                     active-class="ndColor--text" id="mmGroup" title="관리" v-on:click.stop=" addNavGroupData('mmGroup'); ">
                     <template v-slot:activator>
                         <v-list-item-content>
@@ -449,6 +449,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import { eventBus } from '../../eventBus';
 export default {
     name: 'NdNav',
@@ -475,6 +476,7 @@ export default {
     data: () => ({
         selectedList: null,
         wsLogShow: false,
+        isAdmin: false,
     }),
     watch: {
 
@@ -524,6 +526,9 @@ export default {
         },
     },
     mounted() {
+        var self = this;
+        axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
+            .then(function(res) { self.isAdmin = res.data === true; });
         /**
          * DSDataDiag '결과 보기' 버튼 클릭 시 진단 결과 탭을 열기 위한 이벤트 수신
          * - eventBus 'openDiagResult' 이벤트를 받으면 진단 결과 탭을 추가/활성화

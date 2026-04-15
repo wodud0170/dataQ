@@ -53,6 +53,13 @@ public class ExcelUploadService {
 	
 	@Autowired
 	private SqlSessionFactory sqlSessionFactory;	// transaction 사용할 경우 사용
+
+	/** userId로 관리자 여부 조회 (TB_USER.ADM_YN) */
+	private boolean isAdminUser(SqlSession session, String userId) {
+		if (userId == null) return false;
+		Boolean admYn = session.selectOne("sysinfo.selectIsAdmin", userId);
+		return Boolean.TRUE.equals(admYn);
+	}
 	
 	/**
 	 * 단어 Excel 일괄 등록
@@ -67,6 +74,7 @@ public class ExcelUploadService {
 	public UploadResult uploadWords(String userId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
+		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
 
 		try {
 			ExcelSheetHandler sheetHandler = readExcel(multiPart);
@@ -99,6 +107,10 @@ public class ExcelUploadService {
 					stdWordVo.setWordDesc(dataRow.get(5));
 					stdWordVo.setWordClsfYn(dataRow.get(6));
 					stdWordVo.setDomainClsfNm(checkInvalidVal(dataRow.get(7)));
+					// 형식단어인데 도메인 분류명이 없으면 등록 차단
+					if ("Y".equals(stdWordVo.getWordClsfYn()) && stdWordVo.getDomainClsfNm() == null) {
+						throw new Exception("형식 단어는 도메인 분류명이 필수입니다.");
+					}
 					stdWordVo.setAllophSynmLst(splitArrayString(dataRow.get(8)));
 					stdWordVo.setForbdnWordLst(splitArrayString(dataRow.get(9)));
 					String reqSysNm = checkInvalidVal(dataRow.get(10));
@@ -111,7 +123,7 @@ public class ExcelUploadService {
 					stdWordVo.setMagntdOrd(dataRow.get(1));
 					stdWordVo.setCretUserId(userId);
 					stdWordVo.setUpdtUserId(userId);
-					stdWordVo.setAprvYn("Y");
+					stdWordVo.setAprvYn(aprvYn);
 					session.insert("word.insertWord", stdWordVo);
 					session.commit();
 					result.addSuccess();
@@ -148,6 +160,7 @@ public class ExcelUploadService {
 	public UploadResult uploadTermsList(String userId, MultipartFile multiPart, BiConsumer<Integer,Integer> progressCallback) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
+		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
 
 		try {
 			ExcelSheetHandler sheetHandler = readExcel(multiPart);
@@ -182,7 +195,7 @@ public class ExcelUploadService {
 					stdTermsVo.setMagntdOrd(dataRow.get(1));
 					stdTermsVo.setCretUserId(userId);
 					stdTermsVo.setUpdtUserId(userId);
-					stdTermsVo.setAprvYn("Y");
+					stdTermsVo.setAprvYn(aprvYn);
 
 					// 도메인 유효성 검증
 					if (stdTermsVo.getDomainNm() != null) {
@@ -328,6 +341,7 @@ public class ExcelUploadService {
 	public UploadResult uploadDomains(String userId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
+		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
 
 		try {
 			ExcelSheetHandler sheetHandler = readExcel(multiPart);
@@ -369,7 +383,7 @@ public class ExcelUploadService {
 					stdDomainVo.setMagntdOrd(dataRow.get(1));
 					stdDomainVo.setCretUserId(userId);
 					stdDomainVo.setUpdtUserId(userId);
-					stdDomainVo.setAprvYn("Y");
+					stdDomainVo.setAprvYn(aprvYn);
 					session.insert("domain.insertDomain", stdDomainVo);
 					session.commit();
 					result.addSuccess();

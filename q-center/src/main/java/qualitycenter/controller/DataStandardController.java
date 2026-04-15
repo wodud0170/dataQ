@@ -140,6 +140,11 @@ public class DataStandardController {
 			if (dataVo.getWordEngAbrvNm() != null && !dataVo.getWordEngAbrvNm().matches("^[A-Z0-9]+$")) {
 				throw new Exception("단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다. (입력값: " + dataVo.getWordEngAbrvNm() + ")");
 			}
+			// 형식단어인데 도메인 분류명이 없으면 등록 차단
+			if ("Y".equals(dataVo.getWordClsfYn()) && (dataVo.getDomainClsfNm() == null || dataVo.getDomainClsfNm().isEmpty())) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "형식 단어는 도메인 분류명이 필수입니다.");
+				return Mono.just(result);
+			}
 			// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
 			String forbiddenMsg = checkForbiddenWord(dataVo.getWordNm());
 			if (forbiddenMsg != null) {
@@ -150,8 +155,13 @@ public class DataStandardController {
 			String synonymMsg = checkSynonymWord(dataVo.getWordNm());
 
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
-			if (synonymMsg != null) {
-				result.setResultInfo(RestResult.CODE_200.getCode(), synonymMsg);
+			String msg = synonymMsg;
+			if (!sessionService.isAdmin()) {
+				String approvalMsg = "관리자 승인 후 조회 가능합니다.";
+				msg = msg != null ? msg + " " + approvalMsg : approvalMsg;
+			}
+			if (msg != null) {
+				result.setResultInfo(RestResult.CODE_200.getCode(), msg);
 			} else {
 				result.setResultInfo(RestResult.CODE_200);
 			}
@@ -451,7 +461,11 @@ public class DataStandardController {
 			wordList.stream().forEach(v -> v.setTermsId(dataVo.getId()));
 			session.insert("terms.insertTermsWords", wordList);
 			session.commit();
-			result.setResultInfo(RestResult.CODE_200);
+			if (!sessionService.isAdmin()) {
+				result.setResultInfo(RestResult.CODE_200.getCode(), "관리자 승인 후 조회 가능합니다.");
+			} else {
+				result.setResultInfo(RestResult.CODE_200);
+			}
 			// 이력 저장 (관리자 즉시 승인 시에만)
 			if (sessionService.isAdmin()) {
 				saveChangeHistory("INSERT", "TERM", dataVo.getId(), dataVo.getTermsNm(),
@@ -1038,7 +1052,11 @@ public class DataStandardController {
 				throw new Exception("domain(" + dataVo.getDomainNm() + ") is already registered");
 			}
 			sqlSessionTemplate.insert("domain.insertDomain", dataVo);
-			result.setResultInfo(RestResult.CODE_200);
+			if (!sessionService.isAdmin()) {
+				result.setResultInfo(RestResult.CODE_200.getCode(), "관리자 승인 후 조회 가능합니다.");
+			} else {
+				result.setResultInfo(RestResult.CODE_200);
+			}
 			// 이력 저장 (관리자 즉시 승인 시에만, 일반 사용자는 승인 시점에 저장)
 			if (sessionService.isAdmin()) {
 				saveChangeHistory("INSERT", "DOMAIN", dataVo.getId(), dataVo.getDomainNm(),

@@ -1137,12 +1137,21 @@ export default {
 
             if (res.data.resultCode === 200) {
 
-              this.$swal.fire({
-                title: '새로운 도메인이 등록되었습니다.',
-                icon: 'success',
-                showConfirmButton: false,
-                timer: 1500
-              })
+              if (res.data.resultMessage) {
+                this.$swal.fire({
+                  title: '도메인이 등록되었습니다.',
+                  text: res.data.resultMessage,
+                  icon: 'info',
+                  confirmButtonText: '확인',
+                });
+              } else {
+                this.$swal.fire({
+                  title: '새로운 도메인이 등록되었습니다.',
+                  icon: 'success',
+                  showConfirmButton: false,
+                  timer: 1500
+                });
+              }
 
               this.getDomainData();
 

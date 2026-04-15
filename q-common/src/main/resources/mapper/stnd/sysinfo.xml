@@ -400,4 +400,8 @@
                 #{item.id}
     </foreach>
   </delete>
+  <!-- 사용자 관리자 여부 조회 (ExcelUploadService 등 q-common에서 사용) -->
+  <select id="selectIsAdmin" parameterType="String" resultType="Boolean">
+    SELECT ADM_YN FROM tb_user WHERE USER_ID = #{userId} AND (DEL_YN = false OR DEL_YN IS NULL)
+  </select>
 </mapper>

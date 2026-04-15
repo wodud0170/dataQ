@@ -22,7 +22,7 @@
       </v-row>
       <v-row>
         <v-col cols="4"><v-subheader class="font-weight-bold">전화번호</v-subheader></v-col>
-        <v-col cols="8"><v-text-field v-model="userPhone" dense outlined hide-details color="ndColor" placeholder="010-0000-0000"></v-text-field></v-col>
+        <v-col cols="8"><v-text-field v-model="userPhone" dense outlined hide-details color="ndColor" placeholder="010-0000-0000" autocomplete="off"></v-text-field></v-col>
       </v-row>
 
       <v-row class="mt-2">
@@ -42,7 +42,7 @@
       <v-divider class="mb-4"></v-divider>
       <v-row>
         <v-col cols="4"><v-subheader>현재 비밀번호</v-subheader></v-col>
-        <v-col cols="8"><v-text-field v-model="oldPassword" dense outlined hide-details type="password" color="ndColor"></v-text-field></v-col>
+        <v-col cols="8"><v-text-field v-model="oldPassword" dense outlined hide-details type="password" color="ndColor" autocomplete="new-password"></v-text-field></v-col>
       </v-row>
       <v-row>
         <v-col cols="4"><v-subheader>새 비밀번호</v-subheader></v-col>
@@ -91,7 +91,7 @@ export default {
   methods: {
     loadProfile() {
       var self = this;
-      axios.get(self.$APIURL.base + 'api/login/getUser').then(function(res) {
+      axios.get(self.$APIURL.base + 'api/login/getUserDetail', { params: { userId: self.$loginStatusData.id } }).then(function(res) {
         if (res.data) {
           self.userId = res.data.id || '';
           self.isAdmin = res.data.admin || false;
@@ -102,11 +102,11 @@ export default {
     },
     saveProfile() {
       this.saving = true;
-      let formData = new FormData();
-      formData.append('id', this.userId);
-      formData.append('email', this.userEmail || '');
-      formData.append('phone', this.userPhone || '');
-      axios.post(this.$APIURL.base + 'api/login/updateUser', formData)
+      axios.post(this.$APIURL.base + 'api/login/updateUser', {
+        id: this.userId,
+        email: this.userEmail || '',
+        phone: this.userPhone || ''
+      })
         .then(res => {
           if (res.data.resultCode === 200) {
             this.$swal.fire({ title: '저장되었습니다.', icon: 'success', timer: 1500, showConfirmButton: false });

@@ -15,6 +15,10 @@
                             label="유형" dense outlined hide-details />
                     </v-col>
                     <v-col cols="2">
+                        <v-select v-model="filter.changeSource" :items="changeSources" item-text="text" item-value="value"
+                            label="등록 경로" dense outlined hide-details />
+                    </v-col>
+                    <v-col cols="2">
                         <v-text-field v-model="filter.fromDt" label="시작일" type="date" dense outlined hide-details />
                     </v-col>
                     <v-col cols="2">
@@ -112,6 +116,7 @@ export default {
             filter: {
                 targetType: "",
                 changeType: "",
+                changeSource: "",
                 fromDt: "",
                 toDt: ""
             },
@@ -130,6 +135,15 @@ export default {
                 { text: "삭제", value: "DELETE" },
                 { text: "일괄등록", value: "BULK_INSERT" }
             ],
+            changeSources: [
+                { text: "전체", value: "" },
+                { text: "관리자 직접", value: "ADMIN_DIRECT" },
+                { text: "사용자 신청", value: "USER_REQUEST" },
+                { text: "관리자 승인", value: "ADMIN_APPROVE" },
+                { text: "관리자 반려", value: "ADMIN_REJECT" },
+                { text: "일괄등록", value: "BULK_UPLOAD" },
+                { text: "자동 추천", value: "AUTO_RECOMMEND" }
+            ],
             headers: [
                 { text: "변경일시", value: "changeDt", width: "160px" },
                 { text: "유형", value: "changeType", width: "100px" },
@@ -137,6 +151,7 @@ export default {
                 { text: "대상명", value: "targetNm", width: "200px" },
                 { text: "요약", value: "summary" },
                 { text: "건수", value: "changeCnt", width: "80px", align: "center" },
+                { text: "등록 경로", value: "changeSourceLabel", width: "110px" },
                 { text: "변경자", value: "changeUserId", width: "120px" }
             ],
             detailHeaders: [
@@ -161,7 +176,11 @@ export default {
             axios
                 .post(this.$APIURL.base + "api/std/getChangeHistoryList", this.filter)
                 .then(res => {
-                    this.historyList = res.data || [];
+                    var sourceMap = { ADMIN_DIRECT: '관리자 직접', USER_REQUEST: '사용자 신청', ADMIN_APPROVE: '관리자 승인', ADMIN_REJECT: '관리자 반려', BULK_UPLOAD: '일괄등록', AUTO_RECOMMEND: '자동 추천' };
+                    this.historyList = (res.data || []).map(function(h) {
+                        h.changeSourceLabel = sourceMap[h.changeSource] || h.changeSource || '-';
+                        return h;
+                    });
                 })
                 .catch(err => {
                     console.error("이력 조회 실패:", err);
@@ -172,7 +191,7 @@ export default {
                 });
         },
         resetFilter() {
-            this.filter = { targetType: "", changeType: "", fromDt: "", toDt: "" };
+            this.filter = { targetType: "", changeType: "", changeSource: "", fromDt: "", toDt: "" };
             this.search();
         },
         onRowClick(item) {
