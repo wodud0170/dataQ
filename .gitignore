@@ -26,7 +26,7 @@ target/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
+/build/
 
 ### VS Code ###
 .vscode/
@@ -36,7 +36,6 @@ build/
 **/src/main/resources/static/static/
 **/vue/front/node/
 **/vue/front/node_modules/
-!/vue/front/build/
 
 # local DB docker image (contains sensitive user data)
 dataq-db/

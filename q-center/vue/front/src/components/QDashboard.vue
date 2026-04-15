@@ -197,10 +197,10 @@
           <div class="quick-actions">
             <div class="section-subtitle">빠른 액션</div>
             <div class="quick-actions__grid">
-              <v-card class="quick-action-btn" @click="addTabItem('표준화 추천', 'termRecommend')">
+              <v-card class="quick-action-btn" @click="addTabItem('컬럼 표준화', 'termRecommend')">
                 <v-icon color="#3F51B5" x-large>mdi-auto-fix</v-icon>
-                <div class="quick-action-btn__label">표준화 추천</div>
-                <div class="quick-action-btn__desc">표준 용어 자동 추천</div>
+                <div class="quick-action-btn__label">컬럼 표준화</div>
+                <div class="quick-action-btn__desc">한글명 → 영문약어 변환</div>
               </v-card>
               <v-card class="quick-action-btn" @click="addTabItem('진단 실행', 'dataDiag')">
                 <v-icon color="#303F9F" x-large>mdi-stethoscope</v-icon>

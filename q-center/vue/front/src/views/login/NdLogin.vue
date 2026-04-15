@@ -73,7 +73,7 @@
                             </div>
                             <div class="visual-point">
                                 <span class="point-dot" style="background:#A5D6A7;"></span>
-                                자동 표준화 추천 및 등록
+                                컬럼 표준화 (한글명 → 영문약어 변환)
                             </div>
                             <div class="visual-point">
                                 <span class="point-dot" style="background:#CE93D8;"></span>
