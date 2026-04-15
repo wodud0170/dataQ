@@ -44,9 +44,9 @@
 					,A.ALLOW_VAL_LST	
 					,CASE
 						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'VARCHAR'	-- VARCHAR
-							THEN (select A.DATA_LEN||'자리 이내 문자' from dual)
+							THEN A.DATA_LEN||'자리 이내 문자'
 						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'CHAR'	-- CHAR
-							THEN (select A.DATA_LEN||'자리 문자' from dual)
+							THEN A.DATA_LEN||'자리 문자'
 						ELSE A.STOR_FMT
 					END as STOR_FMT
 					,A.EXPR_FMT_LST	
@@ -118,9 +118,9 @@
 					,B.ALLOW_VAL_LST	
 					,CASE
 						WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
-							THEN (select B.DATA_LEN||'자리 이내 문자' from dual)
+							THEN B.DATA_LEN||'자리 이내 문자'
 						WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
-							THEN (select B.DATA_LEN||'자리 문자' from dual)
+							THEN B.DATA_LEN||'자리 문자'
 						ELSE B.STOR_FMT
 					END as STOR_FMT
 					,B.EXPR_FMT_LST	
@@ -159,9 +159,9 @@
 				,B.ALLOW_VAL_LST	
 				,CASE
 		            WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
-		            	THEN (select B.DATA_LEN||'자리 이내 문자' from dual)
+		            	THEN B.DATA_LEN||'자리 이내 문자'
 		            WHEN STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
-		            	THEN (select B.DATA_LEN||'자리 문자' from dual)
+		            	THEN B.DATA_LEN||'자리 문자'
 		            ELSE B.STOR_FMT
 		         END as STOR_FMT
 				,B.EXPR_FMT_LST	
@@ -388,9 +388,9 @@
 					,A.ALLOW_VAL_LST	
 					,CASE
 						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'VARCHAR'	-- VARCHAR
-							THEN (select A.DATA_LEN||'자리 이내 문자' from dual)
+							THEN A.DATA_LEN||'자리 이내 문자'
 						WHEN A.STOR_FMT is null AND A.DATA_TYPE = 'CHAR'	-- CHAR
-							THEN (select A.DATA_LEN||'자리 문자' from dual)
+							THEN A.DATA_LEN||'자리 문자'
 						ELSE A.STOR_FMT
 					END as STOR_FMT
 					,A.EXPR_FMT_LST	
@@ -433,9 +433,9 @@
 					,B.ALLOW_VAL_LST	
 					,CASE
 						WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
-							THEN (select B.DATA_LEN||'자리 이내 문자' from dual)
+							THEN B.DATA_LEN||'자리 이내 문자'
 						WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
-							THEN (select B.DATA_LEN||'자리 문자' from dual)
+							THEN B.DATA_LEN||'자리 문자'
 						ELSE B.STOR_FMT
 					END as STOR_FMT
 					,B.EXPR_FMT_LST	
@@ -471,9 +471,9 @@
 				,B.ALLOW_VAL_LST	
 				,CASE
 		            WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
-		            	THEN (select B.DATA_LEN||'자리 이내 문자' from dual)
+		            	THEN B.DATA_LEN||'자리 이내 문자'
 		            WHEN STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
-		            	THEN (select B.DATA_LEN||'자리 문자' from dual)
+		            	THEN B.DATA_LEN||'자리 문자'
 		            ELSE B.STOR_FMT
 		         END as STOR_FMT
 				,B.EXPR_FMT_LST	

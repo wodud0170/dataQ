@@ -28,7 +28,7 @@
 						(select count(*) from TB_DOMAIN where APRV_YN = 'N'
 							<if test="reqUserId != null">
 							AND CRET_USER_ID = #{reqUserId}
-							</if>) from DUAL) as aprvStatRequestedCnt,
+							</if>)) as aprvStatRequestedCnt,
 				(select count(*) from TB_APRV_STATS where APRV_STAT = 1
 							<if test="reqUserId != null">
 							AND REQ_USER_ID = #{reqUserId}
@@ -41,7 +41,6 @@
 							<if test="reqUserId != null">
 							AND REQ_USER_ID = #{reqUserId}
 							</if>) as aprvStatRejectedCnt
-			from DUAL
 	</select>
 
 	<!-- 데이터모델현황 -->
