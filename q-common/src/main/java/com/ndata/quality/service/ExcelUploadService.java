@@ -129,7 +129,9 @@ public class ExcelUploadService {
 					result.addSuccess();
 				} catch (Exception e) {
 					session.rollback();
-					String detail = String.format("단어(%s): %s", stdWordVo.getWordNm() != null ? stdWordVo.getWordNm() : dataRow.get(2), e.getMessage());
+					String errMsg = translateDuplicateError(e.getMessage());
+					if (errMsg == null) errMsg = e.getMessage();
+					String detail = String.format("단어(%s): %s", stdWordVo.getWordNm() != null ? stdWordVo.getWordNm() : dataRow.get(2), errMsg);
 					log.error("upload words row failed: {}", detail);
 					result.addFail(detail);
 				}
@@ -245,7 +247,9 @@ public class ExcelUploadService {
 					result.addSuccess();
 				} catch (Exception e) {
 					session.rollback();
-					String detail = String.format("용어(%s): %s", stdTermsVo.getTermsNm() != null ? stdTermsVo.getTermsNm() : dataRow.get(2), e.getMessage());
+					String errMsg = translateDuplicateError(e.getMessage());
+					if (errMsg == null) errMsg = e.getMessage();
+					String detail = String.format("용어(%s): %s", stdTermsVo.getTermsNm() != null ? stdTermsVo.getTermsNm() : dataRow.get(2), errMsg);
 					log.error("upload terms row failed: {}", detail);
 					result.addFail(detail);
 				}
@@ -390,7 +394,8 @@ public class ExcelUploadService {
 				} catch (Exception e) {
 					session.rollback();
 					String domainNm = stdDomainVo.getDomainNm() != null ? stdDomainVo.getDomainNm() : dataRow.get(4);
-					String reason = translateDomainInsertError(e, stdDomainVo);
+					String dupMsg = translateDuplicateError(e.getMessage());
+					String reason = dupMsg != null ? dupMsg : translateDomainInsertError(e, stdDomainVo);
 					String detail = String.format("도메인(%s): %s", domainNm, reason);
 					log.error("upload domains row failed: {}", detail);
 					result.addFail(detail);
@@ -519,6 +524,15 @@ public class ExcelUploadService {
 
 	// 도메인 INSERT 실패 메시지를 사용자가 알기 쉬운 형태로 변환.
 	// FK 위반(도메인 그룹/분류 미등록)을 우선 감지하여 친절한 메시지로 바꾸고, 그 외는 원본 메시지 반환.
+	private String translateDuplicateError(String msg) {
+		if (msg == null) return null;
+		if (msg.contains("uix_word_nm")) return "이미 등록된 단어명입니다.";
+		if (msg.contains("uix_word_eng_abrv_nm")) return "이미 등록된 단어 영문약어입니다.";
+		if (msg.contains("uix_terms_nm")) return "이미 등록된 용어명입니다.";
+		if (msg.contains("uix_domain_nm")) return "이미 등록된 도메인명입니다.";
+		return null;
+	}
+
 	private String translateDomainInsertError(Exception e, StdDomainVo vo) {
 		String msg = e.getMessage();
 		if (msg == null) {

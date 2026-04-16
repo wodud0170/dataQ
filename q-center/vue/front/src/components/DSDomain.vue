@@ -1716,9 +1716,32 @@ export default {
     },
   },
   created() {
+    if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'domain') {
+      var pending = eventBus.pendingSearch;
+      eventBus.pendingSearch = null;
+      if (pending.field === 'domainNm') {
+        this.searchDomain = pending.value;
+        this.searchDomainGrpNm = '';
+        this.searchDataType = '';
+        this.searchDataLen = '';
+      }
+    }
     this.getDomainData();
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
+  },
+  activated() {
+    if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'domain') {
+      var pending = eventBus.pendingSearch;
+      eventBus.pendingSearch = null;
+      if (pending.field === 'domainNm') {
+        this.searchDomain = pending.value;
+        this.searchDomainGrpNm = '';
+        this.searchDataType = '';
+        this.searchDataLen = '';
+      }
+      this.getDomainData();
+    }
   },
   beforeDestroy() {
     eventBus.$off('NOTICE', this.onUploadNotice);

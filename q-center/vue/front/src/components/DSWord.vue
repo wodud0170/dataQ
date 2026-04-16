@@ -1728,9 +1728,35 @@ export default {
     },
   },
   created() {
+    // pendingSearch가 있으면 검색조건 세팅 후 조회
+    if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'word') {
+      var pending = eventBus.pendingSearch;
+      eventBus.pendingSearch = null;
+      if (pending.field === 'wordNm') {
+        this.searchWord = pending.value;
+        this.searchEngWord = '';
+      } else if (pending.field === 'wordEngAbrvNm') {
+        this.searchEngWord = pending.value;
+        this.searchWord = '';
+      }
+    }
     this.getWordData();
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
+  },
+  activated() {
+    if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'word') {
+      var pending = eventBus.pendingSearch;
+      eventBus.pendingSearch = null;
+      if (pending.field === 'wordNm') {
+        this.searchWord = pending.value;
+        this.searchEngWord = '';
+      } else if (pending.field === 'wordEngAbrvNm') {
+        this.searchEngWord = pending.value;
+        this.searchWord = '';
+      }
+      this.getWordData();
+    }
   },
   beforeDestroy() {
     eventBus.$off('NOTICE', this.onUploadNotice);

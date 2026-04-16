@@ -31,6 +31,11 @@
           item.dsn
         }}</span>
       </template>
+      <template v-slot:[`item.connTestYn`]="{ item }">
+        <v-chip x-small :color="item.connTestYn === 'Y' ? 'green' : 'grey'" text-color="white">
+          {{ item.connTestYn === 'Y' ? '성공' : '미확인' }}
+        </v-chip>
+      </template>
       <!-- 데이터 없음 -->
       <template #top>
         <v-progress-linear v-show="loadTable" color="indigo darken-2" indeterminate />
@@ -411,6 +416,7 @@ export default {
       { text: '서버주소', sortable: false, align: 'center', value: 'svrAddr' },
       { text: '포트', sortable: false, align: 'center', value: 'port' },
       { text: '사용자', sortable: false, align: 'center', value: 'userId' },
+      { text: '연결 상태', sortable: false, align: 'center', value: 'connTestYn' },
     ],
     progress: false,
     // 테이블 편의성 관련

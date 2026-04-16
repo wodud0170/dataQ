@@ -172,7 +172,8 @@ public class DataStandardController {
 			}
 		} catch (Exception e) {
 			log.error(">> createWord failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			String dupMsg = translateDuplicateError(e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg != null ? dupMsg : e.getMessage());
 		}
 
 		return Mono.just(result);
@@ -474,7 +475,8 @@ public class DataStandardController {
 		} catch (Exception e) {
 			session.rollback();
 			log.error("create terms : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			String dupMsg = translateDuplicateError(e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg != null ? dupMsg : e.getMessage());
 		} finally {
 			session.close();
 		}
@@ -1064,7 +1066,8 @@ public class DataStandardController {
 			}
 		} catch (Exception e) {
 			log.error(">> createDomain failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), translateDomainInsertError(e, dataVo));
+			String dupMsg = translateDuplicateError(e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg != null ? dupMsg : translateDomainInsertError(e, dataVo));
 		}
 
 		return Mono.just(result);
@@ -2722,5 +2725,14 @@ public class DataStandardController {
 		} catch (Exception e) {
 			log.warn("변경이력 저장 실패: {}", e.getMessage());
 		}
+	}
+
+	private String translateDuplicateError(String msg) {
+		if (msg == null) return null;
+		if (msg.contains("uix_word_nm")) return "이미 등록된 단어명입니다.";
+		if (msg.contains("uix_word_eng_abrv_nm")) return "이미 등록된 단어 영문약어입니다.";
+		if (msg.contains("uix_terms_nm")) return "이미 등록된 용어명입니다.";
+		if (msg.contains("uix_domain_nm")) return "이미 등록된 도메인명입니다.";
+		return null;
 	}
 }

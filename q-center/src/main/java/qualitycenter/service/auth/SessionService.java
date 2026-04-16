@@ -103,6 +103,13 @@ public class SessionService {
     }
      
     /**
+     * 유저 상세 조회
+     */
+    public AdminVo getUserDetail(String userId) {
+        return sqlSessionTemplate.selectOne("login.getUser", userId);
+    }
+
+    /**
      * 유저 목록 조회
      */
     public List<AdminVo> getUserList() {

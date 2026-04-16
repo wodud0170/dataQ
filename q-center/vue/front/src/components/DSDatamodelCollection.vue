@@ -759,7 +759,6 @@ export default {
     },
     getDataSourceList() {
       axios.get(this.$APIURL.base + "api/sysinfo/getDataSourceList").then((res) => {
-        // console.log(res)
         let _data = res.data;
         let _dataSourceList = [];
 
@@ -767,7 +766,8 @@ export default {
           let _obj = {};
           _obj = {
             'id': _data[i].id,
-            'dsn': _data[i].dsn,
+            'dsn': _data[i].dsn + (_data[i].connTestYn === 'Y' ? '' : ' (연결 미확인)'),
+            'connTestYn': _data[i].connTestYn,
           }
           _dataSourceList.push(_obj);
         }
@@ -846,14 +846,23 @@ export default {
     },
     createDataModel() {
       try {
+        var selectedDs = this.dataSourceList.find(function(ds) { return ds.id === this.add_dataSource; }.bind(this));
+        if (selectedDs && selectedDs.connTestYn !== 'Y') {
+          this.$swal.fire({
+            title: '연결 테스트가 필요합니다',
+            text: '데이터 소스의 연결 테스트를 먼저 수행해주세요. (관리 > 데이터 소스)',
+            icon: 'warning',
+            confirmButtonText: '확인',
+          });
+          return;
+        }
+
         let dataModleData = {
           'dataModelNm': this.add_dataModelNm,
           'dataModelSysCd': this.add_dataModelSysCd,
           'dataModelDsId': this.add_dataSource,
           'ver': this.add_ver,
         };
-
-        // console.log(dataModleData);
 
         axios.post(this.$APIURL.base + "api/dm/createDataModel", dataModleData)
           .then(res => {

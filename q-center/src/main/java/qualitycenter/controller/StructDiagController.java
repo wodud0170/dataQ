@@ -72,6 +72,13 @@ public class StructDiagController {
 		}
 
 		try {
+			// 중복 진단 체크: 동일 데이터모델에 READY/RUNNING 상태 진단이 있으면 거부
+			int activeCount = sqlSessionTemplate.selectOne("structdiag.selectActiveStructDiagCount", dataModelId);
+			if (activeCount > 0) {
+				result.setResultInfo(409, "이미 진행 중인 구조 진단이 있습니다.");
+				return Mono.just(result);
+			}
+
 			String diagId = StringUtils.getUUID();
 			String userId = sessionService.getUserId();
 

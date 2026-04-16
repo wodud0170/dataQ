@@ -225,7 +225,7 @@
   </delete>
 
   <!-- 데이터소스 -->
-  <select id="selectDataSourceList" resultType="com.ndata.model.DataSourceVo">
+  <select id="selectDataSourceList" resultType="com.ndata.quality.model.mgmt.DataSourceExtVo">
         SELECT
              DS_ID              as id
             ,DSN                as dsn
@@ -241,6 +241,8 @@
             ,DB_NAME            as dbName
             ,RM_DIR             as rmDir
             ,CONN_PROPS         as connProps
+            ,CONN_TEST_YN       as connTestYn
+            ,CONN_TEST_DT       as connTestDt
         FROM
             ndata.tb_data_source
   </select>
@@ -382,8 +384,16 @@
                ,RM_DIR = #{rmDir}
                ,CONN_PROPS = #{connProps}
                ,SECURE_YN = #{useSecure}
+               ,CONN_TEST_YN = 'N'
+               ,CONN_TEST_DT = NULL
             WHERE
               DS_ID = #{id}
+  </update>
+
+  <update id="updateDataSourceConnTest" parameterType="String">
+            UPDATE ndata.tb_data_source
+            SET CONN_TEST_YN = 'Y', CONN_TEST_DT = NOW()
+            WHERE DS_ID = #{id}
   </update>
 
   <delete id="deleteDataSource" parameterType="String">

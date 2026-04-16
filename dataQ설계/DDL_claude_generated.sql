@@ -743,3 +743,21 @@ CREATE TABLE TB_BOARD_COMMENT (
     CRET_DT       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT PK_TB_BOARD_COMMENT PRIMARY KEY (COMMENT_ID)
 );
+
+-- -------------------------------------------------------------
+-- 14. ndata.TB_DATA_SOURCE 연결 테스트 상태 컬럼 추가
+--     데이터소스 수정 시 N 리셋, 연결 테스트 성공 시 Y 갱신
+--     (세션: 2026-04-16 / 데이터소스 연결 정합성 설계)
+-- -------------------------------------------------------------
+ALTER TABLE ndata.tb_data_source ADD COLUMN CONN_TEST_YN CHAR(1) DEFAULT 'N';
+ALTER TABLE ndata.tb_data_source ADD COLUMN CONN_TEST_DT TIMESTAMP;
+
+-- -------------------------------------------------------------
+-- 15. 단어/용어/도메인 중복 방어 UNIQUE 인덱스
+--     코드 레벨 방어 + DB 레벨 이중 안전장치
+--     (세션: 2026-04-16 / 중복 등록 방어 강화)
+-- -------------------------------------------------------------
+CREATE UNIQUE INDEX uix_word_nm ON quality.tb_word (WORD_NM);
+CREATE UNIQUE INDEX uix_word_eng_abrv_nm ON quality.tb_word (WORD_ENG_ABRV_NM);
+CREATE UNIQUE INDEX uix_terms_nm ON quality.tb_terms (TERMS_NM);
+CREATE UNIQUE INDEX uix_domain_nm ON quality.tb_domain (DOMAIN_NM);

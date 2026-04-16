@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(find c:UsersnaraedataDesktopdataQ -name *.java -path *com/ndata/model*)",
       "Bash(find c:UsersnaraedataDesktopdataQ -name *.jar)",
@@ -16,7 +17,9 @@
       "Bash(npx webpack:*)",
       "WebSearch",
       "WebFetch(domain:blog.b2en.com)",
-      "WebFetch(domain:wise.co.kr)"
+      "WebFetch(domain:wise.co.kr)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ]
   }
 }

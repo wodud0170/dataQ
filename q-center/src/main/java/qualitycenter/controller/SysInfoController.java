@@ -19,6 +19,7 @@ import com.ndata.datasource.dbms.connection.DBConnection;
 import com.ndata.model.DataSourceVo;
 import com.ndata.model.DriverVo;
 import com.ndata.module.StringUtils;
+import com.ndata.quality.model.mgmt.DataSourceExtVo;
 import com.ndata.quality.model.mgmt.SysInfoVo;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -161,10 +162,9 @@ public class SysInfoController {
 	}
 
 	@RequestMapping(value = "/getDataSourceList", method = RequestMethod.GET)
-	public List<DataSourceVo> getDataSourceList() {
-		List<DataSourceVo> dsVos = sqlSessionTemplate.selectList("sysinfo.selectDataSourceList");
-		// password를 복호화한다.
-		for (DataSourceVo dsVo : dsVos) {
+	public List<DataSourceExtVo> getDataSourceList() {
+		List<DataSourceExtVo> dsVos = sqlSessionTemplate.selectList("sysinfo.selectDataSourceList");
+		for (DataSourceExtVo dsVo : dsVos) {
 			dsVo.setPwd(securityUtils.decryptStr(dsVo.getPwd()));
 		}
 		return dsVos;
@@ -199,7 +199,9 @@ public class SysInfoController {
 			}
 			dbConn = new DBConnection(dataVo, false);
 			dbConn.connect();
-			// set response message
+			if (dataVo.getId() != null && !dataVo.getId().isEmpty()) {
+				sqlSessionTemplate.update("sysinfo.updateDataSourceConnTest", dataVo.getId());
+			}
 			result.setResultInfo(RestResult.CODE_200);
 			log.info("test datasource success - data={}", dataVo);
 		} catch (Exception e) {

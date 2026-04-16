@@ -45,7 +45,7 @@
                 dense hide-default-footer
                 :items-per-page="-1"
                 class="search-result-table"
-                @click:row="(item) => navigateTo('word')"
+                @click:row="(item) => navigateTo('word', { field: 'wordNm', value: item.wordNm })"
               ></v-data-table>
             </v-expansion-panel-content>
           </v-expansion-panel>
@@ -62,7 +62,7 @@
                 dense hide-default-footer
                 :items-per-page="-1"
                 class="search-result-table"
-                @click:row="(item) => navigateTo('term')"
+                @click:row="(item) => navigateTo('term', { field: 'termsNm', value: item.termsNm })"
               ></v-data-table>
             </v-expansion-panel-content>
           </v-expansion-panel>
@@ -79,7 +79,7 @@
                 dense hide-default-footer
                 :items-per-page="-1"
                 class="search-result-table"
-                @click:row="(item) => navigateTo('domain')"
+                @click:row="(item) => navigateTo('domain', { field: 'domainNm', value: item.domainNm })"
               ></v-data-table>
             </v-expansion-panel-content>
           </v-expansion-panel>
@@ -186,7 +186,10 @@ export default {
         this.searched = true;
       }
     },
-    navigateTo(tabName) {
+    navigateTo(tabName, searchInfo) {
+      if (searchInfo) {
+        eventBus.pendingSearch = { type: tabName, field: searchInfo.field, value: searchInfo.value };
+      }
       this.$emit('addTabItem', this.getTabTitle(tabName), tabName);
     },
     getTabTitle(name) {

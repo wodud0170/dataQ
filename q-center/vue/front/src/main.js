@@ -135,17 +135,14 @@ export const wsVue = new Vue({
       document.getElementById("logTextWrap").innerHTML +=
         "STOMP close: " + JSON.stringify(error) + '<br /><br />';
 
-      if (
-        error &&
-        Object.prototype.toString.call(error) === "[object String]" &&
-        error.lastIndexOf("Whoops! Lost connection to", 0) === 0
-      ) {
-        //when stomp session disconnected, try reconnect
+      // 연결 끊김/실패 시 재연결 시도 (로그인 상태면 로그아웃하지 않음)
+      var loginStatus = sessionStorage.getItem("loginStatus");
+      if (loginStatus) {
         this.wsUnsubscribe();
-        setTimeout(this.connect(), 2000);
-        console.log("STOMP: Reconecting in 2 seconds");
+        setTimeout(() => this.connect(), 3000);
+        console.log("STOMP: Reconnecting in 3 seconds (session alive)");
       } else {
-        console.log("STOMP: connection failed or nomally closed, redirect to login page");
+        console.log("STOMP: no login session, redirect to login page");
         router.push({ path: '/signin' });
       }
     },

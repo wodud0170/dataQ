@@ -40,9 +40,7 @@ public class LoginController {
 
   @RequestMapping(value = "/getUserDetail", method = RequestMethod.GET)
   public AdminVo getUserDetail(@RequestParam String userId) {
-    return sessionService.getUserList().stream()
-        .filter(u -> u.getId().equals(userId))
-        .findFirst().orElse(null);
+    return sessionService.getUserDetail(userId);
   }
 
   @RequestMapping(value = "/isAdmin", method = RequestMethod.GET)

@@ -2492,9 +2492,42 @@ export default {
     },
   },
   created() {
+    if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'term') {
+      var pending = eventBus.pendingSearch;
+      eventBus.pendingSearch = null;
+      if (pending.field === 'termsNm') {
+        this.searchTerm = pending.value;
+        this.searchTermMode = 'contains';
+        this.searchEngTerm = '';
+        this.searchDomain = '';
+      } else if (pending.field === 'termsEngAbrvNm') {
+        this.searchEngTerm = pending.value;
+        this.searchEngTermMode = 'contains';
+        this.searchTerm = '';
+        this.searchDomain = '';
+      }
+    }
     this.getTermData();
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
+  },
+  activated() {
+    if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'term') {
+      var pending = eventBus.pendingSearch;
+      eventBus.pendingSearch = null;
+      if (pending.field === 'termsNm') {
+        this.searchTerm = pending.value;
+        this.searchTermMode = 'contains';
+        this.searchEngTerm = '';
+        this.searchDomain = '';
+      } else if (pending.field === 'termsEngAbrvNm') {
+        this.searchEngTerm = pending.value;
+        this.searchEngTermMode = 'contains';
+        this.searchTerm = '';
+        this.searchDomain = '';
+      }
+      this.getTermData();
+    }
   },
   beforeDestroy() {
     eventBus.$off('NOTICE', this.onUploadNotice);

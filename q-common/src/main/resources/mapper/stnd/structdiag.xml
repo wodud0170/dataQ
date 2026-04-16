@@ -44,6 +44,13 @@
 		<result property="currNullable" column="CURR_NULLABLE"/>
 	</resultMap>
 
+	<!-- 동일 데이터모델에 대해 READY/RUNNING 상태인 진단 수 조회 (중복 방지용) -->
+	<select id="selectActiveStructDiagCount" parameterType="String" resultType="int">
+		SELECT COUNT(*) FROM TB_STRUCT_DIAG_HISTORY
+		WHERE DATA_MODEL_ID = #{dataModelId}
+		AND STATUS IN ('READY', 'RUNNING')
+	</select>
+
 	<!-- 진단 이력 저장 (READY 상태로 초기 생성) -->
 	<insert id="insertStructDiagHistory" parameterType="java.util.HashMap">
 		INSERT INTO TB_STRUCT_DIAG_HISTORY (
