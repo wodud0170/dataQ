@@ -116,32 +116,21 @@
 
       <!-- ===== 3. 승인 현황 ===== -->
       <v-card class="itemsWrapper">
-        <h2><v-icon>dashboard_customize</v-icon>&nbsp;&nbsp;승인 현황</h2>
+        <h2><v-icon>dashboard_customize</v-icon>&nbsp;&nbsp;{{ isAdmin ? '승인 현황' : '내 요청 현황' }}</h2>
         <v-sheet class="chartWrapper">
-          <!-- 승인요청 -->
-          <v-card class="aprv-card" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('REQUESTED');">
+          <!-- 승인대기 -->
+          <v-card class="aprv-card" v-on:click.stop="onAprvCardClick('REQUESTED')">
             <div class="aprv-card__bar" style="background: #1976D2;"></div>
             <div class="aprv-card__icon-area" style="background: rgba(25,118,210,0.1);">
               <v-icon color="#1976D2" large>mdi-send</v-icon>
             </div>
             <div class="aprv-card__content">
-              <div class="aprv-card__label">승인요청</div>
+              <div class="aprv-card__label">승인대기</div>
               <div class="aprv-card__value">{{ aprvStatRequestedCnt }}<span class="aprv-card__unit">건</span></div>
             </div>
           </v-card>
-          <!-- 검토 -->
-          <v-card class="aprv-card" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('CHECKING');">
-            <div class="aprv-card__bar" style="background: #FB8C00;"></div>
-            <div class="aprv-card__icon-area" style="background: rgba(251,140,0,0.1);">
-              <v-icon color="#FB8C00" large>mdi-eye</v-icon>
-            </div>
-            <div class="aprv-card__content">
-              <div class="aprv-card__label">검토</div>
-              <div class="aprv-card__value">{{ aprvStatCheckingCnt }}<span class="aprv-card__unit">건</span></div>
-            </div>
-          </v-card>
-          <!-- 승인 완료 -->
-          <v-card class="aprv-card" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('APPROVED');">
+          <!-- 승인완료 -->
+          <v-card class="aprv-card" v-on:click.stop="onAprvCardClick('APPROVED')">
             <div class="aprv-card__bar" style="background: #43A047;"></div>
             <div class="aprv-card__icon-area" style="background: rgba(67,160,71,0.1);">
               <v-icon color="#43A047" large>mdi-check-circle</v-icon>
@@ -152,7 +141,7 @@
             </div>
           </v-card>
           <!-- 반려 -->
-          <v-card class="aprv-card" v-on:click.stop="addTabItem('승인', 'approval'); sendApprovalStatus('REJECTED');">
+          <v-card class="aprv-card" v-on:click.stop="onAprvCardClick('REJECTED')">
             <div class="aprv-card__bar" style="background: #E53935;"></div>
             <div class="aprv-card__icon-area" style="background: rgba(229,57,53,0.1);">
               <v-icon color="#E53935" large>mdi-close-circle</v-icon>
@@ -236,10 +225,11 @@ export default {
     domainCnt: 0,
     termsCnt: 0,
     wordCnt: 0,
+    // 관리자 여부
+    isAdmin: false,
     // 승인현황
     aprvStatRequestedCnt: 0,
     aprvStatApprovedCnt: 0,
-    aprvStatCheckingCnt: 0,
     aprvStatRejectedCnt: 0,
     // 데이터 모델 현황
     dataModelCnt: 0,
@@ -438,6 +428,8 @@ export default {
     this.getDashboardInfo();
     this.loadModelList();
     this.getRecentChangeHistory();
+    axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
+      .then(res => { this.isAdmin = res.data === true; });
   },
   mounted() {
   },
@@ -472,7 +464,6 @@ export default {
           this.termsCnt = _data.termsCnt;
           this.aprvStatApprovedCnt = _data.aprvStatApprovedCnt;
           this.wordCnt = _data.wordCnt;
-          this.aprvStatCheckingCnt = _data.aprvStatCheckingCnt;
           this.aprvStatRejectedCnt = _data.aprvStatRejectedCnt;
 
         }).catch(error => {
@@ -654,9 +645,14 @@ export default {
       }, 500);
 
     },
-    sendApprovalStatus(status) {
-      // 승인일 경우 승인상태를 넘겨주어서 해당 목록만 보일 수 있도록 함
-      this.$emit('sendApprovalStatus', status);
+    onAprvCardClick(status) {
+      if (this.isAdmin) {
+        eventBus.pendingApprovalFilter = status;
+        this.addTabItem('승인', 'approval');
+      } else {
+        eventBus.pendingMyRequestFilter = status === 'REQUESTED' ? 'PENDING' : status;
+        this.addTabItem('요청 현황', 'myRequest');
+      }
     }
   },
 }

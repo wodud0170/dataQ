@@ -5,7 +5,8 @@ import lombok.Getter;
 public enum NDQualityStdObjectType {
 	WORD      ("WORD"),
 	TERMS       ("TERMS"),
-	DOMAIN       ("DOMAIN");
+	DOMAIN       ("DOMAIN"),
+	CODE        ("CODE");
 	
 	@Getter
     private String value;

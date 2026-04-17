@@ -40,11 +40,11 @@
           </v-sheet>
           <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-            <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
-            <v-btn class="gradient" v-on:click="domainExcelFileUpload()" title="일괄 등록">일괄 등록</v-btn>
+            <v-btn class="gradient" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" v-on:click="domainExcelFileUpload()" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="domainListDownload()" title="다운로드">다운로드</v-btn>
-            <v-btn class="gradient" v-on:click="domainRemoveItem()" title="삭제">삭제</v-btn>
-            <v-btn class="gradient" color="red lighten-4" v-on:click="domainBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" v-on:click="domainRemoveItem()" title="삭제">삭제</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" color="red lighten-4" v-on:click="domainBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
             <input type="file" @change="readExcelFile" ref="file" id="inputDomainUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
@@ -104,7 +104,7 @@
             </v-sheet>
             <!-- 수정 / 삭제 버튼 -->
             <v-sheet class="pr-4 pl-4">
-              <v-btn class="gradient" v-on:click="showModal('update')">수정</v-btn>
+              <v-btn v-if="isAdmin" class="gradient" v-on:click="showModal('update')">수정</v-btn>
               <v-btn class="gradient" v-on:click="openImpactDialog()">영향도 분석</v-btn>
               <!-- <v-btn class="gradient" v-on:click="domainRemoveItem()">삭제</v-btn> -->
             </v-sheet>
@@ -577,6 +577,8 @@ export default {
     searchDomainGrpNm: '',
     searchDataType: '',
     searchDataLen: '',
+    // 관리자 여부
+    isAdmin: false,
     // 검색 승인 여부
     searchApproval: true,
     // 등록 모달 보이기
@@ -1728,6 +1730,8 @@ export default {
     }
     this.getDomainData();
     this.getSystemList();
+    axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
+      .then(res => { this.isAdmin = res.data === true; });
     eventBus.$on('NOTICE', this.onUploadNotice);
   },
   activated() {

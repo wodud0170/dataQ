@@ -49,12 +49,12 @@
           </v-sheet>
           <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-            <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
-            <v-btn class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
+            <v-btn class="gradient" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="downloadTermTemplate()" title="템플릿 다운로드">템플릿 다운로드</v-btn>
             <v-btn class="gradient" v-on:click="termListDownload()" title="다운로드">다운로드</v-btn>
-            <v-btn class="gradient" v-on:click="termRemoveItem()" title="선택 삭제" :disabled="removeItems.length === 0">선택 삭제</v-btn>
-            <v-btn class="gradient" color="red lighten-4" v-on:click="termBulkRemove()" title="전체 삭제">전체 삭제</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" v-on:click="termRemoveItem()" title="선택 삭제" :disabled="removeItems.length === 0">선택 삭제</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" color="red lighten-4" v-on:click="termBulkRemove()" title="전체 삭제">전체 삭제</v-btn>
             <input type="file" @change="readExcelFile" ref="file" id="inputTermUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
@@ -127,7 +127,7 @@
               </v-sheet>
               <!-- 수정 / 삭제 버튼 -->
               <v-sheet class="pr-4 pl-4">
-                <v-btn class="gradient" v-on:click="showModal('update')">수정</v-btn>
+                <v-btn v-if="isAdmin" class="gradient" v-on:click="showModal('update')">수정</v-btn>
                 <!-- <v-btn class="gradient" v-on:click="wordRemoveItem()">삭제</v-btn> -->
               </v-sheet>
             </v-sheet>
@@ -181,7 +181,7 @@
               </v-sheet>
               <!-- 수정 / 삭제 버튼 -->
               <v-sheet class="pr-4 pl-4">
-                <v-btn class="gradient" v-on:click="showModal('update')">수정</v-btn>
+                <v-btn v-if="isAdmin" class="gradient" v-on:click="showModal('update')">수정</v-btn>
                 <!-- <v-btn class="gradient" v-on:click="wordRemoveItem()">삭제</v-btn> -->
               </v-sheet>
             </v-sheet>
@@ -889,6 +889,8 @@ export default {
     searchDomain: '',
 
     
+    // 관리자 여부
+    isAdmin: false,
     // 검색 승인 여부
     searchApproval: true,
     // 검색 이후 용어 리스트 다시보기 버튼 보이기
@@ -2510,6 +2512,8 @@ export default {
     this.getTermData();
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
+    axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
+      .then(res => { this.isAdmin = res.data === true; });
   },
   activated() {
     if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'term') {

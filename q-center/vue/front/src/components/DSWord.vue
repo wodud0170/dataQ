@@ -40,11 +40,11 @@
           </v-sheet>
           <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-            <v-btn class="gradient" id="addWordBtn" v-on:click="showModal('add')" title="등록">등록</v-btn>
-            <v-btn class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
+            <v-btn class="gradient" id="addWordBtn" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="wordListDownload()" title="다운로드">다운로드</v-btn>
-            <v-btn class="gradient" v-on:click="wordRemoveItem()" title="삭제">삭제</v-btn>
-            <v-btn class="gradient" color="red lighten-4" v-on:click="wordBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" v-on:click="wordRemoveItem()" title="삭제">삭제</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" color="red lighten-4" v-on:click="wordBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
             <input type="file" @change="readExcelFile" ref="file" id="inputUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
@@ -109,7 +109,7 @@
             </v-sheet>
             <!-- 수정 / 삭제 버튼 -->
             <v-sheet class="pr-4 pl-4">
-              <v-btn class="gradient" v-on:click="showModal('update')">수정</v-btn>
+              <v-btn v-if="isAdmin" class="gradient" v-on:click="showModal('update')">수정</v-btn>
               <v-btn class="gradient" v-on:click="openImpactDialog()">영향도 분석</v-btn>
               <!-- <v-btn class="gradient" v-on:click="wordRemoveItem()">삭제</v-btn> -->
             </v-sheet>
@@ -599,6 +599,8 @@ export default {
     searchWord: '',
     // 검색 단어영문약어명
     searchEngWord: '',
+    // 관리자 여부
+    isAdmin: false,
     // 검색 승인 여부
     searchApproval: true,
     // 형식단어 여부 필터
@@ -1743,6 +1745,8 @@ export default {
     this.getWordData();
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
+    axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
+      .then(res => { this.isAdmin = res.data === true; });
   },
   activated() {
     if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'word') {

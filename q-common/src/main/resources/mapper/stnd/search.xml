@@ -8,38 +8,39 @@
 		<id column="wordCnt" property="wordCnt"/>
 		<id column="domainCnt" property="domainCnt"/>
 		<id column="aprvStatRequestedCnt" property="aprvStatRequestedCnt"/>
-		<id column="aprvStatCheckingCnt" property="aprvStatCheckingCnt"/>
 		<id column="aprvStatApprovedCnt" property="aprvStatApprovedCnt"/>
 		<id column="aprvStatRejectedCnt" property="aprvStatRejectedCnt"/>
 	</resultMap>
 	<select id="selectDataboardInfo" parameterType="com.ndata.quality.model.std.StdApproveStatVo$RetrieveCond" resultMap="dashboardMap">
-			select 
+			select
 				(select count(*) from TB_TERMS where APRV_YN = 'Y') as termsCnt,
 				(select count(*) from TB_WORD where APRV_YN = 'Y') as wordCnt,
 				(select count(*) from TB_DOMAIN where APRV_YN = 'Y') as domainCnt,
 				(select (select count(*) from TB_TERMS where APRV_YN = 'N'
 							<if test="reqUserId != null">
 							AND CRET_USER_ID = #{reqUserId}
-							</if>) + 
+							</if>) +
 						(select count(*) from TB_WORD where APRV_YN = 'N'
 							<if test="reqUserId != null">
 							AND CRET_USER_ID = #{reqUserId}
-							</if>) + 
+							</if>) +
 						(select count(*) from TB_DOMAIN where APRV_YN = 'N'
 							<if test="reqUserId != null">
 							AND CRET_USER_ID = #{reqUserId}
 							</if>)) as aprvStatRequestedCnt,
-				(select count(*) from TB_APRV_STATS where APRV_STAT = 1
-							<if test="reqUserId != null">
-							AND REQ_USER_ID = #{reqUserId}
-							</if>) as aprvStatCheckingCnt,
 				(select count(*) from TB_APRV_STATS where APRV_STAT = 2
 							<if test="reqUserId != null">
 							AND REQ_USER_ID = #{reqUserId}
+							</if>
+							<if test="reqUserId == null">
+							AND APRV_STAT_UPDT_DT &gt;= to_char(now() - interval '1 month', 'YYYYMMDDHH24MISS')
 							</if>) as aprvStatApprovedCnt,
 				(select count(*) from TB_APRV_STATS where APRV_STAT = 3
 							<if test="reqUserId != null">
 							AND REQ_USER_ID = #{reqUserId}
+							</if>
+							<if test="reqUserId == null">
+							AND APRV_STAT_UPDT_DT &gt;= to_char(now() - interval '1 month', 'YYYYMMDDHH24MISS')
 							</if>) as aprvStatRejectedCnt
 	</select>
 

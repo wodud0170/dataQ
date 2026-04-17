@@ -145,6 +145,15 @@ public class DataStandardController {
 				result.setResultInfo(RestResult.CODE_500.getCode(), "형식 단어는 도메인 분류명이 필수입니다.");
 				return Mono.just(result);
 			}
+			// 중복 체크: 동일 단어명이 이미 존재하면 승인 상태에 따라 메시지 분기
+			StdWordVo existingWord = sqlSessionTemplate.selectOne("word.selectWordInfoByNm", dataVo.getWordNm());
+			if (existingWord != null) {
+				String dupMsg = "Y".equals(existingWord.getAprvYn())
+						? "이미 승인된 단어명입니다."
+						: "승인 대기 중인 단어명입니다.";
+				result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg);
+				return Mono.just(result);
+			}
 			// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
 			String forbiddenMsg = checkForbiddenWord(dataVo.getWordNm());
 			if (forbiddenMsg != null) {
@@ -187,6 +196,11 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateWord", method = RequestMethod.POST)
 	public Mono<Response> updateWord(@RequestBody StdWordVo dataVo) {
+		if (!sessionService.isAdmin()) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 수정할 수 있습니다.");
+			return Mono.just(r);
+		}
 		dataVo.setUpdtUserId(sessionService.getUserId());
 		log.info(">> updateWord : {}", dataVo);
 
@@ -220,6 +234,11 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteWords", method = RequestMethod.POST)
 	public Mono<Response> deleteWords(@RequestBody List<StdWordVo> dataVos) {
+		if (!sessionService.isAdmin()) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 삭제할 수 있습니다.");
+			return Mono.just(r);
+		}
 		Response result = new Response();
 		try {
 			// 삭제 전 참조 중인 용어 확인
@@ -436,10 +455,14 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
-			// 용어가 이미 존재하는 경우에는 Exception 발생시킨다.
+			// 중복 체크: 동일 용어명이 이미 존재하면 승인 상태에 따라 메시지 분기
 			dataVo.setTermsNm(dataVo.getTermsNm().replaceAll("\\s", ""));
-			if (session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm()) != null) {
-				throw new Exception("terms(" + dataVo.getTermsNm() + ") is already registered");
+			StdTermsVo existingTerms = session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm());
+			if (existingTerms != null) {
+				String dupMsg = "Y".equals(existingTerms.getAprvYn())
+						? "이미 승인된 용어명입니다."
+						: "승인 대기 중인 용어명입니다.";
+				throw new Exception(dupMsg);
 			}
 			// 구성 단어 목록 확인 (승인 여부 체크는 용어 승인 시점에 수행)
 			List<StdTermsVo.Word> wordList = Arrays.asList(dataVo.getWordList());
@@ -616,6 +639,11 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateTerms", method = RequestMethod.POST)
 	public Mono<Response> updateTerms(@RequestBody StdTermsVo dataVo) {
+		if (!sessionService.isAdmin()) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 수정할 수 있습니다.");
+			return Mono.just(r);
+		}
 		dataVo.setUpdtUserId(sessionService.getUserId());
 		log.info(">> updateTerms : {}", dataVo);
 
@@ -663,6 +691,11 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteTermsList", method = RequestMethod.POST)
 	public Mono<Response> deleteTermsList(@RequestBody List<StdTermsVo> dataVos) {
+		if (!sessionService.isAdmin()) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 삭제할 수 있습니다.");
+			return Mono.just(r);
+		}
 		Response result = new Response();
 		try {
 			List<String> deletedNames = new ArrayList<>();
@@ -1050,8 +1083,13 @@ public class DataStandardController {
 
 		Response result = new Response();
 		try {
-			if (sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dataVo.getDomainNm()) != null) {
-				throw new Exception("domain(" + dataVo.getDomainNm() + ") is already registered");
+			// 중복 체크: 동일 도메인명이 이미 존재하면 승인 상태에 따라 메시지 분기
+			StdDomainVo existingDomain = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dataVo.getDomainNm());
+			if (existingDomain != null) {
+				String dupMsg = "Y".equals(existingDomain.getAprvYn())
+						? "이미 승인된 도메인명입니다."
+						: "승인 대기 중인 도메인명입니다.";
+				throw new Exception(dupMsg);
 			}
 			sqlSessionTemplate.insert("domain.insertDomain", dataVo);
 			if (!sessionService.isAdmin()) {
@@ -1097,6 +1135,11 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateDomain", method = RequestMethod.POST)
 	public Mono<Response> updateDomain(@RequestBody StdDomainVo dataVo) {
+		if (!sessionService.isAdmin()) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 수정할 수 있습니다.");
+			return Mono.just(r);
+		}
 		dataVo.setUpdtUserId(sessionService.getUserId());
 		log.info(">> updateDomain : {}", dataVo);
 
@@ -1126,6 +1169,11 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteDomains", method = RequestMethod.POST)
 	public Mono<Response> deleteDomains(@RequestBody List<StdDomainVo> dataVos) {
+		if (!sessionService.isAdmin()) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 삭제할 수 있습니다.");
+			return Mono.just(r);
+		}
 		Response result = new Response();
 		try {
 			List<String> deletedNames = new ArrayList<>();
@@ -1567,41 +1615,79 @@ public class DataStandardController {
 					}
 				}
 
-				// 단어 반려 시: 연관 미승인 용어 경고
-				if (objType == NDQualityStdObjectType.WORD
-						&& dataVo.getAprvStat() == NDQualityApproveStat.REJECTED.getValue()) {
-					List<Map<String, Object>> relatedTerms = session.selectList(
-							"approve.selectUnapprovedTermsByWordId", dataVo.getReqItemId());
-					if (relatedTerms != null && !relatedTerms.isEmpty()) {
-						Map<String, Object> warning = new HashMap<>();
-						warning.put("wordId", dataVo.getReqItemId());
-						warning.put("wordNm", dataVo.getReqItemNm());
-						warning.put("relatedTerms", relatedTerms);
-						warnings.add(warning);
+				if (dataVo.getAprvStat() == NDQualityApproveStat.REJECTED.getValue()) {
+					// === 반려: 물리 삭제 ===
+					session.insert("approve.insertStdAprvStat", dataVo);
+
+					switch (objType) {
+						case WORD:
+							// 단어 반려 → 연관 미승인 용어 cascade 삭제
+							List<Map<String, Object>> relatedTerms = session.selectList(
+									"approve.selectUnapprovedTermsByWordId", dataVo.getReqItemId());
+							if (relatedTerms != null && !relatedTerms.isEmpty()) {
+								// cascade 대상 용어의 반려 이력도 남김
+								for (Map<String, Object> t : relatedTerms) {
+									StdApproveStatVo cascadeVo = new StdApproveStatVo();
+									cascadeVo.setId(StringUtils.getUUID());
+									cascadeVo.setReqTp("TERMS");
+									cascadeVo.setReqItemId((String) t.get("termsId"));
+									cascadeVo.setReqItemNm((String) t.get("termsNm"));
+									cascadeVo.setAprvStat((short) NDQualityApproveStat.REJECTED.getValue());
+									cascadeVo.setAprvUserId(sessionService.getUserId());
+									cascadeVo.setAprvStatUpdtRsn("단어 '" + dataVo.getReqItemNm() + "' 반려에 의한 연쇄 삭제");
+									session.insert("approve.insertStdAprvStat", cascadeVo);
+								}
+								// 용어 먼저 삭제 (TB_TERMS_WORDS는 FK CASCADE 자동 정리)
+								Map<String, Object> cascadeParam = new HashMap<>();
+								cascadeParam.put("wordId", dataVo.getReqItemId());
+								session.delete("approve.cascadeDeleteTermsByWordReject", cascadeParam);
+
+								// 경고 정보 응답에 포함
+								Map<String, Object> warning = new HashMap<>();
+								warning.put("wordId", dataVo.getReqItemId());
+								warning.put("wordNm", dataVo.getReqItemNm());
+								warning.put("relatedTerms", relatedTerms);
+								warnings.add(warning);
+							}
+							// 단어 삭제
+							session.delete("approve.deleteWordByReject", dataVo);
+							break;
+						case TERMS:
+						case CODE:
+							session.delete("approve.deleteTermsByReject", dataVo);
+							break;
+						case DOMAIN:
+							session.delete("approve.deleteDomainByReject", dataVo);
+							break;
 					}
-				}
+					session.commit();
+					result.setResultInfo(RestResult.CODE_200);
 
-				session.insert("approve.insertStdAprvStat", dataVo);
-				switch (objType) {
-					case TERMS:
-						session.update("approve.updateTermsAprvStat", dataVo);
-						break;
-					case WORD:
-						session.update("approve.updateWordAprvStat", dataVo);
-						break;
-					case DOMAIN:
-						session.update("approve.updateDomainAprvStat", dataVo);
-						break;
-				}
-				session.commit();
-				result.setResultInfo(RestResult.CODE_200);
+				} else {
+					// === 승인 ===
+					session.insert("approve.insertStdAprvStat", dataVo);
+					switch (objType) {
+						case TERMS:
+							session.update("approve.updateTermsAprvStat", dataVo);
+							break;
+						case WORD:
+							session.update("approve.updateWordAprvStat", dataVo);
+							break;
+						case DOMAIN:
+							session.update("approve.updateDomainAprvStat", dataVo);
+							break;
+						case CODE:
+							session.update("approve.updateTermsAprvStat", dataVo);
+							break;
+					}
+					session.commit();
+					result.setResultInfo(RestResult.CODE_200);
 
-				// 승인 완료 시(aprvStat=2) 변경 이력 저장
-				if (dataVo.getAprvStat() == NDQualityApproveStat.APPROVED.getValue()) {
+					// 승인 완료 시 변경 이력 저장
 					String targetType = objType == NDQualityStdObjectType.TERMS ? "TERM"
-							: objType == NDQualityStdObjectType.WORD ? "WORD" : "DOMAIN";
+							: objType == NDQualityStdObjectType.WORD ? "WORD"
+							: objType == NDQualityStdObjectType.CODE ? "CODE" : "DOMAIN";
 					String targetNm = dataVo.getReqItemNm();
-					// 승인된 항목의 현재 값 조회
 					String currValue = null;
 					try {
 						switch (objType) {
@@ -1655,37 +1741,6 @@ public class DataStandardController {
 		return Mono.just(result);
 	}
 
-	/**
-	 * 반려 항목 재요청 API
-	 * - TB_APRV_STATS에 APRV_STAT=0 (재요청) 레코드 삽입
-	 * - 기존 반려 이력은 유지
-	 */
-	@RequestMapping(value = "/reRequestApproval", method = RequestMethod.POST)
-	public Map<String, Object> reRequestApproval(@RequestBody Map<String, Object> body) {
-		Map<String, Object> res = new HashMap<>();
-		String reqTp = (String) body.get("reqTp");
-		String reqItemId = (String) body.get("reqItemId");
-
-		if (reqTp == null || reqItemId == null) {
-			res.put("success", false);
-			res.put("message", "필수 파라미터 누락");
-			return res;
-		}
-
-		StdApproveStatVo vo = new StdApproveStatVo();
-		vo.setId(StringUtils.getUUID());
-		vo.setReqTp(reqTp);
-		vo.setReqItemId(reqItemId);
-		vo.setAprvStat((short) 0); // 재요청 (승인대기)
-		vo.setReqUserId(sessionService.getUserId());
-		vo.setAprvStatUpdtRsn("재요청");
-
-		sqlSessionTemplate.insert("approve.insertStdAprvStat", vo);
-
-		res.put("success", true);
-		res.put("message", "재요청이 완료되었습니다.");
-		return res;
-	}
 
 	/**
 	 * 반려 항목의 승인 이력 조회 API

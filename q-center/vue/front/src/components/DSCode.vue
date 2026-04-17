@@ -29,10 +29,10 @@
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-btn :style="{ width: '150px' }" class="gradient" v-on:click="showModal('managingCodeval')"
               title="코드 항목 관리">코드 항목 관리</v-btn>
-            <v-btn class="gradient" v-on:click="showModal('codeAdd')" title="등록">등록</v-btn>
-            <v-btn class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
+            <v-btn class="gradient" v-on:click="showModal('codeAdd')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="codeListDownload()" title="다운로드">다운로드</v-btn>
-            <v-btn class="gradient" v-on:click="codeRemoveItem()" title="삭제">삭제</v-btn>
+            <v-btn v-if="isAdmin" class="gradient" v-on:click="codeRemoveItem()" title="삭제">삭제</v-btn>
             <input type="file" @change="readExcelFile" ref="file" id="inputCodeUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
@@ -104,7 +104,7 @@
               </v-sheet>
               <!-- 수정 / 삭제 버튼 -->
               <v-sheet class="pr-4 pl-4">
-                <v-btn class="gradient" v-on:click="showModal('codeUpdate')">수정</v-btn>
+                <v-btn v-if="isAdmin" class="gradient" v-on:click="showModal('codeUpdate')">수정</v-btn>
               </v-sheet>
             </v-sheet>
             <!-- 테이블 -->
@@ -920,6 +920,8 @@ export default {
     codeDataItems: [],
     // 검색 코드
     searchCode: '',
+    // 관리자 여부
+    isAdmin: false,
     // 검색 승인 여부
     searchApproval: true,
     // 테이블 로딩
@@ -2833,6 +2835,8 @@ export default {
     this.getCodeDataList();
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
+    axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
+      .then(res => { this.isAdmin = res.data === true; });
   },
   beforeDestroy() {
     eventBus.$off('NOTICE', this.onUploadNotice);

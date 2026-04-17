@@ -19,6 +19,7 @@
         ,''           as aprvStatUpdtRsn
 			from TB_TERMS
 			where APRV_YN = 'N'
+				AND CODE_GRP IS NULL
 				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = TERMS_ID AND s.REQ_TP = 'TERMS')
     <if test="reqUserId != null">
         		AND CRET_USER_ID = #{reqUserId}
@@ -34,7 +35,38 @@
         		AND CRET_DT &lt;= #{to}
     </if>
 			union all
-			select 
+			select
+        ''            as id
+				,'CODE'				as reqTp		--코드
+				,TERMS_ID			as reqItemId
+				,TERMS_NM			as reqItemNm
+				,TERMS_ENG_ABRV_NM	as reqItemEngNm
+				,0					as aprvStat		--요청됨
+				,CRET_USER_ID		as reqUserId
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqUpdtDt
+        ,APRV_USER_ID as aprvUserId
+        ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt
+        ,''           as aprvStatUpdtRsn
+			from TB_TERMS
+			where APRV_YN = 'N'
+				AND CODE_GRP IS NOT NULL
+				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = TERMS_ID AND s.REQ_TP = 'CODE')
+    <if test="reqUserId != null">
+        		AND CRET_USER_ID = #{reqUserId}
+    </if>
+    <if test="statusList != null and statusList.size() != 0">
+            AND 0 in <foreach collection="statusList" item="item" index="index" open="(" separator="," close=")">
+        					#{item.value}</foreach>
+    </if>
+    <if test="from != null">
+        		AND CRET_DT &gt;= #{from}
+    </if>
+    <if test="to != null">
+        		AND CRET_DT &lt;= #{to}
+    </if>
+			union all
+			select
         ''            as id
 				,'WORD'				as reqTp		--단어
 				,WORD_ID			as reqItemId
@@ -98,24 +130,22 @@
              A.REQ_ID              as id
             ,A.REQ_TP			         as reqTp
             ,A.REQ_ITEM_ID         as reqItemId
-            ,CASE
-            WHEN A.REQ_TP = 'WORD'
-            	THEN (select WORD_NM from tb_word where WORD_ID = A.REQ_ITEM_ID)
-            WHEN A.REQ_TP = 'TERMS'
-            	THEN (select TERMS_NM from tb_terms where TERMS_ID = A.REQ_ITEM_ID)
-            WHEN A.REQ_TP = 'DOMAIN'
-            	THEN (select DOMAIN_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
-            ELSE NULL
-            END 				    	  as reqItemNm
-            ,CASE
-            WHEN A.REQ_TP = 'WORD'
-            	THEN (select WORD_ENG_ABRV_NM from tb_word where WORD_ID = A.REQ_ITEM_ID)
-            WHEN A.REQ_TP = 'TERMS'
-            	THEN (select TERMS_ENG_ABRV_NM from tb_terms where TERMS_ID = A.REQ_ITEM_ID)
-            WHEN A.REQ_TP = 'DOMAIN'
-            	THEN (select DOMAIN_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
-            ELSE NULL
-            END 				    	  as reqItemEngNm
+            ,COALESCE(
+              CASE
+              WHEN A.REQ_TP = 'WORD'   THEN (select WORD_NM from tb_word where WORD_ID = A.REQ_ITEM_ID)
+              WHEN A.REQ_TP IN ('TERMS','CODE') THEN (select TERMS_NM from tb_terms where TERMS_ID = A.REQ_ITEM_ID)
+              WHEN A.REQ_TP = 'DOMAIN' THEN (select DOMAIN_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
+              END,
+              A.REQ_ITEM_NM
+            ) as reqItemNm
+            ,COALESCE(
+              CASE
+              WHEN A.REQ_TP = 'WORD'   THEN (select WORD_ENG_ABRV_NM from tb_word where WORD_ID = A.REQ_ITEM_ID)
+              WHEN A.REQ_TP IN ('TERMS','CODE') THEN (select TERMS_ENG_ABRV_NM from tb_terms where TERMS_ID = A.REQ_ITEM_ID)
+              WHEN A.REQ_TP = 'DOMAIN' THEN (select DOMAIN_NM from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
+              END,
+              A.REQ_ITEM_NM
+            ) as reqItemEngNm
             ,A.APRV_STAT		      as aprvStat
             ,A.REQ_USER_ID	      as reqUserId
             ,to_char(to_timestamp(A.REQ_CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as reqCretDt
@@ -150,14 +180,15 @@
            INSERT INTO TB_APRV_STATS
            (
              REQ_ID
-            ,REQ_TP			
+            ,REQ_TP
             ,REQ_ITEM_ID
-            ,APRV_STAT		
-            ,REQ_USER_ID	
+            ,REQ_ITEM_NM
+            ,APRV_STAT
+            ,REQ_USER_ID
             ,REQ_CRET_DT
 			      ,REQ_UPDT_DT
-            ,APRV_USER_ID	
-            ,APRV_STAT_UPDT_DT	
+            ,APRV_USER_ID
+            ,APRV_STAT_UPDT_DT
             ,APRV_STAT_UPDT_RSN
            )
            VALUES
@@ -165,6 +196,7 @@
              #{id}
             ,#{reqTp}
             ,#{reqItemId}
+            ,#{reqItemNm, jdbcType=VARCHAR}
             ,#{aprvStat}
             ,#{reqUserId, jdbcType=VARCHAR}
             ,COALESCE(#{reqCretDt, jdbcType=VARCHAR}, to_char(now(), 'YYYYMMDDHH24MISS'))
@@ -175,47 +207,53 @@
            )
   </insert>
 
+  <!-- 승인 전용 (반려는 물리 삭제로 처리) -->
   <update id="updateTermsAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
-            UPDATE
-              TB_TERMS
-            SET
-               APRV_YN = 
-					      CASE WHEN 2 = #{aprvStat} THEN 'Y'
-                    ELSE 'N'
-                    END
+            UPDATE TB_TERMS
+            SET APRV_YN = 'Y'
               ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
               ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-            WHERE
-              TERMS_ID = #{reqItemId}
+            WHERE TERMS_ID = #{reqItemId}
   </update>
 
   <update id="updateWordAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
-            UPDATE
-              TB_WORD
-            SET
-               APRV_YN = 
-					      CASE WHEN 2 = #{aprvStat} THEN 'Y'
-                    ELSE 'N'
-                    END
+            UPDATE TB_WORD
+            SET APRV_YN = 'Y'
               ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
               ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-            WHERE
-              WORD_ID = #{reqItemId}
+            WHERE WORD_ID = #{reqItemId}
   </update>
 
   <update id="updateDomainAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
-            UPDATE
-              TB_DOMAIN
-            SET
-               APRV_YN =
-					      CASE WHEN 2 = #{aprvStat} THEN 'Y'
-                    ELSE 'N'
-                    END
+            UPDATE TB_DOMAIN
+            SET APRV_YN = 'Y'
               ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
               ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-            WHERE
-              DOMAIN_ID = #{reqItemId}
+            WHERE DOMAIN_ID = #{reqItemId}
   </update>
+
+  <!-- 반려: 엔티티 물리 삭제 -->
+  <delete id="deleteWordByReject" parameterType="String">
+    DELETE FROM TB_WORD WHERE WORD_ID = #{reqItemId}
+  </delete>
+
+  <delete id="deleteTermsByReject" parameterType="String">
+    DELETE FROM TB_TERMS WHERE TERMS_ID = #{reqItemId}
+  </delete>
+
+  <delete id="deleteDomainByReject" parameterType="String">
+    DELETE FROM TB_DOMAIN WHERE DOMAIN_ID = #{reqItemId}
+  </delete>
+
+  <!-- 단어 반려 cascade: 해당 단어를 포함하는 미승인 용어 일괄 삭제 (TB_TERMS_WORDS는 FK CASCADE 자동 정리) -->
+  <delete id="cascadeDeleteTermsByWordReject" parameterType="String">
+    DELETE FROM TB_TERMS
+    WHERE APRV_YN = 'N'
+      AND TERMS_ID IN (
+        SELECT tw.TERMS_ID FROM TB_TERMS_WORDS tw
+        WHERE tw.WORD_ID = #{wordId}
+      )
+  </delete>
 
   <!-- 용어 승인 시: 구성 단어 중 미승인 단어 조회 -->
   <select id="selectUnapprovedWordsByTermsId" parameterType="String" resultType="hashmap">

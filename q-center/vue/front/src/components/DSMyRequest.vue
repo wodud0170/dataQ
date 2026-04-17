@@ -113,6 +113,7 @@
 
 <script>
 import axios from "axios";
+import { eventBus } from '../eventBus';
 import DatePicker from 'vue2-datepicker';
 import 'vue2-datepicker/index.css';
 
@@ -159,6 +160,13 @@ export default {
   },
   created() {
     this.loadData();
+  },
+  activated() {
+    if (eventBus.pendingMyRequestFilter) {
+      this.activeFilter = eventBus.pendingMyRequestFilter;
+      eventBus.pendingMyRequestFilter = null;
+      this.loadData();
+    }
   },
   methods: {
     setFilter(filter) {
