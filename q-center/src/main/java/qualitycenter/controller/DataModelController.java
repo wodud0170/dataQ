@@ -48,6 +48,7 @@ import com.ndata.quality.service.ExcelDownloadService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
+import qualitycenter.service.ddl.DdlGenerator;
 import qualitycenter.service.ws.WebSocketService;
 import qualitycenter.util.ErwinXmlParser;
 import qualitycenter.util.ErwinXmlParser.ErwinParseResult;
@@ -85,6 +86,9 @@ public class DataModelController {
 
 	@Autowired
 	private WebSocketService websocketService;
+
+	@Autowired
+	private DdlGenerator ddlGenerator;
 
 	/**
 	 * 데이터모델 등록 API
@@ -163,6 +167,64 @@ public class DataModelController {
 	@RequestMapping(value = "/getDataModelStatsList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelVo> getDataModelStatsList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelStatsList", retCond);
+	}
+
+	/**
+	 * 데이터모델 DDL 다운로드
+	 *
+	 * @param dataModelId 데이터모델 ID
+	 * @param dbType      DB 타입 (oracle/postgres 등, 미지정 시 모델의 데이터소스 타입으로 자동 판정)
+	 * @param response    HTTP 응답 (파일 스트림)
+	 */
+	@RequestMapping(value = "/downloadDdl", method = RequestMethod.GET)
+	public void downloadDdl(@RequestParam("dataModelId") String dataModelId,
+			@RequestParam(value = "dbType", required = false) String dbType,
+			HttpServletResponse response) {
+		log.info(">> downloadDdl : dmId={}, dbType={}", dataModelId, dbType);
+		try {
+			Map<String, Object> model = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataModelId);
+			String dmNm = model == null ? dataModelId : String.valueOf(model.get("dataModelNm"));
+
+			String resolvedDbType = dbType;
+			if (resolvedDbType == null || resolvedDbType.trim().isEmpty()) {
+				resolvedDbType = resolveDbTypeByModel(dataModelId);
+			}
+
+			String ddl = ddlGenerator.generate(dataModelId, resolvedDbType);
+
+			String safeName = (dmNm == null ? dataModelId : dmNm).replaceAll("[\\\\/:*?\"<>|]", "_");
+			String ts = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+			String filename = safeName + "_" + ts + ".sql";
+
+			response.setContentType("application/sql; charset=UTF-8");
+			response.setCharacterEncoding("UTF-8");
+			response.setHeader("Content-Disposition",
+					"attachment; filename=\"" + java.net.URLEncoder.encode(filename, "UTF-8").replace("+", "%20") + "\"");
+			response.getWriter().write(ddl);
+			response.getWriter().flush();
+		} catch (Exception e) {
+			log.error(">> downloadDdl failed : {}", e.getMessage(), e);
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	private String resolveDbTypeByModel(String dataModelId) {
+		try {
+			Map<String, Object> model = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataModelId);
+			if (model == null) return "postgres";
+			String dsId = model.get("dataModelDsId") == null ? null : String.valueOf(model.get("dataModelDsId"));
+			if (dsId == null || dsId.trim().isEmpty() || "null".equals(dsId)) return "postgres";
+			DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
+			if (ds == null) return "postgres";
+			String driverName = ds.getDriverName();
+			if (driverName == null) return "postgres";
+			String lower = driverName.toLowerCase();
+			if (lower.contains("oracle")) return "oracle";
+			return "postgres";
+		} catch (Exception e) {
+			log.warn("resolveDbTypeByModel failed: {}", e.getMessage());
+			return "postgres";
+		}
 	}
 
 	/**

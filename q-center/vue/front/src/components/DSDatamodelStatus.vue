@@ -97,6 +97,14 @@
                     <span v-else class="grey--text text-caption">미진단</span>
                   </div>
                 </template>
+                <!-- DDL 다운로드 -->
+                <template v-else-if="ci === 'ddl'">
+                  <div :style="{ textAlign: 'center' }">
+                    <v-btn icon small color="ndColor" title="DDL 다운로드" @click.stop="downloadDdl(props.item)">
+                      <v-icon small>mdi-file-download</v-icon>
+                    </v-btn>
+                  </div>
+                </template>
                 <!-- 일반 아이템 -->
                 <!-- <span v-else :style="{ margin: '0px 16px' }">{{ c }}</span> -->
               </td>
@@ -283,6 +291,7 @@ export default {
       { text: '최신\n구조변경 진단일시', sortable: false, align: 'center', value: 'structDiagDt' },
       { text: '표준화\n준수율', sortable: false, align: 'center', value: 'diagStndRate' },
       { text: '구조진단\n일치율', sortable: false, align: 'center', value: 'structDiagRate' },
+      { text: 'DDL', sortable: false, align: 'center', value: 'ddl' },
     ],
     // 탭 활성화
     activeDetailTab: 'tab1',
@@ -392,6 +401,11 @@ export default {
     setListPage() {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.dmStatusItems.length / this.itemsPerPage);
+    },
+    downloadDdl(item) {
+      if (!item || !item.dataModelId) return;
+      const url = this.$APIURL.base + 'api/dm/downloadDdl?dataModelId=' + encodeURIComponent(item.dataModelId);
+      window.location.href = url;
     },
     tb_setListPage() {
       // 페이지네이션 버튼 개수

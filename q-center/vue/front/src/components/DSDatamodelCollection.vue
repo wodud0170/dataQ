@@ -86,7 +86,7 @@
             <!-- 수정 / 수집 버튼 -->
             <v-sheet class="pr-4 pl-4">
               <v-btn class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
-              <v-btn class="gradient" v-on:click="collectionAction()" title="수집">수집</v-btn>
+              <v-btn v-if="hasDataSource" class="gradient" v-on:click="collectionAction()" title="수집">수집</v-btn>
             </v-sheet>
           </v-sheet>
           <!-- 테이블 -->
@@ -306,8 +306,23 @@ export default {
     update_dataModelSysCd() {
       this.resetDataSourceItems();
     },
+    addDataModelModal(val) {
+      if (!val) {
+        this.addModalReset();
+      }
+    },
+    updateDataModelModal(val) {
+      if (!val) {
+        this.updateModalReset();
+      }
+    },
   },
   props: ['isMobile'],
+  computed: {
+    hasDataSource() {
+      return this.selectedItem.length > 0 && !!this.selectedItem[0].dataModelDsId;
+    },
+  },
   data: () => ({
     // 데이터 모델 정보
     dataModelItems: [],
@@ -387,6 +402,7 @@ export default {
     async showModal(value) {
       // 모달 보여주기
       if (value === 'add') {
+        this.addModalReset();
         this.addDataModelModal = true;
       } else if (value === 'update') {
         if (this.selectedItem.length === 0) {
