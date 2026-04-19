@@ -405,7 +405,12 @@ export default {
     downloadDdl(item) {
       if (!item || !item.dataModelId) return;
       const url = this.$APIURL.base + 'api/dm/downloadDdl?dataModelId=' + encodeURIComponent(item.dataModelId);
-      window.location.href = url;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     },
     tb_setListPage() {
       // 페이지네이션 버튼 개수
@@ -614,7 +619,7 @@ export default {
       return result;
     },
     getRows(rows) {
-      const keyOrder = ['dataModelNm', 'dataModelDsNm', 'objCnt', 'attrCnt', 'clctDt', 'diagDt', 'structDiagDt', 'diagStndRate', 'structDiagRate'];
+      const keyOrder = ['dataModelNm', 'dataModelDsNm', 'objCnt', 'attrCnt', 'clctDt', 'diagDt', 'structDiagDt', 'diagStndRate', 'structDiagRate', 'ddl'];
       const result = {};
       keyOrder.forEach(key => {
         result[key] = rows[key] != null ? rows[key] : '';
