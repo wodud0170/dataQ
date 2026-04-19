@@ -122,6 +122,7 @@ public class DataModelService implements Runnable {
 			String dataModelId = dataVo.getDataModelId();
 			stdDataModelCollectVo.setClctId(clctId);
 			stdDataModelCollectVo.setDataModelId(dataModelId);
+			stdDataModelCollectVo.setClctType("DBMS");
 			stdDataModelCollectVo.setCretUserId(userId);
 			session.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
 			// 수집 대상 스키마 목록 조회 (TB_DATA_MODEL_SCHEMA 필터 사용, 없으면 기본 스키마)
@@ -149,7 +150,10 @@ public class DataModelService implements Runnable {
 				while (rs.next()) {
 					stdDataModelObjVo.setDataModelId(dataModelId);
 					stdDataModelObjVo.setObjNm(rs.getString("objNm"));
-					stdDataModelObjVo.setObjNmKr(rs.getString("objNmKr"));
+					// 최초 수집: DB 코멘트를 논리명(OBJ_NM_KR)과 코멘트 원본(OBJ_COMMENT) 양쪽에 세팅
+					String objDbComment = rs.getString("objNmKr");
+					stdDataModelObjVo.setObjNmKr(objDbComment);
+					stdDataModelObjVo.setObjComment(objDbComment);
 					stdDataModelObjVo.setObjOwner(rs.getString("objOwner"));
 					stdDataModelObjVo.setObjAttrCnt(rs.getShort("objAttrCnt"));
 					stdDataModelObjVo.setObjCretDt(rs.getString("objCretDt"));
@@ -176,7 +180,10 @@ public class DataModelService implements Runnable {
 					stdDataModelAttrVo.setObjOwner(schemaNm);
 					stdDataModelAttrVo.setObjNm(rs.getString("objNm"));
 					stdDataModelAttrVo.setAttrNm(rs.getString("attrNm"));
-					stdDataModelAttrVo.setAttrNmKr(rs.getString("attrNmKr"));
+					// 최초 수집: DB 코멘트를 논리명(ATTR_NM_KR)과 코멘트 원본(ATTR_COMMENT) 양쪽에 세팅
+					String attrDbComment = rs.getString("attrNmKr");
+					stdDataModelAttrVo.setAttrNmKr(attrDbComment);
+					stdDataModelAttrVo.setAttrComment(attrDbComment);
 					stdDataModelAttrVo.setDataType(rs.getString("dataType"));
 					stdDataModelAttrVo.setDataLen(rs.getLong("dataLen"));
 					stdDataModelAttrVo.setDataDecimalLen(rs.getShort("dataDecimalLen"));

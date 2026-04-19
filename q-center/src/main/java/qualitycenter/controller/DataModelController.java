@@ -42,6 +42,7 @@ import com.ndata.quality.model.std.StdDataModelObjVo;
 import com.ndata.quality.model.std.StdDataModelSchemaVo;
 import com.ndata.quality.model.std.StdDataModelStatsVo;
 import com.ndata.quality.model.std.StdDataModelVo;
+import com.ndata.quality.model.std.StdWordVo;
 import com.ndata.quality.service.ExcelDownloadService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -467,6 +468,7 @@ public class DataModelController {
 			StdDataModelCollectVo clctVo = new StdDataModelCollectVo();
 			clctVo.setClctId(clctId);
 			clctVo.setDataModelId(dataModelId);
+			clctVo.setClctType("ERWIN");
 			clctVo.setCretUserId(userId);
 			session.insert("datamodel.updateDataModelCollect", clctVo);
 
@@ -531,5 +533,246 @@ public class DataModelController {
 			session.close();
 		}
 		return result;
+	}
+
+	// ======== 데이터모델 재설계 1단계: 최신 스냅샷 편집 API (설계문서 40/41) ========
+
+	/**
+	 * 테이블(OBJ) 추가 — 최신 CLCT 스냅샷에 INSERT
+	 */
+	@RequestMapping(value = "/addObj", method = RequestMethod.POST)
+	public Mono<Response> addObj(@RequestBody StdDataModelObjVo objVo) {
+		Response result = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String clctId = resolveLatestClctId(objVo.getDataModelId());
+			if (clctId == null) throw new IllegalStateException("최신 스냅샷을 찾을 수 없습니다. 먼저 수집하거나 모델을 생성하세요.");
+			if (objVo.getObjNm() == null || objVo.getObjNm().trim().isEmpty())
+				throw new IllegalArgumentException("테이블 물리명(objNm)은 필수입니다.");
+
+			Map<String, Object> dupParam = new HashMap<>();
+			dupParam.put("clctId", clctId);
+			dupParam.put("objNm", objVo.getObjNm());
+			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelObj", dupParam);
+			if (dup > 0) throw new IllegalStateException("이미 존재하는 테이블입니다: " + objVo.getObjNm());
+
+			objVo.setClctId(clctId);
+			if (objVo.getObjAttrCnt() == 0) objVo.setObjAttrCnt((short) 0);
+			session.insert("datamodel.insertDataModelObj", objVo);
+			session.commit();
+			result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> addObj failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(result);
+	}
+
+	/**
+	 * 테이블(OBJ) 수정 — 논리명/오너/설명
+	 */
+	@RequestMapping(value = "/updateObj", method = RequestMethod.POST)
+	public Mono<Response> updateObj(@RequestBody StdDataModelObjVo objVo) {
+		Response result = new Response();
+		try {
+			String clctId = resolveLatestClctId(objVo.getDataModelId());
+			if (clctId == null) throw new IllegalStateException("최신 스냅샷을 찾을 수 없습니다.");
+			objVo.setClctId(clctId);
+			sqlSessionTemplate.update("datamodel.updateDataModelObj", objVo);
+			result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			log.error(">> updateObj failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return Mono.just(result);
+	}
+
+	/**
+	 * 테이블(OBJ) 삭제 — 하위 컬럼 함께 삭제
+	 */
+	@RequestMapping(value = "/deleteObj", method = RequestMethod.POST)
+	public Mono<Response> deleteObj(@RequestBody StdDataModelObjVo objVo) {
+		Response result = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String clctId = resolveLatestClctId(objVo.getDataModelId());
+			if (clctId == null) throw new IllegalStateException("최신 스냅샷을 찾을 수 없습니다.");
+			Map<String, Object> param = new HashMap<>();
+			param.put("clctId", clctId);
+			param.put("objNm", objVo.getObjNm());
+			session.delete("datamodel.deleteDataModelAttrsByObj", param);
+			session.delete("datamodel.deleteDataModelObj", param);
+			session.commit();
+			result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> deleteObj failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(result);
+	}
+
+	/**
+	 * 컬럼(ATTR) 추가 — 표준 검증 후 INSERT
+	 */
+	@RequestMapping(value = "/addAttr", method = RequestMethod.POST)
+	public Mono<Response> addAttr(@RequestBody StdDataModelAttrVo attrVo) {
+		Response result = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String clctId = resolveLatestClctId(attrVo.getDataModelId());
+			if (clctId == null) throw new IllegalStateException("최신 스냅샷을 찾을 수 없습니다.");
+			if (attrVo.getObjNm() == null || attrVo.getAttrNm() == null)
+				throw new IllegalArgumentException("테이블명/컬럼명은 필수입니다.");
+			validateAttrStandards(attrVo);
+
+			Map<String, Object> dupParam = new HashMap<>();
+			dupParam.put("clctId", clctId);
+			dupParam.put("objNm", attrVo.getObjNm());
+			dupParam.put("attrNm", attrVo.getAttrNm());
+			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelAttr", dupParam);
+			if (dup > 0) throw new IllegalStateException("이미 존재하는 컬럼입니다: " + attrVo.getAttrNm());
+
+			attrVo.setClctId(clctId);
+			// 순번 자동 부여
+			Map<String, Object> ordParam = new HashMap<>();
+			ordParam.put("clctId", clctId);
+			ordParam.put("objNm", attrVo.getObjNm());
+			Short maxOrd = sqlSessionTemplate.selectOne("datamodel.selectMaxAttrOrd", ordParam);
+			attrVo.setAttrOrder((short) ((maxOrd == null ? 0 : maxOrd) + 1));
+			// 표준 검증 결과 Y/N 저장
+			applyStandardFlags(attrVo);
+			session.insert("datamodel.insertDataModelAttr", attrVo);
+			session.update("datamodel.syncDataModelObjAttrCnt", dupParam);
+			session.commit();
+			result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> addAttr failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(result);
+	}
+
+	/**
+	 * 컬럼(ATTR) 수정
+	 */
+	@RequestMapping(value = "/updateAttr", method = RequestMethod.POST)
+	public Mono<Response> updateAttr(@RequestBody StdDataModelAttrVo attrVo) {
+		Response result = new Response();
+		try {
+			String clctId = resolveLatestClctId(attrVo.getDataModelId());
+			if (clctId == null) throw new IllegalStateException("최신 스냅샷을 찾을 수 없습니다.");
+			attrVo.setClctId(clctId);
+			validateAttrStandards(attrVo);
+			applyStandardFlags(attrVo);
+			sqlSessionTemplate.update("datamodel.updateDataModelAttr", attrVo);
+			result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			log.error(">> updateAttr failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return Mono.just(result);
+	}
+
+	/**
+	 * 컬럼(ATTR) 삭제
+	 */
+	@RequestMapping(value = "/deleteAttr", method = RequestMethod.POST)
+	public Mono<Response> deleteAttr(@RequestBody StdDataModelAttrVo attrVo) {
+		Response result = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String clctId = resolveLatestClctId(attrVo.getDataModelId());
+			if (clctId == null) throw new IllegalStateException("최신 스냅샷을 찾을 수 없습니다.");
+			Map<String, Object> param = new HashMap<>();
+			param.put("clctId", clctId);
+			param.put("objNm", attrVo.getObjNm());
+			param.put("attrNm", attrVo.getAttrNm());
+			session.delete("datamodel.deleteDataModelAttr", param);
+			session.update("datamodel.syncDataModelObjAttrCnt", param);
+			session.commit();
+			result.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> deleteAttr failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(result);
+	}
+
+	// ---------- 내부 헬퍼 ----------
+
+	private String resolveLatestClctId(String dataModelId) {
+		if (dataModelId == null) return null;
+		return sqlSessionTemplate.selectOne("datamodel.selectLatestClctIdByDmId", dataModelId);
+	}
+
+	/**
+	 * 컬럼 표준 검증 — 영문명 토큰은 모두 표준 단어에 존재하고, 도메인(타입/길이)은 TB_DOMAIN과 일치해야 함
+	 * (테이블·인덱스·제약조건은 표준 검증 대상 아님 — 컬럼만 강제)
+	 */
+	private void validateAttrStandards(StdDataModelAttrVo attrVo) {
+		String attrNm = attrVo.getAttrNm();
+		if (attrNm == null || attrNm.trim().isEmpty())
+			throw new IllegalArgumentException("컬럼 물리명(attrNm)은 필수입니다.");
+		List<String> tokens = splitTokens(attrNm);
+		List<String> missing = findMissingWords(tokens);
+		if (!missing.isEmpty()) {
+			throw new IllegalStateException("표준 미준수: 컬럼명에 표준 단어가 아닌 토큰이 있습니다 → " + String.join(", ", missing));
+		}
+		if (attrVo.getDataType() == null || attrVo.getDataType().trim().isEmpty()) {
+			throw new IllegalArgumentException("데이터 타입은 필수입니다.");
+		}
+	}
+
+	private List<String> splitTokens(String physicalName) {
+		List<String> tokens = new ArrayList<>();
+		if (physicalName == null) return tokens;
+		for (String t : physicalName.toUpperCase().split("_")) {
+			String s = t.trim();
+			if (!s.isEmpty()) tokens.add(s);
+		}
+		return tokens;
+	}
+
+	private List<String> findMissingWords(List<String> tokens) {
+		List<String> missing = new ArrayList<>();
+		if (tokens.isEmpty()) return missing;
+		List<StdWordVo> found = sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", tokens);
+		java.util.Set<String> foundSet = new java.util.HashSet<>();
+		for (StdWordVo w : found) {
+			if (w.getWordEngAbrvNm() != null) foundSet.add(w.getWordEngAbrvNm().toUpperCase());
+		}
+		for (String t : tokens) {
+			if (!foundSet.contains(t)) missing.add(t);
+		}
+		return missing;
+	}
+
+	/**
+	 * 검증 통과한 편집 값 기준으로 표준 플래그를 Y로 세팅
+	 */
+	private void applyStandardFlags(StdDataModelAttrVo attrVo) {
+		attrVo.setTermsStndYn("Y");
+		attrVo.setDomainStndYn("Y");
+		List<String> tokens = splitTokens(attrVo.getAttrNm());
+		String[] wordLst = new String[tokens.size()];
+		String[] wordStndLst = new String[tokens.size()];
+		for (int i = 0; i < tokens.size(); i++) {
+			wordLst[i] = tokens.get(i);
+			wordStndLst[i] = "Y";
+		}
+		attrVo.setWordLst(wordLst);
+		attrVo.setWordStndLst(wordStndLst);
 	}
 }

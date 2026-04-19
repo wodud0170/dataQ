@@ -214,27 +214,26 @@
                   color="ndColor"></v-text-field>
               </v-col>
             </v-row>
-            <!-- 데이터 소스 -->
+            <!-- 데이터 소스 (선택) — 논리모델(설계 단계)은 비워둘 수 있음 -->
             <v-row>
               <v-col cols="4">
-                <v-subheader class="reqText">데이터 소스</v-subheader>
+                <v-subheader>데이터 소스</v-subheader>
               </v-col>
               <v-col cols="8">
-                <v-select dense required color="ndColor" v-model="add_dataSource" :items="dataSourceList" item-text="dsn"
-                  name="add_dataSource" item-value="id" ref="add_dataSource" :placeholder="'선택'"
-                  no-data-text="데이터 소스가 없습니다." :rules="[v => !!v || '데이터 소스는 필수 입력값입니다.']"
+                <v-select dense clearable color="ndColor" v-model="add_dataSource" :items="dataSourceList" item-text="dsn"
+                  name="add_dataSource" item-value="id" ref="add_dataSource" :placeholder="'선택 (논리모델이면 비워두기)'"
+                  no-data-text="데이터 소스가 없습니다."
                   :menu-props="{ top: false, offsetY: true }" v-on:click="getDataSourceList()"></v-select>
               </v-col>
             </v-row>
-            <!-- 버전 -->
+            <!-- 버전 (선택, 미입력 시 '1.0') -->
             <v-row>
               <v-col cols="4">
-                <v-subheader class="reqText">버전</v-subheader>
+                <v-subheader>버전</v-subheader>
               </v-col>
               <v-col cols="8">
                 <v-text-field v-model="add_ver" name="add_ver" ref="add_ver"
-                  :rules="[() => !!add_ver || '버전은 필수 입력값입니다.']" clearable required dense placeholder="버전"
-                  color="ndColor"></v-text-field>
+                  clearable dense placeholder="미입력 시 1.0" color="ndColor"></v-text-field>
               </v-col>
             </v-row>
           </v-container>
@@ -258,26 +257,26 @@
                   placeholder="데이터모델명" color="ndColor"></v-text-field>
               </v-col>
             </v-row>
-            <!-- 데이터 소스 -->
+            <!-- 데이터 소스 (선택) — 논리모델은 비워둘 수 있음 -->
             <v-row>
               <v-col cols="4">
-                <v-subheader class="reqText">데이터 소스</v-subheader>
+                <v-subheader>데이터 소스</v-subheader>
               </v-col>
               <v-col cols="8">
-                <v-select dense required color="ndColor" v-model="update_dataSource" :items="dataSourceList"
-                  item-text="dsn" name="update_dataSource" item-value="id" ref="update_dataSource" :placeholder="'선택'"
-                  no-data-text="데이터 소스가 없습니다." :rules="[v => !!v || '데이터 소스는 필수 입력값입니다.']"
+                <v-select dense clearable color="ndColor" v-model="update_dataSource" :items="dataSourceList"
+                  item-text="dsn" name="update_dataSource" item-value="id" ref="update_dataSource" :placeholder="'선택 (논리모델이면 비워두기)'"
+                  no-data-text="데이터 소스가 없습니다."
                   :menu-props="{ top: false, offsetY: true }" v-on:click="getDataSourceList()"></v-select>
               </v-col>
             </v-row>
-            <!-- 버전 -->
+            <!-- 버전 (선택, 미입력 시 '1.0') -->
             <v-row>
               <v-col cols="4">
-                <v-subheader class="reqText">버전</v-subheader>
+                <v-subheader>버전</v-subheader>
               </v-col>
               <v-col cols="8">
-                <v-text-field v-model="update_ver" ref="update_ver" :rules="[() => !!update_ver || '버전은 필수 입력값입니다.']"
-                  clearable required dense placeholder="버전" color="ndColor" name="update_ver"></v-text-field>
+                <v-text-field v-model="update_ver" ref="update_ver"
+                  clearable dense placeholder="미입력 시 1.0" color="ndColor" name="update_ver"></v-text-field>
               </v-col>
             </v-row>
           </v-container>
@@ -801,12 +800,6 @@ export default {
         if (this.add_dataModelNm === null) {
           _attr = '데이터 모델명은';
           this.$refs.add_dataModelNm.focus()
-        } else if (this.add_dataSource === null) {
-          _attr = '데이터 소스는'
-          this.$refs.add_dataSource.focus()
-        } else if (this.add_ver === null) {
-          _attr = '버전은'
-          this.$refs.add_ver.focus()
         }
 
         if (_attr !== null) {
@@ -823,12 +816,6 @@ export default {
         if (this.update_dataModelNm === null) {
           _attr = '데이터 모델명은';
           this.$refs.update_dataModelNm.focus()
-        } else if (this.update_dataSource === null || this.update_dataSource === '') {
-          _attr = '데이터 소스는'
-          this.$refs.update_dataSource.focus()
-        } else if (this.update_ver === null) {
-          _attr = '버전은'
-          this.$refs.update_ver.focus()
         }
 
         if (_attr !== null) {
@@ -857,11 +844,12 @@ export default {
           return;
         }
 
+        const _ver = (this.add_ver && String(this.add_ver).trim()) || '1.0';
         let dataModleData = {
           'dataModelNm': this.add_dataModelNm,
           'dataModelSysCd': this.add_dataModelSysCd,
           'dataModelDsId': this.add_dataSource,
-          'ver': this.add_ver,
+          'ver': _ver,
         };
 
         axios.post(this.$APIURL.base + "api/dm/createDataModel", dataModleData)
@@ -919,12 +907,13 @@ export default {
     },
     updateDataModel() {
       try {
+        const _ver = (this.update_ver && String(this.update_ver).trim()) || '1.0';
         let dataModleData = {
           'dataModelId': this.update_dataModelId,
           'dataModelNm': this.update_dataModelNm,
           'dataModelSysCd': this.update_dataModelSysCd,
           'dataModelDsId': this.update_dataSource,
-          'ver': this.update_ver,
+          'ver': _ver,
         };
 
         // console.log(dataModleData);

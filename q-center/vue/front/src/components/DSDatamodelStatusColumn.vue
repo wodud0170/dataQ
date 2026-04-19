@@ -51,8 +51,71 @@
         <v-checkbox class="checkboxStyle" hide-details v-model="statusListArray" label="비표준" color="ndColor" value="N"></v-checkbox> -->
         <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
         <v-btn class="gradient" v-on:click="columnDataDownload" :disabled="dmColumnAllItems.length === 0">다운로드</v-btn>
+        <v-btn color="primary" :disabled="!isLatestClct" v-on:click="openAddAttrDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">컬럼 추가</v-btn>
       </v-row>
     </v-sheet>
+
+    <!-- 컬럼 추가/수정 다이얼로그 (표준사전 드롭다운 강제형) -->
+    <v-dialog v-model="attrDialog" max-width="720" persistent>
+      <v-card>
+        <v-card-title>{{ attrDialogMode === 'add' ? '컬럼 추가' : '컬럼 수정' }}</v-card-title>
+        <v-card-text>
+          <v-row dense>
+            <v-col cols="6">
+              <v-autocomplete v-model="attrForm.objNm" :items="objOptions" label="소속 테이블 *"
+                :disabled="attrDialogMode === 'edit'" outlined dense hide-details />
+            </v-col>
+            <v-col cols="6">
+              <v-autocomplete v-model="selectedTerm" :items="termOptions" :loading="termsLoading"
+                :search-input.sync="termSearch" item-text="termsNm" item-value="termsId" return-object
+                label="용어 사전에서 선택 *" hint="선택 시 컬럼명·한글명이 자동 설정됩니다" persistent-hint
+                outlined dense @change="onTermSelected" :disabled="attrDialogMode === 'edit'" />
+            </v-col>
+          </v-row>
+          <v-row dense>
+            <v-col cols="6">
+              <v-text-field v-model="attrForm.attrNm" label="컬럼명 (물리명) *"
+                :disabled="attrDialogMode === 'edit'" hint="용어 선택 시 자동 · 수동 입력 시 표준 검증" persistent-hint outlined dense />
+            </v-col>
+            <v-col cols="6">
+              <v-text-field v-model="attrForm.attrNmKr" label="컬럼 한글명 (논리명) *" outlined dense />
+            </v-col>
+          </v-row>
+          <v-row dense>
+            <v-col cols="12">
+              <v-autocomplete v-model="selectedDomain" :items="domainOptions" :loading="domainsLoading"
+                item-text="domainDisplayNm" item-value="domainId" return-object
+                label="도메인 사전에서 선택 *" hint="선택 시 데이터 타입·길이가 자동 설정됩니다" persistent-hint
+                outlined dense @change="onDomainSelected" />
+            </v-col>
+          </v-row>
+          <v-row dense>
+            <v-col cols="4">
+              <v-text-field v-model="attrForm.dataType" label="데이터 타입 *" readonly outlined dense />
+            </v-col>
+            <v-col cols="4">
+              <v-text-field v-model.number="attrForm.dataLen" label="길이" type="number" readonly outlined dense />
+            </v-col>
+            <v-col cols="4">
+              <v-text-field v-model.number="attrForm.dataDecimalLen" label="소수점 길이" type="number" readonly outlined dense />
+            </v-col>
+          </v-row>
+          <v-row dense align="center">
+            <v-col cols="3"><v-checkbox v-model="attrForm.pkYn" label="PK" true-value="Y" false-value="N" hide-details /></v-col>
+            <v-col cols="3"><v-checkbox v-model="attrForm.fkYn" label="FK" true-value="Y" false-value="N" hide-details /></v-col>
+            <v-col cols="3"><v-checkbox v-model="attrForm.nullableYn" label="NULL 허용" true-value="Y" false-value="N" hide-details /></v-col>
+            <v-col cols="3">
+              <v-text-field v-model="attrForm.defaultVal" label="기본값" outlined dense hide-details />
+            </v-col>
+          </v-row>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="attrDialog = false">취소</v-btn>
+          <v-btn color="primary" @click="submitAttr">{{ attrDialogMode === 'add' ? '추가' : '수정' }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- 목록 카운트 + 페이지 크기 -->
     <v-sheet class="tableSpt">
@@ -114,6 +177,10 @@
             <p v-else-if="ci === 'pkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
             <p v-else-if="ci === 'fkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
             <span v-else-if="ci === 'defaultVal'" :style="{ margin: '0px 16px' }">{{ c }}</span>
+            <span v-else-if="ci === 'actions'" :style="{ textAlign: 'center', display: 'block' }">
+              <v-icon small :disabled="!isLatestClct" @click="openEditAttrDialog(props.item)" class="mr-2">mdi-pencil</v-icon>
+              <v-icon small :disabled="!isLatestClct" @click="deleteAttr(props.item)">mdi-delete</v-icon>
+            </span>
           </td>
         </tr>
       </template>
@@ -184,6 +251,10 @@ export default {
     itemsPerPage() {
       this.pageCount = Math.ceil(this.dmColumnItems.length / this.itemsPerPage);
     },
+    termSearch(val) {
+      if (this._termSearchTimer) clearTimeout(this._termSearchTimer);
+      this._termSearchTimer = setTimeout(() => { this.loadTermOptions(val); }, 300);
+    },
   },
   data: () => ({
     modelList: [],
@@ -227,7 +298,26 @@ export default {
       { text: 'PK 여부', sortable: false, align: 'center', value: 'pkYn' },
       { text: 'FK 여부', sortable: false, align: 'center', value: 'fkYn' },
       { text: '디폴트 값', sortable: false, align: 'center', value: 'defaultVal' },
+      { text: '편집', sortable: false, align: 'center', value: 'actions', width: '100px' },
     ],
+    attrDialog: false,
+    attrDialogMode: 'add',
+    attrForm: {
+      attrId: null, dataModelId: null, clctId: null,
+      objNm: null, attrNm: '', attrNmKr: '',
+      dataType: '', dataLen: null, dataDecimalLen: null,
+      pkYn: 'N', fkYn: 'N', nullableYn: 'Y', defaultVal: '',
+      termsId: null, domainId: null,
+    },
+    selectedTerm: null,
+    termOptions: [],
+    termsLoading: false,
+    termSearch: '',
+    _termSearchTimer: null,
+    selectedDomain: null,
+    domainOptions: [],
+    domainsLoading: false,
+    objOptions: [],
     termDetaileHeaders: [
       { text: '용어명', align: 'center', sortable: false, value: 'termsNm' },
       { text: '용어영문약어명', sortable: false, align: 'center', value: 'termsEngAbrvNm' },
@@ -259,6 +349,10 @@ export default {
         //              this.statusListArray.includes(item.termsStndYn);
         return t && c && cKr && dt && dl;
       });
+    },
+    isLatestClct() {
+      if (!this.selectedClctId || this.clctList.length === 0) return false;
+      return this.selectedClctId === this.clctList[0].clctId;
     },
   },
   methods: {
@@ -320,6 +414,7 @@ export default {
       return data.map(item => {
         const _wordLst = (item.wordLst || []).map((w, i) => w + " : " + (item.wordStndLst || [])[i]);
         return {
+          attrId: item.attrId,
           objOwner: item.objOwner, objNm: item.objNm, objNmKr: item.objNmKr, attrNm: item.attrNm, attrNmKr: item.attrNmKr,
           dataType: item.dataType, dataLen: item.dataLen, dataDecimalLen: item.dataDecimalLen,
           nullableYn: item.nullableYn, termsStndYn: item.termsStndYn, domainStndYn: item.domainStndYn,
@@ -398,10 +493,138 @@ export default {
     },
     getRows(rows) {
       const keys = ['objOwner','objNm','objNmKr','attrNm','attrNmKr','dataType','dataLen','dataDecimalLen',
-                     'nullableYn','pkYn','fkYn','defaultVal'];
+                     'nullableYn','pkYn','fkYn','defaultVal','actions'];
       const result = {};
       keys.forEach(key => { result[key] = rows[key] != null ? rows[key] : ''; });
       return result;
+    },
+    loadObjOptions() {
+      if (!this.selectedClctId) { this.objOptions = []; return; }
+      axios.get(this.$APIURL.base + "api/dm/getDataModelObjListByClctId", {
+        params: { 'clctId': this.selectedClctId }
+      }).then((res) => {
+        this.objOptions = (res.data || []).map(o => o.objNm).filter(Boolean);
+      }).catch(() => { this.objOptions = []; });
+    },
+    loadTermOptions(keyword) {
+      const kw = (keyword || '').trim();
+      if (kw.length < 1) { this.termOptions = []; return; }
+      this.termsLoading = true;
+      axios.post(this.$APIURL.base + "api/std/getTerms", { 'schNm': kw, 'aprvYn': 'Y' })
+        .then((res) => { this.termOptions = res.data || []; })
+        .catch(() => { this.termOptions = []; })
+        .finally(() => { this.termsLoading = false; });
+    },
+    loadDomainOptions() {
+      this.domainsLoading = true;
+      axios.post(this.$APIURL.base + "api/std/getDomainList", { 'schNm': null, 'aprvYn': 'Y' })
+        .then((res) => {
+          this.domainOptions = (res.data || []).map(d => ({
+            ...d,
+            domainDisplayNm: `${d.domainNm} (${d.dataType}${d.dataLen ? '(' + d.dataLen + (d.dataDecimalLen ? ',' + d.dataDecimalLen : '') + ')' : ''})`,
+          }));
+        })
+        .catch(() => { this.domainOptions = []; })
+        .finally(() => { this.domainsLoading = false; });
+    },
+    resetAttrForm() {
+      this.attrForm = {
+        attrId: null,
+        dataModelId: this.selectedModelId,
+        clctId: this.selectedClctId,
+        objNm: null, attrNm: '', attrNmKr: '',
+        dataType: '', dataLen: null, dataDecimalLen: null,
+        pkYn: 'N', fkYn: 'N', nullableYn: 'Y', defaultVal: '',
+        termsId: null, domainId: null,
+      };
+      this.selectedTerm = null;
+      this.selectedDomain = null;
+      this.termOptions = [];
+      this.termSearch = '';
+    },
+    openAddAttrDialog() {
+      if (!this.isLatestClct) return;
+      this.attrDialogMode = 'add';
+      this.resetAttrForm();
+      this.loadObjOptions();
+      if (this.domainOptions.length === 0) this.loadDomainOptions();
+      this.attrDialog = true;
+    },
+    openEditAttrDialog(item) {
+      if (!this.isLatestClct) return;
+      this.attrDialogMode = 'edit';
+      this.resetAttrForm();
+      this.attrForm = {
+        attrId: item.attrId,
+        dataModelId: item.dataModelId || this.selectedModelId,
+        clctId: item.clctId || this.selectedClctId,
+        objNm: item.objNm, attrNm: item.attrNm, attrNmKr: item.attrNmKr,
+        dataType: item.dataType, dataLen: item.dataLen, dataDecimalLen: item.dataDecimalLen,
+        pkYn: item.pkYn || 'N', fkYn: item.fkYn || 'N',
+        nullableYn: item.nullableYn || 'Y', defaultVal: item.defaultVal || '',
+        termsId: null, domainId: null,
+      };
+      this.loadObjOptions();
+      if (this.domainOptions.length === 0) this.loadDomainOptions();
+      this.attrDialog = true;
+    },
+    onTermSelected(term) {
+      if (!term) return;
+      this.attrForm.attrNm = term.termsEngAbrvNm || '';
+      this.attrForm.attrNmKr = term.termsNm || '';
+      this.attrForm.termsId = term.termsId;
+      if (term.domainId) {
+        const d = this.domainOptions.find(x => x.domainId === term.domainId);
+        if (d) { this.selectedDomain = d; this.onDomainSelected(d); }
+      }
+    },
+    onDomainSelected(domain) {
+      if (!domain) return;
+      this.attrForm.dataType = domain.dataType || '';
+      this.attrForm.dataLen = domain.dataLen != null ? domain.dataLen : null;
+      this.attrForm.dataDecimalLen = domain.dataDecimalLen != null ? domain.dataDecimalLen : null;
+      this.attrForm.domainId = domain.domainId;
+    },
+    submitAttr() {
+      if (!this.attrForm.objNm) { this.$swal.fire({ title: '소속 테이블을 선택하세요.', icon: 'warning' }); return; }
+      if (!this.attrForm.attrNm) { this.$swal.fire({ title: '컬럼 물리명이 필요합니다.', icon: 'warning' }); return; }
+      if (!this.attrForm.attrNmKr) { this.$swal.fire({ title: '컬럼 한글명이 필요합니다.', icon: 'warning' }); return; }
+      if (!this.attrForm.dataType) { this.$swal.fire({ title: '도메인 사전에서 선택해야 합니다.', icon: 'warning' }); return; }
+      const url = this.attrDialogMode === 'add' ? 'api/dm/addAttr' : 'api/dm/updateAttr';
+      axios.post(this.$APIURL.base + url, this.attrForm).then((res) => {
+        if (res.data && res.data.code === 200) {
+          this.$swal.fire({ title: this.attrDialogMode === 'add' ? '추가되었습니다.' : '수정되었습니다.', icon: 'success', timer: 1000, showConfirmButton: false });
+          this.attrDialog = false;
+          this.load();
+        } else {
+          this.$swal.fire({ title: '저장 실패', text: (res.data && res.data.message) || '표준 검증 실패', icon: 'error' });
+        }
+      }).catch((err) => {
+        const msg = (err.response && err.response.data && err.response.data.message) || '저장 실패';
+        this.$swal.fire({ title: '저장 실패', text: msg, icon: 'error' });
+      });
+    },
+    deleteAttr(item) {
+      if (!this.isLatestClct) return;
+      this.$swal.fire({
+        title: '컬럼을 삭제하시겠습니까?', text: `${item.objNm}.${item.attrNm}`, icon: 'warning',
+        showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소'
+      }).then((r) => {
+        if (!r.isConfirmed) return;
+        axios.post(this.$APIURL.base + "api/dm/deleteAttr", {
+          attrId: item.attrId, clctId: item.clctId || this.selectedClctId,
+          dataModelId: item.dataModelId || this.selectedModelId, objNm: item.objNm, attrNm: item.attrNm,
+        }).then((res) => {
+          if (res.data && res.data.code === 200) {
+            this.$swal.fire({ title: '삭제되었습니다.', icon: 'success', timer: 1000, showConfirmButton: false });
+            this.load();
+          } else {
+            this.$swal.fire({ title: '삭제 실패', icon: 'error' });
+          }
+        }).catch(() => {
+          this.$swal.fire({ title: '삭제 실패 - API 확인 필요', icon: 'error' });
+        });
+      });
     },
   },
   created() {

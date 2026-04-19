@@ -10,6 +10,7 @@
 		<result property="dataModelSysNm" column="DM_SYS_NM"/>
 		<result property="dataModelDsId" column="DM_DS_ID"/>
 		<result property="dataModelDsNm" column="DM_DS_NM"/>
+		<result property="modelType" column="MODEL_TYPE"/>
 		<result property="ver" column="VER"/>
 		<result property="structDiagYn" column="STRUCT_DIAG_YN"/>
 		<result property="structDiagDt" column="STRUCT_DIAG_DT_FMT"/>
@@ -37,6 +38,7 @@
 		<result property="objNmKr" column="OBJ_NM_KR"/>
 		<result property="attrNm" column="ATTR_NM"/>
 		<result property="attrNmKr" column="ATTR_NM_KR"/>
+		<result property="attrComment" column="ATTR_COMMENT"/>
 		<result property="dataType" column="DATA_TYPE"/>
 		<result property="dataLen" column="DATA_LEN"/>
 		<result property="dataDecimalLen" column="DATA_DECIMAL_LEN"/>
@@ -48,6 +50,7 @@
 		<result property="pkYn" column="PK_YN"/>
 		<result property="fkYn" column="FK_YN"/>
 		<result property="defaultVal" column="DEFAULT_VAL"/>
+		<result property="attrOrder" column="ATTR_ORD"/>
 	</resultMap>
 
 	<select id="selectDataModelStatsList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDataModelMap">
@@ -58,6 +61,7 @@
             ,(select SYS_NM from TB_SYS_INFO where sys_cd = A.DM_SYS_CD) as DM_SYS_NM
             ,A.DM_DS_ID
             ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
+            ,COALESCE(A.MODEL_TYPE, 'PHYSICAL') as MODEL_TYPE
             ,A.VER
             ,COALESCE(A.STRUCT_DIAG_YN, 'N') as STRUCT_DIAG_YN
             ,to_char(A.STRUCT_DIAG_DT, 'YYYY-MM-DD HH24:MI') as STRUCT_DIAG_DT_FMT
@@ -116,6 +120,7 @@
             ,(select SYS_NM from TB_SYS_INFO where sys_cd = A.DM_SYS_CD) as DM_SYS_NM
             ,A.DM_DS_ID
             ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
+            ,COALESCE(A.MODEL_TYPE, 'PHYSICAL') as MODEL_TYPE
             ,A.VER
             ,B.DM_CLCT_ID
             ,COALESCE(B.OBJ_CNT,0) as OBJ_CNT
@@ -190,11 +195,12 @@
 	</select>
 
 	<select id="selectDataModelObjListByClctId" parameterType="String" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
-			select 
+			select
 				 OBJ_NM        as objNm
 				,OBJ_NM_KR     as objNmKr
 				,OBJ_OWNER     as objOwner
 				,OBJ_DESC      as objDesc
+				,OBJ_COMMENT   as objComment
 				,OBJ_ATTR_CNT  as objAttrCnt
 			from TB_DATA_MODEL_OBJ
 			where DM_CLCT_ID = #{clctId}
@@ -202,14 +208,15 @@
 	</select>
 
 	<select id="selectDataModelObjListByObjNm" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
-			select 
+			select
 				 OBJ_NM        as objNm
 				,OBJ_NM_KR     as objNmKr
 				,OBJ_OWNER     as objOwner
 				,OBJ_DESC      as objDesc
+				,OBJ_COMMENT   as objComment
 				,OBJ_ATTR_CNT  as objAttrCnt
 			from TB_DATA_MODEL_OBJ
-			where DM_CLCT_ID = #{schId} 
+			where DM_CLCT_ID = #{schId}
 			<if test="schObjNm != null">
 				AND OBJ_NM ILIKE '%'||#{schObjNm}||'%'
 			</if>
@@ -222,9 +229,10 @@
 				,A.OBJ_NM
 				,(select OBJ_NM_KR from TB_DATA_MODEL_OBJ
 				  where DM_CLCT_ID = A.DM_CLCT_ID and OBJ_NM = A.OBJ_NM) as OBJ_NM_KR
-				,A.ATTR_NM			
+				,A.ATTR_NM
 				,A.ATTR_NM_KR
-				,A.DATA_TYPE		
+				,A.ATTR_COMMENT
+				,A.DATA_TYPE
 				,A.DATA_LEN
 				,A.DATA_DECIMAL_LEN
 				,A.TERMS_STND_YN
@@ -234,7 +242,8 @@
 				,A.NULLABLE_YN
 				,A.PK_YN
 				,A.FK_YN
-				,A.DEFAULT_VAL		
+				,A.DEFAULT_VAL
+				,A.ATTR_ORD
 			from TB_DATA_MODEL_ATTR	A
 			where A.DM_CLCT_ID = #{clctId}
 			order by A.OBJ_NM, A.ATTR_ORD
@@ -270,9 +279,10 @@
 				 A.OBJ_NM
 				,(select OBJ_NM_KR from TB_DATA_MODEL_OBJ 
 				  where DM_CLCT_ID = A.DM_CLCT_ID and OBJ_NM = A.OBJ_NM) as OBJ_NM_KR
-				,A.ATTR_NM			
+				,A.ATTR_NM
 				,A.ATTR_NM_KR
-				,A.DATA_TYPE		
+				,A.ATTR_COMMENT
+				,A.DATA_TYPE
 				,A.DATA_LEN
 				,A.DATA_DECIMAL_LEN
 				,A.TERMS_STND_YN
@@ -282,9 +292,10 @@
 				,A.NULLABLE_YN
 				,A.PK_YN
 				,A.FK_YN
-				,A.DEFAULT_VAL		
+				,A.DEFAULT_VAL
+				,A.ATTR_ORD
 			from TB_DATA_MODEL_ATTR	A
-			where A.DM_CLCT_ID = #{schId} 
+			where A.DM_CLCT_ID = #{schId}
 			<if test="schObjNm != null or schAttrNm != null">
 				AND (A.OBJ_NM ILIKE '%'||#{schObjNm}||'%' OR A.ATTR_NM ILIKE '%'||#{schAttrNm}||'%')
 			</if>
@@ -345,19 +356,21 @@
            INSERT INTO TB_DATA_MODEL
            (
              DM_ID
-            ,DM_NM			
+            ,DM_NM
             ,DM_SYS_CD
-            ,DM_DS_ID		
+            ,DM_DS_ID
+            ,MODEL_TYPE
             ,VER
-            ,CRET_DT			
-            ,CRET_USER_ID	
+            ,CRET_DT
+            ,CRET_USER_ID
            )
            VALUES
            (
              #{dataModelId}
             ,#{dataModelNm}
             ,#{dataModelSysCd}
-            ,#{dataModelDsId}
+            ,#{dataModelDsId, jdbcType=VARCHAR}
+            ,COALESCE(#{modelType, jdbcType=VARCHAR}, 'PHYSICAL')
             ,#{ver, jdbcType=VARCHAR}
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{cretUserId, jdbcType=VARCHAR}
@@ -387,10 +400,11 @@
 	</delete>
 
 	<insert id="updateDataModelCollect" parameterType="com.ndata.quality.model.std.StdDataModelCollectVo">
-           INSERT INTO TB_DATA_MODEL_CLCT	
+           INSERT INTO TB_DATA_MODEL_CLCT
            (
              DM_CLCT_ID
-            ,DM_ID		
+            ,DM_ID
+            ,CLCT_TYPE
 			,CLCT_START_DT
 			,CRET_USER_ID
            )
@@ -398,10 +412,11 @@
            (
              #{clctId}
             ,#{dataModelId}
+            ,COALESCE(#{clctType, jdbcType=VARCHAR}, 'DBMS')
             ,to_char(now(), 'YYYYMMDDHH24MISS')
 			,#{cretUserId, jdbcType=VARCHAR}
 		   ) ON CONFLICT (DM_CLCT_ID,DM_ID) DO UPDATE
-            SET 
+            SET
               CLCT_END_DT = #{clctEndDt, jdbcType=VARCHAR}
 			 ,CLCT_CMPTN_YN = #{clctCmptnYn, jdbcType=VARCHAR}
 	</insert>
@@ -415,6 +430,7 @@
 			,OBJ_NM
 			,ATTR_NM
 			,ATTR_NM_KR
+			,ATTR_COMMENT
 			,DATA_TYPE
 			,DATA_LEN
 			,DATA_DECIMAL_LEN
@@ -436,6 +452,7 @@
             ,#{objNm, jdbcType=VARCHAR}
             ,#{attrNm, jdbcType=VARCHAR}
 			,#{attrNmKr, jdbcType=VARCHAR}
+			,#{attrComment, jdbcType=VARCHAR}
 			,#{dataType, jdbcType=VARCHAR}
 			,#{dataLen, jdbcType=BIGINT}
 			,#{dataDecimalLen, jdbcType=SMALLINT}
@@ -452,14 +469,15 @@
 	</insert>
 
 	<insert id="insertDataModelObj" parameterType="com.ndata.quality.model.std.StdDataModelObjVo">
-           INSERT INTO TB_DATA_MODEL_OBJ	
+           INSERT INTO TB_DATA_MODEL_OBJ
            (
              DM_CLCT_ID
-            ,DM_ID		
+            ,DM_ID
 			,OBJ_NM
 			,OBJ_NM_KR
 			,OBJ_OWNER
 			,OBJ_DESC
+			,OBJ_COMMENT
 			,OBJ_ATTR_CNT
            )
            VALUES
@@ -470,6 +488,7 @@
 			,#{objNmKr, jdbcType=VARCHAR}
 			,#{objOwner, jdbcType=VARCHAR}
 			,#{objDesc, jdbcType=VARCHAR}
+			,#{objComment, jdbcType=VARCHAR}
 			,#{objAttrCnt, jdbcType=SMALLINT}
 		   )
 	</insert>
@@ -618,6 +637,88 @@
 			GROUP BY A.DM_CLCT_ID, A.DM_ID
 	</insert>
 	-->
+
+	<!-- ========================================================= -->
+	<!-- 데이터모델 재설계 1단계: 최신 스냅샷 편집용 매퍼 (설계문서 40/41)  -->
+	<!-- ========================================================= -->
+
+	<!-- 데이터모델의 최신 CLCT_ID 조회 (편집 대상 스냅샷) -->
+	<select id="selectLatestClctIdByDmId" parameterType="String" resultType="String">
+		SELECT DM_CLCT_ID FROM TB_DATA_MODEL_CLCT
+		WHERE DM_ID = #{dataModelId}
+		ORDER BY CLCT_END_DT DESC NULLS LAST, CLCT_START_DT DESC
+		LIMIT 1
+	</select>
+
+	<!-- 테이블(OBJ) 존재 여부 확인 -->
+	<select id="countDataModelObj" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
+		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+	</select>
+
+	<!-- 컬럼(ATTR) 존재 여부 확인 -->
+	<select id="countDataModelAttr" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+	</select>
+
+	<!-- 테이블 수정 -->
+	<update id="updateDataModelObj" parameterType="com.ndata.quality.model.std.StdDataModelObjVo">
+		UPDATE TB_DATA_MODEL_OBJ SET
+			 OBJ_NM_KR = #{objNmKr, jdbcType=VARCHAR}
+			,OBJ_OWNER = #{objOwner, jdbcType=VARCHAR}
+			,OBJ_DESC  = #{objDesc, jdbcType=VARCHAR}
+		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+	</update>
+
+	<!-- 테이블 삭제 (하위 컬럼 함께 삭제) -->
+	<delete id="deleteDataModelAttrsByObj" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_ATTR
+		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+	</delete>
+	<delete id="deleteDataModelObj" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_OBJ
+		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+	</delete>
+
+	<!-- 컬럼 수정 -->
+	<update id="updateDataModelAttr" parameterType="com.ndata.quality.model.std.StdDataModelAttrVo">
+		UPDATE TB_DATA_MODEL_ATTR SET
+			 ATTR_NM_KR       = #{attrNmKr, jdbcType=VARCHAR}
+			,DATA_TYPE        = #{dataType, jdbcType=VARCHAR}
+			,DATA_LEN         = #{dataLen, jdbcType=BIGINT}
+			,DATA_DECIMAL_LEN = #{dataDecimalLen, jdbcType=SMALLINT}
+			,NULLABLE_YN      = #{nullableYn, jdbcType=VARCHAR}
+			,PK_YN            = #{pkYn, jdbcType=VARCHAR}
+			,FK_YN            = #{fkYn, jdbcType=VARCHAR}
+			,DEFAULT_VAL      = #{defaultVal, jdbcType=VARCHAR}
+			,TERMS_STND_YN    = #{termsStndYn, jdbcType=VARCHAR}
+			,DOMAIN_STND_YN   = #{domainStndYn, jdbcType=VARCHAR}
+			,WORD_LST         = #{wordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+			,WORD_STND_LST    = #{wordStndLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+	</update>
+
+	<!-- 컬럼 삭제 -->
+	<delete id="deleteDataModelAttr" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_ATTR
+		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+	</delete>
+
+	<!-- 테이블 컬럼 개수 동기화 (INSERT/DELETE 후 호출) -->
+	<update id="syncDataModelObjAttrCnt" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ O SET OBJ_ATTR_CNT = (
+			SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR A
+			WHERE A.DM_CLCT_ID = O.DM_CLCT_ID AND A.OBJ_NM = O.OBJ_NM
+		)
+		WHERE O.DM_CLCT_ID = #{clctId} AND O.OBJ_NM = #{objNm}
+	</update>
+
+	<!-- ATTR_ORD 최댓값 조회 (새 컬럼 추가 시 다음 순번 산정) -->
+	<select id="selectMaxAttrOrd" parameterType="java.util.Map" resultType="short">
+		SELECT COALESCE(MAX(ATTR_ORD), 0) FROM TB_DATA_MODEL_ATTR
+		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+	</select>
 
 	<!-- 대상 DB 스키마 목록 조회 SQL (DBMS 유형별) -->
 	<select id="selectSchemaListSql" parameterType="String" resultType="String">

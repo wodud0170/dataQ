@@ -12,6 +12,7 @@ public class StdDataModelCollectVo {
 	private String dataModelDsId;
 	private String dataModelDsNm;
 	private String dataModelVer;
+	private String clctType;
     private String clctStartDt;
 	private String clctEndDt;
 	private String clctCmptnYn;

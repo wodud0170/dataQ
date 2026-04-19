@@ -761,3 +761,24 @@ CREATE UNIQUE INDEX uix_word_nm ON quality.tb_word (WORD_NM);
 CREATE UNIQUE INDEX uix_word_eng_abrv_nm ON quality.tb_word (WORD_ENG_ABRV_NM);
 CREATE UNIQUE INDEX uix_terms_nm ON quality.tb_terms (TERMS_NM);
 CREATE UNIQUE INDEX uix_domain_nm ON quality.tb_domain (DOMAIN_NM);
+
+-- -------------------------------------------------------------
+-- 16. 데이터모델 재설계 1단계 (설계문서 40/41)
+--     - 논리모델 지원을 위해 DM_DS_ID NULL 허용
+--     - 스냅샷 원천 구분용 CLCT_TYPE 컬럼
+--     - 논리명(NM_KR)과 DB 코멘트(COMMENT) 분리
+--     (세션: 2026-04-19 / 데이터모델 관리 재설계)
+-- -------------------------------------------------------------
+ALTER TABLE TB_DATA_MODEL ALTER COLUMN DM_DS_ID DROP NOT NULL;
+
+ALTER TABLE TB_DATA_MODEL_CLCT ADD COLUMN IF NOT EXISTS CLCT_TYPE VARCHAR(20) DEFAULT 'DBMS';
+COMMENT ON COLUMN TB_DATA_MODEL_CLCT.CLCT_TYPE IS '스냅샷 원천 (DBMS: 수집, MANUAL: 수동편집, ERWIN: ERwin 임포트)';
+
+ALTER TABLE TB_DATA_MODEL_OBJ ADD COLUMN IF NOT EXISTS OBJ_COMMENT VARCHAR(500);
+COMMENT ON COLUMN TB_DATA_MODEL_OBJ.OBJ_COMMENT IS 'DB에서 수집한 테이블 코멘트 원본 (수집 시 자동, 읽기 전용)';
+COMMENT ON COLUMN TB_DATA_MODEL_OBJ.OBJ_NM_KR IS '테이블 논리명 (편집 가능). 최초 수집 시 OBJ_COMMENT 값 복사';
+
+ALTER TABLE TB_DATA_MODEL_ATTR ADD COLUMN IF NOT EXISTS ATTR_COMMENT VARCHAR(500);
+COMMENT ON COLUMN TB_DATA_MODEL_ATTR.ATTR_COMMENT IS 'DB에서 수집한 컬럼 코멘트 원본 (수집 시 자동, 읽기 전용)';
+COMMENT ON COLUMN TB_DATA_MODEL_ATTR.ATTR_NM_KR IS '컬럼 논리명 (편집 가능). 최초 수집 시 ATTR_COMMENT 값 복사';
+

@@ -11,6 +11,7 @@ public class StdDataModelAttrVo {
 	private String objNmKr;
 	private String attrNm;
 	private String attrNmKr;
+	private String attrComment;
 	private String dataType;
 	private long dataLen;
 	private short dataDecimalLen;

@@ -36,6 +36,13 @@
           {{ item.connTestYn === 'Y' ? '성공' : '미확인' }}
         </v-chip>
       </template>
+      <template v-slot:[`item.actions`]="{ item }">
+        <v-btn x-small color="primary" outlined :loading="rowTestingId === item.id"
+          :disabled="rowTestingId !== null && rowTestingId !== item.id"
+          @click.stop="testDatasourceRow(item)">
+          <v-icon x-small left>mdi-connection</v-icon>테스트
+        </v-btn>
+      </template>
       <!-- 데이터 없음 -->
       <template #top>
         <v-progress-linear v-show="loadTable" color="indigo darken-2" indeterminate />
@@ -197,8 +204,7 @@
     <!-- update domainGroup Modal -->
     <v-dialog max-width="800px" v-model="updateDatasourceModalShow">
       <NdModal @hide="hideModal('update')" @submit="submitDialog('update')" :footer-submit="true" header-title="데이터 소스 수정"
-        footer-hide-title="취소" footer-submit-title="수정" :footer-subbtn="true" footer-subbtn-title="연결 테스트"
-        @subbtn="testDatasource()">
+        footer-hide-title="취소" footer-submit-title="수정" :footer-subbtn="false">
         <template v-slot:body>
           <v-container fluid>
             <v-form ref="form">
@@ -417,7 +423,9 @@ export default {
       { text: '포트', sortable: false, align: 'center', value: 'port' },
       { text: '사용자', sortable: false, align: 'center', value: 'userId' },
       { text: '연결 상태', sortable: false, align: 'center', value: 'connTestYn' },
+      { text: '연결 테스트', sortable: false, align: 'center', value: 'actions', width: '120px' },
     ],
+    rowTestingId: null,
     progress: false,
     // 테이블 편의성 관련
     tableViewLengthList: [10, 20, 30, 40, 50],
@@ -1021,6 +1029,53 @@ export default {
           icon: 'error',
         });
       }
+    },
+    testDatasourceRow(item) {
+      if (!item || !item.id) return;
+      this.rowTestingId = item.id;
+      const payload = {
+        "id": item.id,
+        "dsn": item.dsn,
+        "dsTp": item.dsTp,
+        "dbmsTp": item.dbmsTp,
+        "driverName": item.driverName,
+        "svrAddr": item.svrAddr,
+        "port": item.port,
+        "userId": item.userId,
+        "pwd": item.pwd,
+        "dbName": item.dbName,
+        "charSet": item.charSet,
+        "connProps": item.connProps,
+      };
+      axios.post(this.$APIURL.base + "api/sysinfo/testDataSource", payload).then(res => {
+        this.rowTestingId = null;
+        if (res.data.resultCode === 200) {
+          this.$set(item, 'connTestYn', 'Y');
+          this.$swal.fire({
+            title: '연결 테스트 성공',
+            text: item.dsn,
+            confirmButtonText: '확인',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false,
+          });
+        } else {
+          this.$swal.fire({
+            title: '연결 테스트 실패',
+            text: res.data.resultMessage,
+            confirmButtonText: '확인',
+            icon: 'error',
+          });
+        }
+      }).catch(error => {
+        this.rowTestingId = null;
+        this.$swal.fire({
+          title: '연결 테스트 실패',
+          text: error && error.message ? error.message : String(error),
+          confirmButtonText: '확인',
+          icon: 'error',
+        });
+      });
     },
     checkIpAddress: function (addr) {
       return /^(?!0)(?!.*\.$)((1?\d?\d|25[0-5]|2[0-4]\d)(\.|$)){4}$/.test(addr);

@@ -10,6 +10,7 @@ public class StdDataModelVo {
 	private String dataModelSysNm;
 	private String dataModelDsId;
 	private String dataModelDsNm;
+	private String modelType;
 	private String ver;
     private String cretDt;
     private String cretUserId;

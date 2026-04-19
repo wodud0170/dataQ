@@ -10,6 +10,7 @@ public class StdDataModelObjVo {
 	private String objNmKr;
 	private String objOwner;
 	private String objDesc;
+	private String objComment;
 	private short objAttrCnt;
 	private String objCretDt;
 	private String objUpdtDt;

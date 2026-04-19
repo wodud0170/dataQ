@@ -28,8 +28,28 @@
         </v-text-field>
         <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
         <v-btn class="gradient" v-on:click="tableDataDownload" :disabled="dmTableAllItems.length === 0">다운로드</v-btn>
+        <v-btn color="primary" :disabled="!isLatestClct" v-on:click="openAddObjDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">테이블 추가</v-btn>
       </v-row>
     </v-sheet>
+
+    <!-- 테이블 추가/수정 다이얼로그 -->
+    <v-dialog v-model="objDialog" max-width="600" persistent>
+      <v-card>
+        <v-card-title>{{ objDialogMode === 'add' ? '테이블 추가' : '테이블 수정' }}</v-card-title>
+        <v-card-text>
+          <v-text-field v-model="objForm.objNm" label="테이블명 (물리명, 예: TB_USER)" :disabled="objDialogMode === 'edit'"
+            hint="영문/숫자/언더바" persistent-hint outlined dense />
+          <v-text-field v-model="objForm.objNmKr" label="테이블 한글명 (논리명)" outlined dense />
+          <v-text-field v-model="objForm.objOwner" label="소유자 (스키마)" outlined dense />
+          <v-text-field v-model="objForm.objDesc" label="테이블 설명" outlined dense />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="objDialog = false">취소</v-btn>
+          <v-btn color="primary" @click="submitObj">{{ objDialogMode === 'add' ? '추가' : '수정' }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- 목록 카운트 + 페이지 크기 -->
     <v-sheet class="tableSpt">
@@ -48,6 +68,14 @@
       item-key="objNm" class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요.">
       <template #[`item.objNm`]="{ item }">
         <a class="ndColor--text" style="cursor:pointer; text-decoration:underline;" @click="goToColumn(item)">{{ item.objNm }}</a>
+      </template>
+      <template #[`item.actions`]="{ item }">
+        <v-btn icon small :disabled="!isLatestClct" @click="openEditObjDialog(item)" title="수정">
+          <v-icon small>mdi-pencil</v-icon>
+        </v-btn>
+        <v-btn icon small :disabled="!isLatestClct" @click="deleteObj(item)" title="삭제">
+          <v-icon small color="error">mdi-delete</v-icon>
+        </v-btn>
       </template>
       <template #top>
         <v-progress-linear v-show="loadTable" color="indigo darken-2" indeterminate />
@@ -101,7 +129,11 @@ export default {
       { text: '소유자', sortable: false, align: 'center', value: 'objOwner' },
       { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
       { text: '테이블 설명', sortable: false, align: 'center', value: 'objDesc' },
+      { text: '편집', align: 'center', sortable: false, value: 'actions', width: '100px' },
     ],
+    objDialog: false,
+    objDialogMode: 'add',
+    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '' },
   }),
   computed: {
     dmTableItems() {
@@ -110,6 +142,10 @@ export default {
         const nmKr = !this.searchTableKr || (item.objNmKr || '').includes(this.searchTableKr);
         return nm && nmKr;
       });
+    },
+    isLatestClct() {
+      if (!this.selectedClctId || this.clctList.length === 0) return false;
+      return this.clctList[0].clctId === this.selectedClctId;
     },
   },
   methods: {
@@ -223,6 +259,57 @@ export default {
         link.remove();
       }).catch(() => {
         this.$swal.fire({ title: '테이블 정보 다운로드 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
+      });
+    },
+    openAddObjDialog() {
+      this.objDialogMode = 'add';
+      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '' };
+      this.objDialog = true;
+    },
+    openEditObjDialog(item) {
+      this.objDialogMode = 'edit';
+      this.objForm = {
+        objNm: item.objNm, objNmKr: item.objNmKr || '',
+        objOwner: item.objOwner || '', objDesc: item.objDesc || '',
+      };
+      this.objDialog = true;
+    },
+    submitObj() {
+      if (!this.objForm.objNm || !this.objForm.objNm.trim()) {
+        this.$swal.fire({ title: '테이블명(물리명)은 필수입니다.', confirmButtonText: '확인', icon: 'warning' });
+        return;
+      }
+      const url = this.objDialogMode === 'add' ? 'api/dm/addObj' : 'api/dm/updateObj';
+      const payload = { ...this.objForm, dataModelId: this.selectedModelId };
+      axios.post(this.$APIURL.base + url, payload).then((res) => {
+        if (res.data && res.data.code === '200') {
+          this.$swal.fire({ title: this.objDialogMode === 'add' ? '테이블이 추가되었습니다.' : '테이블이 수정되었습니다.', confirmButtonText: '확인', icon: 'success' });
+          this.objDialog = false;
+          this.load();
+        } else {
+          this.$swal.fire({ title: '저장 실패', text: (res.data && res.data.message) || '저장 중 오류', confirmButtonText: '확인', icon: 'error' });
+        }
+      }).catch((e) => {
+        this.$swal.fire({ title: '저장 실패', text: e.message, confirmButtonText: '확인', icon: 'error' });
+      });
+    },
+    deleteObj(item) {
+      this.$swal.fire({
+        title: '테이블을 삭제할까요?',
+        text: `${item.objNm} 및 하위 컬럼이 함께 삭제됩니다.`,
+        showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소', icon: 'warning',
+      }).then((r) => {
+        if (!r.isConfirmed) return;
+        axios.post(this.$APIURL.base + "api/dm/deleteObj", {
+          dataModelId: this.selectedModelId, objNm: item.objNm,
+        }).then((res) => {
+          if (res.data && res.data.code === '200') {
+            this.$swal.fire({ title: '삭제되었습니다.', confirmButtonText: '확인', icon: 'success' });
+            this.load();
+          } else {
+            this.$swal.fire({ title: '삭제 실패', text: (res.data && res.data.message) || '', confirmButtonText: '확인', icon: 'error' });
+          }
+        });
       });
     },
   },
