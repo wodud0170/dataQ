@@ -10,13 +10,6 @@
           @change="onModelChange" clearable dense outlined hide-details
           class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
         </v-autocomplete>
-        <span class="filterLabel">수집일시</span>
-        <v-select v-model="selectedClctId" :items="clctList"
-          item-text="clctDisplayDt" item-value="clctId"
-          clearable dense outlined hide-details
-          class="filterInput" :style="{ width: '300px' }" color="ndColor"
-          placeholder="수집일시 선택" :disabled="clctList.length === 0">
-        </v-select>
       </v-row>
       <!-- Row 2: 상세 검색 조건 -->
       <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '6px' }">
@@ -51,7 +44,7 @@
         <v-checkbox class="checkboxStyle" hide-details v-model="statusListArray" label="비표준" color="ndColor" value="N"></v-checkbox> -->
         <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
         <v-btn class="gradient" v-on:click="columnDataDownload" :disabled="dmColumnAllItems.length === 0">다운로드</v-btn>
-        <v-btn color="primary" :disabled="!isLatestClct" v-on:click="openAddAttrDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">컬럼 추가</v-btn>
+        <v-btn color="primary" :disabled="!selectedModelId" v-on:click="openAddAttrDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">컬럼 추가</v-btn>
       </v-row>
     </v-sheet>
 
@@ -77,8 +70,13 @@
               <v-text-field v-model="attrForm.attrNm" label="컬럼명 (물리명) *"
                 :disabled="attrDialogMode === 'edit'" hint="용어 선택 시 자동 · 수동 입력 시 표준 검증" persistent-hint outlined dense />
             </v-col>
-            <v-col cols="6">
+            <v-col cols="4">
               <v-text-field v-model="attrForm.attrNmKr" label="컬럼 한글명 (논리명) *" outlined dense />
+            </v-col>
+            <v-col cols="2" class="d-flex align-center">
+              <v-btn small color="indigo" dark @click="applyStandard" :loading="standardLoading" :disabled="!attrForm.attrNmKr">
+                <v-icon small left>mdi-auto-fix</v-icon>표준 적용
+              </v-btn>
             </v-col>
           </v-row>
           <v-row dense>
@@ -178,8 +176,8 @@
             <p v-else-if="ci === 'fkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
             <span v-else-if="ci === 'defaultVal'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'actions'" :style="{ textAlign: 'center', display: 'block' }">
-              <v-icon small :disabled="!isLatestClct" @click="openEditAttrDialog(props.item)" class="mr-2">mdi-pencil</v-icon>
-              <v-icon small :disabled="!isLatestClct" @click="deleteAttr(props.item)">mdi-delete</v-icon>
+              <v-icon small :disabled="!selectedModelId" @click="openEditAttrDialog(props.item)" class="mr-2">mdi-pencil</v-icon>
+              <v-icon small :disabled="!selectedModelId" @click="deleteAttr(props.item)">mdi-delete</v-icon>
             </span>
           </td>
         </tr>
@@ -258,7 +256,6 @@ export default {
   },
   data: () => ({
     modelList: [],
-    clctList: [],
     dmColumnAllItems: [],
     selectedModelId: null,
     selectedClctId: null,
@@ -312,6 +309,7 @@ export default {
     selectedTerm: null,
     termOptions: [],
     termsLoading: false,
+    standardLoading: false,
     termSearch: '',
     _termSearchTimer: null,
     selectedDomain: null,
@@ -350,10 +348,6 @@ export default {
         return t && c && cKr && dt && dl;
       });
     },
-    isLatestClct() {
-      if (!this.selectedClctId || this.clctList.length === 0) return false;
-      return this.selectedClctId === this.clctList[0].clctId;
-    },
   },
   methods: {
     getModelList() {
@@ -369,39 +363,18 @@ export default {
       });
     },
     onModelChange(modelId) {
-      this.clctList = [];
-      this.selectedClctId = null;
       this.dmColumnAllItems = [];
       if (!modelId) return;
-      const _to = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-      const _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-      axios.post(this.$APIURL.base + "api/dm/getDataModelClctList", {
-        'schId': modelId, 'from': _from, 'to': _to
-      }).then((res) => {
-        const sorted = res.data.slice().sort((a, b) => b.clctStartDt.localeCompare(a.clctStartDt));
-        this.clctList = sorted.map((item, index) => ({
-          ...item,
-          clctDisplayDt: index === 0 ? item.clctStartDt + ' (최신)' : item.clctStartDt,
-        }));
-        if (this.clctList.length > 0) {
-          this.selectedClctId = this.clctList[0].clctId;
-        }
-      }).catch(() => {
-        this.$swal.fire({ title: '수집 목록 로드 실패', confirmButtonText: '확인', icon: 'error' });
-      });
+      this.load();
     },
     load() {
       if (!this.selectedModelId) {
         this.$swal.fire({ title: '데이터모델명을 선택해주세요.', confirmButtonText: '확인', icon: 'warning' });
         return;
       }
-      if (!this.selectedClctId) {
-        this.$swal.fire({ title: '수집일시를 선택해주세요.', confirmButtonText: '확인', icon: 'warning' });
-        return;
-      }
       this.loadTable = true;
       axios.get(this.$APIURL.base + "api/dm/getDataModelAttrListByClctId", {
-        params: { 'clctId': this.selectedClctId }
+        params: { 'clctId': this.selectedModelId }
       }).then((res) => {
         this.dmColumnAllItems = this._mapColumnData(res.data);
         this.loadTable = false;
@@ -438,7 +411,7 @@ export default {
     },
     columnDataDownload() {
       axios.get(this.$APIURL.base + "api/dm/downloadDataModelAttrs", {
-        params: { 'clctId': this.selectedClctId },
+        params: { 'clctId': this.selectedModelId },
         responseType: 'blob',
         headers: { "Accept": "application/vnd.ms-excel" }
       }).then(response => {
@@ -457,20 +430,8 @@ export default {
     _applyPendingView(pending) {
       const apply = () => {
         this.selectedModelId = pending.modelId;
-        const _to = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-        const _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-        axios.post(this.$APIURL.base + "api/dm/getDataModelClctList", {
-          'schId': pending.modelId, 'from': _from, 'to': _to
-        }).then((res) => {
-          const sorted = res.data.slice().sort((a, b) => b.clctStartDt.localeCompare(a.clctStartDt));
-          this.clctList = sorted.map((item, index) => ({
-            ...item,
-            clctDisplayDt: index === 0 ? item.clctStartDt + ' (최신)' : item.clctStartDt,
-          }));
-          this.selectedClctId = pending.clctId;
-          this.searchTable = pending.tableNm || '';
-          this.$nextTick(() => { this.load(); });
-        });
+        this.searchTable = pending.tableNm || '';
+        this.$nextTick(() => { this.load(); });
       };
       if (this.modelList.length > 0) {
         apply();
@@ -499,9 +460,9 @@ export default {
       return result;
     },
     loadObjOptions() {
-      if (!this.selectedClctId) { this.objOptions = []; return; }
+      if (!this.selectedModelId) { this.objOptions = []; return; }
       axios.get(this.$APIURL.base + "api/dm/getDataModelObjListByClctId", {
-        params: { 'clctId': this.selectedClctId }
+        params: { 'clctId': this.selectedModelId }
       }).then((res) => {
         this.objOptions = (res.data || []).map(o => o.objNm).filter(Boolean);
       }).catch(() => { this.objOptions = []; });
@@ -531,7 +492,7 @@ export default {
       this.attrForm = {
         attrId: null,
         dataModelId: this.selectedModelId,
-        clctId: this.selectedClctId,
+        clctId: this.selectedModelId,
         objNm: null, attrNm: '', attrNmKr: '',
         dataType: '', dataLen: null, dataDecimalLen: null,
         pkYn: 'N', fkYn: 'N', nullableYn: 'Y', defaultVal: '',
@@ -557,7 +518,7 @@ export default {
       this.attrForm = {
         attrId: item.attrId,
         dataModelId: item.dataModelId || this.selectedModelId,
-        clctId: item.clctId || this.selectedClctId,
+        clctId: item.clctId || this.selectedModelId,
         objNm: item.objNm, attrNm: item.attrNm, attrNmKr: item.attrNmKr,
         dataType: item.dataType, dataLen: item.dataLen, dataDecimalLen: item.dataDecimalLen,
         pkYn: item.pkYn || 'N', fkYn: item.fkYn || 'N',
@@ -577,6 +538,29 @@ export default {
         const d = this.domainOptions.find(x => x.domainId === term.domainId);
         if (d) { this.selectedDomain = d; this.onDomainSelected(d); }
       }
+    },
+    applyStandard() {
+      if (!this.attrForm.attrNmKr) return;
+      var self = this;
+      self.standardLoading = true;
+      axios.get(self.$APIURL.base + 'api/dm/resolveStandard', {
+        params: { termsNm: self.attrForm.attrNmKr.trim() }
+      }).then(function(res) {
+        var data = res.data;
+        if (data.found) {
+          self.attrForm.attrNm = data.termsEngAbrvNm || '';
+          if (data.dataType) {
+            self.attrForm.dataType = data.dataType;
+            self.attrForm.dataLen = data.dataLen || null;
+            self.attrForm.dataDecimalLen = data.dataDecimalLen || null;
+          }
+          self.$swal.fire({ title: '표준 적용 완료', text: data.termsEngAbrvNm + ' (' + (data.dataType || '') + (data.dataLen ? '(' + data.dataLen + ')' : '') + ')', icon: 'success', timer: 2000, showConfirmButton: false });
+        } else {
+          self.$swal.fire({ title: '표준 용어 없음', text: data.message, icon: 'warning', confirmButtonText: '확인' });
+        }
+      }).catch(function() {
+        self.$swal.fire({ title: '조회 실패', icon: 'error', confirmButtonText: '확인' });
+      }).finally(function() { self.standardLoading = false; });
     },
     onDomainSelected(domain) {
       if (!domain) return;
@@ -612,7 +596,7 @@ export default {
       }).then((r) => {
         if (!r.isConfirmed) return;
         axios.post(this.$APIURL.base + "api/dm/deleteAttr", {
-          attrId: item.attrId, clctId: item.clctId || this.selectedClctId,
+          attrId: item.attrId, clctId: item.clctId || this.selectedModelId,
           dataModelId: item.dataModelId || this.selectedModelId, objNm: item.objNm, attrNm: item.attrNm,
         }).then((res) => {
           if (res.data && res.data.code === 200) {

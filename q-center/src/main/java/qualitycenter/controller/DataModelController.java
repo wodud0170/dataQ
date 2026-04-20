@@ -40,7 +40,6 @@ import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelCollectVo;
 import com.ndata.quality.model.std.StdDataModelObjVo;
 import com.ndata.quality.model.std.StdDataModelSchemaVo;
-import com.ndata.quality.model.std.StdDataModelStatsVo;
 import com.ndata.quality.model.std.StdDataModelVo;
 import com.ndata.quality.model.std.StdWordVo;
 import com.ndata.quality.service.ExcelDownloadService;
@@ -573,12 +572,6 @@ public class DataModelController {
 			clctVo.setClctCmptnYn("Y");
 			session.insert("datamodel.updateDataModelCollect", clctVo);
 
-			// 5) 통계 등록
-			StdDataModelStatsVo statsVo = new StdDataModelStatsVo();
-			statsVo.setClctId(clctId);
-			statsVo.setDataModelId(dataModelId);
-			session.insert("datamodel.insertDataModelStats", statsVo);
-
 			session.commit();
 
 			result.put("success", true);
@@ -607,18 +600,19 @@ public class DataModelController {
 		Response result = new Response();
 		SqlSession session = sqlSessionFactory.openSession();
 		try {
-			String clctId = resolveLatestClctId(objVo.getDataModelId());
-			if (clctId == null) throw new IllegalStateException("최신 스냅샷을 찾을 수 없습니다. 먼저 수집하거나 모델을 생성하세요.");
-			if (objVo.getObjNm() == null || objVo.getObjNm().trim().isEmpty())
-				throw new IllegalArgumentException("테이블 물리명(objNm)은 필수입니다.");
+			if ((objVo.getObjNm() == null || objVo.getObjNm().trim().isEmpty())
+				&& (objVo.getObjNmKr() == null || objVo.getObjNmKr().trim().isEmpty()))
+				throw new IllegalArgumentException("테이블명(물리명) 또는 한글명(논리명) 중 하나는 필수입니다.");
 
-			Map<String, Object> dupParam = new HashMap<>();
-			dupParam.put("clctId", clctId);
-			dupParam.put("objNm", objVo.getObjNm());
-			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelObj", dupParam);
-			if (dup > 0) throw new IllegalStateException("이미 존재하는 테이블입니다: " + objVo.getObjNm());
+			// 물리명이 있으면 중복 체크
+			if (objVo.getObjNm() != null && !objVo.getObjNm().trim().isEmpty()) {
+				Map<String, Object> dupParam = new HashMap<>();
+				dupParam.put("dataModelId", objVo.getDataModelId());
+				dupParam.put("objNm", objVo.getObjNm());
+				Integer dup = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDmId", dupParam);
+				if (dup != null && dup > 0) throw new IllegalStateException("이미 존재하는 테이블입니다: " + objVo.getObjNm());
+			}
 
-			objVo.setClctId(clctId);
 			if (objVo.getObjAttrCnt() == 0) objVo.setObjAttrCnt((short) 0);
 			session.insert("datamodel.insertDataModelObj", objVo);
 			session.commit();
@@ -677,6 +671,42 @@ public class DataModelController {
 			session.close();
 		}
 		return Mono.just(result);
+	}
+
+	/**
+	 * 한글명으로 표준 용어 조회 → 영문약어명 + 도메인(타입/길이) 반환
+	 * 컬럼 추가 시 [표준 적용] 버튼에서 호출
+	 */
+	@RequestMapping(value = "/resolveStandard", method = RequestMethod.GET)
+	public Map<String, Object> resolveStandard(@RequestParam String termsNm) {
+		Map<String, Object> result = new HashMap<>();
+		try {
+			// 1. 한글명으로 용어 조회
+			com.ndata.quality.model.std.StdTermsVo terms = sqlSessionTemplate.selectOne("terms.selectTermsByNm", termsNm.trim());
+			if (terms == null) {
+				result.put("found", false);
+				result.put("message", "'" + termsNm + "' 에 해당하는 표준 용어가 없습니다.");
+				return result;
+			}
+			result.put("found", true);
+			result.put("termsNm", terms.getTermsNm());
+			result.put("termsEngAbrvNm", terms.getTermsEngAbrvNm());
+			result.put("domainNm", terms.getDomainNm());
+
+			// 2. 도메인 정보 조회 (타입/길이)
+			if (terms.getDomainNm() != null) {
+				com.ndata.quality.model.std.StdDomainVo domain = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", terms.getDomainNm());
+				if (domain != null) {
+					result.put("dataType", domain.getDataType());
+					result.put("dataLen", domain.getDataLen());
+					result.put("dataDecimalLen", domain.getDataDecimalLen());
+				}
+			}
+		} catch (Exception e) {
+			result.put("found", false);
+			result.put("message", e.getMessage());
+		}
+		return result;
 	}
 
 	/**

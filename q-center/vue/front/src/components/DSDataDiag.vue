@@ -19,18 +19,6 @@
         @change="onModelChange"
       />
 
-      <span class="filterLabel">수집일시</span>
-      <v-select
-        v-model="selectedClctId"
-        :items="clctList"
-        item-text="clctDisplayDt"
-        item-value="clctId"
-        dense outlined hide-details
-        placeholder="수집일시 선택"
-        style="width:280px; flex-grow:0;"
-        :disabled="!selectedModel"
-      />
-
       <v-spacer />
 
       <!-- Job 상태 표시 -->
@@ -41,7 +29,7 @@
         </span>
       </v-chip>
 
-      <v-btn small color="primary" :disabled="!selectedClctId || isRunning || starting" :loading="starting" @click="startDiag">
+      <v-btn small color="primary" :disabled="!selectedModel || isRunning || starting" :loading="starting" @click="startDiag">
         진단 시작
       </v-btn>
       <v-btn small color="error" :disabled="!isRunning" @click="stopDiag">
@@ -122,8 +110,6 @@ export default {
     return {
       dataModelList: [],
       selectedModel: null,
-      clctList: [],
-      selectedClctId: null,
       jobList: [],
       currentJob: null,
       starting: false,
@@ -175,21 +161,7 @@ export default {
       });
     },
     onModelChange(dmId) {
-      this.clctList = [];
-      this.selectedClctId = null;
       if (!dmId) return;
-      const _to   = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-      const _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-      axios.post(this.$APIURL.base + 'api/dm/getDataModelClctList', { schId: dmId, from: _from, to: _to }).then(res => {
-        const sorted = (res.data || []).slice().sort((a, b) => b.clctEndDt.localeCompare(a.clctEndDt));
-        this.clctList = sorted.map((item, idx) => ({
-          ...item,
-          clctDisplayDt: item.clctEndDt + (idx === 0 ? ' (최신)' : ''),
-        }));
-        if (this.clctList.length > 0) {
-          this.selectedClctId = this.clctList[0].clctId;
-        }
-      });
     },
     loadJobList() {
       axios.post(this.$APIURL.base + 'api/diag/getDiagJobList').then(res => {
@@ -203,10 +175,9 @@ export default {
       });
     },
     startDiag() {
-      if (!this.selectedModel || !this.selectedClctId || this.starting) return;
+      if (!this.selectedModel || this.starting) return;
       this.starting = true;
       const body = {
-        clctId: this.selectedClctId,
         dataModelId: this.selectedModel,
       };
       axios.post(this.$APIURL.base + 'api/diag/startDiag', body).then(res => {

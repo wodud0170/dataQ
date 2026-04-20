@@ -29,4 +29,8 @@ public class StdDataModelCollectVo {
     private int nonStndCnt;           // 비표준 건수
     private int noTermsCnt;           // 용어 미존재 건수
     private int domainMismatchCnt;    // 도메인 불일치 건수
+    // 수집 로그 통계
+    private int addedCnt;
+    private int deletedCnt;
+    private int modifiedCnt;
 }

@@ -813,15 +813,14 @@ export default {
 
             _obj.dataModelNm = _data[i].dataModelNm;
             _obj.dataModelDsNm = _data[i].dataModelDsNm;
-            _obj.objCnt = _data[i].dataModelStats ? _data[i].dataModelStats.objCnt : 0;
-            _obj.attrCnt = _data[i].dataModelStats ? _data[i].dataModelStats.attrCnt : 0;
-            _obj.clctDt = _data[i].dataModelStats ? _data[i].dataModelStats.clctDt : '';
+            _obj.objCnt = _data[i].objCnt || 0;
+            _obj.attrCnt = _data[i].attrCnt || 0;
+            _obj.clctDt = _data[i].clctDt || '';
             _obj.diagDt = _data[i].diagDt || '';
             _obj.structDiagDt = _data[i].structDiagDt || '';
             _obj.diagStndRate = _data[i].diagStndRate || 0;
             _obj.structDiagRate = _data[i].structDiagRate >= 0 ? _data[i].structDiagRate : null;
             _obj.dataModelId = _data[i].dataModelId;
-            _obj.clctId = _data[i].dataModelStats ? _data[i].dataModelStats.clctId : '';
 
             _newArr.push(_obj);
           }
@@ -958,14 +957,13 @@ export default {
           // _data의 dataModelId와 dmStatusItems.dataModelId가 같은 것을 찾아서 데이터를 교체
           // 해당 배열에 있는 모든 데이터를 교체해야하며 교체한 데이터를 dmStatusItems에 다시 넣어줘야함
           for (let i = 0; i < this.dmStatusItems.length; i++) {
-            if (this.dmStatusItems[i].dataModelId === _data.dataModelStats.dataModelId) {
+            if (this.dmStatusItems[i].dataModelId === _data.dataModelId) {
               this.dmStatusItems[i].dataModelNm = _data.dataModelNm;
               this.dmStatusItems[i].dataModelDsNm = _data.dataModelDsNm;
-              this.dmStatusItems[i].objCnt = _data.dataModelStats ? _data.dataModelStats.objCnt : 0;
-              this.dmStatusItems[i].attrCnt = _data.dataModelStats ? _data.dataModelStats.attrCnt : 0;
-              this.dmStatusItems[i].clctDt = _data.dataModelStats ? _data.dataModelStats.clctDt : '';
+              this.dmStatusItems[i].objCnt = _data.objCnt || 0;
+              this.dmStatusItems[i].attrCnt = _data.attrCnt || 0;
+              this.dmStatusItems[i].clctDt = _data.clctDt || '';
               this.dmStatusItems[i].dataModelId = _data.dataModelId;
-              this.dmStatusItems[i].clctId = _data.dataModelStats ? _data.dataModelStats.clctId : '';
             }
           }
 

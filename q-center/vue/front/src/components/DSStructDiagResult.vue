@@ -11,14 +11,10 @@
       <span class="filterLabel">데이터모델</span>
       <v-select v-model="selectedModelNm" :items="modelList" dense outlined hide-details clearable
         placeholder="데이터모델 선택" style="width:220px; flex-grow:0;" @change="onModelChange" />
-      <span class="filterLabel">수집일시</span>
-      <v-select v-model="selectedCollectDt" :items="collectDtList" dense outlined hide-details clearable
-        placeholder="수집일시 선택" style="width:350px; flex-grow:0;" :disabled="!selectedModelNm"
-        @change="onCollectDtChange" />
       <span class="filterLabel">진단이력</span>
       <v-select v-model="selectedDiagId" :items="diagList" item-text="displayText" item-value="diagId"
         dense outlined hide-details clearable placeholder="진단이력 선택" style="width:350px; flex-grow:0;"
-        :disabled="!selectedCollectDt" @change="loadResult" />
+        :disabled="!selectedModelNm" @change="loadResult" />
     </v-sheet>
 
     <!-- 결과 영역 -->
@@ -271,8 +267,6 @@ export default {
           if (target) {
             self.selectedModelNm = target.dataModelNm;
             self.onModelChange();
-            self.selectedCollectDt = target.prevCollectDt;
-            self.onCollectDtChange();
             self.selectedDiagId = target.diagId;
             self.loadResult();
           }
@@ -280,20 +274,11 @@ export default {
       });
     },
     onModelChange() {
-      this.selectedCollectDt = null; this.selectedDiagId = null;
-      this.collectDtList = []; this.diagList = []; this.hasResult = false;
+      this.selectedDiagId = null;
+      this.diagList = []; this.hasResult = false;
       if (!this.selectedModelNm || !this._allHistory) return;
-      var nm = this.selectedModelNm; var dtSet = {};
-      this._allHistory.forEach(function(h) {
-        if (h.dataModelNm === nm && h.status === 'DONE' && h.prevCollectDt) dtSet[h.prevCollectDt] = true;
-      });
-      this.collectDtList = Object.keys(dtSet).sort().reverse();
-    },
-    onCollectDtChange() {
-      this.selectedDiagId = null; this.diagList = []; this.hasResult = false;
-      if (!this.selectedCollectDt || !this._allHistory) return;
-      var nm = this.selectedModelNm; var dt = this.selectedCollectDt;
-      this.diagList = this._allHistory.filter(function(h) { return h.dataModelNm === nm && h.prevCollectDt === dt && h.status === 'DONE'; });
+      var nm = this.selectedModelNm;
+      this.diagList = this._allHistory.filter(function(h) { return h.dataModelNm === nm && h.status === 'DONE'; });
     },
     loadResult() {
       if (!this.selectedDiagId) return;

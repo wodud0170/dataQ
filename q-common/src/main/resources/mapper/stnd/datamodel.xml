@@ -17,17 +17,8 @@
 		<result property="structDiagRate" column="STRUCT_DIAG_RATE"/>
 		<result property="diagStndRate" column="DIAG_STND_RATE"/>
 		<result property="diagDt" column="DIAG_DT_FMT"/>
-		<collection property="dataModelStats" resultMap="stdDataModelStatsMap" />
-	</resultMap>
-	<resultMap id="stdDataModelStatsMap" type="com.ndata.quality.model.std.StdDataModelStatsVo">
-		<result property="clctId" column="DM_CLCT_ID"/>
-		<result property="dataModelId" column="DM_ID"/>
 		<result property="objCnt" column="OBJ_CNT"/>
 		<result property="attrCnt" column="ATTR_CNT"/>
-		<result property="totalStndRate" column="TOTAL_STND_RATE"/>
-		<result property="termsStndRate" column="TERMS_STND_RATE"/>
-		<result property="wordStndRate" column="WORD_STND_RATE"/>
-		<result property="domainStndRate" column="DOMAIN_STND_RATE"/>
 		<result property="clctDt" column="CLCT_DT"/>
 	</resultMap>
 	<resultMap id="stdDataModelAttrMap" type="com.ndata.quality.model.std.StdDataModelAttrVo">
@@ -68,16 +59,10 @@
             ,COALESCE(SD.STRUCT_DIAG_RATE, -1) as STRUCT_DIAG_RATE
             ,COALESCE(D.DIAG_STND_RATE, 0) as DIAG_STND_RATE
             ,D.DIAG_DT_FMT
-            ,B.DM_CLCT_ID
-            ,COALESCE(B.OBJ_CNT,0) as OBJ_CNT
-            ,COALESCE(B.ATTR_CNT,0) as ATTR_CNT
-            ,to_char(to_timestamp(B.CLCT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
-        from TB_DATA_MODEL A LEFT OUTER JOIN (
-            select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID, T.CLCT_END_DT as CLCT_DT
-            from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
-            where S.DM_CLCT_ID = T.DM_CLCT_ID and
-                T.CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = S.DM_ID)
-            ) B on A.DM_ID = B.DM_ID
+            ,(select count(*) from TB_DATA_MODEL_OBJ where DM_ID = A.DM_ID and USE_YN='Y') as OBJ_CNT
+            ,(select count(*) from TB_DATA_MODEL_ATTR where DM_ID = A.DM_ID and USE_YN='Y') as ATTR_CNT
+            ,(select to_char(to_timestamp(max(CLCT_END_DT),'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') from TB_DATA_MODEL_CLCT where DM_ID = A.DM_ID and CLCT_CMPTN_YN='Y') as CLCT_DT
+        from TB_DATA_MODEL A
         LEFT OUTER JOIN (
             select J.DM_ID,
                 CASE WHEN J.TOTAL_CNT > 0
@@ -122,15 +107,10 @@
             ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
             ,COALESCE(A.MODEL_TYPE, 'PHYSICAL') as MODEL_TYPE
             ,A.VER
-            ,B.DM_CLCT_ID
-            ,COALESCE(B.OBJ_CNT,0) as OBJ_CNT
-            ,COALESCE(B.ATTR_CNT,0) as ATTR_CNT
-            ,to_char(to_timestamp(B.CLCT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
-        from TB_DATA_MODEL A INNER JOIN (
-            select S.DM_ID, S.OBJ_CNT, S.ATTR_CNT, T.DM_CLCT_ID, T.CLCT_END_DT as CLCT_DT
-            from TB_DATA_MODEL_STATS S, TB_DATA_MODEL_CLCT T
-            where S.DM_CLCT_ID = T.DM_CLCT_ID) B on A.DM_ID = B.DM_ID
-        where A.USE_YN = 'Y' AND B.DM_CLCT_ID = #{clctId}
+            ,(select count(*) from TB_DATA_MODEL_OBJ where DM_ID = A.DM_ID and USE_YN='Y') as OBJ_CNT
+            ,(select count(*) from TB_DATA_MODEL_ATTR where DM_ID = A.DM_ID and USE_YN='Y') as ATTR_CNT
+        from TB_DATA_MODEL A
+        where A.USE_YN = 'Y' AND A.DM_ID = #{clctId}
     </select>
 
 	<select id="selectDataModelList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelCollectVo">
@@ -194,6 +174,7 @@
 			order by T.CLCT_END_DT DESC NULLS LAST
 	</select>
 
+	<!-- DM_ID 기반 OBJ 조회 (CLCT 폐기 후) -->
 	<select id="selectDataModelObjListByClctId" parameterType="String" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
 			select
 				 OBJ_NM        as objNm
@@ -202,8 +183,26 @@
 				,OBJ_DESC      as objDesc
 				,OBJ_COMMENT   as objComment
 				,OBJ_ATTR_CNT  as objAttrCnt
+				,USE_YN        as useYn
 			from TB_DATA_MODEL_OBJ
-			where DM_CLCT_ID = #{clctId}
+			where DM_ID = #{clctId} AND USE_YN = 'Y'
+			order by OBJ_NM
+	</select>
+
+	<select id="selectDataModelObjListByDmId" parameterType="String" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
+			select
+				 OBJ_NM        as objNm
+				,OBJ_NM_KR     as objNmKr
+				,OBJ_OWNER     as objOwner
+				,OBJ_DESC      as objDesc
+				,OBJ_COMMENT   as objComment
+				,OBJ_ATTR_CNT  as objAttrCnt
+				,USE_YN        as useYn
+			from TB_DATA_MODEL_OBJ
+			where DM_ID = #{dataModelId}
+			<if test="_parameter != null">
+				AND USE_YN = 'Y'
+			</if>
 			order by OBJ_NM
 	</select>
 
@@ -216,19 +215,20 @@
 				,OBJ_COMMENT   as objComment
 				,OBJ_ATTR_CNT  as objAttrCnt
 			from TB_DATA_MODEL_OBJ
-			where DM_CLCT_ID = #{schId}
+			where DM_ID = #{schId} AND USE_YN = 'Y'
 			<if test="schObjNm != null">
 				AND OBJ_NM ILIKE '%'||#{schObjNm}||'%'
 			</if>
 			order by OBJ_NM
 	</select>
 
+	<!-- DM_ID 기반 ATTR 조회 (CLCT 폐기 후) -->
 	<select id="selectDataModelAttrListByClctId" parameterType="String" resultMap="stdDataModelAttrMap">
 			select
 				 COALESCE(A.OBJ_OWNER, '') as OBJ_OWNER
 				,A.OBJ_NM
 				,(select OBJ_NM_KR from TB_DATA_MODEL_OBJ
-				  where DM_CLCT_ID = A.DM_CLCT_ID and OBJ_NM = A.OBJ_NM) as OBJ_NM_KR
+				  where DM_ID = A.DM_ID and OBJ_NM = A.OBJ_NM) as OBJ_NM_KR
 				,A.ATTR_NM
 				,A.ATTR_NM_KR
 				,A.ATTR_COMMENT
@@ -245,19 +245,41 @@
 				,A.DEFAULT_VAL
 				,A.ATTR_ORD
 			from TB_DATA_MODEL_ATTR	A
-			where A.DM_CLCT_ID = #{clctId}
+			where A.DM_ID = #{clctId} AND A.USE_YN = 'Y'
 			order by A.OBJ_NM, A.ATTR_ORD
 	</select>
 
-	<!-- 구조 진단용: clctId 기준 컬럼 스냅샷 (HashMap 반환) -->
+	<!-- 구조 진단용: DM_ID 기준 컬럼 (HashMap 반환) -->
 	<select id="selectDataModelAttrListByClctIdRaw" parameterType="String" resultType="java.util.HashMap">
 		SELECT O.OBJ_OWNER AS "owner", A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm",
 			A.DATA_TYPE AS "dataType", A.DATA_LEN AS "dataLen",
 			A.NULLABLE_YN AS "nullableYn"
 		FROM TB_DATA_MODEL_ATTR A
-		INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_CLCT_ID = O.DM_CLCT_ID AND A.OBJ_NM = O.OBJ_NM
-		WHERE A.DM_CLCT_ID = #{clctId}
+		INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID = O.DM_ID AND A.OBJ_NM = O.OBJ_NM
+		WHERE A.DM_ID = #{clctId} AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
 		ORDER BY O.OBJ_OWNER, A.OBJ_NM, A.ATTR_NM
+	</select>
+
+	<!-- DM_ID 기반 인덱스 조회 -->
+	<select id="selectDataModelIndexListByDmId" parameterType="String" resultType="java.util.HashMap">
+		SELECT OBJ_OWNER AS "objOwner", TABLE_NM AS "tableNm", INDEX_NM AS "indexNm",
+			INDEX_TYPE AS "indexType", UNIQUENESS AS "uniqueness",
+			COLUMN_NM AS "columnNm", COLUMN_POS AS "columnPos",
+			SORT_ORDER AS "sortOrder", TABLESPACE_NM AS "tablespaceNm"
+		FROM TB_DATA_MODEL_INDEX
+		WHERE DM_ID = #{dataModelId}
+		ORDER BY OBJ_OWNER, TABLE_NM, INDEX_NM, COLUMN_POS
+	</select>
+
+	<!-- DM_ID 기반 제약조건 조회 -->
+	<select id="selectDataModelConstraintListByDmId" parameterType="String" resultType="java.util.HashMap">
+		SELECT OBJ_OWNER AS "objOwner", TABLE_NM AS "tableNm", CONSTRAINT_NM AS "constraintNm",
+			CONSTRAINT_TYPE AS "constraintType", COLUMN_NM AS "columnNm", COLUMN_POS AS "columnPos",
+			REF_OWNER AS "refOwner", REF_TABLE_NM AS "refTableNm", REF_COLUMN_NM AS "refColumnNm",
+			DELETE_RULE AS "deleteRule", STATUS AS "status", SEARCH_CONDITION AS "searchCondition"
+		FROM TB_DATA_MODEL_CONSTRAINT
+		WHERE DM_ID = #{dataModelId}
+		ORDER BY OBJ_OWNER, TABLE_NM, CONSTRAINT_NM, COLUMN_POS
 	</select>
 
 	<!-- 데이터모델 정보 조회 (구조진단용) -->
@@ -318,24 +340,14 @@
 			,to_char(to_timestamp(T.CLCT_START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as clctStartDt
 			,to_char(to_timestamp(T.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS')   as clctEndDt
 			,T.CLCT_CMPTN_YN as clctCmptnYn
-			,COALESCE(S.OBJ_CNT,0)  as objCnt
-			,COALESCE(S.ATTR_CNT,0) as attrCnt
-			,COALESCE((SELECT ROUND(
-				COUNT(*) FILTER (WHERE TERMS_STND_YN='Y' AND DOMAIN_STND_YN='Y')::NUMERIC
-				/ NULLIF(COUNT(*), 0) * 100, 1)
-			 FROM TB_DATA_MODEL_ATTR WHERE DM_CLCT_ID = T.DM_CLCT_ID), 0) as stndRate
-			,COALESCE((SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
-			 WHERE DM_CLCT_ID = T.DM_CLCT_ID
-			 AND NOT (TERMS_STND_YN='Y' AND DOMAIN_STND_YN='Y')), 0) as nonStndCnt
-			,COALESCE((SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
-			 WHERE DM_CLCT_ID = T.DM_CLCT_ID
-			 AND TERMS_STND_YN='N'), 0) as noTermsCnt
-			,COALESCE((SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
-			 WHERE DM_CLCT_ID = T.DM_CLCT_ID
-			 AND TERMS_STND_YN='Y' AND DOMAIN_STND_YN='N'), 0) as domainMismatchCnt
+			,(select count(*) from TB_DATA_MODEL_OBJ where DM_ID = M.DM_ID and USE_YN='Y') as objCnt
+			,(select count(*) from TB_DATA_MODEL_ATTR where DM_ID = M.DM_ID and USE_YN='Y') as attrCnt
+			,0 as stndRate
+			,0 as nonStndCnt
+			,0 as noTermsCnt
+			,0 as domainMismatchCnt
 		from TB_DATA_MODEL_CLCT T
 		JOIN TB_DATA_MODEL M on T.DM_ID = M.DM_ID
-		LEFT OUTER JOIN TB_DATA_MODEL_STATS S on T.DM_CLCT_ID = S.DM_CLCT_ID
 		where M.USE_YN = 'Y'
 		<if test="schNm != null">
 			AND M.DM_NM ILIKE '%' || #{schNm} || '%'
@@ -421,11 +433,11 @@
 			 ,CLCT_CMPTN_YN = #{clctCmptnYn, jdbcType=VARCHAR}
 	</insert>
 
+	<!-- ATTR UPSERT (MERGE): 수집 시 기존 행 갱신, 신규 행 삽입 -->
 	<insert id="insertDataModelAttr" parameterType="com.ndata.quality.model.std.StdDataModelAttrVo">
            INSERT INTO TB_DATA_MODEL_ATTR
            (
-             DM_CLCT_ID
-            ,DM_ID
+             DM_ID
 			,OBJ_OWNER
 			,OBJ_NM
 			,ATTR_NM
@@ -434,20 +446,16 @@
 			,DATA_TYPE
 			,DATA_LEN
 			,DATA_DECIMAL_LEN
-			,TERMS_STND_YN
-			,DOMAIN_STND_YN
-			,WORD_LST
-			,WORD_STND_LST
 			,NULLABLE_YN
 			,PK_YN
 			,FK_YN
 			,DEFAULT_VAL
 			,ATTR_ORD
+			,USE_YN
            )
            VALUES
            (
-             #{clctId}
-            ,#{dataModelId}
+             #{dataModelId}
             ,#{objOwner, jdbcType=VARCHAR}
             ,#{objNm, jdbcType=VARCHAR}
             ,#{attrNm, jdbcType=VARCHAR}
@@ -456,42 +464,75 @@
 			,#{dataType, jdbcType=VARCHAR}
 			,#{dataLen, jdbcType=BIGINT}
 			,#{dataDecimalLen, jdbcType=SMALLINT}
-			,#{termsStndYn, jdbcType=VARCHAR}
-			,#{domainStndYn, jdbcType=VARCHAR}
-			,#{wordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
-			,#{wordStndLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
 			,#{nullableYn, jdbcType=VARCHAR}
 			,#{pkYn, jdbcType=VARCHAR}
 			,#{fkYn, jdbcType=VARCHAR}
 			,#{defaultVal, jdbcType=VARCHAR}
 			,#{attrOrder, jdbcType=SMALLINT}
+			,'Y'
 		   )
+		   ON CONFLICT (DM_ID, OBJ_NM, ATTR_NM) DO UPDATE SET
+			ATTR_COMMENT = EXCLUDED.ATTR_COMMENT,
+			OBJ_OWNER = EXCLUDED.OBJ_OWNER,
+			DATA_TYPE = EXCLUDED.DATA_TYPE,
+			DATA_LEN = EXCLUDED.DATA_LEN,
+			DATA_DECIMAL_LEN = EXCLUDED.DATA_DECIMAL_LEN,
+			NULLABLE_YN = EXCLUDED.NULLABLE_YN,
+			PK_YN = EXCLUDED.PK_YN,
+			FK_YN = EXCLUDED.FK_YN,
+			DEFAULT_VAL = EXCLUDED.DEFAULT_VAL,
+			ATTR_ORD = EXCLUDED.ATTR_ORD,
+			USE_YN = 'Y',
+			DELETED_DT = NULL
 	</insert>
 
+	<!-- OBJ UPSERT (MERGE): 수집 시 기존 행 갱신, 신규 행 삽입 -->
 	<insert id="insertDataModelObj" parameterType="com.ndata.quality.model.std.StdDataModelObjVo">
            INSERT INTO TB_DATA_MODEL_OBJ
            (
-             DM_CLCT_ID
-            ,DM_ID
+             DM_ID
 			,OBJ_NM
 			,OBJ_NM_KR
 			,OBJ_OWNER
 			,OBJ_DESC
 			,OBJ_COMMENT
 			,OBJ_ATTR_CNT
+			,USE_YN
            )
            VALUES
            (
-             #{clctId}
-            ,#{dataModelId}
+             #{dataModelId}
             ,#{objNm, jdbcType=VARCHAR}
 			,#{objNmKr, jdbcType=VARCHAR}
 			,#{objOwner, jdbcType=VARCHAR}
 			,#{objDesc, jdbcType=VARCHAR}
 			,#{objComment, jdbcType=VARCHAR}
 			,#{objAttrCnt, jdbcType=SMALLINT}
+			,'Y'
 		   )
+		   ON CONFLICT (DM_ID, OBJ_NM) DO UPDATE SET
+			OBJ_COMMENT = EXCLUDED.OBJ_COMMENT,
+			OBJ_OWNER = EXCLUDED.OBJ_OWNER,
+			OBJ_ATTR_CNT = EXCLUDED.OBJ_ATTR_CNT,
+			USE_YN = 'Y',
+			DELETED_DT = NULL
 	</insert>
+
+	<!-- 수집 후 이번에 없는 OBJ 소프트 삭제 -->
+	<update id="softDeleteMissingObjs" parameterType="java.util.HashMap">
+		UPDATE TB_DATA_MODEL_OBJ SET USE_YN = 'N', DELETED_DT = #{deletedDt}
+		WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y'
+		AND OBJ_NM NOT IN
+		<foreach item="nm" collection="collectedNames" open="(" separator="," close=")">#{nm}</foreach>
+	</update>
+
+	<!-- 수집 후 이번에 없는 ATTR 소프트 삭제 -->
+	<update id="softDeleteMissingAttrs" parameterType="java.util.HashMap">
+		UPDATE TB_DATA_MODEL_ATTR SET USE_YN = 'N', DELETED_DT = #{deletedDt}
+		WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y'
+		AND (OBJ_NM || '.' || ATTR_NM) NOT IN
+		<foreach item="nm" collection="collectedNames" open="(" separator="," close=")">#{nm}</foreach>
+	</update>
 
 	<!-- 데이터모델 스키마 수집 필터 조회 -->
 	<select id="selectDataModelSchemaList" parameterType="String" resultType="com.ndata.quality.model.std.StdDataModelSchemaVo">
@@ -577,66 +618,15 @@
 		ORDER BY OBJ_OWNER, TABLE_NM, CONSTRAINT_NM, COLUMN_POS
 	</select>
 
-	<!-- [수정] 수집 시 표준검사 제거에 따라 표준화율 0으로 처리 — 원복 시 아래 주석의 원본 쿼리 사용 -->
-	<insert id="insertDataModelStats" parameterType="com.ndata.quality.model.std.StdDataModelStatsVo">
-           INSERT INTO TB_DATA_MODEL_STATS
-           (
-             DM_CLCT_ID
-            ,DM_ID
-			,OBJ_CNT
-			,ATTR_CNT
-			,TERMS_STND_RATE
-			,DOMAIN_STND_RATE
-			,WORD_STND_RATE
-           )
-           SELECT
-				A.DM_CLCT_ID
-				,A.DM_ID
-				,COUNT(A.OBJ_NM)
-				,SUM(A.OBJ_ATTR_CNT)
-				,0
-				,0
-				,0
-			FROM TB_DATA_MODEL_OBJ A
-			WHERE A.DM_CLCT_ID = #{clctId}
-				AND A.DM_ID = #{dataModelId}
-			GROUP BY A.DM_CLCT_ID, A.DM_ID
-	</insert>
-	<!-- [원본] 표준검사 원복 시 위 쿼리 대신 아래 사용
-	<insert id="insertDataModelStats" parameterType="com.ndata.quality.model.std.StdDataModelStatsVo">
-           INSERT INTO TB_DATA_MODEL_STATS
-           (
-             DM_CLCT_ID
-            ,DM_ID
-			,OBJ_CNT
-			,ATTR_CNT
-			,TERMS_STND_RATE
-			,DOMAIN_STND_RATE
-			,WORD_STND_RATE
-           )
-           SELECT
-				A.DM_CLCT_ID
-				,A.DM_ID
-				,COUNT(A.OBJ_NM)
-				,SUM(A.OBJ_ATTR_CNT)
-				,(SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
-				WHERE DM_CLCT_ID = A.DM_CLCT_ID AND DM_ID = A.DM_ID
-				AND TERMS_STND_YN = 'Y') / SUM(A.OBJ_ATTR_CNT) * 100
-				,(SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
-				WHERE DM_CLCT_ID = A.DM_CLCT_ID AND DM_ID = A.DM_ID
-				AND DOMAIN_STND_YN = 'Y')/ SUM(A.OBJ_ATTR_CNT) * 100::NUMERIC(5,2) AS DOMAINSTNDRATE
-				,(SELECT COUNT(B.WORD_STND) FILTER (WHERE WORD_STND = 'Y')::NUMERIC / COUNT(B.WORD_STND) * 100
-					FROM (SELECT DM_CLCT_ID, UNNEST(CASE WHEN ARRAY_LENGTH(WORD_STND_LST, 1) >= 1
-										THEN WORD_STND_LST
-										ELSE '{NULL}'::TEXT[] END
-										) AS WORD_STND
-						FROM TB_DATA_MODEL_ATTR WHERE DM_CLCT_ID =  A.DM_CLCT_ID) B)
-			FROM TB_DATA_MODEL_OBJ A
-			WHERE A.DM_CLCT_ID = #{clctId}
-				AND A.DM_ID = #{dataModelId}
-			GROUP BY A.DM_CLCT_ID, A.DM_ID
-	</insert>
-	-->
+	<!-- TB_DATA_MODEL_STATS 폐기됨 — 실시간 COUNT로 대체 -->
+	<!-- insertDataModelStats는 더 이상 사용하지 않음 (DataModelService에서 호출 제거 필요) -->
+
+	<!-- 실시간 모델 통계 (STATS 테이블 대체) -->
+	<select id="selectDataModelLiveStats" parameterType="String" resultType="java.util.HashMap">
+		SELECT
+			(SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y') AS "objCnt",
+			(SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y') AS "attrCnt"
+	</select>
 
 	<!-- ========================================================= -->
 	<!-- 데이터모델 재설계 1단계: 최신 스냅샷 편집용 매퍼 (설계문서 40/41)  -->
@@ -653,7 +643,11 @@
 	<!-- 테이블(OBJ) 존재 여부 확인 -->
 	<select id="countDataModelObj" parameterType="java.util.Map" resultType="int">
 		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
-		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND USE_YN = 'Y'
+	</select>
+	<select id="countDataModelObjByDmId" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND USE_YN = 'Y'
 	</select>
 
 	<!-- 컬럼(ATTR) 존재 여부 확인 -->

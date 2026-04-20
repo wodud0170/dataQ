@@ -39,3 +39,4 @@ target/
 
 # local DB docker image (contains sensitive user data)
 dataq-db/
+BACKUP_before_clct_migration.sql

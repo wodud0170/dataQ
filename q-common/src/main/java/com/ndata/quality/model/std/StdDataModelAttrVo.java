@@ -24,4 +24,6 @@ public class StdDataModelAttrVo {
 	private String fkYn;
 	private String defaultVal;
 	private short attrOrder;
+	private String useYn;
+	private String deletedDt;
 }

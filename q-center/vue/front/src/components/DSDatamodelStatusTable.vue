@@ -9,13 +9,6 @@
           @change="onModelChange" clearable dense outlined hide-details
           class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
         </v-autocomplete>
-        <span class="filterLabel">수집일시</span>
-        <v-select v-model="selectedClctId" :items="clctList"
-          item-text="clctDisplayDt" item-value="clctId"
-          clearable dense outlined hide-details
-          class="filterInput" :style="{ width: '300px' }" color="ndColor"
-          placeholder="수집일시 선택" :disabled="clctList.length === 0">
-        </v-select>
         <span class="filterLabel">테이블명</span>
         <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
@@ -28,7 +21,7 @@
         </v-text-field>
         <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
         <v-btn class="gradient" v-on:click="tableDataDownload" :disabled="dmTableAllItems.length === 0">다운로드</v-btn>
-        <v-btn color="primary" :disabled="!isLatestClct" v-on:click="openAddObjDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">테이블 추가</v-btn>
+        <v-btn color="primary" :disabled="!selectedModelId" v-on:click="openAddObjDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">테이블 추가</v-btn>
       </v-row>
     </v-sheet>
 
@@ -70,10 +63,10 @@
         <a class="ndColor--text" style="cursor:pointer; text-decoration:underline;" @click="goToColumn(item)">{{ item.objNm }}</a>
       </template>
       <template #[`item.actions`]="{ item }">
-        <v-btn icon small :disabled="!isLatestClct" @click="openEditObjDialog(item)" title="수정">
+        <v-btn icon small :disabled="!selectedModelId" @click="openEditObjDialog(item)" title="수정">
           <v-icon small>mdi-pencil</v-icon>
         </v-btn>
-        <v-btn icon small :disabled="!isLatestClct" @click="deleteObj(item)" title="삭제">
+        <v-btn icon small :disabled="!selectedModelId" @click="deleteObj(item)" title="삭제">
           <v-icon small color="error">mdi-delete</v-icon>
         </v-btn>
       </template>
@@ -112,10 +105,8 @@ export default {
   },
   data: () => ({
     modelList: [],
-    clctList: [],
     dmTableAllItems: [],
     selectedModelId: null,
-    selectedClctId: null,
     searchTable: '',
     searchTableKr: '',
     loadTable: false,
@@ -143,10 +134,6 @@ export default {
         return nm && nmKr;
       });
     },
-    isLatestClct() {
-      if (!this.selectedClctId || this.clctList.length === 0) return false;
-      return this.clctList[0].clctId === this.selectedClctId;
-    },
   },
   methods: {
     getModelList() {
@@ -162,44 +149,23 @@ export default {
       });
     },
     onModelChange(modelId) {
-      this.clctList = [];
-      this.selectedClctId = null;
       this.dmTableAllItems = [];
       if (!modelId) return;
-      const _to = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-      const _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-      axios.post(this.$APIURL.base + "api/dm/getDataModelClctList", {
-        'schId': modelId, 'from': _from, 'to': _to
-      }).then((res) => {
-        const sorted = res.data.slice().sort((a, b) => b.clctStartDt.localeCompare(a.clctStartDt));
-        this.clctList = sorted.map((item, index) => ({
-          ...item,
-          clctDisplayDt: index === 0 ? item.clctStartDt + ' (최신)' : item.clctStartDt,
-        }));
-        if (this.clctList.length > 0) {
-          this.selectedClctId = this.clctList[0].clctId;
-        }
-      }).catch(() => {
-        this.$swal.fire({ title: '수집 목록 로드 실패', confirmButtonText: '확인', icon: 'error' });
-      });
+      this.load();
     },
     load() {
       if (!this.selectedModelId) {
         this.$swal.fire({ title: '데이터모델명을 선택해주세요.', confirmButtonText: '확인', icon: 'warning' });
         return;
       }
-      if (!this.selectedClctId) {
-        this.$swal.fire({ title: '수집일시를 선택해주세요.', confirmButtonText: '확인', icon: 'warning' });
-        return;
-      }
       this.loadTable = true;
       axios.get(this.$APIURL.base + "api/dm/getDataModelObjListByClctId", {
-        params: { 'clctId': this.selectedClctId }
+        params: { 'clctId': this.selectedModelId }
       }).then((res) => {
         this.dmTableAllItems = res.data;
         this.loadTable = false;
       }).catch(() => {
-        this.$swal.fire({ title: '테이블 정보 로드 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
+        this.$swal.fire({ title: '테이블 정보 로드 실패', confirmButtonText: '확인', icon: 'error' });
         this.loadTable = false;
       });
     },
@@ -207,20 +173,7 @@ export default {
       var self = this;
       var apply = function() {
         self.selectedModelId = pending.modelId;
-        var _to = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-        var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-        axios.post(self.$APIURL.base + "api/dm/getDataModelClctList", {
-          'schId': pending.modelId, 'from': _from, 'to': _to
-        }).then(function(res) {
-          var sorted = res.data.slice().sort(function(a, b) { return b.clctStartDt.localeCompare(a.clctStartDt); });
-          self.clctList = sorted.map(function(item, index) {
-            return Object.assign({}, item, {
-              clctDisplayDt: index === 0 ? item.clctStartDt + ' (최신)' : item.clctStartDt,
-            });
-          });
-          self.selectedClctId = pending.clctId || (self.clctList.length > 0 ? self.clctList[0].clctId : null);
-          self.$nextTick(function() { self.load(); });
-        });
+        self.$nextTick(function() { self.load(); });
       };
       if (this.modelList.length > 0) {
         apply();
@@ -275,8 +228,8 @@ export default {
       this.objDialog = true;
     },
     submitObj() {
-      if (!this.objForm.objNm || !this.objForm.objNm.trim()) {
-        this.$swal.fire({ title: '테이블명(물리명)은 필수입니다.', confirmButtonText: '확인', icon: 'warning' });
+      if ((!this.objForm.objNm || !this.objForm.objNm.trim()) && (!this.objForm.objNmKr || !this.objForm.objNmKr.trim())) {
+        this.$swal.fire({ title: '테이블명(물리명) 또는 한글명(논리명) 중 하나는 입력해야 합니다.', confirmButtonText: '확인', icon: 'warning' });
         return;
       }
       const url = this.objDialogMode === 'add' ? 'api/dm/addObj' : 'api/dm/updateObj';

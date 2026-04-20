@@ -22,7 +22,6 @@ import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelCollectVo;
 import com.ndata.quality.model.std.StdDataModelObjVo;
 import com.ndata.quality.model.std.StdDataModelSchemaVo;
-import com.ndata.quality.model.std.StdDataModelStatsVo;
 import com.ndata.quality.model.std.StdDataModelVo;
 import com.ndata.quality.model.std.StdTermsVo;
 import com.ndata.quality.model.std.StdWordVo;
@@ -105,7 +104,6 @@ public class DataModelService implements Runnable {
 		StdDataModelCollectVo stdDataModelCollectVo = new StdDataModelCollectVo();
 		StdDataModelAttrVo stdDataModelAttrVo = new StdDataModelAttrVo();
 		StdDataModelObjVo stdDataModelObjVo = new StdDataModelObjVo();
-		StdDataModelStatsVo stdDataModelStatsVo = new StdDataModelStatsVo();
 
 		DBHandler dbHandler = null;
 
@@ -143,6 +141,8 @@ public class DataModelService implements Runnable {
 			String objQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetObjs");
 			stdDataModelObjVo.setClctId(clctId);
 			int totalObjCnt = 0;
+			java.util.List<String> collectedObjNames = new java.util.ArrayList<>();
+			java.util.List<String> collectedAttrNames = new java.util.ArrayList<>();
 			for (String schemaNm : schemas) {
 				NamedParamStatement pstmt = dbHandler.namedParamStatement(objQuery);
 				pstmt.setString("owner", StringUtils.upperCase(schemaNm));
@@ -159,6 +159,7 @@ public class DataModelService implements Runnable {
 					stdDataModelObjVo.setObjCretDt(rs.getString("objCretDt"));
 					stdDataModelObjVo.setObjUpdtDt(rs.getString("objUpdtDt"));
 					session.insert("datamodel.insertDataModelObj", stdDataModelObjVo);
+					collectedObjNames.add(stdDataModelObjVo.getObjNm());
 					totalObjCnt++;
 				}
 				pstmt.close();
@@ -220,6 +221,7 @@ public class DataModelService implements Runnable {
 					// stdDataModelAttrVo.setWordLst(wordLst.toArray(new String[0]));
 					// stdDataModelAttrVo.setWordStndLst(wordStndLst.toArray(new String[0]));
 					session.insert("datamodel.insertDataModelAttr", stdDataModelAttrVo);
+					collectedAttrNames.add(stdDataModelAttrVo.getObjNm() + "." + stdDataModelAttrVo.getAttrNm());
 					totalAttrCnt++;
 				}
 				pstmt.close();
@@ -227,6 +229,24 @@ public class DataModelService implements Runnable {
 			}
 			session.commit();
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "컬럼 정보 수집 완료 (" + totalAttrCnt + "개)");
+			// 3-0. 소프트 삭제: 이번 수집에 없는 OBJ/ATTR
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "삭제된 객체 정리 중...");
+			String nowDt = com.ndata.module.DateUtils.dateToStr(new Date(), "yyyyMMddHHmmss");
+			if (!collectedObjNames.isEmpty()) {
+				java.util.Map<String, Object> softDelObjParam = new java.util.HashMap<>();
+				softDelObjParam.put("dataModelId", dataModelId);
+				softDelObjParam.put("deletedDt", nowDt);
+				softDelObjParam.put("collectedNames", collectedObjNames);
+				session.update("datamodel.softDeleteMissingObjs", softDelObjParam);
+			}
+			if (!collectedAttrNames.isEmpty()) {
+				java.util.Map<String, Object> softDelAttrParam = new java.util.HashMap<>();
+				softDelAttrParam.put("dataModelId", dataModelId);
+				softDelAttrParam.put("deletedDt", nowDt);
+				softDelAttrParam.put("collectedNames", collectedAttrNames);
+				session.update("datamodel.softDeleteMissingAttrs", softDelAttrParam);
+			}
+			session.commit();
 			// 3-1. INDEX (인덱스) 수집
 			int totalIndexCnt = 0;
 			try {
@@ -304,13 +324,7 @@ public class DataModelService implements Runnable {
 			} catch (Exception e) {
 				log.warn(">> constraint collect skipped: {}", e.getMessage());
 			}
-			// 4. 데이터 모델 통계 저장
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "통계 처리 중...");
-			stdDataModelStatsVo.setClctId(clctId);
-			stdDataModelStatsVo.setDataModelId(dataModelId);
-			session.insert("datamodel.insertDataModelStats", stdDataModelStatsVo);
-			session.commit();
-			// 5. 데이터 모델 수집 완료 처리
+			// 4. 데이터 모델 수집 완료 처리
 			stdDataModelCollectVo.setClctEndDt(DateUtils.dateToStr(new Date(), "yyyyMMddHHmmss"));
 			stdDataModelCollectVo.setClctCmptnYn("Y");
 			session.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);

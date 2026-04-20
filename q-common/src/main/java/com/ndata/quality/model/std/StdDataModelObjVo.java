@@ -14,4 +14,6 @@ public class StdDataModelObjVo {
 	private short objAttrCnt;
 	private String objCretDt;
 	private String objUpdtDt;
+	private String useYn;
+	private String deletedDt;
 }

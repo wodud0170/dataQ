@@ -14,21 +14,9 @@
         @change="onModelChange"
       />
 
-      <span class="filterLabel">수집일시</span>
-      <v-select
-        v-model="selectedClctId"
-        :items="clctList"
-        item-text="clctDisplayDt"
-        item-value="clctId"
-        dense outlined hide-details
-        placeholder="수집일시 선택"
-        style="width:280px; flex-grow:0;"
-        :disabled="!selectedModel"
-      />
-
       <v-spacer />
 
-      <v-btn small color="primary" :disabled="!selectedClctId" :loading="comparing" @click="runCompare">
+      <v-btn small color="primary" :disabled="!selectedModel" :loading="comparing" @click="runCompare">
         <v-icon small left>mdi-compare</v-icon>
         진단 실행
       </v-btn>
@@ -275,8 +263,6 @@ export default {
       });
     },
     onModelChange: function(dmId) {
-      this.clctList = [];
-      this.selectedClctId = null;
       this.resetResult();
       if (!dmId) return;
 
@@ -284,25 +270,14 @@ export default {
       var _to   = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
       var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
 
-      axios.post(self.$APIURL.base + 'api/dm/getDataModelClctList', { schId: dmId, from: _from, to: _to }).then(function(res) {
-        var sorted = (res.data || []).slice().sort(function(a, b) { return b.clctEndDt.localeCompare(a.clctEndDt); });
-        self.clctList = sorted.map(function(item, idx) {
-          return Object.assign({}, item, {
-            clctDisplayDt: item.clctEndDt + (idx === 0 ? ' (최신)' : '')
-          });
-        });
-        if (self.clctList.length > 0) {
-          self.selectedClctId = self.clctList[0].clctId;
-        }
-      });
     },
     runCompare: function() {
-      if (!this.selectedModel || !this.selectedClctId) return;
+      if (!this.selectedModel) return;
       var self = this;
       self.comparing = true;
       self.resetResult();
 
-      var body = { dataModelId: self.selectedModel, clctId: self.selectedClctId };
+      var body = { dataModelId: self.selectedModel };
       axios.post(self.$APIURL.base + 'api/std/structDiag/compareSchema', body).then(function(res) {
         self.comparing = false;
         var data = res.data;

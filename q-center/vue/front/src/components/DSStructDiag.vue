@@ -12,10 +12,6 @@
       <v-autocomplete v-model="selectedModel" :items="dataModelList" item-text="dataModelNm" item-value="dataModelId"
         dense outlined hide-details clearable placeholder="데이터 모델 선택" style="width:280px; flex-grow:0;" @change="onModelChange" />
 
-      <span class="filterLabel">수집일시</span>
-      <v-select v-model="selectedClctId" :items="clctList" item-text="clctDisplayDt" item-value="clctId"
-        dense outlined hide-details placeholder="수집일시 선택" style="width:280px; flex-grow:0;" :disabled="!selectedModel" />
-
       <v-spacer />
 
       <v-chip v-if="executing" small color="blue" text-color="white" class="mr-2">
@@ -23,7 +19,7 @@
         {{ stepMessage }}
       </v-chip>
 
-      <v-btn small color="primary" :disabled="!selectedModel || !selectedClctId || executing" @click="executeStructDiag">
+      <v-btn small color="primary" :disabled="!selectedModel || executing" @click="executeStructDiag">
         <v-icon small left>mdi-database-sync</v-icon> 진단 실행
       </v-btn>
     </v-sheet>
@@ -69,9 +65,6 @@ export default {
     return {
       dataModelList: [],
       selectedModel: null,
-      clctList: [],
-      selectedClctId: null,
-      lastClctDt: '',
       executing: false,
       stepMessage: '',
       historyLoading: false,
@@ -109,35 +102,14 @@ export default {
       });
     },
     onModelChange(dmId) {
-      this.clctList = [];
-      this.selectedClctId = null;
-      this.lastClctDt = '';
       if (!dmId) return;
-      var self = this;
-      var _to = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-      var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-      axios.post(self.$APIURL.base + 'api/dm/getDataModelClctList', { schId: dmId, from: _from, to: _to }).then(function(res) {
-        var sorted = (res.data || []).slice().sort(function(a, b) { return b.clctEndDt.localeCompare(a.clctEndDt); });
-        self.clctList = sorted.map(function(item, idx) {
-          return Object.assign({}, item, { clctDisplayDt: item.clctEndDt + (idx === 0 ? ' (최신)' : '') });
-        });
-        if (self.clctList.length > 0) {
-          self.selectedClctId = self.clctList[0].clctId;
-          self.lastClctDt = sorted[0].clctEndDt;
-        }
-      });
     },
     executeStructDiag() {
       if (!this.selectedModel) return;
       var self = this;
-      if (!self.lastClctDt) {
-        self.$swal.fire({ title: '수집 이력 없음', text: '먼저 데이터 모델 수집을 진행해주세요.', icon: 'warning', confirmButtonText: '확인' });
-        return;
-      }
       self.executing = true;
       self.stepMessage = '분석 중...';
       var body = { dataModelId: self.selectedModel };
-      if (self.selectedClctId) body.clctId = self.selectedClctId;
       axios.post(self.$APIURL.base + 'api/std/structDiag/execute', body).then(function(res) {
         var data = res.data;
         if (data && data.resultCode === 200 && data.contents) {

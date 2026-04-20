@@ -18,7 +18,10 @@ public class StdDataModelVo {
     private String updtUserId;
 	private String useYn;
 
-	private StdDataModelStatsVo dataModelStats;
+    // 실시간 통계 (STATS 테이블 폐기 → 직접 필드)
+    private int objCnt;
+    private int attrCnt;
+    private String clctDt;
 
     // 현황 필드 (용어 기준 재정의)
     private double stndRate;          // 표준 준수율 (용어+도메인 모두 일치)

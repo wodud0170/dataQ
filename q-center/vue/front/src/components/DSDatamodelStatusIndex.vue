@@ -9,13 +9,6 @@
           @change="onModelChange" clearable dense outlined hide-details
           class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
         </v-autocomplete>
-        <span class="filterLabel">수집일시</span>
-        <v-select v-model="selectedClctId" :items="clctList"
-          item-text="clctDisplayDt" item-value="clctId"
-          clearable dense outlined hide-details
-          class="filterInput" :style="{ width: '300px' }" color="ndColor"
-          placeholder="수집일시 선택" :disabled="clctList.length === 0">
-        </v-select>
         <span class="filterLabel">테이블명</span>
         <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
@@ -84,10 +77,8 @@ export default {
   },
   data: () => ({
     modelList: [],
-    clctList: [],
     allItems: [],
     selectedModelId: null,
-    selectedClctId: null,
     searchTable: '',
     searchColumn: '',
     searchIndex: '',
@@ -129,38 +120,18 @@ export default {
       });
     },
     onModelChange(modelId) {
-      this.clctList = [];
-      this.selectedClctId = null;
       this.allItems = [];
       if (!modelId) return;
-      var _to = new Date().toISOString().substr(0, 10).replace(/-/g, '') + '235959';
-      var _from = new Date(new Date() - 365 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10).replace(/-/g, '') + '000000';
-      axios.post(this.$APIURL.base + "api/dm/getDataModelClctList", {
-        'schId': modelId, 'from': _from, 'to': _to
-      }).then((res) => {
-        var sorted = res.data.slice().sort(function(a, b) { return b.clctStartDt.localeCompare(a.clctStartDt); });
-        this.clctList = sorted.map(function(item, index) {
-          return Object.assign({}, item, {
-            clctDisplayDt: index === 0 ? item.clctStartDt + ' (최신)' : item.clctStartDt,
-          });
-        });
-        if (this.clctList.length > 0) {
-          this.selectedClctId = this.clctList[0].clctId;
-        }
-      });
+      this.load();
     },
     load() {
       if (!this.selectedModelId) {
         this.$swal.fire({ title: '데이터모델명을 선택해주세요.', confirmButtonText: '확인', icon: 'warning' });
         return;
       }
-      if (!this.selectedClctId) {
-        this.$swal.fire({ title: '수집일시를 선택해주세요.', confirmButtonText: '확인', icon: 'warning' });
-        return;
-      }
       this.loading = true;
       axios.get(this.$APIURL.base + "api/dm/getDataModelIndexListByClctId", {
-        params: { 'clctId': this.selectedClctId }
+        params: { 'clctId': this.selectedModelId }
       }).then((res) => {
         this.allItems = res.data;
         this.loading = false;

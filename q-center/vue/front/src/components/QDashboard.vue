@@ -491,10 +491,8 @@ export default {
           var totalObj = 0, totalAttr = 0, totalStndRate = 0, stndRateCnt = 0;
           for (var i = 0; i < filtered.length; i++) {
             var m = filtered[i];
-            if (m.dataModelStats) {
-              totalObj += m.dataModelStats.objCnt || 0;
-              totalAttr += m.dataModelStats.attrCnt || 0;
-            }
+            totalObj += m.objCnt || 0;
+            totalAttr += m.attrCnt || 0;
             if (m.diagStndRate > 0) {
               totalStndRate += m.diagStndRate;
               stndRateCnt++;
@@ -502,7 +500,7 @@ export default {
           }
           self.dataModelCnt = filtered.length;
           self.selectedModelNm = (self.selectedModelId && filtered.length === 1) ? filtered[0].dataModelNm : '';
-          self.selectedClctId = (filtered.length === 1 && filtered[0].dataModelStats) ? filtered[0].dataModelStats.clctId : null;
+          self.selectedClctId = (filtered.length === 1) ? filtered[0].dataModelId : null;
           self.objCnt = totalObj;
           self.attrCnt = totalAttr;
           var avgRate = stndRateCnt > 0 ? Math.round(totalStndRate / stndRateCnt * 10) / 10 : 0;

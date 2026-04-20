@@ -84,28 +84,18 @@ public class StructDiagService implements Runnable {
             }
             String dsId = (String) dmInfo.get("dataModelDsId");
 
-            // 2. 수집 스냅샷 결정 (clctId 지정 시 해당 건, 없으면 최신)
-            String targetClctId;
-            String targetClctDt;
-            if (this.clctId != null && !this.clctId.trim().isEmpty()) {
-                targetClctId = this.clctId;
-                Map<String, Object> clctInfo = sqlSessionTemplate.selectOne("datamodel.selectDataModelClctById", this.clctId);
-                targetClctDt = clctInfo != null ? (String) clctInfo.get("clctEndDt") : null;
-            } else {
-                List<Map<String, Object>> recentClcts = sqlSessionTemplate.selectList(
-                        "structdiag.selectRecentClctIds", dataModelId);
-                if (recentClcts == null || recentClcts.isEmpty()) {
-                    log.warn(">> StructDiag: 수집 이력 없음 diagId={}", diagId);
-                    updateStatus("ERROR");
-                    return;
-                }
-                targetClctId = (String) recentClcts.get(0).get("clctId");
+            // 2. 현재 모델의 OBJ/ATTR 로드 (DM_ID 기반, CLCT 폐기 후)
+            List<Map<String, Object>> prevAttrs = sqlSessionTemplate.selectList(
+                    "datamodel.selectDataModelAttrListByClctIdRaw", dataModelId);
+            log.info(">> StructDiag: 모델 컬럼 {} 로드 (dataModelId={})", prevAttrs.size(), dataModelId);
+
+            // 최신 수집일시 조회 (이력 기록용)
+            String targetClctDt = null;
+            List<Map<String, Object>> recentClcts = sqlSessionTemplate.selectList(
+                    "structdiag.selectRecentClctIds", dataModelId);
+            if (recentClcts != null && !recentClcts.isEmpty()) {
                 targetClctDt = (String) recentClcts.get(0).get("clctEndDt");
             }
-
-            List<Map<String, Object>> prevAttrs = sqlSessionTemplate.selectList(
-                    "datamodel.selectDataModelAttrListByClctIdRaw", targetClctId);
-            log.info(">> StructDiag: 수집 스냅샷 {} 컬럼 로드 (clctId={})", prevAttrs.size(), targetClctId);
 
             // 3. 실제 DBMS에 접속하여 현재 스키마 읽기 (CURR = 실제 DB 상태)
             DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
@@ -238,7 +228,7 @@ public class StructDiagService implements Runnable {
             List<Map<String, Object>> indexChanges = new ArrayList<>();
             int addedIndexes = 0, modifiedIndexes = 0, deletedIndexes = 0, totalIndexes = 0;
             List<Map<String, Object>> prevIndexes = sqlSessionTemplate.selectList(
-                    "datamodel.selectDataModelIndexListByClctId", targetClctId);
+                    "datamodel.selectDataModelIndexListByDmId", dataModelId);
             if (prevIndexes != null && !prevIndexes.isEmpty()) {
                 // 실제 DB 인덱스 읽기
                 String indexQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetIndexes");
@@ -315,7 +305,7 @@ public class StructDiagService implements Runnable {
             List<Map<String, Object>> constraintChanges = new ArrayList<>();
             int addedConstraints = 0, modifiedConstraints = 0, deletedConstraints = 0, totalConstraints = 0;
             List<Map<String, Object>> prevConstraints = sqlSessionTemplate.selectList(
-                    "datamodel.selectDataModelConstraintListByClctId", targetClctId);
+                    "datamodel.selectDataModelConstraintListByDmId", dataModelId);
             if (prevConstraints != null && !prevConstraints.isEmpty()) {
                 String constraintQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetConstraints");
                 List<Map<String, Object>> currConstraintRows = new ArrayList<>();
@@ -596,22 +586,9 @@ public class StructDiagService implements Runnable {
             }
             String dsId = (String) dmInfo.get("dataModelDsId");
 
-            // 2. 수집 스냅샷 결정
-            String targetClctId;
-            if (clctId != null && !clctId.trim().isEmpty()) {
-                targetClctId = clctId;
-            } else {
-                List<Map<String, Object>> recentClcts = sqlSessionTemplate.selectList(
-                        "structdiag.selectRecentClctIds", dataModelId);
-                if (recentClcts == null || recentClcts.isEmpty()) {
-                    resultMap.put("error", "수집 이력이 없습니다.");
-                    return resultMap;
-                }
-                targetClctId = (String) recentClcts.get(0).get("clctId");
-            }
-
+            // 2. 현재 모델 OBJ/ATTR 로드 (DM_ID 기반)
             List<Map<String, Object>> prevAttrs = sqlSessionTemplate.selectList(
-                    "datamodel.selectDataModelAttrListByClctIdRaw", targetClctId);
+                    "datamodel.selectDataModelAttrListByClctIdRaw", dataModelId);
 
             // 3. 실제 DBMS 접속하여 현재 스키마 읽기
             DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);

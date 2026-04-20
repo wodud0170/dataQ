@@ -770,6 +770,14 @@ CREATE UNIQUE INDEX uix_domain_nm ON quality.tb_domain (DOMAIN_NM);
 --     (세션: 2026-04-19 / 데이터모델 관리 재설계)
 -- -------------------------------------------------------------
 ALTER TABLE TB_DATA_MODEL ALTER COLUMN DM_DS_ID DROP NOT NULL;
+ALTER TABLE TB_DATA_MODEL ADD COLUMN IF NOT EXISTS MODEL_TYPE VARCHAR(10) DEFAULT 'PHYSICAL';
+COMMENT ON COLUMN TB_DATA_MODEL.MODEL_TYPE IS 'PHYSICAL(물리만), LOGICAL(논리만), BOTH(논리+물리)';
+
+-- -------------------------------------------------------------
+-- 17. TB_APRV_STATS 항목명 컬럼 (반려 물리삭제 후 이력 조회용)
+-- -------------------------------------------------------------
+ALTER TABLE TB_APRV_STATS ADD COLUMN IF NOT EXISTS REQ_ITEM_NM VARCHAR(200);
+COMMENT ON COLUMN TB_APRV_STATS.REQ_ITEM_NM IS '요청 항목명 (반려 시 원본 삭제되므로 이력 보존용)';
 
 ALTER TABLE TB_DATA_MODEL_CLCT ADD COLUMN IF NOT EXISTS CLCT_TYPE VARCHAR(20) DEFAULT 'DBMS';
 COMMENT ON COLUMN TB_DATA_MODEL_CLCT.CLCT_TYPE IS '스냅샷 원천 (DBMS: 수집, MANUAL: 수동편집, ERWIN: ERwin 임포트)';
