@@ -2,7 +2,7 @@
   <v-main>
     <!-- 조회 조건 -->
     <v-sheet class="filterWrapper px-4 pt-3 pb-2">
-      <!-- Row 1: 모델/수집일시 선택 -->
+      <!-- Row 1: 모델 선택 -->
       <v-row :style="{ alignItems: 'center', margin: '0 0 6px 0', flexWrap: 'wrap', gap: '6px' }">
         <span class="filterLabel">데이터모델명</span>
         <v-autocomplete v-model="selectedModelId" :items="modelList"
@@ -48,57 +48,75 @@
       </v-row>
     </v-sheet>
 
-    <!-- 컬럼 추가/수정 다이얼로그 (표준사전 드롭다운 강제형) -->
+    <!-- 컬럼 추가/수정 다이얼로그 (한글명 단일 입력 · 표준 변환) -->
     <v-dialog v-model="attrDialog" max-width="720" persistent>
       <v-card>
-        <v-card-title>{{ attrDialogMode === 'add' ? '컬럼 추가' : '컬럼 수정' }}</v-card-title>
+        <v-card-title>
+          {{ attrDialogMode === 'add' ? '컬럼 추가' : '컬럼 수정' }}
+          <v-spacer />
+          <v-chip v-if="resolveState === 'matched'" color="success" small>표준</v-chip>
+          <v-chip v-else-if="resolveState === 'unmatched'" color="error" small>비표준</v-chip>
+        </v-card-title>
         <v-card-text>
           <v-row dense>
-            <v-col cols="6">
+            <v-col cols="12">
               <v-autocomplete v-model="attrForm.objNm" :items="objOptions" label="소속 테이블 *"
                 :disabled="attrDialogMode === 'edit'" outlined dense hide-details />
             </v-col>
-            <v-col cols="6">
-              <v-autocomplete v-model="selectedTerm" :items="termOptions" :loading="termsLoading"
-                :search-input.sync="termSearch" item-text="termsNm" item-value="termsId" return-object
-                label="용어 사전에서 선택 *" hint="선택 시 컬럼명·한글명이 자동 설정됩니다" persistent-hint
-                outlined dense @change="onTermSelected" :disabled="attrDialogMode === 'edit'" />
-            </v-col>
           </v-row>
           <v-row dense>
-            <v-col cols="6">
-              <v-text-field v-model="attrForm.attrNm" label="컬럼명 (물리명) *"
-                :disabled="attrDialogMode === 'edit'" hint="용어 선택 시 자동 · 수동 입력 시 표준 검증" persistent-hint outlined dense />
+            <v-col cols="9">
+              <v-text-field v-model="attrForm.attrNmKr" label="컬럼 한글명 *"
+                hint="입력 후 [표준 변환] 클릭 또는 엔터로 자동 변환됩니다"
+                persistent-hint outlined dense
+                @blur="resolveStandardNow" @keyup.enter="resolveStandardNow" />
             </v-col>
-            <v-col cols="4">
-              <v-text-field v-model="attrForm.attrNmKr" label="컬럼 한글명 (논리명) *" outlined dense />
-            </v-col>
-            <v-col cols="2" class="d-flex align-center">
-              <v-btn small color="indigo" dark @click="applyStandard" :loading="standardLoading" :disabled="!attrForm.attrNmKr">
-                <v-icon small left>mdi-auto-fix</v-icon>표준 적용
+            <v-col cols="3" class="d-flex align-center">
+              <v-btn color="indigo" dark @click="resolveStandardNow" :loading="standardLoading"
+                :disabled="!attrForm.attrNmKr">
+                <v-icon small left>mdi-auto-fix</v-icon>표준 변환
               </v-btn>
             </v-col>
           </v-row>
-          <v-row dense>
-            <v-col cols="12">
-              <v-autocomplete v-model="selectedDomain" :items="domainOptions" :loading="domainsLoading"
-                item-text="domainDisplayNm" item-value="domainId" return-object
-                label="도메인 사전에서 선택 *" hint="선택 시 데이터 타입·길이가 자동 설정됩니다" persistent-hint
-                outlined dense @change="onDomainSelected" />
+
+          <!-- 변환 결과 패널 -->
+          <v-sheet v-if="resolveState !== 'idle'" outlined rounded class="pa-3 mt-2"
+            :class="resolveState === 'matched' ? 'matched-panel' : 'unmatched-panel'">
+            <div v-if="resolveState === 'matched'">
+              <v-icon small color="success" class="mr-1">mdi-check-circle</v-icon>
+              <strong>표준 매칭</strong> — {{ resolveResult.termsNm }} → {{ resolveResult.termsEngAbrvNm }}
+              <span v-if="resolveResult.domainNm"> · {{ resolveResult.domainNm }}</span>
+            </div>
+            <div v-else>
+              <v-icon small color="error" class="mr-1">mdi-alert-circle</v-icon>
+              <strong>표준 미매칭</strong> — '{{ attrForm.attrNmKr }}'에 해당하는 표준 용어가 없습니다.
+              <div class="mt-1 mb-2" style="font-size:.8rem; color:#666;">
+                비표준으로 저장 시: 물리명은 임시로 자동 생성되고, 타입은 VARCHAR(255)로 설정됩니다. 그리드에서 빨간색으로 표시됩니다.
+              </div>
+              <v-btn small outlined color="indigo" @click="goRegisterTerm">
+                <v-icon small left>mdi-book-plus</v-icon>용어 등록하기
+              </v-btn>
+            </div>
+          </v-sheet>
+
+          <!-- 변환 결과 필드 (readonly) -->
+          <v-row dense class="mt-2" v-if="resolveState === 'matched'">
+            <v-col cols="6">
+              <v-text-field v-model="attrForm.attrNm" label="컬럼 물리명 (자동)" readonly outlined dense />
             </v-col>
-          </v-row>
-          <v-row dense>
-            <v-col cols="4">
-              <v-text-field v-model="attrForm.dataType" label="데이터 타입 *" readonly outlined dense />
+            <v-col cols="3">
+              <v-text-field v-model="attrForm.dataType" label="데이터 타입 (자동)" readonly outlined dense />
             </v-col>
-            <v-col cols="4">
+            <v-col cols="2">
               <v-text-field v-model.number="attrForm.dataLen" label="길이" type="number" readonly outlined dense />
             </v-col>
-            <v-col cols="4">
-              <v-text-field v-model.number="attrForm.dataDecimalLen" label="소수점 길이" type="number" readonly outlined dense />
+            <v-col cols="1">
+              <v-text-field v-model.number="attrForm.dataDecimalLen" label="소수" type="number" readonly outlined dense />
             </v-col>
           </v-row>
-          <v-row dense align="center">
+
+          <!-- 속성 (사용자 편집) -->
+          <v-row dense align="center" class="mt-2">
             <v-col cols="3"><v-checkbox v-model="attrForm.pkYn" label="PK" true-value="Y" false-value="N" hide-details /></v-col>
             <v-col cols="3"><v-checkbox v-model="attrForm.fkYn" label="FK" true-value="Y" false-value="N" hide-details /></v-col>
             <v-col cols="3"><v-checkbox v-model="attrForm.nullableYn" label="NULL 허용" true-value="Y" false-value="N" hide-details /></v-col>
@@ -110,7 +128,10 @@
         <v-card-actions>
           <v-spacer />
           <v-btn text @click="attrDialog = false">취소</v-btn>
-          <v-btn color="primary" @click="submitAttr">{{ attrDialogMode === 'add' ? '추가' : '수정' }}</v-btn>
+          <v-btn color="primary" @click="submitAttr"
+            :disabled="!attrForm.objNm || !attrForm.attrNmKr || resolveState === 'idle' || resolveState === 'loading'">
+            {{ attrDialogMode === 'add' ? (resolveState === 'unmatched' ? '비표준으로 추가' : '추가') : '수정' }}
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -149,32 +170,29 @@
         </thead>
       </template>
       <template #item="props">
-        <tr>
-          <td v-for="(c, ci) in getRows(props.item)" :key="ci"
-            :style="{ padding: '0px', backgroundColor: '#ffffff' }">
+        <tr :class="{ 'row-nonstandard': props.item.termsStndYn === 'N' }">
+          <td v-for="(c, ci) in getRows(props.item)" :key="ci" :style="{ padding: '0px' }">
             <span v-if="ci === 'objOwner'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'objNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'objNmKr'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'attrNm'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'attrNmKr'" class="ndColor--text"
-              :style="{ cursor: 'pointer', margin: '0px 16px' }" @click="showTermData(props.item)">{{ c }}</span>
+              :style="{ cursor: 'pointer', margin: '0px 16px' }" @click="showTermData(props.item)">
+              <v-icon v-if="props.item.termsStndYn === 'N'" small color="error" class="mr-1"
+                title="비표준 용어">mdi-alert-circle</v-icon>{{ c }}
+            </span>
             <span v-else-if="ci === 'dataType'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'dataLen'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <span v-else-if="ci === 'dataDecimalLen'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <p v-else-if="ci === 'nullableYn'" :style="{ textAlign: 'center', margin: '0px 16px' }">{{ c }}</p>
-            <!-- [숨김] 수집 시 표준검사 제거에 따라 표준여부 셀 비활성화 — 원복 시 주석 해제 -->
-            <!-- <template v-else-if="ci === 'termsStndYn'">
-              <p :style="{ textAlign: 'center', margin: '0px 5px' }">{{ c }}</p>
-            </template>
-            <template v-else-if="ci === 'domainStndYn'">
-              <p :style="{ textAlign: 'center', margin: '0px 5px' }">{{ c }}</p>
-            </template>
-            <template v-else-if="ci === 'wordLst'">
-              <p v-for="(line, index) in c" :key="index" :style="{ textAlign: 'center', margin: '0px 5px' }">{{ line }}</p>
-            </template> -->
             <p v-else-if="ci === 'pkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
             <p v-else-if="ci === 'fkYn'" :style="{ margin: '0px 16px' }">{{ c }}</p>
             <span v-else-if="ci === 'defaultVal'" :style="{ margin: '0px 16px' }">{{ c }}</span>
+            <span v-else-if="ci === 'termsStndYn'" :style="{ display: 'block', textAlign: 'center' }">
+              <v-icon small :color="c === 'Y' ? 'success' : 'error'">
+                {{ c === 'Y' ? 'mdi-check-circle' : 'mdi-close-circle' }}
+              </v-icon>
+            </span>
             <span v-else-if="ci === 'actions'" :style="{ textAlign: 'center', display: 'block' }">
               <v-icon small :disabled="!selectedModelId" @click="openEditAttrDialog(props.item)" class="mr-2">mdi-pencil</v-icon>
               <v-icon small :disabled="!selectedModelId" @click="deleteAttr(props.item)">mdi-delete</v-icon>
@@ -249,10 +267,6 @@ export default {
     itemsPerPage() {
       this.pageCount = Math.ceil(this.dmColumnItems.length / this.itemsPerPage);
     },
-    termSearch(val) {
-      if (this._termSearchTimer) clearTimeout(this._termSearchTimer);
-      this._termSearchTimer = setTimeout(() => { this.loadTermOptions(val); }, 300);
-    },
   },
   data: () => ({
     modelList: [],
@@ -274,47 +288,34 @@ export default {
     termDetailItem: [],
     termLoading: false,
     dmColumnDetaileHeaders: [
-      { text: '소유자', align: 'center', sortable: false, value: 'objOwner', width: '100px' },
+      { text: '소유자', align: 'center', sortable: false, value: 'objOwner', width: '80px' },
+      { text: '테이블\n한글명', sortable: false, align: 'center', value: 'objNmKr' },
       { text: '테이블명', align: 'center', sortable: false, value: 'objNm' },
-      { text: '테이블 한글명', sortable: false, align: 'center', value: 'objNmKr' },
-      { text: '컬럼명', sortable: false, align: 'center', value: 'attrNm' },
       { text: '컬럼\n한글명', sortable: false, align: 'center', value: 'attrNmKr' },
+      { text: '컬럼명', sortable: false, align: 'center', value: 'attrNm' },
       { text: '데이터\n타입', sortable: false, align: 'center', value: 'dataType' },
-      { text: '데이터\n길이', sortable: false, align: 'center', value: 'dataLen' },
-      { text: '데이터\n소수점\n길이', sortable: false, align: 'center', value: 'dataDecimalLen' },
-      { text: 'NULL\n여부', sortable: false, align: 'center', value: 'nullableYn' },
-      // [숨김] 수집 시 표준검사 제거에 따라 표준여부 헤더 비활성화 — 원복 시 주석 해제
-      // {
-      //   text: '표준 여부', sortable: false, align: 'center', value: 'termsStndYn', divider: true,
-      //   children: [
-      //     { text: '용어', align: 'center', value: 'termsStndYn', sortable: false },
-      //     { text: '도메인', align: 'center', value: 'domainStndYn', sortable: false },
-      //     { text: '단어', align: 'center', value: 'wordLst', sortable: false }
-      //   ]
-      // },
-      { text: 'PK 여부', sortable: false, align: 'center', value: 'pkYn' },
-      { text: 'FK 여부', sortable: false, align: 'center', value: 'fkYn' },
-      { text: '디폴트 값', sortable: false, align: 'center', value: 'defaultVal' },
-      { text: '편집', sortable: false, align: 'center', value: 'actions', width: '100px' },
+      { text: '길이', sortable: false, align: 'center', value: 'dataLen', width: '60px' },
+      { text: '소수점', sortable: false, align: 'center', value: 'dataDecimalLen', width: '60px' },
+      { text: 'NULL\n여부', sortable: false, align: 'center', value: 'nullableYn', width: '60px' },
+      { text: 'PK', sortable: false, align: 'center', value: 'pkYn', width: '50px' },
+      { text: 'FK', sortable: false, align: 'center', value: 'fkYn', width: '50px' },
+      { text: '디폴트', sortable: false, align: 'center', value: 'defaultVal' },
+      { text: '표준', sortable: false, align: 'center', value: 'termsStndYn', width: '60px' },
+      { text: '편집', sortable: false, align: 'center', value: 'actions', width: '90px' },
     ],
     attrDialog: false,
     attrDialogMode: 'add',
     attrForm: {
-      attrId: null, dataModelId: null, clctId: null,
+      attrId: null, dataModelId: null,
       objNm: null, attrNm: '', attrNmKr: '',
       dataType: '', dataLen: null, dataDecimalLen: null,
       pkYn: 'N', fkYn: 'N', nullableYn: 'Y', defaultVal: '',
       termsId: null, domainId: null,
+      termsStndYn: 'Y', domainStndYn: 'Y',
     },
-    selectedTerm: null,
-    termOptions: [],
-    termsLoading: false,
+    resolveState: 'idle',      // idle | loading | matched | unmatched
+    resolveResult: {},         // resolveStandard 응답
     standardLoading: false,
-    termSearch: '',
-    _termSearchTimer: null,
-    selectedDomain: null,
-    domainOptions: [],
-    domainsLoading: false,
     objOptions: [],
     termDetaileHeaders: [
       { text: '용어명', align: 'center', sortable: false, value: 'termsNm' },
@@ -453,8 +454,9 @@ export default {
       return result;
     },
     getRows(rows) {
-      const keys = ['objOwner','objNm','objNmKr','attrNm','attrNmKr','dataType','dataLen','dataDecimalLen',
-                     'nullableYn','pkYn','fkYn','defaultVal','actions'];
+      // 그리드 표시 순서: 한글명 중심 (objNmKr 먼저, objNm 뒤) + 표준 여부 컬럼 추가
+      const keys = ['objOwner','objNmKr','objNm','attrNmKr','attrNm','dataType','dataLen','dataDecimalLen',
+                     'nullableYn','pkYn','fkYn','defaultVal','termsStndYn','actions'];
       const result = {};
       keys.forEach(key => { result[key] = rows[key] != null ? rows[key] : ''; });
       return result;
@@ -467,48 +469,24 @@ export default {
         this.objOptions = (res.data || []).map(o => o.objNm).filter(Boolean);
       }).catch(() => { this.objOptions = []; });
     },
-    loadTermOptions(keyword) {
-      const kw = (keyword || '').trim();
-      if (kw.length < 1) { this.termOptions = []; return; }
-      this.termsLoading = true;
-      axios.post(this.$APIURL.base + "api/std/getTerms", { 'schNm': kw, 'aprvYn': 'Y' })
-        .then((res) => { this.termOptions = res.data || []; })
-        .catch(() => { this.termOptions = []; })
-        .finally(() => { this.termsLoading = false; });
-    },
-    loadDomainOptions() {
-      this.domainsLoading = true;
-      axios.post(this.$APIURL.base + "api/std/getDomainList", { 'schNm': null, 'aprvYn': 'Y' })
-        .then((res) => {
-          this.domainOptions = (res.data || []).map(d => ({
-            ...d,
-            domainDisplayNm: `${d.domainNm} (${d.dataType}${d.dataLen ? '(' + d.dataLen + (d.dataDecimalLen ? ',' + d.dataDecimalLen : '') + ')' : ''})`,
-          }));
-        })
-        .catch(() => { this.domainOptions = []; })
-        .finally(() => { this.domainsLoading = false; });
-    },
     resetAttrForm() {
       this.attrForm = {
         attrId: null,
         dataModelId: this.selectedModelId,
-        clctId: this.selectedModelId,
         objNm: null, attrNm: '', attrNmKr: '',
         dataType: '', dataLen: null, dataDecimalLen: null,
         pkYn: 'N', fkYn: 'N', nullableYn: 'Y', defaultVal: '',
         termsId: null, domainId: null,
+        termsStndYn: 'Y', domainStndYn: 'Y',
       };
-      this.selectedTerm = null;
-      this.selectedDomain = null;
-      this.termOptions = [];
-      this.termSearch = '';
+      this.resolveState = 'idle';
+      this.resolveResult = {};
     },
     openAddAttrDialog() {
       if (!this.isLatestClct) return;
       this.attrDialogMode = 'add';
       this.resetAttrForm();
       this.loadObjOptions();
-      if (this.domainOptions.length === 0) this.loadDomainOptions();
       this.attrDialog = true;
     },
     openEditAttrDialog(item) {
@@ -518,73 +496,85 @@ export default {
       this.attrForm = {
         attrId: item.attrId,
         dataModelId: item.dataModelId || this.selectedModelId,
-        clctId: item.clctId || this.selectedModelId,
         objNm: item.objNm, attrNm: item.attrNm, attrNmKr: item.attrNmKr,
         dataType: item.dataType, dataLen: item.dataLen, dataDecimalLen: item.dataDecimalLen,
         pkYn: item.pkYn || 'N', fkYn: item.fkYn || 'N',
         nullableYn: item.nullableYn || 'Y', defaultVal: item.defaultVal || '',
         termsId: null, domainId: null,
+        termsStndYn: item.termsStndYn || 'Y', domainStndYn: item.domainStndYn || 'Y',
       };
+      this.resolveState = item.termsStndYn === 'N' ? 'unmatched' : 'matched';
+      this.resolveResult = { termsNm: item.attrNmKr, termsEngAbrvNm: item.attrNm };
       this.loadObjOptions();
-      if (this.domainOptions.length === 0) this.loadDomainOptions();
       this.attrDialog = true;
     },
-    onTermSelected(term) {
-      if (!term) return;
-      this.attrForm.attrNm = term.termsEngAbrvNm || '';
-      this.attrForm.attrNmKr = term.termsNm || '';
-      this.attrForm.termsId = term.termsId;
-      if (term.domainId) {
-        const d = this.domainOptions.find(x => x.domainId === term.domainId);
-        if (d) { this.selectedDomain = d; this.onDomainSelected(d); }
-      }
-    },
-    applyStandard() {
-      if (!this.attrForm.attrNmKr) return;
-      var self = this;
-      self.standardLoading = true;
-      axios.get(self.$APIURL.base + 'api/dm/resolveStandard', {
-        params: { termsNm: self.attrForm.attrNmKr.trim() }
-      }).then(function(res) {
-        var data = res.data;
-        if (data.found) {
-          self.attrForm.attrNm = data.termsEngAbrvNm || '';
-          if (data.dataType) {
-            self.attrForm.dataType = data.dataType;
-            self.attrForm.dataLen = data.dataLen || null;
-            self.attrForm.dataDecimalLen = data.dataDecimalLen || null;
+    resolveStandardNow() {
+      const kr = (this.attrForm.attrNmKr || '').trim();
+      if (!kr) { this.resolveState = 'idle'; return; }
+      // 이미 같은 한글명으로 변환된 상태면 재호출 안함
+      if (this.resolveState === 'matched' && this.resolveResult.termsNm === kr) return;
+      this.standardLoading = true;
+      this.resolveState = 'loading';
+      axios.get(this.$APIURL.base + 'api/dm/resolveStandard', { params: { termsNm: kr } })
+        .then((res) => {
+          const data = res.data || {};
+          if (data.found) {
+            this.resolveResult = data;
+            this.attrForm.attrNm = data.termsEngAbrvNm || '';
+            this.attrForm.termsId = data.termsId || null;
+            this.attrForm.domainId = data.domainId || null;
+            this.attrForm.dataType = data.dataType || '';
+            this.attrForm.dataLen = data.dataLen || null;
+            this.attrForm.dataDecimalLen = data.dataDecimalLen || null;
+            this.attrForm.termsStndYn = 'Y';
+            this.attrForm.domainStndYn = data.domainId ? 'Y' : 'N';
+            this.resolveState = (data.domainId && data.dataType) ? 'matched' : 'unmatched';
+          } else {
+            this.resolveResult = { message: data.message };
+            this.attrForm.attrNm = '';
+            this.attrForm.dataType = '';
+            this.attrForm.dataLen = null;
+            this.attrForm.dataDecimalLen = null;
+            this.attrForm.termsId = null;
+            this.attrForm.domainId = null;
+            this.attrForm.termsStndYn = 'N';
+            this.attrForm.domainStndYn = 'N';
+            this.resolveState = 'unmatched';
           }
-          self.$swal.fire({ title: '표준 적용 완료', text: data.termsEngAbrvNm + ' (' + (data.dataType || '') + (data.dataLen ? '(' + data.dataLen + ')' : '') + ')', icon: 'success', timer: 2000, showConfirmButton: false });
-        } else {
-          self.$swal.fire({ title: '표준 용어 없음', text: data.message, icon: 'warning', confirmButtonText: '확인' });
-        }
-      }).catch(function() {
-        self.$swal.fire({ title: '조회 실패', icon: 'error', confirmButtonText: '확인' });
-      }).finally(function() { self.standardLoading = false; });
+        })
+        .catch(() => {
+          this.$swal.fire({ title: '변환 실패', text: '서버 오류', icon: 'error', confirmButtonText: '확인' });
+          this.resolveState = 'idle';
+        })
+        .finally(() => { this.standardLoading = false; });
     },
-    onDomainSelected(domain) {
-      if (!domain) return;
-      this.attrForm.dataType = domain.dataType || '';
-      this.attrForm.dataLen = domain.dataLen != null ? domain.dataLen : null;
-      this.attrForm.dataDecimalLen = domain.dataDecimalLen != null ? domain.dataDecimalLen : null;
-      this.attrForm.domainId = domain.domainId;
+    goRegisterTerm() {
+      eventBus.pendingTermRegister = { termsNm: this.attrForm.attrNmKr };
+      eventBus.$emit('openTermsRegister');
+      this.attrDialog = false;
     },
     submitAttr() {
       if (!this.attrForm.objNm) { this.$swal.fire({ title: '소속 테이블을 선택하세요.', icon: 'warning' }); return; }
-      if (!this.attrForm.attrNm) { this.$swal.fire({ title: '컬럼 물리명이 필요합니다.', icon: 'warning' }); return; }
       if (!this.attrForm.attrNmKr) { this.$swal.fire({ title: '컬럼 한글명이 필요합니다.', icon: 'warning' }); return; }
-      if (!this.attrForm.dataType) { this.$swal.fire({ title: '도메인 사전에서 선택해야 합니다.', icon: 'warning' }); return; }
+      if (this.resolveState === 'idle' || this.resolveState === 'loading') {
+        this.$swal.fire({ title: '표준 변환이 필요합니다.', text: '한글명 입력 후 [표준 변환]을 실행하세요.', icon: 'warning' });
+        return;
+      }
       const url = this.attrDialogMode === 'add' ? 'api/dm/addAttr' : 'api/dm/updateAttr';
       axios.post(this.$APIURL.base + url, this.attrForm).then((res) => {
-        if (res.data && res.data.code === 200) {
-          this.$swal.fire({ title: this.attrDialogMode === 'add' ? '추가되었습니다.' : '수정되었습니다.', icon: 'success', timer: 1000, showConfirmButton: false });
+        if (res.data && res.data.resultCode === 200) {
+          this.$swal.fire({
+            title: this.attrDialogMode === 'add' ? '추가되었습니다.' : '수정되었습니다.',
+            text: this.attrForm.termsStndYn === 'N' ? '비표준으로 저장되었습니다 (빨간색 표시)' : '',
+            icon: 'success', timer: 1500, showConfirmButton: false
+          });
           this.attrDialog = false;
           this.load();
         } else {
-          this.$swal.fire({ title: '저장 실패', text: (res.data && res.data.message) || '표준 검증 실패', icon: 'error' });
+          this.$swal.fire({ title: '저장 실패', text: (res.data && res.data.resultMessage) || '저장 중 오류', icon: 'error' });
         }
       }).catch((err) => {
-        const msg = (err.response && err.response.data && err.response.data.message) || '저장 실패';
+        const msg = (err.response && err.response.data && err.response.data.resultMessage) || '저장 실패';
         this.$swal.fire({ title: '저장 실패', text: msg, icon: 'error' });
       });
     },
@@ -599,7 +589,7 @@ export default {
           attrId: item.attrId, clctId: item.clctId || this.selectedModelId,
           dataModelId: item.dataModelId || this.selectedModelId, objNm: item.objNm, attrNm: item.attrNm,
         }).then((res) => {
-          if (res.data && res.data.code === 200) {
+          if (res.data && res.data.resultCode === 200) {
             this.$swal.fire({ title: '삭제되었습니다.', icon: 'success', timer: 1000, showConfirmButton: false });
             this.load();
           } else {
@@ -637,4 +627,7 @@ export default {
 pre { font-family: 'Roboto'; }
 .checkboxStyle { margin-top: 0; padding-top: 0; }
 #clTable_table { height: calc(100vh - 64px - 48px - 104px - 44px - 60px); overflow-y: overlay; overflow-x: hidden; }
+.row-nonstandard > td { background-color: #FFEBEE !important; }
+.matched-panel { background-color: #E8F5E9; border-color: #66BB6A !important; }
+.unmatched-panel { background-color: #FFEBEE; border-color: #EF5350 !important; }
 </style>

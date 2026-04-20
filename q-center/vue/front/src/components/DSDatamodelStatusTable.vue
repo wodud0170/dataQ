@@ -235,12 +235,12 @@ export default {
       const url = this.objDialogMode === 'add' ? 'api/dm/addObj' : 'api/dm/updateObj';
       const payload = { ...this.objForm, dataModelId: this.selectedModelId };
       axios.post(this.$APIURL.base + url, payload).then((res) => {
-        if (res.data && res.data.code === '200') {
+        if (res.data && res.data.resultCode === 200) {
           this.$swal.fire({ title: this.objDialogMode === 'add' ? '테이블이 추가되었습니다.' : '테이블이 수정되었습니다.', confirmButtonText: '확인', icon: 'success' });
           this.objDialog = false;
           this.load();
         } else {
-          this.$swal.fire({ title: '저장 실패', text: (res.data && res.data.message) || '저장 중 오류', confirmButtonText: '확인', icon: 'error' });
+          this.$swal.fire({ title: '저장 실패', text: (res.data && res.data.resultMessage) || '저장 중 오류', confirmButtonText: '확인', icon: 'error' });
         }
       }).catch((e) => {
         this.$swal.fire({ title: '저장 실패', text: e.message, confirmButtonText: '확인', icon: 'error' });
@@ -256,11 +256,11 @@ export default {
         axios.post(this.$APIURL.base + "api/dm/deleteObj", {
           dataModelId: this.selectedModelId, objNm: item.objNm,
         }).then((res) => {
-          if (res.data && res.data.code === '200') {
+          if (res.data && res.data.resultCode === 200) {
             this.$swal.fire({ title: '삭제되었습니다.', confirmButtonText: '확인', icon: 'success' });
             this.load();
           } else {
-            this.$swal.fire({ title: '삭제 실패', text: (res.data && res.data.message) || '', confirmButtonText: '확인', icon: 'error' });
+            this.$swal.fire({ title: '삭제 실패', text: (res.data && res.data.resultMessage) || '', confirmButtonText: '확인', icon: 'error' });
           }
         });
       });

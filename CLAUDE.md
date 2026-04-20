@@ -95,7 +95,6 @@ cd ../q-executor && mvn package -q -DskipTests
 | TB_DATA_MODEL_CLCT | 데이터 모델 수집 이력 |
 | TB_DATA_MODEL_OBJ | 수집된 테이블 |
 | TB_DATA_MODEL_ATTR | 수집된 컬럼 (OBJ_OWNER 포함) |
-| TB_DATA_MODEL_STATS | 수집 통계 (테이블수, 컬럼수) |
 | TB_DIAG_JOB | 표준화 진단 Job |
 | TB_DIAG_RESULT | 표준화 진단 결과 (이슈 건별) |
 | TB_STRUCT_DIAG_HISTORY | 구조 변경 진단 이력 |

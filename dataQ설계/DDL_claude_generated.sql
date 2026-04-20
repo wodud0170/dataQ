@@ -790,3 +790,9 @@ ALTER TABLE TB_DATA_MODEL_ATTR ADD COLUMN IF NOT EXISTS ATTR_COMMENT VARCHAR(500
 COMMENT ON COLUMN TB_DATA_MODEL_ATTR.ATTR_COMMENT IS 'DB에서 수집한 컬럼 코멘트 원본 (수집 시 자동, 읽기 전용)';
 COMMENT ON COLUMN TB_DATA_MODEL_ATTR.ATTR_NM_KR IS '컬럼 논리명 (편집 가능). 최초 수집 시 ATTR_COMMENT 값 복사';
 
+-- ===========================================================
+-- 2026-04-20: CLCT 폐기 이관 마무리 — 44번 설계 스펙 이행
+-- (이전 세션이 PK는 DM_ID로 바꿨지만 DM_CLCT_ID 컬럼 DROP은 누락)
+-- ===========================================================
+ALTER TABLE TB_DATA_MODEL_OBJ  DROP COLUMN IF EXISTS DM_CLCT_ID;
+ALTER TABLE TB_DATA_MODEL_ATTR DROP COLUMN IF EXISTS DM_CLCT_ID;

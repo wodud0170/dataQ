@@ -22,7 +22,6 @@
 		<result property="clctDt" column="CLCT_DT"/>
 	</resultMap>
 	<resultMap id="stdDataModelAttrMap" type="com.ndata.quality.model.std.StdDataModelAttrVo">
-		<result property="clctId" column="DM_CLCT_ID"/>
 		<result property="dataModelId" column="DM_ID"/>
 		<result property="objOwner" column="OBJ_OWNER"/>
 		<result property="objNm" column="OBJ_NM"/>
@@ -299,8 +298,8 @@
 	<select id="selectDataModelAttrListByRetreiveCond" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDataModelAttrMap">
 			select 
 				 A.OBJ_NM
-				,(select OBJ_NM_KR from TB_DATA_MODEL_OBJ 
-				  where DM_CLCT_ID = A.DM_CLCT_ID and OBJ_NM = A.OBJ_NM) as OBJ_NM_KR
+				,(select OBJ_NM_KR from TB_DATA_MODEL_OBJ
+				  where DM_ID = A.DM_ID and OBJ_NM = A.OBJ_NM) as OBJ_NM_KR
 				,A.ATTR_NM
 				,A.ATTR_NM_KR
 				,A.ATTR_COMMENT
@@ -317,7 +316,7 @@
 				,A.DEFAULT_VAL
 				,A.ATTR_ORD
 			from TB_DATA_MODEL_ATTR	A
-			where A.DM_CLCT_ID = #{schId}
+			where A.DM_ID = #{schId}
 			<if test="schObjNm != null or schAttrNm != null">
 				AND (A.OBJ_NM ILIKE '%'||#{schObjNm}||'%' OR A.ATTR_NM ILIKE '%'||#{schAttrNm}||'%')
 			</if>
@@ -618,9 +617,6 @@
 		ORDER BY OBJ_OWNER, TABLE_NM, CONSTRAINT_NM, COLUMN_POS
 	</select>
 
-	<!-- TB_DATA_MODEL_STATS 폐기됨 — 실시간 COUNT로 대체 -->
-	<!-- insertDataModelStats는 더 이상 사용하지 않음 (DataModelService에서 호출 제거 필요) -->
-
 	<!-- 실시간 모델 통계 (STATS 테이블 대체) -->
 	<select id="selectDataModelLiveStats" parameterType="String" resultType="java.util.HashMap">
 		SELECT
@@ -653,7 +649,7 @@
 	<!-- 컬럼(ATTR) 존재 여부 확인 -->
 	<select id="countDataModelAttr" parameterType="java.util.Map" resultType="int">
 		SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
-		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
 	</select>
 
 	<!-- 테이블 수정 -->
@@ -662,17 +658,17 @@
 			 OBJ_NM_KR = #{objNmKr, jdbcType=VARCHAR}
 			,OBJ_OWNER = #{objOwner, jdbcType=VARCHAR}
 			,OBJ_DESC  = #{objDesc, jdbcType=VARCHAR}
-		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm}
 	</update>
 
 	<!-- 테이블 삭제 (하위 컬럼 함께 삭제) -->
 	<delete id="deleteDataModelAttrsByObj" parameterType="java.util.Map">
 		DELETE FROM TB_DATA_MODEL_ATTR
-		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm}
 	</delete>
 	<delete id="deleteDataModelObj" parameterType="java.util.Map">
 		DELETE FROM TB_DATA_MODEL_OBJ
-		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm}
 	</delete>
 
 	<!-- 컬럼 수정 -->
@@ -690,28 +686,28 @@
 			,DOMAIN_STND_YN   = #{domainStndYn, jdbcType=VARCHAR}
 			,WORD_LST         = #{wordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
 			,WORD_STND_LST    = #{wordStndLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
-		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
 	</update>
 
 	<!-- 컬럼 삭제 -->
 	<delete id="deleteDataModelAttr" parameterType="java.util.Map">
 		DELETE FROM TB_DATA_MODEL_ATTR
-		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
 	</delete>
 
 	<!-- 테이블 컬럼 개수 동기화 (INSERT/DELETE 후 호출) -->
 	<update id="syncDataModelObjAttrCnt" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_OBJ O SET OBJ_ATTR_CNT = (
 			SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR A
-			WHERE A.DM_CLCT_ID = O.DM_CLCT_ID AND A.OBJ_NM = O.OBJ_NM
+			WHERE A.DM_ID = O.DM_ID AND A.OBJ_NM = O.OBJ_NM
 		)
-		WHERE O.DM_CLCT_ID = #{clctId} AND O.OBJ_NM = #{objNm}
+		WHERE O.DM_ID = #{dataModelId} AND O.OBJ_NM = #{objNm}
 	</update>
 
 	<!-- ATTR_ORD 최댓값 조회 (새 컬럼 추가 시 다음 순번 산정) -->
 	<select id="selectMaxAttrOrd" parameterType="java.util.Map" resultType="short">
 		SELECT COALESCE(MAX(ATTR_ORD), 0) FROM TB_DATA_MODEL_ATTR
-		WHERE DM_CLCT_ID = #{clctId} AND OBJ_NM = #{objNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm}
 	</select>
 
 	<!-- 대상 DB 스키마 목록 조회 SQL (DBMS 유형별) -->
