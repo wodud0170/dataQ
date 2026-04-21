@@ -248,6 +248,65 @@
 			order by A.OBJ_NM, A.ATTR_ORD
 	</select>
 
+	<!-- 비표준 컬럼 목록 (일괄 변환용) -->
+	<select id="selectNonStandardAttrs" parameterType="String" resultMap="stdDataModelAttrMap">
+		select
+			 COALESCE(A.OBJ_OWNER, '') as OBJ_OWNER
+			,A.DM_ID
+			,A.OBJ_NM
+			,A.ATTR_NM
+			,A.ATTR_NM_KR
+			,A.ATTR_COMMENT
+			,A.DATA_TYPE
+			,A.DATA_LEN
+			,A.DATA_DECIMAL_LEN
+			,A.TERMS_STND_YN
+			,A.DOMAIN_STND_YN
+			,A.WORD_LST
+			,A.WORD_STND_LST
+			,A.NULLABLE_YN
+			,A.PK_YN
+			,A.FK_YN
+			,A.DEFAULT_VAL
+			,A.ATTR_ORD
+		from TB_DATA_MODEL_ATTR A
+		where A.DM_ID = #{dataModelId}
+		  and A.USE_YN = 'Y'
+		  and A.TERMS_STND_YN = 'N'
+		order by A.OBJ_NM, A.ATTR_ORD
+	</select>
+
+	<!-- 복합키(OBJ_NM, ATTR_NM) 리스트로 컬럼 조회 (선택 변환용) -->
+	<select id="selectAttrListByKeys" parameterType="java.util.Map" resultMap="stdDataModelAttrMap">
+		select
+			 COALESCE(A.OBJ_OWNER, '') as OBJ_OWNER
+			,A.DM_ID
+			,A.OBJ_NM
+			,A.ATTR_NM
+			,A.ATTR_NM_KR
+			,A.ATTR_COMMENT
+			,A.DATA_TYPE
+			,A.DATA_LEN
+			,A.DATA_DECIMAL_LEN
+			,A.TERMS_STND_YN
+			,A.DOMAIN_STND_YN
+			,A.WORD_LST
+			,A.WORD_STND_LST
+			,A.NULLABLE_YN
+			,A.PK_YN
+			,A.FK_YN
+			,A.DEFAULT_VAL
+			,A.ATTR_ORD
+		from TB_DATA_MODEL_ATTR A
+		where A.DM_ID = #{dataModelId}
+		  and A.USE_YN = 'Y'
+		  and (A.OBJ_NM, A.ATTR_NM) in
+		  <foreach item="k" collection="attrs" open="(" separator="," close=")">
+			(#{k.objNm}, #{k.attrNm})
+		  </foreach>
+		order by A.OBJ_NM, A.ATTR_ORD
+	</select>
+
 	<!-- 구조 진단용: DM_ID 기준 컬럼 (HashMap 반환) -->
 	<select id="selectDataModelAttrListByClctIdRaw" parameterType="String" resultType="java.util.HashMap">
 		SELECT O.OBJ_OWNER AS "owner", A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm",
@@ -259,25 +318,25 @@
 		ORDER BY O.OBJ_OWNER, A.OBJ_NM, A.ATTR_NM
 	</select>
 
-	<!-- DM_ID 기반 인덱스 조회 -->
+	<!-- DM_ID 기반 인덱스 조회 (CLCT 폐기 이후 표준 조회 경로) -->
 	<select id="selectDataModelIndexListByDmId" parameterType="String" resultType="java.util.HashMap">
 		SELECT OBJ_OWNER AS "objOwner", TABLE_NM AS "tableNm", INDEX_NM AS "indexNm",
 			INDEX_TYPE AS "indexType", UNIQUENESS AS "uniqueness",
 			COLUMN_NM AS "columnNm", COLUMN_POS AS "columnPos",
 			SORT_ORDER AS "sortOrder", TABLESPACE_NM AS "tablespaceNm"
 		FROM TB_DATA_MODEL_INDEX
-		WHERE DM_ID = #{dataModelId}
+		WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y'
 		ORDER BY OBJ_OWNER, TABLE_NM, INDEX_NM, COLUMN_POS
 	</select>
 
-	<!-- DM_ID 기반 제약조건 조회 -->
+	<!-- DM_ID 기반 제약조건 조회 (CLCT 폐기 이후 표준 조회 경로) -->
 	<select id="selectDataModelConstraintListByDmId" parameterType="String" resultType="java.util.HashMap">
 		SELECT OBJ_OWNER AS "objOwner", TABLE_NM AS "tableNm", CONSTRAINT_NM AS "constraintNm",
 			CONSTRAINT_TYPE AS "constraintType", COLUMN_NM AS "columnNm", COLUMN_POS AS "columnPos",
 			REF_OWNER AS "refOwner", REF_TABLE_NM AS "refTableNm", REF_COLUMN_NM AS "refColumnNm",
 			DELETE_RULE AS "deleteRule", STATUS AS "status", SEARCH_CONDITION AS "searchCondition"
 		FROM TB_DATA_MODEL_CONSTRAINT
-		WHERE DM_ID = #{dataModelId}
+		WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y'
 		ORDER BY OBJ_OWNER, TABLE_NM, CONSTRAINT_NM, COLUMN_POS
 	</select>
 
@@ -450,6 +509,8 @@
 			,FK_YN
 			,DEFAULT_VAL
 			,ATTR_ORD
+			,TERMS_STND_YN
+			,DOMAIN_STND_YN
 			,USE_YN
            )
            VALUES
@@ -468,6 +529,8 @@
 			,#{fkYn, jdbcType=VARCHAR}
 			,#{defaultVal, jdbcType=VARCHAR}
 			,#{attrOrder, jdbcType=SMALLINT}
+			,COALESCE(#{termsStndYn, jdbcType=VARCHAR}, 'N')
+			,COALESCE(#{domainStndYn, jdbcType=VARCHAR}, 'N')
 			,'Y'
 		   )
 		   ON CONFLICT (DM_ID, OBJ_NM, ATTR_NM) DO UPDATE SET
@@ -571,51 +634,64 @@
 		SET USE_YN = #{useYn}
 	</insert>
 
-	<!-- 인덱스 수집 INSERT -->
+	<!-- 인덱스 수집 UPSERT (CLCT 폐기 이후: DM_ID + 자연키 PK) -->
 	<insert id="insertDataModelIndex" parameterType="java.util.HashMap">
 		INSERT INTO TB_DATA_MODEL_INDEX (
-			DM_CLCT_ID, SEQ, DM_ID, OBJ_OWNER, TABLE_NM, INDEX_NM,
-			INDEX_TYPE, UNIQUENESS, COLUMN_NM, COLUMN_POS, SORT_ORDER, TABLESPACE_NM
+			DM_ID, OBJ_OWNER, TABLE_NM, INDEX_NM, COLUMN_POS,
+			INDEX_TYPE, UNIQUENESS, COLUMN_NM, SORT_ORDER, TABLESPACE_NM, USE_YN
 		) VALUES (
-			#{clctId}, #{seq}, #{dataModelId}, #{objOwner}, #{tableNm}, #{indexNm},
-			#{indexType}, #{uniqueness}, #{columnNm}, #{columnPos}, #{sortOrder}, #{tablespaceNm}
+			#{dataModelId}, #{objOwner}, #{tableNm}, #{indexNm}, #{columnPos},
+			#{indexType}, #{uniqueness}, #{columnNm}, #{sortOrder}, #{tablespaceNm}, 'Y'
 		)
+		ON CONFLICT (DM_ID, OBJ_OWNER, TABLE_NM, INDEX_NM, COLUMN_POS) DO UPDATE SET
+			INDEX_TYPE    = EXCLUDED.INDEX_TYPE,
+			UNIQUENESS    = EXCLUDED.UNIQUENESS,
+			COLUMN_NM     = EXCLUDED.COLUMN_NM,
+			SORT_ORDER    = EXCLUDED.SORT_ORDER,
+			TABLESPACE_NM = EXCLUDED.TABLESPACE_NM,
+			USE_YN        = 'Y',
+			DELETED_DT    = NULL
 	</insert>
 
-	<!-- 제약조건 수집 INSERT -->
+	<!-- 제약조건 수집 UPSERT (CLCT 폐기 이후: DM_ID + 자연키 PK) -->
 	<insert id="insertDataModelConstraint" parameterType="java.util.HashMap">
 		INSERT INTO TB_DATA_MODEL_CONSTRAINT (
-			DM_CLCT_ID, SEQ, DM_ID, OBJ_OWNER, TABLE_NM, CONSTRAINT_NM,
-			CONSTRAINT_TYPE, COLUMN_NM, COLUMN_POS,
-			REF_OWNER, REF_TABLE_NM, REF_COLUMN_NM, DELETE_RULE, STATUS, SEARCH_CONDITION
+			DM_ID, OBJ_OWNER, TABLE_NM, CONSTRAINT_NM, COLUMN_POS,
+			CONSTRAINT_TYPE, COLUMN_NM,
+			REF_OWNER, REF_TABLE_NM, REF_COLUMN_NM, DELETE_RULE, STATUS, SEARCH_CONDITION, USE_YN
 		) VALUES (
-			#{clctId}, #{seq}, #{dataModelId}, #{objOwner}, #{tableNm}, #{constraintNm},
-			#{constraintType}, #{columnNm}, #{columnPos},
-			#{refOwner}, #{refTableNm}, #{refColumnNm}, #{deleteRule}, #{status}, #{searchCondition}
+			#{dataModelId}, #{objOwner}, #{tableNm}, #{constraintNm}, #{columnPos},
+			#{constraintType}, #{columnNm},
+			#{refOwner}, #{refTableNm}, #{refColumnNm}, #{deleteRule}, #{status}, #{searchCondition}, 'Y'
 		)
+		ON CONFLICT (DM_ID, OBJ_OWNER, TABLE_NM, CONSTRAINT_NM, COLUMN_POS) DO UPDATE SET
+			CONSTRAINT_TYPE  = EXCLUDED.CONSTRAINT_TYPE,
+			COLUMN_NM        = EXCLUDED.COLUMN_NM,
+			REF_OWNER        = EXCLUDED.REF_OWNER,
+			REF_TABLE_NM     = EXCLUDED.REF_TABLE_NM,
+			REF_COLUMN_NM    = EXCLUDED.REF_COLUMN_NM,
+			DELETE_RULE      = EXCLUDED.DELETE_RULE,
+			STATUS           = EXCLUDED.STATUS,
+			SEARCH_CONDITION = EXCLUDED.SEARCH_CONDITION,
+			USE_YN           = 'Y',
+			DELETED_DT       = NULL
 	</insert>
 
-	<!-- 인덱스 조회 (수집건 기준) -->
-	<select id="selectDataModelIndexListByClctId" parameterType="String" resultType="java.util.HashMap">
-		SELECT OBJ_OWNER AS "objOwner", TABLE_NM AS "tableNm", INDEX_NM AS "indexNm",
-			INDEX_TYPE AS "indexType", UNIQUENESS AS "uniqueness",
-			COLUMN_NM AS "columnNm", COLUMN_POS AS "columnPos",
-			SORT_ORDER AS "sortOrder", TABLESPACE_NM AS "tablespaceNm"
-		FROM TB_DATA_MODEL_INDEX
-		WHERE DM_CLCT_ID = #{clctId}
-		ORDER BY OBJ_OWNER, TABLE_NM, INDEX_NM, COLUMN_POS
-	</select>
+	<!-- 수집 후 이번에 없는 INDEX 소프트 삭제 (key = owner|table|index|pos) -->
+	<update id="softDeleteMissingIndexes" parameterType="java.util.HashMap">
+		UPDATE TB_DATA_MODEL_INDEX SET USE_YN = 'N', DELETED_DT = #{deletedDt}
+		WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y'
+		AND (COALESCE(OBJ_OWNER,'') || '|' || TABLE_NM || '|' || INDEX_NM || '|' || COLUMN_POS) NOT IN
+		<foreach item="k" collection="collectedKeys" open="(" separator="," close=")">#{k}</foreach>
+	</update>
 
-	<!-- 제약조건 조회 (수집건 기준) -->
-	<select id="selectDataModelConstraintListByClctId" parameterType="String" resultType="java.util.HashMap">
-		SELECT OBJ_OWNER AS "objOwner", TABLE_NM AS "tableNm", CONSTRAINT_NM AS "constraintNm",
-			CONSTRAINT_TYPE AS "constraintType", COLUMN_NM AS "columnNm", COLUMN_POS AS "columnPos",
-			REF_OWNER AS "refOwner", REF_TABLE_NM AS "refTableNm", REF_COLUMN_NM AS "refColumnNm",
-			DELETE_RULE AS "deleteRule", STATUS AS "status", SEARCH_CONDITION AS "searchCondition"
-		FROM TB_DATA_MODEL_CONSTRAINT
-		WHERE DM_CLCT_ID = #{clctId}
-		ORDER BY OBJ_OWNER, TABLE_NM, CONSTRAINT_NM, COLUMN_POS
-	</select>
+	<!-- 수집 후 이번에 없는 CONSTRAINT 소프트 삭제 (key = owner|table|constraint|pos) -->
+	<update id="softDeleteMissingConstraints" parameterType="java.util.HashMap">
+		UPDATE TB_DATA_MODEL_CONSTRAINT SET USE_YN = 'N', DELETED_DT = #{deletedDt}
+		WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y'
+		AND (COALESCE(OBJ_OWNER,'') || '|' || TABLE_NM || '|' || CONSTRAINT_NM || '|' || COLUMN_POS) NOT IN
+		<foreach item="k" collection="collectedKeys" open="(" separator="," close=")">#{k}</foreach>
+	</update>
 
 	<!-- 실시간 모델 통계 (STATS 테이블 대체) -->
 	<select id="selectDataModelLiveStats" parameterType="String" resultType="java.util.HashMap">
@@ -644,6 +720,11 @@
 	<select id="countDataModelObjByDmId" parameterType="java.util.Map" resultType="int">
 		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
 		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND USE_YN = 'Y'
+	</select>
+	<!-- 모델 내 테이블 총건수 (TMP_TBL_N 순번 생성용) -->
+	<select id="countDataModelObjByDm" parameterType="String" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
+		WHERE DM_ID = #{dataModelId}
 	</select>
 
 	<!-- 컬럼(ATTR) 존재 여부 확인 -->
@@ -687,6 +768,21 @@
 			,WORD_LST         = #{wordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
 			,WORD_STND_LST    = #{wordStndLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
 		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+	</update>
+
+	<!-- 컬럼 표준 변환 전용 UPDATE (원래 ATTR_NM을 키로 새 ATTR_NM으로 rename) -->
+	<update id="updateDataModelAttrKey" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR SET
+			 ATTR_NM          = #{attrNm, jdbcType=VARCHAR}
+			,ATTR_NM_KR       = #{attrNmKr, jdbcType=VARCHAR}
+			,DATA_TYPE        = #{dataType, jdbcType=VARCHAR}
+			,DATA_LEN         = #{dataLen, jdbcType=BIGINT}
+			,DATA_DECIMAL_LEN = #{dataDecimalLen, jdbcType=SMALLINT}
+			,TERMS_STND_YN    = #{termsStndYn, jdbcType=VARCHAR}
+			,DOMAIN_STND_YN   = #{domainStndYn, jdbcType=VARCHAR}
+			,WORD_LST         = #{wordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+			,WORD_STND_LST    = #{wordStndLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{origAttrNm}
 	</update>
 
 	<!-- 컬럼 삭제 -->

@@ -246,21 +246,19 @@ public class DataModelService implements Runnable {
 				session.update("datamodel.softDeleteMissingAttrs", softDelAttrParam);
 			}
 			session.commit();
-			// 3-1. INDEX (인덱스) 수집
+			// 3-1. INDEX (인덱스) 수집 — UPSERT + soft-delete
 			int totalIndexCnt = 0;
 			try {
 				String indexQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetIndexes");
 				if (indexQuery != null) {
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "인덱스 정보 수집 중...");
-					int indexSeq = 1;
+					java.util.List<String> collectedIndexKeys = new java.util.ArrayList<>();
 					for (String schemaNm : schemas) {
 						NamedParamStatement pstmt = dbHandler.namedParamStatement(indexQuery);
 						pstmt.setString("owner", StringUtils.upperCase(schemaNm));
 						ResultSet rs = dbHandler.executeSql(pstmt);
 						while (rs.next()) {
 							java.util.Map<String, Object> param = new java.util.HashMap<>();
-							param.put("clctId", clctId);
-							param.put("seq", indexSeq++);
 							param.put("dataModelId", dataModelId);
 							param.put("objOwner", schemaNm);
 							param.put("tableNm", rs.getString("tableNm"));
@@ -272,10 +270,18 @@ public class DataModelService implements Runnable {
 							param.put("sortOrder", rs.getString("sortOrder"));
 							param.put("tablespaceNm", rs.getString("tablespaceNm"));
 							session.insert("datamodel.insertDataModelIndex", param);
+							collectedIndexKeys.add(schemaNm + "|" + rs.getString("tableNm") + "|" + rs.getString("indexNm") + "|" + rs.getInt("columnPos"));
 							totalIndexCnt++;
 						}
 						pstmt.close();
 						rs.close();
+					}
+					if (!collectedIndexKeys.isEmpty()) {
+						java.util.Map<String, Object> softDelParam = new java.util.HashMap<>();
+						softDelParam.put("dataModelId", dataModelId);
+						softDelParam.put("deletedDt", nowDt);
+						softDelParam.put("collectedKeys", collectedIndexKeys);
+						session.update("datamodel.softDeleteMissingIndexes", softDelParam);
 					}
 					session.commit();
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "인덱스 정보 수집 완료 (" + totalIndexCnt + "개)");
@@ -283,21 +289,19 @@ public class DataModelService implements Runnable {
 			} catch (Exception e) {
 				log.warn(">> index collect skipped: {}", e.getMessage());
 			}
-			// 3-2. CONSTRAINT (제약조건) 수집
+			// 3-2. CONSTRAINT (제약조건) 수집 — UPSERT + soft-delete
 			int totalConstraintCnt = 0;
 			try {
 				String constraintQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetConstraints");
 				if (constraintQuery != null) {
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 중...");
-					int constraintSeq = 1;
+					java.util.List<String> collectedConstraintKeys = new java.util.ArrayList<>();
 					for (String schemaNm : schemas) {
 						NamedParamStatement pstmt = dbHandler.namedParamStatement(constraintQuery);
 						pstmt.setString("owner", StringUtils.upperCase(schemaNm));
 						ResultSet rs = dbHandler.executeSql(pstmt);
 						while (rs.next()) {
 							java.util.Map<String, Object> param = new java.util.HashMap<>();
-							param.put("clctId", clctId);
-							param.put("seq", constraintSeq++);
 							param.put("dataModelId", dataModelId);
 							param.put("objOwner", schemaNm);
 							param.put("tableNm", rs.getString("tableNm"));
@@ -312,10 +316,18 @@ public class DataModelService implements Runnable {
 							param.put("status", rs.getString("status"));
 							try { param.put("searchCondition", rs.getString("searchCondition")); } catch (Exception ignore) {}
 							session.insert("datamodel.insertDataModelConstraint", param);
+							collectedConstraintKeys.add(schemaNm + "|" + rs.getString("tableNm") + "|" + rs.getString("constraintNm") + "|" + rs.getInt("columnPos"));
 							totalConstraintCnt++;
 						}
 						pstmt.close();
 						rs.close();
+					}
+					if (!collectedConstraintKeys.isEmpty()) {
+						java.util.Map<String, Object> softDelParam = new java.util.HashMap<>();
+						softDelParam.put("dataModelId", dataModelId);
+						softDelParam.put("deletedDt", nowDt);
+						softDelParam.put("collectedKeys", collectedConstraintKeys);
+						session.update("datamodel.softDeleteMissingConstraints", softDelParam);
 					}
 					session.commit();
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 완료 (" + totalConstraintCnt + "개)");

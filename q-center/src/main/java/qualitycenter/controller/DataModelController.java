@@ -5,15 +5,24 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -25,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ndata.bean.SecurityManager;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
@@ -311,16 +321,16 @@ public class DataModelController {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", clctId);
 	}
 
-	/** 수집된 인덱스 목록 조회 (수집 ID 기준) */
-	@RequestMapping(value = "/getDataModelIndexListByClctId", method = RequestMethod.GET)
-	public List<java.util.Map<String, Object>> getDataModelIndexListByClctId(String clctId) {
-		return sqlSessionTemplate.selectList("datamodel.selectDataModelIndexListByClctId", clctId);
+	/** 데이터모델 인덱스 목록 조회 (DM_ID 기준, CLCT 폐기 이후) */
+	@RequestMapping(value = "/getDataModelIndexListByDmId", method = RequestMethod.GET)
+	public List<java.util.Map<String, Object>> getDataModelIndexListByDmId(String dataModelId) {
+		return sqlSessionTemplate.selectList("datamodel.selectDataModelIndexListByDmId", dataModelId);
 	}
 
-	/** 수집된 제약조건 목록 조회 (수집 ID 기준) */
-	@RequestMapping(value = "/getDataModelConstraintListByClctId", method = RequestMethod.GET)
-	public List<java.util.Map<String, Object>> getDataModelConstraintListByClctId(String clctId) {
-		return sqlSessionTemplate.selectList("datamodel.selectDataModelConstraintListByClctId", clctId);
+	/** 데이터모델 제약조건 목록 조회 (DM_ID 기준, CLCT 폐기 이후) */
+	@RequestMapping(value = "/getDataModelConstraintListByDmId", method = RequestMethod.GET)
+	public List<java.util.Map<String, Object>> getDataModelConstraintListByDmId(String dataModelId) {
+		return sqlSessionTemplate.selectList("datamodel.selectDataModelConstraintListByDmId", dataModelId);
 	}
 
 	/**
@@ -604,14 +614,19 @@ public class DataModelController {
 				&& (objVo.getObjNmKr() == null || objVo.getObjNmKr().trim().isEmpty()))
 				throw new IllegalArgumentException("테이블명(물리명) 또는 한글명(논리명) 중 하나는 필수입니다.");
 
-			// 물리명이 있으면 중복 체크
-			if (objVo.getObjNm() != null && !objVo.getObjNm().trim().isEmpty()) {
-				Map<String, Object> dupParam = new HashMap<>();
-				dupParam.put("dataModelId", objVo.getDataModelId());
-				dupParam.put("objNm", objVo.getObjNm());
-				Integer dup = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDmId", dupParam);
-				if (dup != null && dup > 0) throw new IllegalStateException("이미 존재하는 테이블입니다: " + objVo.getObjNm());
+			// 물리명이 비어있으면 TMP_TBL_N 자동 생성 (한글명만 입력된 논리 모델 케이스)
+			if (objVo.getObjNm() == null || objVo.getObjNm().trim().isEmpty()) {
+				Integer cnt = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDm", objVo.getDataModelId());
+				int seq = (cnt == null ? 0 : cnt) + 1;
+				objVo.setObjNm("TMP_TBL_" + seq);
 			}
+
+			// 물리명 중복 체크
+			Map<String, Object> dupParam = new HashMap<>();
+			dupParam.put("dataModelId", objVo.getDataModelId());
+			dupParam.put("objNm", objVo.getObjNm());
+			Integer dup = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDmId", dupParam);
+			if (dup != null && dup > 0) throw new IllegalStateException("이미 존재하는 테이블입니다: " + objVo.getObjNm());
 
 			if (objVo.getObjAttrCnt() == 0) objVo.setObjAttrCnt((short) 0);
 			session.insert("datamodel.insertDataModelObj", objVo);
@@ -674,39 +689,63 @@ public class DataModelController {
 	 */
 	@RequestMapping(value = "/resolveStandard", method = RequestMethod.GET)
 	public Map<String, Object> resolveStandard(@RequestParam String termsNm) {
-		Map<String, Object> result = new HashMap<>();
-		try {
-			// 1. 한글명으로 용어 조회
-			com.ndata.quality.model.std.StdTermsVo terms = sqlSessionTemplate.selectOne("terms.selectTermsByNm", termsNm.trim());
-			if (terms == null) {
-				result.put("found", false);
-				result.put("message", "'" + termsNm + "' 에 해당하는 표준 용어가 없습니다.");
-				return result;
-			}
-			result.put("found", true);
-			result.put("termsId", terms.getTermsId());
-			result.put("termsNm", terms.getTermsNm());
-			result.put("termsEngAbrvNm", terms.getTermsEngAbrvNm());
-			result.put("domainNm", terms.getDomainNm());
+		return resolveTermsInternal(termsNm);
+	}
 
-			// 2. 도메인 정보 조회 (타입/길이)
-			if (terms.getDomainNm() != null) {
-				com.ndata.quality.model.std.StdDomainVo domain = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", terms.getDomainNm());
-				if (domain != null) {
-					result.put("domainId", domain.getDomainId());
-					result.put("dataType", domain.getDataType());
-					result.put("dataLen", domain.getDataLen());
-					result.put("dataDecimalLen", domain.getDataDecimalLen());
-				} else {
-					result.put("domainMissing", true);
-				}
-			} else {
-				result.put("domainMissing", true);
-			}
-		} catch (Exception e) {
-			result.put("found", false);
-			result.put("message", e.getMessage());
+	/**
+	 * 비표준 컬럼(TERMS_STND_YN='N') 일괄/선택 표준 변환.
+	 * attrs 미지정 → dataModelId의 모든 비표준 컬럼.
+	 * attrs 지정 → {objNm, attrNm} 키로 지정된 컬럼만.
+	 * 건별 독립 처리 — 한 건 실패가 전체를 롤백하지 않음.
+	 */
+	@SuppressWarnings("unchecked")
+	@PostMapping(value = "/resolveAttrs")
+	public Map<String, Object> resolveAttrs(@RequestBody Map<String, Object> req) {
+		Map<String, Object> result = new HashMap<>();
+		List<Map<String, Object>> failedList = new ArrayList<>();
+		int tried = 0, succeeded = 0, failed = 0;
+
+		String dataModelId = (String) req.get("dataModelId");
+		if (dataModelId == null || dataModelId.trim().isEmpty()) {
+			result.put("tried", 0);
+			result.put("succeeded", 0);
+			result.put("failed", 0);
+			result.put("failedList", failedList);
+			result.put("message", "dataModelId는 필수입니다.");
+			return result;
 		}
+
+		List<Map<String, String>> attrs = (List<Map<String, String>>) req.get("attrs");
+		List<StdDataModelAttrVo> targets;
+		if (attrs == null || attrs.isEmpty()) {
+			targets = sqlSessionTemplate.selectList("datamodel.selectNonStandardAttrs", dataModelId);
+		} else {
+			Map<String, Object> p = new HashMap<>();
+			p.put("dataModelId", dataModelId);
+			p.put("attrs", attrs);
+			targets = sqlSessionTemplate.selectList("datamodel.selectAttrListByKeys", p);
+		}
+
+		for (StdDataModelAttrVo attr : targets) {
+			tried++;
+			try {
+				applyResolvedToAttr(attr);
+				succeeded++;
+			} catch (Exception e) {
+				failed++;
+				Map<String, Object> fi = new HashMap<>();
+				fi.put("objNm", attr.getObjNm());
+				fi.put("attrNm", attr.getAttrNm());
+				fi.put("attrNmKr", attr.getAttrNmKr());
+				fi.put("reason", e.getMessage());
+				failedList.add(fi);
+			}
+		}
+
+		result.put("tried", tried);
+		result.put("succeeded", succeeded);
+		result.put("failed", failed);
+		result.put("failedList", failedList);
 		return result;
 	}
 
@@ -822,11 +861,251 @@ public class DataModelController {
 		return Mono.just(result);
 	}
 
+	/**
+	 * 컬럼(ATTR) 배치 저장 — 그리드 인라인 편집 저장 (53번 §7-2).
+	 * 논리 영역만 받는다: 물리명·타입·길이 등은 서버에서 TMP_COL_N / VARCHAR(255) 기본값.
+	 * 단일 트랜잭션으로 ADD / UPDATE / DELETE 섞어서 처리.
+	 *
+	 * 요청: { dataModelId, objNm, attrs: [{ mode, attrNm?, attrNmKr?, pkYn?, fkYn?, nullableYn?, defaultVal?, attrDesc? }] }
+	 * 응답: { saved, added, updated, deleted, errors:[{index, mode, message}] }
+	 */
+	@RequestMapping(value = "/saveAttrs", method = RequestMethod.POST)
+	public Mono<Response> saveAttrs(@RequestBody Map<String, Object> body) {
+		Response result = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String dataModelId = (String) body.get("dataModelId");
+			String objNm = (String) body.get("objNm");
+			Object rawAttrs = body.get("attrs");
+
+			if (dataModelId == null || dataModelId.trim().isEmpty())
+				throw new IllegalArgumentException("dataModelId 누락");
+			if (objNm == null || objNm.trim().isEmpty())
+				throw new IllegalArgumentException("objNm 누락");
+			if (!(rawAttrs instanceof List))
+				throw new IllegalArgumentException("attrs 배열이 아닙니다.");
+
+			@SuppressWarnings("unchecked")
+			List<Map<String, Object>> attrs = (List<Map<String, Object>>) rawAttrs;
+
+			// 현재 최대 ATTR_ORD 조회 (ADD 시 nextOrd 증분 기준)
+			Map<String, Object> ordParam = new HashMap<>();
+			ordParam.put("dataModelId", dataModelId);
+			ordParam.put("objNm", objNm);
+			Short maxOrdObj = sqlSessionTemplate.selectOne("datamodel.selectMaxAttrOrd", ordParam);
+			short nextOrd = (short) (maxOrdObj == null ? 0 : maxOrdObj);
+
+			int added = 0, updated = 0, deleted = 0;
+			List<Map<String, Object>> errors = new ArrayList<>();
+
+			for (int i = 0; i < attrs.size(); i++) {
+				Map<String, Object> row = attrs.get(i);
+				String mode = str(row.get("mode"));
+				try {
+					if ("ADD".equalsIgnoreCase(mode)) {
+						String attrNmKr = str(row.get("attrNmKr"));
+						if (attrNmKr == null || attrNmKr.trim().isEmpty())
+							throw new IllegalArgumentException("컬럼 한글명 누락");
+						nextOrd++;
+						StdDataModelAttrVo vo = new StdDataModelAttrVo();
+						vo.setDataModelId(dataModelId);
+						vo.setObjNm(objNm);
+						vo.setAttrNm("TMP_COL_" + nextOrd);
+						vo.setAttrNmKr(attrNmKr);
+						vo.setAttrOrder(nextOrd);
+						vo.setDataType("VARCHAR");
+						vo.setDataLen(255);
+						vo.setPkYn("Y".equalsIgnoreCase(str(row.get("pkYn"))) ? "Y" : "N");
+						vo.setFkYn("Y".equalsIgnoreCase(str(row.get("fkYn"))) ? "Y" : "N");
+						String nullableYn = str(row.get("nullableYn"));
+						vo.setNullableYn("Y".equalsIgnoreCase(vo.getPkYn()) ? "N"
+								: (nullableYn == null || nullableYn.isEmpty() ? "Y" : nullableYn));
+						vo.setDefaultVal(str(row.get("defaultVal")));
+						vo.setTermsStndYn("N");
+						vo.setDomainStndYn("N");
+						session.insert("datamodel.insertDataModelAttr", vo);
+						added++;
+					} else if ("UPDATE".equalsIgnoreCase(mode)) {
+						String attrNm = str(row.get("attrNm"));
+						if (attrNm == null || attrNm.trim().isEmpty())
+							throw new IllegalArgumentException("attrNm 누락");
+						StdDataModelAttrVo vo = new StdDataModelAttrVo();
+						vo.setDataModelId(dataModelId);
+						vo.setObjNm(objNm);
+						vo.setAttrNm(attrNm);
+						vo.setAttrNmKr(str(row.get("attrNmKr")));
+						vo.setPkYn("Y".equalsIgnoreCase(str(row.get("pkYn"))) ? "Y" : "N");
+						vo.setFkYn("Y".equalsIgnoreCase(str(row.get("fkYn"))) ? "Y" : "N");
+						String nullableYn = str(row.get("nullableYn"));
+						vo.setNullableYn("Y".equalsIgnoreCase(vo.getPkYn()) ? "N"
+								: (nullableYn == null || nullableYn.isEmpty() ? "Y" : nullableYn));
+						vo.setDefaultVal(str(row.get("defaultVal")));
+						// 물리명/타입은 수정하지 않음 — 53번 §6-0 원칙
+						vo.setTermsStndYn("N");
+						vo.setDomainStndYn("N");
+						session.update("datamodel.updateDataModelAttr", vo);
+						updated++;
+					} else if ("DELETE".equalsIgnoreCase(mode)) {
+						String attrNm = str(row.get("attrNm"));
+						if (attrNm == null || attrNm.trim().isEmpty())
+							throw new IllegalArgumentException("attrNm 누락");
+						Map<String, Object> p = new HashMap<>();
+						p.put("dataModelId", dataModelId);
+						p.put("objNm", objNm);
+						p.put("attrNm", attrNm);
+						session.delete("datamodel.deleteDataModelAttr", p);
+						deleted++;
+					} else {
+						throw new IllegalArgumentException("알 수 없는 mode: " + mode);
+					}
+				} catch (Exception inner) {
+					Map<String, Object> err = new HashMap<>();
+					err.put("index", i);
+					err.put("mode", mode);
+					err.put("message", inner.getMessage());
+					errors.add(err);
+					throw inner; // 배치 전체 롤백 — 53번 §7-2 트랜잭션 1개 원칙
+				}
+			}
+
+			// 컬럼 개수 동기화
+			Map<String, Object> syncParam = new HashMap<>();
+			syncParam.put("dataModelId", dataModelId);
+			syncParam.put("objNm", objNm);
+			session.update("datamodel.syncDataModelObjAttrCnt", syncParam);
+			session.commit();
+
+			Map<String, Object> data = new HashMap<>();
+			data.put("saved", added + updated + deleted);
+			data.put("added", added);
+			data.put("updated", updated);
+			data.put("deleted", deleted);
+			data.put("errors", errors);
+			result.setResultInfo(RestResult.CODE_200);
+			result.setContents(new ObjectMapper().writeValueAsString(data));
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> saveAttrs failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(result);
+	}
+
+	private static String str(Object o) {
+		return o == null ? null : o.toString();
+	}
+
 	// ---------- 내부 헬퍼 ----------
 
 	private String resolveLatestClctId(String dataModelId) {
 		if (dataModelId == null) return null;
 		return sqlSessionTemplate.selectOne("datamodel.selectLatestClctIdByDmId", dataModelId);
+	}
+
+	/**
+	 * 한글명 → 용어/도메인 조회 공통 로직. /resolveStandard 와 /resolveAttrs 가 공유.
+	 * 반환: {found, termsId, termsNm, termsEngAbrvNm, domainNm, domainId, dataType, dataLen, dataDecimalLen, domainMissing, message}
+	 */
+	private Map<String, Object> resolveTermsInternal(String termsNm) {
+		Map<String, Object> result = new HashMap<>();
+		if (termsNm == null || termsNm.trim().isEmpty()) {
+			result.put("found", false);
+			result.put("message", "한글명이 비어있습니다.");
+			return result;
+		}
+		try {
+			com.ndata.quality.model.std.StdTermsVo terms =
+				sqlSessionTemplate.selectOne("terms.selectTermsByNm", termsNm.trim());
+			if (terms == null) {
+				result.put("found", false);
+				result.put("message", "'" + termsNm + "' 에 해당하는 표준 용어가 없습니다.");
+				return result;
+			}
+			result.put("found", true);
+			result.put("termsId", terms.getId());
+			result.put("termsNm", terms.getTermsNm());
+			result.put("termsEngAbrvNm", terms.getTermsEngAbrvNm());
+			result.put("domainNm", terms.getDomainNm());
+
+			if (terms.getDomainNm() != null) {
+				com.ndata.quality.model.std.StdDomainVo domain =
+					sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", terms.getDomainNm());
+				if (domain != null) {
+					result.put("domainId", domain.getId());
+					result.put("dataType", domain.getDataType());
+					result.put("dataLen", domain.getDataLen());
+					result.put("dataDecimalLen", domain.getDataDecimalLen());
+				} else {
+					result.put("domainMissing", true);
+				}
+			} else {
+				result.put("domainMissing", true);
+			}
+		} catch (Exception e) {
+			result.put("found", false);
+			result.put("message", e.getMessage());
+		}
+		return result;
+	}
+
+	/**
+	 * 단일 비표준 컬럼을 표준 컬럼으로 변환(rename + 타입/도메인/플래그 갱신).
+	 * 실패 시 IllegalStateException 을 던짐 — 호출자는 catch 하여 failedList 로 수집.
+	 */
+	private void applyResolvedToAttr(StdDataModelAttrVo attr) {
+		String attrNmKr = attr.getAttrNmKr();
+		if (attrNmKr == null || attrNmKr.trim().isEmpty())
+			throw new IllegalStateException("한글명 없음");
+
+		Map<String, Object> resolved = resolveTermsInternal(attrNmKr);
+		Boolean found = (Boolean) resolved.get("found");
+		if (found == null || !found)
+			throw new IllegalStateException((String) resolved.getOrDefault("message", "용어 미등록"));
+		if (Boolean.TRUE.equals(resolved.get("domainMissing")))
+			throw new IllegalStateException("도메인 미등록");
+
+		String newAttrNm = (String) resolved.get("termsEngAbrvNm");
+		if (newAttrNm == null || newAttrNm.trim().isEmpty())
+			throw new IllegalStateException("용어 영문약어명 누락");
+
+		if (!newAttrNm.equals(attr.getAttrNm())) {
+			Map<String, Object> dupParam = new HashMap<>();
+			dupParam.put("dataModelId", attr.getDataModelId());
+			dupParam.put("objNm", attr.getObjNm());
+			dupParam.put("attrNm", newAttrNm);
+			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelAttr", dupParam);
+			if (dup > 0) throw new IllegalStateException("이미 존재하는 컬럼: " + newAttrNm);
+		}
+
+		StdDataModelAttrVo flagsVo = new StdDataModelAttrVo();
+		flagsVo.setAttrNm(newAttrNm);
+		flagsVo.setDataType((String) resolved.get("dataType"));
+		validateAttrStandards(flagsVo);
+		applyStandardFlags(flagsVo);
+
+		long dataLen = 0L;
+		Object dl = resolved.get("dataLen");
+		if (dl instanceof Number) dataLen = ((Number) dl).longValue();
+		short dataDecimalLen = 0;
+		Object ddl = resolved.get("dataDecimalLen");
+		if (ddl instanceof Number) dataDecimalLen = ((Number) ddl).shortValue();
+
+		Map<String, Object> updateMap = new HashMap<>();
+		updateMap.put("dataModelId", attr.getDataModelId());
+		updateMap.put("objNm", attr.getObjNm());
+		updateMap.put("origAttrNm", attr.getAttrNm());
+		updateMap.put("attrNm", newAttrNm);
+		updateMap.put("attrNmKr", attrNmKr);
+		updateMap.put("dataType", resolved.get("dataType"));
+		updateMap.put("dataLen", dataLen);
+		updateMap.put("dataDecimalLen", dataDecimalLen);
+		updateMap.put("termsStndYn", "Y");
+		updateMap.put("domainStndYn", "Y");
+		updateMap.put("wordLst", flagsVo.getWordLst());
+		updateMap.put("wordStndLst", flagsVo.getWordStndLst());
+		sqlSessionTemplate.update("datamodel.updateDataModelAttrKey", updateMap);
 	}
 
 	/**
@@ -886,5 +1165,527 @@ public class DataModelController {
 		}
 		attrVo.setWordLst(wordLst);
 		attrVo.setWordStndLst(wordStndLst);
+	}
+
+	// ===================================================================
+	// 53번 Phase 5: 엑셀 업로드 (테이블·컬럼)
+	// ===================================================================
+
+	private static final String[] TABLE_HEADERS = { "소유자", "테이블명(한글)", "설명" };
+	private static final String[] ATTR_HEADERS = {
+		"소유자", "테이블명(한글)", "컬럼명(한글)", "컬럼 순서",
+		"PK여부", "FK여부", "참조 테이블(한글)", "참조 컬럼(한글)", "삭제 규칙"
+	};
+
+	/**
+	 * 테이블 목록 엑셀 업로드 — preview/commit 2단계
+	 */
+	@RequestMapping(value = "/uploadTables", method = RequestMethod.POST, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public Mono<Response> uploadTables(@RequestParam("file") MultipartFile file,
+	                                    @RequestParam("dataModelId") String dataModelId,
+	                                    @RequestParam(value = "mode", defaultValue = "preview") String mode) {
+		Response result = new Response();
+		try {
+			if (dataModelId == null || dataModelId.trim().isEmpty())
+				throw new IllegalArgumentException("dataModelId 누락");
+			if (file == null || file.isEmpty())
+				throw new IllegalArgumentException("파일이 비어있습니다.");
+			String fn = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+			if (!fn.endsWith(".xlsx"))
+				throw new IllegalArgumentException("xlsx 파일만 허용됩니다.");
+
+			Map<String, Object> parsed = parseTableWorkbook(file, dataModelId);
+			@SuppressWarnings("unchecked")
+			List<Map<String, Object>> rows = (List<Map<String, Object>>) parsed.get("rows");
+			@SuppressWarnings("unchecked")
+			List<Map<String, Object>> errors = (List<Map<String, Object>>) parsed.get("errors");
+
+			int toInsert = 0, skipped = 0;
+			for (Map<String, Object> r : rows) {
+				if ("SKIP".equals(r.get("_action"))) skipped++;
+				else if ("INSERT".equals(r.get("_action"))) toInsert++;
+			}
+
+			if ("commit".equalsIgnoreCase(mode) && errors.isEmpty()) {
+				SqlSession session = sqlSessionFactory.openSession();
+				try {
+					Integer cnt = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDm", dataModelId);
+					int seq = cnt == null ? 0 : cnt;
+					for (Map<String, Object> r : rows) {
+						if (!"INSERT".equals(r.get("_action"))) continue;
+						seq++;
+						StdDataModelObjVo vo = new StdDataModelObjVo();
+						vo.setDataModelId(dataModelId);
+						vo.setObjOwner(str(r.get("objOwner")));
+						vo.setObjNmKr(str(r.get("objNmKr")));
+						vo.setObjDesc(str(r.get("objDesc")));
+						vo.setObjNm("TMP_TBL_" + seq);
+						vo.setObjAttrCnt((short) 0);
+						session.insert("datamodel.insertDataModelObj", vo);
+						r.put("objNm", vo.getObjNm());
+					}
+					session.commit();
+				} catch (Exception e) {
+					session.rollback();
+					throw e;
+				} finally {
+					session.close();
+				}
+			}
+
+			Map<String, Object> summary = new HashMap<>();
+			summary.put("total", rows.size());
+			summary.put("toInsert", toInsert);
+			summary.put("skipped", skipped);
+			summary.put("mode", mode);
+
+			Map<String, Object> resp = new HashMap<>();
+			resp.put("tables", rows);
+			resp.put("errors", errors);
+			resp.put("warnings", parsed.get("warnings"));
+			resp.put("summary", summary);
+			result.setResultInfo(RestResult.CODE_200);
+			result.setContents(new ObjectMapper().writeValueAsString(resp));
+		} catch (Exception e) {
+			log.error(">> uploadTables failed : {}", e.getMessage(), e);
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return Mono.just(result);
+	}
+
+	/**
+	 * 컬럼 목록 엑셀 업로드 — preview/commit 2단계 + FK 2-pass
+	 */
+	@RequestMapping(value = "/uploadAttrs", method = RequestMethod.POST, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public Mono<Response> uploadAttrs(@RequestParam("file") MultipartFile file,
+	                                   @RequestParam("dataModelId") String dataModelId,
+	                                   @RequestParam(value = "mode", defaultValue = "preview") String mode) {
+		Response result = new Response();
+		try {
+			if (dataModelId == null || dataModelId.trim().isEmpty())
+				throw new IllegalArgumentException("dataModelId 누락");
+			if (file == null || file.isEmpty())
+				throw new IllegalArgumentException("파일이 비어있습니다.");
+			String fn = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+			if (!fn.endsWith(".xlsx"))
+				throw new IllegalArgumentException("xlsx 파일만 허용됩니다.");
+
+			Map<String, Object> parsed = parseAttrWorkbook(file, dataModelId);
+			@SuppressWarnings("unchecked")
+			List<Map<String, Object>> rows = (List<Map<String, Object>>) parsed.get("rows");
+			@SuppressWarnings("unchecked")
+			List<Map<String, Object>> errors = (List<Map<String, Object>>) parsed.get("errors");
+
+			int toInsertAttrs = 0, skipped = 0, toInsertFks = 0;
+			for (Map<String, Object> r : rows) {
+				if ("SKIP".equals(r.get("_action"))) skipped++;
+				else if ("INSERT".equals(r.get("_action"))) {
+					toInsertAttrs++;
+					if ("Y".equals(r.get("fkYn"))) toInsertFks++;
+				}
+			}
+
+			if ("commit".equalsIgnoreCase(mode) && errors.isEmpty()) {
+				SqlSession session = sqlSessionFactory.openSession();
+				try {
+					// Pass 1: ATTR insert
+					// 대상 테이블별로 현재 최대 ATTR_ORD 조회 후 증분
+					Map<String, Short> ordMap = new HashMap<>();
+					for (Map<String, Object> r : rows) {
+						if (!"INSERT".equals(r.get("_action"))) continue;
+						String objNm = str(r.get("objNm"));
+						Short cur = ordMap.get(objNm);
+						if (cur == null) {
+							Map<String, Object> p = new HashMap<>();
+							p.put("dataModelId", dataModelId);
+							p.put("objNm", objNm);
+							Short maxOrd = sqlSessionTemplate.selectOne("datamodel.selectMaxAttrOrd", p);
+							cur = maxOrd == null ? (short) 0 : maxOrd;
+						}
+						cur = (short) (cur + 1);
+						ordMap.put(objNm, cur);
+
+						StdDataModelAttrVo vo = new StdDataModelAttrVo();
+						vo.setDataModelId(dataModelId);
+						vo.setObjOwner(str(r.get("objOwner")));
+						vo.setObjNm(objNm);
+						vo.setAttrNm("TMP_COL_" + cur);
+						vo.setAttrNmKr(str(r.get("attrNmKr")));
+						vo.setAttrOrder(cur);
+						vo.setDataType("VARCHAR");
+						vo.setDataLen(255);
+						String pk = str(r.get("pkYn"));
+						String fk = str(r.get("fkYn"));
+						vo.setPkYn("Y".equals(pk) ? "Y" : "N");
+						vo.setFkYn("Y".equals(fk) ? "Y" : "N");
+						vo.setNullableYn("Y".equals(vo.getPkYn()) ? "N" : "Y");
+						vo.setTermsStndYn("N");
+						vo.setDomainStndYn("N");
+						session.insert("datamodel.insertDataModelAttr", vo);
+						r.put("attrNm", vo.getAttrNm());
+					}
+					// Pass 2: FK 제약 — 한글 참조를 물리명으로 매핑. 현 버전은 FK_YN 플래그만 저장하고
+					// CONSTRAINT 테이블 INSERT 는 추후(§6-6 후속)로 연기. REF 매핑 검증만 수행해 오류 시 롤백.
+					List<Map<String, Object>> fkRefs = new ArrayList<>();
+					for (Map<String, Object> r : rows) {
+						if (!"INSERT".equals(r.get("_action"))) continue;
+						if (!"Y".equals(r.get("fkYn"))) continue;
+						String refTbl = resolveObjNmByKr(session, dataModelId, str(r.get("refObjOwner")), str(r.get("refObjNmKr")));
+						String refCol = null;
+						if (refTbl != null) {
+							refCol = resolveAttrNmByKr(session, dataModelId, refTbl, str(r.get("refAttrNmKr")));
+						}
+						Map<String, Object> ref = new HashMap<>();
+						ref.put("row", r.get("row"));
+						ref.put("objNm", r.get("objNm"));
+						ref.put("attrNm", r.get("attrNm"));
+						ref.put("refTableNm", refTbl);
+						ref.put("refColumnNm", refCol);
+						ref.put("deleteRule", r.get("deleteRule"));
+						fkRefs.add(ref);
+					}
+					session.commit();
+					parsed.put("fkRefs", fkRefs);
+				} catch (Exception e) {
+					session.rollback();
+					throw e;
+				} finally {
+					session.close();
+				}
+			}
+
+			Map<String, Object> summary = new HashMap<>();
+			summary.put("total", rows.size());
+			summary.put("toInsertAttrs", toInsertAttrs);
+			summary.put("toInsertFks", toInsertFks);
+			summary.put("skipped", skipped);
+			summary.put("groups", parsed.get("groups"));
+			summary.put("mode", mode);
+
+			Map<String, Object> resp = new HashMap<>();
+			resp.put("attrs", rows);
+			resp.put("errors", errors);
+			resp.put("warnings", parsed.get("warnings"));
+			resp.put("fkRefs", parsed.getOrDefault("fkRefs", new ArrayList<>()));
+			resp.put("summary", summary);
+			result.setResultInfo(RestResult.CODE_200);
+			result.setContents(new ObjectMapper().writeValueAsString(resp));
+		} catch (Exception e) {
+			log.error(">> uploadAttrs failed : {}", e.getMessage(), e);
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return Mono.just(result);
+	}
+
+	/**
+	 * 업로드 양식 xlsx 스트리밍 다운로드 (서버에서 POI 로 동적 생성)
+	 * scope=tables|attrs
+	 */
+	@RequestMapping(value = "/uploadTemplate", method = RequestMethod.GET)
+	public void uploadTemplate(@RequestParam(value = "scope", defaultValue = "tables") String scope,
+	                            HttpServletResponse res) throws Exception {
+		String[] headers;
+		String fileName;
+		if ("attrs".equalsIgnoreCase(scope)) {
+			headers = ATTR_HEADERS;
+			fileName = "dataq_attrs_template.xlsx";
+		} else {
+			headers = TABLE_HEADERS;
+			fileName = "dataq_tables_template.xlsx";
+		}
+		try (XSSFWorkbook wb = new XSSFWorkbook()) {
+			Sheet sh = wb.createSheet("Sheet1");
+			Row h = sh.createRow(0);
+			for (int i = 0; i < headers.length; i++) {
+				h.createCell(i).setCellValue(headers[i]);
+				sh.setColumnWidth(i, 5000);
+			}
+			res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+			res.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+			wb.write(res.getOutputStream());
+			res.getOutputStream().flush();
+		}
+	}
+
+	// ---------- 엑셀 파싱 헬퍼 ----------
+
+	private Map<String, Object> parseTableWorkbook(MultipartFile file, String dataModelId) throws Exception {
+		List<Map<String, Object>> rows = new ArrayList<>();
+		List<Map<String, Object>> errors = new ArrayList<>();
+		List<Map<String, Object>> warnings = new ArrayList<>();
+
+		try (Workbook wb = WorkbookFactory.create(file.getInputStream())) {
+			if (wb.getNumberOfSheets() > 1) {
+				warnings.add(warnRow(0, "2번째 이후 시트는 무시됨"));
+			}
+			Sheet sh = wb.getSheetAt(0);
+			Row header = sh.getRow(0);
+			if (header == null) throw new IllegalArgumentException("시트가 비어있습니다.");
+			Map<String, Integer> hIdx = mapHeaders(header, TABLE_HEADERS);
+			for (String h : TABLE_HEADERS) {
+				if (!h.equals("설명") && !hIdx.containsKey(h))
+					throw new IllegalArgumentException("필수 헤더 누락: " + h);
+			}
+
+			Set<String> seen = new HashSet<>();
+			// DB 에 이미 존재하는 (owner, objNmKr) 조합 조회
+			Set<String> existing = loadExistingObjKrs(dataModelId);
+
+			int last = sh.getLastRowNum();
+			for (int r = 1; r <= last; r++) {
+				Row row = sh.getRow(r);
+				if (row == null || isRowEmpty(row)) continue;
+				String owner = getStr(row, hIdx.get("소유자"));
+				String krNm = getStr(row, hIdx.get("테이블명(한글)"));
+				String desc = hIdx.containsKey("설명") ? getStr(row, hIdx.get("설명")) : null;
+				Map<String, Object> m = new HashMap<>();
+				m.put("row", r + 1);
+				m.put("objOwner", owner);
+				m.put("objNmKr", krNm);
+				m.put("objDesc", desc);
+				if (isBlank(owner) || isBlank(krNm)) {
+					m.put("_action", "ERROR");
+					m.put("_msg", "소유자·테이블명(한글) 필수");
+					errors.add(errRow(r + 1, "소유자·테이블명(한글) 필수"));
+				} else {
+					String key = owner + "|" + krNm;
+					if (seen.contains(key)) {
+						m.put("_action", "ERROR");
+						m.put("_msg", "파일 내 중복 (" + owner + ", " + krNm + ")");
+						errors.add(errRow(r + 1, "파일 내 중복"));
+					} else if (existing.contains(key)) {
+						m.put("_action", "SKIP");
+						m.put("_msg", "이미 존재 — 스킵");
+						warnings.add(warnRow(r + 1, "이미 존재하는 (" + owner + ", " + krNm + ") — 스킵"));
+					} else {
+						m.put("_action", "INSERT");
+						seen.add(key);
+					}
+				}
+				rows.add(m);
+			}
+		}
+
+		Map<String, Object> out = new HashMap<>();
+		out.put("rows", rows);
+		out.put("errors", errors);
+		out.put("warnings", warnings);
+		return out;
+	}
+
+	private Map<String, Object> parseAttrWorkbook(MultipartFile file, String dataModelId) throws Exception {
+		List<Map<String, Object>> rows = new ArrayList<>();
+		List<Map<String, Object>> errors = new ArrayList<>();
+		List<Map<String, Object>> warnings = new ArrayList<>();
+
+		// DB 의 (owner, objNmKr) → objNm 매핑
+		Map<String, String> objKrToNm = loadObjKrToNm(dataModelId);
+		// 같은 파일 내 (owner, tableKr, colKr) 중복 체크
+		Set<String> seenAttrs = new HashSet<>();
+		Set<String> groups = new HashSet<>();
+
+		try (Workbook wb = WorkbookFactory.create(file.getInputStream())) {
+			if (wb.getNumberOfSheets() > 1) {
+				warnings.add(warnRow(0, "2번째 이후 시트는 무시됨"));
+			}
+			Sheet sh = wb.getSheetAt(0);
+			Row header = sh.getRow(0);
+			if (header == null) throw new IllegalArgumentException("시트가 비어있습니다.");
+			Map<String, Integer> hIdx = mapHeaders(header, ATTR_HEADERS);
+			for (String h : new String[] { "소유자", "테이블명(한글)", "컬럼명(한글)" }) {
+				if (!hIdx.containsKey(h)) throw new IllegalArgumentException("필수 헤더 누락: " + h);
+			}
+
+			int last = sh.getLastRowNum();
+			for (int r = 1; r <= last; r++) {
+				Row row = sh.getRow(r);
+				if (row == null || isRowEmpty(row)) continue;
+				String owner = getStr(row, hIdx.get("소유자"));
+				String tblKr = getStr(row, hIdx.get("테이블명(한글)"));
+				String colKr = getStr(row, hIdx.get("컬럼명(한글)"));
+				String pk = getStr(row, hIdx.get("PK여부"));
+				String fk = getStr(row, hIdx.get("FK여부"));
+				String refTbl = getStr(row, hIdx.get("참조 테이블(한글)"));
+				String refCol = getStr(row, hIdx.get("참조 컬럼(한글)"));
+				String delRule = getStr(row, hIdx.get("삭제 규칙"));
+
+				Map<String, Object> m = new HashMap<>();
+				m.put("row", r + 1);
+				m.put("objOwner", owner);
+				m.put("objNmKr", tblKr);
+				m.put("attrNmKr", colKr);
+				m.put("pkYn", "Y".equalsIgnoreCase(pk) ? "Y" : "N");
+				m.put("fkYn", "Y".equalsIgnoreCase(fk) ? "Y" : "N");
+				m.put("refObjOwner", owner); // 같은 오너 내 참조로 가정
+				m.put("refObjNmKr", refTbl);
+				m.put("refAttrNmKr", refCol);
+				m.put("deleteRule", normalizeDeleteRule(delRule, r + 1, warnings));
+
+				if (isBlank(owner) || isBlank(tblKr) || isBlank(colKr)) {
+					m.put("_action", "ERROR");
+					m.put("_msg", "소유자·테이블명·컬럼명 필수");
+					errors.add(errRow(r + 1, "소유자·테이블명·컬럼명 필수"));
+					rows.add(m);
+					continue;
+				}
+				String groupKey = owner + "|" + tblKr;
+				groups.add(groupKey);
+				String objNm = objKrToNm.get(groupKey);
+				if (objNm == null) {
+					m.put("_action", "ERROR");
+					m.put("_msg", "테이블 먼저 등록 필요: (" + owner + ", " + tblKr + ")");
+					errors.add(errRow(r + 1, "테이블 먼저 등록 필요"));
+					rows.add(m);
+					continue;
+				}
+				m.put("objNm", objNm);
+
+				String dupKey = owner + "|" + tblKr + "|" + colKr;
+				if (seenAttrs.contains(dupKey)) {
+					m.put("_action", "ERROR");
+					m.put("_msg", "파일 내 중복 (" + owner + ", " + tblKr + ", " + colKr + ")");
+					errors.add(errRow(r + 1, "파일 내 중복 컬럼"));
+					rows.add(m);
+					continue;
+				}
+				seenAttrs.add(dupKey);
+
+				if ("Y".equals(m.get("fkYn")) && (isBlank(refTbl) || isBlank(refCol))) {
+					m.put("_action", "ERROR");
+					m.put("_msg", "FK=Y 인데 참조 테이블/컬럼 누락");
+					errors.add(errRow(r + 1, "FK 참조 정보 누락"));
+					rows.add(m);
+					continue;
+				}
+
+				m.put("_action", "INSERT");
+				rows.add(m);
+			}
+		}
+
+		Map<String, Object> out = new HashMap<>();
+		out.put("rows", rows);
+		out.put("errors", errors);
+		out.put("warnings", warnings);
+		out.put("groups", groups.size());
+		return out;
+	}
+
+	private Map<String, Integer> mapHeaders(Row header, String[] expected) {
+		Map<String, Integer> idx = new HashMap<>();
+		for (int c = 0; c < header.getLastCellNum(); c++) {
+			Cell cell = header.getCell(c);
+			if (cell == null) continue;
+			String v = cellString(cell).trim();
+			for (String e : expected) {
+				if (e.equals(v)) { idx.put(e, c); break; }
+			}
+		}
+		return idx;
+	}
+
+	private boolean isRowEmpty(Row row) {
+		short last = row.getLastCellNum();
+		for (int c = 0; c < last; c++) {
+			Cell cell = row.getCell(c);
+			if (cell != null && !cellString(cell).trim().isEmpty()) return false;
+		}
+		return true;
+	}
+
+	private String getStr(Row row, Integer idx) {
+		if (idx == null) return null;
+		Cell c = row.getCell(idx);
+		if (c == null) return null;
+		String s = cellString(c).trim();
+		return s.isEmpty() ? null : s;
+	}
+
+	private String cellString(Cell cell) {
+		if (cell == null) return "";
+		if (cell.getCellType() == CellType.NUMERIC) {
+			double d = cell.getNumericCellValue();
+			if (d == Math.floor(d) && !Double.isInfinite(d)) return String.valueOf((long) d);
+			return String.valueOf(d);
+		}
+		if (cell.getCellType() == CellType.BOOLEAN) return cell.getBooleanCellValue() ? "TRUE" : "FALSE";
+		if (cell.getCellType() == CellType.FORMULA) {
+			try { return cell.getStringCellValue(); }
+			catch (Exception e) {
+				try { return String.valueOf(cell.getNumericCellValue()); }
+				catch (Exception ignore) { return ""; }
+			}
+		}
+		return cell.toString();
+	}
+
+	private boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }
+
+	private String normalizeDeleteRule(String v, int row, List<Map<String, Object>> warnings) {
+		if (isBlank(v)) return "NO ACTION";
+		String up = v.toUpperCase();
+		if ("CASCADE".equals(up) || "SET NULL".equals(up) || "NO ACTION".equals(up)) return up;
+		warnings.add(warnRow(row, "삭제 규칙 '" + v + "' 허용 외 — NO ACTION 으로 대체"));
+		return "NO ACTION";
+	}
+
+	private Map<String, Object> errRow(int row, String msg) {
+		Map<String, Object> m = new HashMap<>();
+		m.put("row", row);
+		m.put("message", msg);
+		return m;
+	}
+
+	private Map<String, Object> warnRow(int row, String msg) {
+		Map<String, Object> m = new HashMap<>();
+		m.put("row", row);
+		m.put("message", msg);
+		return m;
+	}
+
+	private Set<String> loadExistingObjKrs(String dataModelId) {
+		Set<String> out = new HashSet<>();
+		List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", dataModelId);
+		if (objs == null) return out;
+		for (StdDataModelObjVo o : objs) {
+			if (o.getObjNmKr() == null) continue;
+			String owner = o.getObjOwner() == null ? "" : o.getObjOwner();
+			out.add(owner + "|" + o.getObjNmKr());
+		}
+		return out;
+	}
+
+	private Map<String, String> loadObjKrToNm(String dataModelId) {
+		Map<String, String> out = new HashMap<>();
+		List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", dataModelId);
+		if (objs == null) return out;
+		for (StdDataModelObjVo o : objs) {
+			if (o.getObjNmKr() == null) continue;
+			String owner = o.getObjOwner() == null ? "" : o.getObjOwner();
+			out.put(owner + "|" + o.getObjNmKr(), o.getObjNm());
+		}
+		return out;
+	}
+
+	private String resolveObjNmByKr(SqlSession session, String dataModelId, String owner, String objKr) {
+		if (isBlank(objKr)) return null;
+		List<StdDataModelObjVo> objs = session.selectList("datamodel.selectDataModelObjListByClctId", dataModelId);
+		if (objs == null) return null;
+		for (StdDataModelObjVo o : objs) {
+			if (objKr.equals(o.getObjNmKr())) {
+				if (owner == null || owner.equals(o.getObjOwner())) return o.getObjNm();
+			}
+		}
+		return null;
+	}
+
+	private String resolveAttrNmByKr(SqlSession session, String dataModelId, String objNm, String attrKr) {
+		if (isBlank(attrKr)) return null;
+		List<StdDataModelAttrVo> attrs = session.selectList("datamodel.selectDataModelAttrListByClctId", dataModelId);
+		if (attrs == null) return null;
+		for (StdDataModelAttrVo a : attrs) {
+			if (objNm.equals(a.getObjNm()) && attrKr.equals(a.getAttrNmKr())) return a.getAttrNm();
+		}
+		return null;
 	}
 }

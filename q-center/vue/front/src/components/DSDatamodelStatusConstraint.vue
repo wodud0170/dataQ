@@ -134,8 +134,8 @@ export default {
         return;
       }
       this.loading = true;
-      axios.get(this.$APIURL.base + "api/dm/getDataModelConstraintListByClctId", {
-        params: { 'clctId': this.selectedModelId }
+      axios.get(this.$APIURL.base + "api/dm/getDataModelConstraintListByDmId", {
+        params: { 'dataModelId': this.selectedModelId }
       }).then((res) => {
         this.allItems = res.data;
         this.loading = false;

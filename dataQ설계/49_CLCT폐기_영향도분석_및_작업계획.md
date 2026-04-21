@@ -68,12 +68,18 @@
 
 ---
 
-## 6. 잔존 `DM_CLCT_ID` 사용처 (정상 — 유지)
+## 6. 잔존 `DM_CLCT_ID` 사용처
 
-수집 로그 참조용으로 의도적으로 남긴 컬럼:
-- `TB_DATA_MODEL_CLCT.DM_CLCT_ID` (수집 이력 PK 자체)
-- `TB_DATA_MODEL_INDEX.DM_CLCT_ID` / `TB_DATA_MODEL_CONSTRAINT.DM_CLCT_ID` (수집 로그 참조)
-- OBJ/ATTR SELECT 절의 `T.DM_CLCT_ID as clctId` alias (UI 호환용)
+수집 이력 로그 자체로만 남김:
+- `TB_DATA_MODEL_CLCT.DM_CLCT_ID` (수집 이력 PK 자체 — 유지)
+- OBJ/ATTR SELECT 절의 `T.DM_CLCT_ID as clctId` alias (UI 호환용 — 유지)
+
+**~~TB_DATA_MODEL_INDEX / TB_DATA_MODEL_CONSTRAINT.DM_CLCT_ID~~**
+당초 "수집 로그 참조용으로 의도적 유지"로 기록했으나, 구조 진단 결과는 이미
+`TB_STRUCT_DIAG_INDEX_DETAIL` / `TB_STRUCT_DIAG_CONSTRAINT_DETAIL` 에 스냅샷이
+별도 저장되므로 원본 테이블이 회차 기반일 기술적 이유가 없음. **2026-04-21**
+작업에서 OBJ/ATTR 와 동일한 방식(DM_ID + 자연키 PK + UPSERT + soft-delete)으로
+정리 완료. 상세는 [57_INDEX_CONSTRAINT_CLCT폐기_정리.md](57_INDEX_CONSTRAINT_CLCT폐기_정리.md) 참고.
 
 ---
 

@@ -130,8 +130,8 @@ export default {
         return;
       }
       this.loading = true;
-      axios.get(this.$APIURL.base + "api/dm/getDataModelIndexListByClctId", {
-        params: { 'clctId': this.selectedModelId }
+      axios.get(this.$APIURL.base + "api/dm/getDataModelIndexListByDmId", {
+        params: { 'dataModelId': this.selectedModelId }
       }).then((res) => {
         this.allItems = res.data;
         this.loading = false;
