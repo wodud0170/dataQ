@@ -308,7 +308,7 @@ CREATE TABLE quality.tb_data_model_attr (
     fk_yn character(1),
     default_val character varying(255),
     attr_ord smallint,
-    obj_owner character varying(100) DEFAULT ''::character varying NOT NULL
+    obj_owner character varying(100) DEFAULT ''::character varying
 );
 
 

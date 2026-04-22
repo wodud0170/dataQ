@@ -22,8 +22,59 @@
         <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
         <v-btn class="gradient" v-on:click="tableDataDownload" :disabled="dmTableAllItems.length === 0">다운로드</v-btn>
         <v-btn color="primary" :disabled="!selectedModelId" v-on:click="openAddObjDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">테이블 추가</v-btn>
+        <v-btn id="btn-upload-tables" color="deep-purple" outlined :disabled="!selectedModelId" v-on:click="triggerUploadTables" :style="{ padding: '0 12px' }">엑셀 업로드</v-btn>
+        <v-btn id="btn-download-tables-template" color="deep-purple" text v-on:click="downloadTablesTemplate" :style="{ padding: '0 8px' }">양식 다운로드</v-btn>
+        <input ref="uploadTablesInput" type="file" accept=".xlsx" style="display:none" @change="onTableFileSelected" />
       </v-row>
     </v-sheet>
+
+    <!-- 엑셀 업로드 미리보기 다이얼로그 -->
+    <v-dialog v-model="uploadDialog" max-width="1100" persistent>
+      <v-card>
+        <v-card-title>
+          테이블 엑셀 업로드 미리보기
+          <v-spacer />
+          <span v-if="uploadSummary" style="font-size:.85rem;color:#455A64;">
+            총 {{ uploadSummary.total }} / 등록 예정 {{ uploadSummary.toInsert }} / 스킵 {{ uploadSummary.skipped }} / 오류 {{ (uploadErrors || []).length }}
+          </span>
+        </v-card-title>
+        <v-card-text>
+          <v-alert v-if="uploadErrors && uploadErrors.length > 0" type="error" dense text>
+            오류 {{ uploadErrors.length }}건 — 수정 후 다시 업로드하세요.
+            <div v-for="(e, i) in uploadErrors.slice(0, 5)" :key="'e' + i" style="font-size:.8rem;">
+              · {{ e.row }}행: {{ e.msg || e.reason }}
+            </div>
+            <div v-if="uploadErrors.length > 5" style="font-size:.8rem;">외 {{ uploadErrors.length - 5 }}건</div>
+          </v-alert>
+          <v-alert v-if="uploadWarnings && uploadWarnings.length > 0" type="warning" dense text>
+            경고 {{ uploadWarnings.length }}건
+            <div v-for="(w, i) in uploadWarnings.slice(0, 5)" :key="'w' + i" style="font-size:.8rem;">
+              · {{ w.row }}행: {{ w.msg || w.reason }}
+            </div>
+            <div v-if="uploadWarnings.length > 5" style="font-size:.8rem;">외 {{ uploadWarnings.length - 5 }}건</div>
+          </v-alert>
+          <v-data-table :items="uploadRows" :headers="uploadRowHeaders" dense
+            :items-per-page="20" class="preview-grid"
+            :item-class="rowClass">
+            <template #[`item._action`]="{ item }">
+              <span v-if="item._action === 'INSERT'" style="color:#2E7D32;font-weight:600;">등록</span>
+              <span v-else-if="item._action === 'SKIP'" style="color:#F57C00;">스킵</span>
+              <span v-else-if="item._action === 'ERROR'" style="color:#D32F2F;font-weight:600;">오류</span>
+              <span v-else>{{ item._action }}</span>
+            </template>
+          </v-data-table>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="uploadDialog = false">취소</v-btn>
+          <v-btn id="btn-upload-tables-commit" color="primary"
+            :disabled="!uploadSummary || (uploadErrors && uploadErrors.length > 0) || uploadSummary.toInsert === 0"
+            :loading="uploadCommitting" @click="commitTablesUpload">
+            {{ uploadSummary ? uploadSummary.toInsert : 0 }}건 등록 실행
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- 테이블 추가/수정 다이얼로그 -->
     <v-dialog v-model="objDialog" max-width="600" persistent>
@@ -125,6 +176,22 @@ export default {
     objDialog: false,
     objDialogMode: 'add',
     objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '' },
+    // 엑셀 업로드
+    uploadDialog: false,
+    uploadFile: null,
+    uploadRows: [],
+    uploadErrors: [],
+    uploadWarnings: [],
+    uploadSummary: null,
+    uploadCommitting: false,
+    uploadRowHeaders: [
+      { text: '행', value: 'row', align: 'center', sortable: false, width: '60px' },
+      { text: '상태', value: '_action', align: 'center', sortable: false, width: '70px' },
+      { text: '소유자', value: 'objOwner', align: 'center', sortable: false, width: '110px' },
+      { text: '테이블명(한글)', value: 'objNmKr', align: 'center', sortable: false },
+      { text: '설명', value: 'objDesc', sortable: false },
+      { text: '메시지', value: '_msg', sortable: false },
+    ],
   }),
   computed: {
     dmTableItems() {
@@ -246,6 +313,78 @@ export default {
         this.$swal.fire({ title: '저장 실패', text: e.message, confirmButtonText: '확인', icon: 'error' });
       });
     },
+    // ===== 엑셀 업로드 =====
+    downloadTablesTemplate() {
+      const url = this.$APIURL.base + 'api/dm/uploadTemplate?scope=tables';
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'dataq_tables_template.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    },
+    triggerUploadTables() {
+      if (!this.selectedModelId) {
+        this.$swal.fire({ title: '데이터모델을 먼저 선택하세요.', icon: 'warning' });
+        return;
+      }
+      this.$refs.uploadTablesInput.value = '';
+      this.$refs.uploadTablesInput.click();
+    },
+    onTableFileSelected(e) {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      this.uploadFile = f;
+      this._runTablesUpload('preview');
+    },
+    _runTablesUpload(mode) {
+      if (!this.uploadFile) return;
+      if (mode === 'commit') this.uploadCommitting = true;
+      const fd = new FormData();
+      fd.append('file', this.uploadFile);
+      fd.append('dataModelId', this.selectedModelId);
+      fd.append('mode', mode);
+      axios.post(this.$APIURL.base + 'api/dm/uploadTables', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then((res) => {
+        if (!(res.data && res.data.resultCode === 200)) {
+          this.$swal.fire({ title: '업로드 실패', text: (res.data && res.data.resultMessage) || '서버 오류', icon: 'error' });
+          this.uploadCommitting = false;
+          return;
+        }
+        let payload = {};
+        try {
+          const c = res.data.contents;
+          payload = typeof c === 'string' ? JSON.parse(c) : (c || {});
+        } catch (err) { payload = {}; }
+        this.uploadRows = payload.tables || [];
+        this.uploadErrors = payload.errors || [];
+        this.uploadWarnings = payload.warnings || [];
+        this.uploadSummary = payload.summary || null;
+        if (mode === 'commit') {
+          this.uploadCommitting = false;
+          this.uploadDialog = false;
+          const inserted = (this.uploadSummary && this.uploadSummary.toInsert) || 0;
+          this.$swal.fire({ title: inserted + '건 등록 완료', icon: 'success', timer: 1500, showConfirmButton: false });
+          this.load();
+        } else {
+          this.uploadDialog = true;
+        }
+      }).catch((err) => {
+        this.uploadCommitting = false;
+        const msg = (err.response && err.response.data && err.response.data.resultMessage) || err.message || '업로드 실패';
+        this.$swal.fire({ title: '업로드 실패', text: msg, icon: 'error' });
+      });
+    },
+    commitTablesUpload() {
+      this._runTablesUpload('commit');
+    },
+    rowClass(item) {
+      if (!item) return '';
+      if (item._action === 'ERROR') return 'row-upload-error';
+      if (item._action === 'SKIP') return 'row-upload-skip';
+      return '';
+    },
     deleteObj(item) {
       this.$swal.fire({
         title: '테이블을 삭제할까요?',
@@ -290,4 +429,7 @@ export default {
 .split_bottom_wrap { position: absolute; width: 100%; max-height: 60px; bottom: 0px; border-top: 1px solid #E8EAF6; background: #FAFBFF; }
 .pagination_wrap { position: relative; width: 100%; }
 #dmTable_table { height: calc(100vh - 64px - 48px - 68px - 44px - 60px); overflow-y: overlay; overflow-x: hidden; }
+.row-upload-error > td { background-color: #FFEBEE !important; }
+.row-upload-skip > td { background-color: #FFF8E1 !important; }
+.preview-grid { border: 1px solid #E0E0E0; }
 </style>

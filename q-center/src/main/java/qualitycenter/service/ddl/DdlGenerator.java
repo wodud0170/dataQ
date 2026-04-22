@@ -30,17 +30,10 @@ public class DdlGenerator {
 		Map<String, Object> model = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataModelId);
 		String modelNm = model == null ? dataModelId : String.valueOf(model.get("dataModelNm"));
 
-		String clctId = sqlSessionTemplate.selectOne("datamodel.selectLatestClctIdByDmId", dataModelId);
-
-		List<StdDataModelObjVo> objs = new ArrayList<>();
-		List<StdDataModelAttrVo> attrs = new ArrayList<>();
-		List<Map<String, Object>> constraints = new ArrayList<>();
-
-		if (clctId != null) {
-			objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", clctId);
-			attrs = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", clctId);
-			constraints = sqlSessionTemplate.selectList("datamodel.selectDataModelConstraintListByClctId", clctId);
-		}
+		// CLCT 폐기 이후 OBJ/ATTR 은 DM_ID 기반 — clctId 파라미터는 실제로 DM_ID가 들어감
+		List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", dataModelId);
+		List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", dataModelId);
+		List<Map<String, Object>> constraints = sqlSessionTemplate.selectList("datamodel.selectDataModelConstraintListByDmId", dataModelId);
 
 		StringBuilder sb = new StringBuilder();
 		appendHeader(sb, modelNm, dataModelId, dialect, objs.size(), attrs.size());

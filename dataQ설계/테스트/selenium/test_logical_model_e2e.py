@@ -97,6 +97,19 @@ def login(d, user="space", pw="123"):
     time.sleep(2)
 
 
+def _click_el(d, el):
+    """일반 클릭 시도 후 실패하면 JS 클릭으로 폴백"""
+    try:
+        el.click()
+    except Exception:
+        d.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+        time.sleep(0.2)
+        try:
+            el.click()
+        except Exception:
+            d.execute_script("arguments[0].click();", el)
+
+
 def nav(d, group_id, menu_id):
     """네비 그룹 펼치고 메뉴 클릭 — 실제 click 이벤트 + visibility 대기"""
     dismiss_swal(d)
@@ -105,15 +118,14 @@ def nav(d, group_id, menu_id):
     need_expand = not menu_items or not menu_items[0].is_displayed()
     if need_expand:
         g = wait_clickable(d, By.ID, group_id, 10)
-        g.click()
+        _click_el(d, g)
         try:
             wait_visible(d, By.ID, menu_id, 5)
         except TimeoutException:
-            # 토글이 닫힌 상태였다면 한 번 더 시도
-            g.click()
+            _click_el(d, g)
             wait_visible(d, By.ID, menu_id, 5)
-    m = wait_clickable(d, By.ID, menu_id, 10)
-    m.click()
+    m = wait_visible(d, By.ID, menu_id, 10)
+    _click_el(d, m)
     time.sleep(2)
 
 
@@ -265,25 +277,65 @@ def step3_add_table(d):
     shot(d, "03c_table_added")
 
 
+def _dialog_force_close(d, t=5):
+    """persistent 다이얼로그 강제 닫기 — '취소' 클릭 후 사라질 때까지 대기"""
+    for _ in range(3):
+        active = d.find_elements(By.CSS_SELECTOR, ".v-dialog--active")
+        if not active or not active[0].is_displayed():
+            return
+        if not click_button_by_text(d, "취소", ".v-dialog--active"):
+            # v-overlay__scrim 직접 클릭은 persistent에서 안먹힘 — JS로 숨김
+            try:
+                d.execute_script(
+                    "document.querySelectorAll('.v-dialog--active').forEach(el => el.parentElement.style.display='none')"
+                )
+            except Exception:
+                pass
+        time.sleep(0.3)
+
+
+def _js_click(d, el):
+    d.execute_script("arguments[0].click();", el)
+
+
+def _find_button_in_dialog(d, text):
+    buttons = d.find_elements(By.CSS_SELECTOR, ".v-dialog--active button")
+    for b in buttons:
+        if b.is_displayed() and text in (b.text or ""):
+            return b
+    return None
+
+
 def add_column(d, term_kr):
-    """컬럼 추가 다이얼로그 열고 한글명 입력→표준 적용→추가.
+    """컬럼 추가 다이얼로그 열고 한글명 입력→[표준 변환]→추가.
        표준 매칭 성공 시 True, 미매칭이면 False 리턴."""
-    close_any_dialog(d)
+    # 이전 잔존 다이얼로그/오버레이 정리
+    _dialog_force_close(d)
+    time.sleep(0.3)
     if not click_button_by_text(d, "컬럼 추가"):
         raise RuntimeError("'컬럼 추가' 버튼 클릭 실패")
     wait_visible(d, By.CSS_SELECTOR, ".v-dialog--active")
-    time.sleep(0.8)
+    time.sleep(1.0)
     # 소속 테이블 선택 (첫 autocomplete)
     dialog_acs = d.find_elements(By.CSS_SELECTOR, ".v-dialog--active .v-autocomplete input[type='text']")
     if not dialog_acs:
+        _dialog_force_close(d)
         raise RuntimeError("다이얼로그 내 autocomplete input 없음")
     obj_ac = dialog_acs[0]
-    obj_ac.click()
-    time.sleep(0.5)
+    _js_click(d, obj_ac)
+    time.sleep(0.8)
     items = d.find_elements(By.CSS_SELECTOR, ".menuable__content__active .v-list-item")
+    if not items:
+        items = d.find_elements(By.CSS_SELECTOR, "[role='option']")
     if items:
-        items[0].click()
-        time.sleep(0.3)
+        _js_click(d, items[0])
+        time.sleep(0.5)
+    # 드롭다운이 완전히 닫힐 때까지 대기 (다른 요소 클릭하기 전에)
+    for _ in range(10):
+        menus = d.find_elements(By.CSS_SELECTOR, ".menuable__content__active")
+        if not menus or not any(m.is_displayed() for m in menus):
+            break
+        time.sleep(0.2)
     # 한글명 입력 (label에 "컬럼 한글명" 포함)
     inputs = d.find_elements(By.CSS_SELECTOR, ".v-dialog--active input")
     kr_input = None
@@ -297,34 +349,44 @@ def add_column(d, term_kr):
         except Exception:
             continue
     if not kr_input:
+        _dialog_force_close(d)
         raise RuntimeError("'컬럼 한글명' 필드 없음")
     kr_input.clear()
     kr_input.send_keys(term_kr)
     time.sleep(0.3)
-    # [표준 적용] 버튼
-    if not click_button_by_text(d, "표준 적용", ".v-dialog--active"):
-        raise RuntimeError("'표준 적용' 버튼 클릭 실패")
-    # swal: '표준 적용 완료' (성공) 또는 '표준 용어 없음' (실패)
+    # [표준 변환] 버튼 — JS로 클릭하여 overlay 간섭 회피
+    btn = _find_button_in_dialog(d, "표준 변환")
+    if btn:
+        _js_click(d, btn)
+    else:
+        kr_input.send_keys(Keys.ENTER)
+    # matched-panel 또는 unmatched-panel 대기
     try:
-        WebDriverWait(d, 5).until(
-            EC.visibility_of_element_located((By.CSS_SELECTOR, ".swal2-title"))
+        WebDriverWait(d, 8).until(
+            lambda drv: drv.find_elements(By.CSS_SELECTOR, ".v-dialog--active .matched-panel")
+            or drv.find_elements(By.CSS_SELECTOR, ".v-dialog--active .unmatched-panel")
         )
     except TimeoutException:
         pass
-    title_els = d.find_elements(By.CSS_SELECTOR, ".swal2-title")
-    title = title_els[0].text if title_els else ""
     shot(d, f"04_apply_{term_kr}")
-    matched = "완료" in title
-    dismiss_swal(d)
+    matched = bool(d.find_elements(By.CSS_SELECTOR, ".v-dialog--active .matched-panel"))
     if not matched:
         print(f"  [skip] '{term_kr}' 표준 매칭 실패 → 컬럼 추가 스킵")
-        close_any_dialog(d)
+        _dialog_force_close(d)
         return False
-    # 추가 버튼
-    if not click_button_by_text(d, "추가", ".v-dialog--active"):
-        raise RuntimeError("컬럼 '추가' 버튼 클릭 실패")
-    # swal 닫고 다이얼로그 닫힘 대기
-    time.sleep(0.5)
+    # "추가" 버튼 JS 클릭 (disabled 체크는 Vue가 resolveState=matched 면 풀어줌)
+    submit_btn = _find_button_in_dialog(d, "추가")
+    # "비표준으로 추가"도 "추가" 포함이라 first-match 버튼일 수 있음 — matched이면 텍스트가 정확히 "추가"
+    for b in d.find_elements(By.CSS_SELECTOR, ".v-dialog--active button"):
+        if b.is_displayed() and (b.text or "").strip() == "추가":
+            submit_btn = b
+            break
+    if not submit_btn:
+        _dialog_force_close(d)
+        raise RuntimeError("컬럼 '추가' 버튼 찾기 실패")
+    _js_click(d, submit_btn)
+    # 저장 swal(timer 1500ms auto) + 다이얼로그 닫힘 대기
+    time.sleep(0.6)
     dismiss_swal(d)
     try:
         WebDriverWait(d, 8).until(
@@ -332,8 +394,8 @@ def add_column(d, term_kr):
             or not drv.find_element(By.CSS_SELECTOR, ".v-dialog--active").is_displayed()
         )
     except TimeoutException:
-        close_any_dialog(d)
-    time.sleep(0.5)
+        _dialog_force_close(d)
+    time.sleep(0.8)
     return True
 
 
