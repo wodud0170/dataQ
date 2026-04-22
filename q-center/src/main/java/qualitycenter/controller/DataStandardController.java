@@ -51,11 +51,16 @@ import com.ndata.quality.service.ExcelUploadService;
 import com.ndata.quality.tool.StringWordAnalyzer;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -2305,6 +2310,102 @@ public class DataStandardController {
 			return String.valueOf((long) cell.getNumericCellValue());
 		}
 		return "";
+	}
+
+	/**
+	 * 분류어 단어 목록 조회 (자동 표준화 수정 모달용).
+	 *
+	 * TB_WORD 에서 WORD_CLSF_YN='Y' + 승인/사용 플래그 필터. 응답에 domainClsfNm 포함되어
+	 * 프론트가 이 값으로 도메인 드롭다운 cascade 로드 가능.
+	 */
+	@GetMapping(value = "/getClassificationWords")
+	public List<Map<String, Object>> getClassificationWords() {
+		List<StdWordVo> all = sqlSessionTemplate.selectList("word.selectAllWords");
+		List<Map<String, Object>> result = new ArrayList<>();
+		for (StdWordVo w : all) {
+			if (!"Y".equals(w.getWordClsfYn())) continue;
+			if (!"Y".equals(w.getAprvYn())) continue;
+			Map<String, Object> m = new HashMap<>();
+			m.put("wordId", w.getId());
+			m.put("wordNm", w.getWordNm());
+			m.put("wordEngAbrvNm", w.getWordEngAbrvNm());
+			m.put("wordEngNm", w.getWordEngNm());
+			m.put("domainClsfNm", w.getDomainClsfNm());
+			result.add(m);
+		}
+		return result;
+	}
+
+	/**
+	 * 분류어로 묶인 도메인 목록 조회 (자동 표준화 수정 모달 cascade 용).
+	 */
+	@GetMapping(value = "/getDomainsByClsf")
+	public List<Map<String, Object>> getDomainsByClsf(@RequestParam("domainClsfNm") String domainClsfNm) {
+		List<StdDomainVo> domains = sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", domainClsfNm);
+		List<Map<String, Object>> result = new ArrayList<>();
+		for (StdDomainVo d : domains) {
+			if (!"Y".equals(d.getAprvYn())) continue;
+			Map<String, Object> m = new HashMap<>();
+			m.put("domainId", d.getId());
+			m.put("domainNm", d.getDomainNm());
+			m.put("dataType", d.getDataType());
+			m.put("dataLen", d.getDataLen());
+			m.put("dataDecimalLen", d.getDataDecimalLen());
+			result.add(m);
+		}
+		return result;
+	}
+
+	/**
+	 * 표준화 추천 엑셀 업로드용 양식 다운로드.
+	 *
+	 * A열에 "한글 컬럼명" 헤더 + 예시 5건. B열은 사용자 참고용 주석 (서버는 A열만 파싱).
+	 */
+	@GetMapping(value = "/downloadTermRecommendTemplate")
+	public void downloadTermRecommendTemplate(HttpServletResponse res) throws Exception {
+		String fileName = "term_recommend_template.xlsx";
+		String[] examples = { "고객명", "주문일자", "상품코드", "결제금액", "등록일시" };
+
+		try (XSSFWorkbook wb = new XSSFWorkbook()) {
+			Sheet sh = wb.createSheet("표준화추천");
+			sh.setColumnWidth(0, 6000);
+			sh.setColumnWidth(1, 8000);
+
+			Font headerFont = wb.createFont();
+			headerFont.setBold(true);
+			headerFont.setColor(IndexedColors.WHITE.getIndex());
+			CellStyle headerStyle = wb.createCellStyle();
+			headerStyle.setFont(headerFont);
+			headerStyle.setFillForegroundColor(IndexedColors.INDIGO.getIndex());
+			headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+			Font noteFont = wb.createFont();
+			noteFont.setItalic(true);
+			noteFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
+			CellStyle noteStyle = wb.createCellStyle();
+			noteStyle.setFont(noteFont);
+
+			Row header = sh.createRow(0);
+			Cell h0 = header.createCell(0);
+			h0.setCellValue("한글 컬럼명");
+			h0.setCellStyle(headerStyle);
+			Cell h1 = header.createCell(1);
+			h1.setCellValue("(참고) B열은 무시됩니다. 한글명만 A열에 입력하세요");
+			h1.setCellStyle(noteStyle);
+
+			for (int i = 0; i < examples.length; i++) {
+				Row r = sh.createRow(i + 1);
+				r.createCell(0).setCellValue(examples[i]);
+				Cell c1 = r.createCell(1);
+				c1.setCellValue("(예시 - 지우고 사용)");
+				c1.setCellStyle(noteStyle);
+			}
+
+			res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+			res.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+			wb.write(res.getOutputStream());
+			res.getOutputStream().flush();
+		}
 	}
 
 	/**

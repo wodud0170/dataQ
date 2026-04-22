@@ -136,12 +136,12 @@
                     </v-list-item>
 
                     <v-list-item link id="nav_datamodelCollection" href="#tab_datamodelCollection"
-                        active-class="ndColor--text" title="데이터 모델 수집"
-                        v-on:click.stop="addTabItem('데이터 모델 수집', 'datamodelCollection');">
+                        active-class="ndColor--text" title="데이터 모델 관리"
+                        v-on:click.stop="addTabItem('데이터 모델 관리', 'datamodelCollection');">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
-                        <v-list-item-title>데이터 모델 수집</v-list-item-title>
+                        <v-list-item-title>데이터 모델 관리</v-list-item-title>
                     </v-list-item>
 
                     <v-list-item link id="nav_datamodelHistory" href="#tab_datamodelHistory"

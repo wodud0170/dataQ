@@ -15,8 +15,16 @@
       <!-- STEP 1: Input -->
       <v-stepper-content step="1">
         <v-card flat class="pa-4">
-          <v-card-title class="px-0 pt-0">한글 컬럼명 입력</v-card-title>
-          <v-card-subtitle class="px-0">엑셀 업로드, 붙여넣기, 또는 직접 입력</v-card-subtitle>
+          <div class="d-flex align-center px-0">
+            <div>
+              <v-card-title class="px-0 pt-0 pb-1">한글 컬럼명 입력</v-card-title>
+              <v-card-subtitle class="px-0 pt-0">엑셀 업로드, 붙여넣기, 또는 직접 입력</v-card-subtitle>
+            </div>
+            <v-spacer></v-spacer>
+            <v-btn small outlined color="ndColor" @click="downloadTemplate">
+              <v-icon small left>mdi-download</v-icon>양식 다운로드
+            </v-btn>
+          </div>
 
           <!-- File upload area -->
           <v-sheet outlined rounded class="pa-6 text-center mb-4"
@@ -221,7 +229,7 @@
     </v-stepper>
 
     <!-- Edit dialog for PARTIAL items -->
-    <v-dialog v-model="editDialog" max-width="750">
+    <v-dialog v-model="editDialog" max-width="1000">
       <v-card v-if="editingItem">
         <v-card-title>단어 정보 수정</v-card-title>
         <v-card-text>
@@ -282,12 +290,53 @@
               </tr>
             </tbody>
           </v-simple-table>
-          <div class="d-flex align-center mt-2" style="gap:8px;">
+          <div class="d-flex align-center flex-wrap mt-2" style="gap:8px;">
             <v-text-field v-model="newWordInput" dense outlined hide-details placeholder="추가할 한글 단어명"
               style="max-width:200px;" @keyup.enter="addEditWord"></v-text-field>
             <v-btn x-small color="primary" outlined @click="addEditWord">
               <v-icon x-small left>mdi-plus</v-icon>단어 추가
             </v-btn>
+            <v-divider vertical class="mx-1"></v-divider>
+            <v-autocomplete v-model="selectedClsfWord" :items="classWords" :item-text="clsfItemText"
+              return-object dense outlined hide-details clearable placeholder="분류어 검색/선택"
+              :loading="loadingClsfWords" :menu-props="{ maxHeight: 320 }"
+              no-data-text="일치하는 분류어 없음"
+              style="max-width:260px;">
+              <template v-slot:selection="{ item }">
+                <span>{{ item.wordNm }}</span>
+                <span v-if="item.domainClsfNm" style="font-size:.75rem; color:#9E9E9E; margin-left:4px;">({{ item.domainClsfNm }})</span>
+              </template>
+              <template v-slot:item="{ item }">
+                <span>{{ item.wordNm }}</span>
+                <span v-if="item.domainClsfNm" style="font-size:.75rem; color:#9E9E9E; margin-left:6px;">[{{ item.domainClsfNm }}]</span>
+              </template>
+            </v-autocomplete>
+            <v-btn x-small color="indigo" dark :disabled="!selectedClsfWord" @click="addClassificationWord">
+              <v-icon x-small left>mdi-plus</v-icon>분류어 추가
+            </v-btn>
+          </div>
+
+          <!-- 용어 도메인 (마지막 단어 기준 독립 편집) -->
+          <div class="d-flex align-center flex-wrap mt-3" style="gap:8px;">
+            <span style="font-size:.85rem; color:#546E7A; font-weight:600; min-width:140px;">
+              용어 도메인 (마지막 단어 기준):
+            </span>
+            <v-select v-model="selectedDomain" :items="domainsInClsf" item-text="domainNm"
+              return-object dense outlined hide-details placeholder="도메인 선택"
+              :disabled="!lastWordDomainClsfNm" :loading="loadingDomains" :menu-props="{ maxHeight: 320 }"
+              style="max-width:280px;" @change="onDomainChange">
+              <template v-slot:selection="{ item }">
+                <span style="font-size:.85rem;">{{ item.domainNm }}</span>
+                <span v-if="item.dataType" style="font-size:.75rem; color:#9E9E9E; margin-left:4px;">({{ domainTypeLabel(item) }})</span>
+              </template>
+              <template v-slot:item="{ item }">
+                <span>{{ item.domainNm }}</span>
+                <span v-if="item.dataType" style="font-size:.75rem; color:#9E9E9E; margin-left:6px;">{{ domainTypeLabel(item) }}</span>
+              </template>
+            </v-select>
+            <span v-if="!lastWordDomainClsfNm" style="font-size:.75rem; color:#B71C1C;">
+              마지막 단어가 분류어가 아니거나 도메인 분류가 지정되지 않았습니다.
+            </span>
           </div>
           <!-- 실시간 조합 미리보기 -->
           <v-sheet class="mt-3 pa-3" style="background:#F5F7FA; border-radius:8px;">
@@ -335,6 +384,14 @@ export default {
       editingItem: null,
       editSplitMode: 0,  // 0=1순위, 1=2순위
       newWordInput: '',  // 단어 추가 입력
+
+      // 분류어/도메인 선택 (수정 모달 cascade)
+      classWords: [],           // [{wordId, wordNm, wordEngAbrvNm, wordEngNm, domainClsfNm}]
+      domainsInClsf: [],        // 선택된 분류어의 도메인 리스트
+      selectedClsfWord: null,   // 현재 선택된 분류어 (object)
+      selectedDomain: null,     // 현재 선택된 도메인 (object)
+      loadingClsfWords: false,
+      loadingDomains: false,
 
       // Step 4
       registerResult: null,
@@ -400,8 +457,48 @@ export default {
     approvedCount: function() {
       return this.analysisResults.filter(function(r) { return r._approved; }).length;
     },
+    // 마지막 단어의 domainClsfNm (도메인 드롭다운 기준)
+    lastWordDomainClsfNm: function() {
+      var ws = this.currentEditWords;
+      if (!ws || ws.length === 0) return '';
+      var last = ws[ws.length - 1];
+      if (!last) return '';
+      if (last.selected && last.selected.domainClsfNm) return last.selected.domainClsfNm;
+      if (last.newWord && last.newWord.domainClsfNm) return last.newWord.domainClsfNm;
+      return '';
+    },
+  },
+  watch: {
+    // 마지막 단어가 바뀔 때마다 도메인 목록 재로드
+    lastWordDomainClsfNm: function(newVal) {
+      if (!this.editDialog) return;
+      if (!newVal) {
+        this.domainsInClsf = [];
+        this.selectedDomain = null;
+        return;
+      }
+      this.loadDomainsForLastWord(newVal);
+    },
   },
   methods: {
+    downloadTemplate: function() {
+      var self = this;
+      axios.get(self.$APIURL.base + 'api/std/downloadTermRecommendTemplate', {
+        responseType: 'blob'
+      }).then(function(res) {
+        var blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var url = window.URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = '표준화추천_양식.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      }).catch(function() {
+        self.$swal.fire({ title: '양식 다운로드 실패', icon: 'error', confirmButtonText: '확인' });
+      });
+    },
     onFileSelect: function(event) {
       var file = event.target.files[0];
       if (!file) return;
@@ -650,7 +747,101 @@ export default {
       this.editingItem = item;
       this.editSplitMode = 0;
       this.newWordInput = '';
+      this.selectedClsfWord = null;
+      this.selectedDomain = null;
+      this.domainsInClsf = [];
       this.editDialog = true;
+      this.loadClassificationWords();
+      // 기존 last word 기준 도메인 드롭다운 초기 로드
+      var clsfNm = this.lastWordDomainClsfNm;
+      if (clsfNm) this.loadDomainsForLastWord(clsfNm);
+    },
+    clsfItemText: function(item) {
+      // autocomplete 검색 대상: 한글명 + 분류명 둘 다 매칭되도록
+      return (item.wordNm || '') + ' ' + (item.domainClsfNm || '');
+    },
+    domainTypeLabel: function(d) {
+      if (!d || !d.dataType) return '';
+      var s = d.dataType;
+      if (d.dataLen) {
+        s += '(' + d.dataLen;
+        if (d.dataDecimalLen && Number(d.dataDecimalLen) > 0) s += ',' + d.dataDecimalLen;
+        s += ')';
+      }
+      return s;
+    },
+    loadClassificationWords: function() {
+      var self = this;
+      if (self.classWords.length > 0) return; // 세션 캐시
+      self.loadingClsfWords = true;
+      axios.get(self.$APIURL.base + 'api/std/getClassificationWords').then(function(res) {
+        self.classWords = res.data || [];
+      }).catch(function() {
+        self.$swal.fire({ title: '분류어 조회 실패', icon: 'error', confirmButtonText: '확인' });
+      }).finally(function() {
+        self.loadingClsfWords = false;
+      });
+    },
+    loadDomainsForLastWord: function(clsfNm) {
+      var self = this;
+      if (!clsfNm) { self.domainsInClsf = []; self.selectedDomain = null; return; }
+      self.loadingDomains = true;
+      axios.get(self.$APIURL.base + 'api/std/getDomainsByClsf', {
+        params: { domainClsfNm: clsfNm }
+      }).then(function(res) {
+        self.domainsInClsf = res.data || [];
+        // 기존 editingItem 의 추천 도메인이 현재 목록에 있으면 preselect, 없으면 첫번째
+        var match = null;
+        if (self.editingItem && self.editingItem.recommendedDomainNm) {
+          match = self.domainsInClsf.find(function(d) { return d.domainNm === self.editingItem.recommendedDomainNm; });
+        }
+        self.selectedDomain = match || (self.domainsInClsf.length > 0 ? self.domainsInClsf[0] : null);
+      }).catch(function() {
+        self.$swal.fire({ title: '도메인 조회 실패', icon: 'error', confirmButtonText: '확인' });
+      }).finally(function() {
+        self.loadingDomains = false;
+      });
+    },
+    onDomainChange: function() {
+      if (!this.selectedDomain || !this.editingItem) return;
+      this.editingItem.recommendedDomainId = this.selectedDomain.domainId;
+      this.editingItem.recommendedDomainNm = this.selectedDomain.domainNm;
+      this.editingItem.recommendedDataType = this.selectedDomain.dataType;
+      this.editingItem.recommendedDataLen = this.selectedDomain.dataLen;
+      this.editingItem.recommendedDataDecimalLen = this.selectedDomain.dataDecimalLen;
+      this.recalcItemStatus(this.editingItem);
+    },
+    addClassificationWord: function() {
+      var self = this;
+      if (!self.selectedClsfWord) {
+        self.$swal.fire({ title: '분류어를 선택해주세요.', icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
+      var c = self.selectedClsfWord;
+      // addEditWord 의 MATCHED 분기와 동일 구조로 push. 도메인은 watcher 가 자동 연결
+      var newWord = {
+        wordNm: c.wordNm,
+        status: 'MATCHED',
+        selected: {
+          wordId: c.wordId,
+          wordNm: c.wordNm,
+          wordEngAbrvNm: c.wordEngAbrvNm,
+          wordEngNm: c.wordEngNm,
+          domainClsfNm: c.domainClsfNm || ''
+        },
+        candidates: [{
+          wordId: c.wordId,
+          wordNm: c.wordNm,
+          wordEngAbrvNm: c.wordEngAbrvNm,
+          wordEngNm: c.wordEngNm,
+          domainClsfNm: c.domainClsfNm || ''
+        }],
+        newWord: { wordEngAbrvNm: '', wordEngNm: '', domainClsfNm: '' }
+      };
+      self.currentEditWords.push(newWord);
+      self.recalcItemStatus(self.editingItem);
+      // 분류어 입력 드롭다운 초기화 (도메인은 watcher 가 lastWord 변경 감지해서 자동 반영)
+      self.selectedClsfWord = null;
     },
     registerSingleWord: function(w) {
       var self = this;
