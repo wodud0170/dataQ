@@ -202,11 +202,11 @@ def main():
         click_nav_menu(driver, "단어", nav_id="nav_word", parent_group_text="데이터 표준 사전")
         time.sleep(2)
 
-        # "등록" 버튼 클릭
+        # "등록 신청" (일반 사용자) 또는 "등록" (관리자) 버튼 클릭
         add_btn = None
         buttons = driver.find_elements(By.CSS_SELECTOR, ".v-btn")
         for btn in buttons:
-            if btn.text.strip() == "등록":
+            if btn.text.strip() in ("등록 신청", "등록"):
                 add_btn = btn
                 break
 
@@ -258,11 +258,11 @@ def main():
         time.sleep(0.5)
         screenshot(driver, "step1_filled")
 
-        # 모달 하단 "등록" 버튼 DOM 클릭
+        # 모달 하단 "등록 신청" (일반) 또는 "등록" (관리자) 버튼 DOM 클릭
         modal_btns = modal.find_elements(By.CSS_SELECTOR, ".v-btn")
         save_btn = None
         for btn in reversed(modal_btns):
-            if btn.text.strip() == "등록":
+            if btn.text.strip() in ("등록 신청", "등록"):
                 save_btn = btn
                 break
         if save_btn:

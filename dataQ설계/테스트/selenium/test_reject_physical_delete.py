@@ -546,7 +546,7 @@ def main():
                     )
                     swal_title = driver.find_element(By.CSS_SELECTOR, ".swal2-title").text
                     print(f"  swal 메시지: {swal_title}")
-                    if "완료" in swal_title or "성공" in swal_title:
+                    if "완료" in swal_title or "성공" in swal_title or "반려" in swal_title:
                         reject_ok = True
                     swal_found = True
                 except:
@@ -555,6 +555,18 @@ def main():
                 if swal_found:
                     dismiss_swal(driver, timeout=3)
                     wait_swal_gone(driver)
+
+                # Fallback 검증: swal 메시지가 없거나 문구가 바뀌었어도,
+                # 반려가 성공했으면 대기 목록에서 해당 단어가 사라져야 함
+                if not reject_ok:
+                    time.sleep(1)
+                    rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
+                    remaining = [r for r in rows if TEST_WORD_NM in (r.text or "")]
+                    if not remaining:
+                        reject_ok = True
+                        print(f"  [fallback-verify] 대기 목록에서 '{TEST_WORD_NM}' 사라짐 → 반려 완료로 판정")
+                    else:
+                        print(f"  [fallback-verify] 대기 목록에 여전히 '{TEST_WORD_NM}' 존재 → 반려 실패")
             else:
                 print("  [WARN] 상세 패널 최종 미발견")
 

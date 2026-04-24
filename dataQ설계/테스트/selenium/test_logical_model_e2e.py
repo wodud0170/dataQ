@@ -306,134 +306,103 @@ def _find_button_in_dialog(d, text):
     return None
 
 
-def add_column(d, term_kr):
-    """컬럼 추가 다이얼로그 열고 한글명 입력→[표준 변환]→추가.
-       표준 매칭 성공 시 True, 미매칭이면 False 리턴."""
-    # 이전 잔존 다이얼로그/오버레이 정리
-    _dialog_force_close(d)
+def _select_add_target_table_if_needed(d, table_kr):
+    """'추가 대상 테이블' autocomplete 가 비어있으면 지정 테이블로 채움.
+       53번 재설계 후 Column.vue 는 그리드 인라인 편집 방식이라
+       addTargetObjNm 이 지정돼야 btn-add-col-row 가 활성화됨."""
+    # 툴바 row 의 두 번째 autocomplete (첫 번째는 상단 모델 선택)
+    # "추가 대상 테이블" 라벨 옆 autocomplete input 찾기
+    labels = d.find_elements(By.XPATH, "//span[contains(@class,'filterLabel') and normalize-space(text())='추가 대상 테이블']")
+    if not labels:
+        raise RuntimeError("'추가 대상 테이블' 라벨 없음 — UI 구조 변경 감지")
+    # 라벨 다음에 오는 autocomplete input
+    ac_input = labels[0].find_element(By.XPATH, "./following::input[contains(@type,'text')][1]")
+    # 이미 값이 있으면 스킵
+    if (ac_input.get_attribute("value") or "").strip():
+        return
+    _js_click(d, ac_input)
     time.sleep(0.3)
-    if not click_button_by_text(d, "컬럼 추가"):
-        raise RuntimeError("'컬럼 추가' 버튼 클릭 실패")
-    wait_visible(d, By.CSS_SELECTOR, ".v-dialog--active")
+    ac_input.clear()
+    ac_input.send_keys(table_kr)
     time.sleep(1.0)
-    # 소속 테이블 선택 (첫 autocomplete)
-    dialog_acs = d.find_elements(By.CSS_SELECTOR, ".v-dialog--active .v-autocomplete input[type='text']")
-    if not dialog_acs:
-        _dialog_force_close(d)
-        raise RuntimeError("다이얼로그 내 autocomplete input 없음")
-    obj_ac = dialog_acs[0]
-    _js_click(d, obj_ac)
-    time.sleep(0.8)
     items = d.find_elements(By.CSS_SELECTOR, ".menuable__content__active .v-list-item")
     if not items:
         items = d.find_elements(By.CSS_SELECTOR, "[role='option']")
-    if items:
-        _js_click(d, items[0])
-        time.sleep(0.5)
-    # 드롭다운이 완전히 닫힐 때까지 대기 (다른 요소 클릭하기 전에)
-    for _ in range(10):
-        menus = d.find_elements(By.CSS_SELECTOR, ".menuable__content__active")
-        if not menus or not any(m.is_displayed() for m in menus):
-            break
-        time.sleep(0.2)
-    # 한글명 입력 (label에 "컬럼 한글명" 포함)
-    inputs = d.find_elements(By.CSS_SELECTOR, ".v-dialog--active input")
-    kr_input = None
-    for inp in inputs:
-        try:
-            parent = inp.find_element(By.XPATH, "./ancestor::div[contains(@class,'v-text-field')][1]")
-            lab = parent.find_element(By.CSS_SELECTOR, "label").text
-            if "컬럼 한글명" in lab:
-                kr_input = inp
-                break
-        except Exception:
-            continue
-    if not kr_input:
-        _dialog_force_close(d)
-        raise RuntimeError("'컬럼 한글명' 필드 없음")
-    kr_input.clear()
-    kr_input.send_keys(term_kr)
-    time.sleep(0.3)
-    # [표준 변환] 버튼 — JS로 클릭하여 overlay 간섭 회피
-    btn = _find_button_in_dialog(d, "표준 변환")
-    if btn:
-        _js_click(d, btn)
-    else:
-        kr_input.send_keys(Keys.ENTER)
-    # matched-panel 또는 unmatched-panel 대기
-    try:
-        WebDriverWait(d, 8).until(
-            lambda drv: drv.find_elements(By.CSS_SELECTOR, ".v-dialog--active .matched-panel")
-            or drv.find_elements(By.CSS_SELECTOR, ".v-dialog--active .unmatched-panel")
-        )
-    except TimeoutException:
-        pass
-    shot(d, f"04_apply_{term_kr}")
-    matched = bool(d.find_elements(By.CSS_SELECTOR, ".v-dialog--active .matched-panel"))
-    if not matched:
-        print(f"  [skip] '{term_kr}' 표준 매칭 실패 → 컬럼 추가 스킵")
-        _dialog_force_close(d)
-        return False
-    # "추가" 버튼 JS 클릭 (disabled 체크는 Vue가 resolveState=matched 면 풀어줌)
-    submit_btn = _find_button_in_dialog(d, "추가")
-    # "비표준으로 추가"도 "추가" 포함이라 first-match 버튼일 수 있음 — matched이면 텍스트가 정확히 "추가"
-    for b in d.find_elements(By.CSS_SELECTOR, ".v-dialog--active button"):
-        if b.is_displayed() and (b.text or "").strip() == "추가":
-            submit_btn = b
-            break
-    if not submit_btn:
-        _dialog_force_close(d)
-        raise RuntimeError("컬럼 '추가' 버튼 찾기 실패")
-    _js_click(d, submit_btn)
-    # 저장 swal(timer 1500ms auto) + 다이얼로그 닫힘 대기
-    time.sleep(0.6)
-    dismiss_swal(d)
-    try:
-        WebDriverWait(d, 8).until(
-            lambda drv: not drv.find_elements(By.CSS_SELECTOR, ".v-dialog--active")
-            or not drv.find_element(By.CSS_SELECTOR, ".v-dialog--active").is_displayed()
-        )
-    except TimeoutException:
-        _dialog_force_close(d)
+    chosen = None
+    for it in items:
+        if table_kr in (it.text or ""):
+            chosen = it; break
+    if chosen is None and items:
+        chosen = items[0]
+    if chosen is None:
+        raise RuntimeError(f"'추가 대상 테이블' 목록에서 '{table_kr}' 선택 옵션 없음")
+    _js_click(d, chosen)
     time.sleep(0.8)
-    return True
+
+
+def add_column_row(d, term_kr):
+    """그리드 인라인 편집 방식 컬럼 1행 추가.
+       + 컬럼 추가 버튼 클릭 → 빈 행 생성 → 마지막 빈 행의 한글명 input 에 타이핑.
+       저장은 호출부에서 일괄 수행."""
+    add_btn = WebDriverWait(d, 5).until(
+        EC.element_to_be_clickable((By.ID, "btn-add-col-row"))
+    )
+    _js_click(d, add_btn)
+    time.sleep(0.4)
+    # 새로 추가된 행의 "컬럼 한글명" placeholder 입력 필드 — 마지막(가장 최근 추가) 항목 사용
+    kr_inputs = d.find_elements(By.XPATH, "//input[@placeholder='컬럼 한글명']")
+    if not kr_inputs:
+        raise RuntimeError("+ 컬럼 추가 후 한글명 입력 필드 없음")
+    target = kr_inputs[-1]
+    d.execute_script("arguments[0].scrollIntoView({block:'center'});", target)
+    time.sleep(0.2)
+    target.clear()
+    target.send_keys(term_kr)
+    time.sleep(0.3)
+
+
+def _click_save_attrs(d):
+    save_btn = WebDriverWait(d, 5).until(
+        EC.element_to_be_clickable((By.ID, "btn-save-attrs"))
+    )
+    _js_click(d, save_btn)
+    time.sleep(1.5)
+    dismiss_swal(d)
+    time.sleep(1.0)
 
 
 def step4_add_columns(d):
+    """53번 재설계 기반 그리드 인라인 편집.
+       한글명만 타이핑, 표준 변환 성공/실패 모두 허용.
+       53번 규칙: 실패 시 TMP_COL_{n} + VARCHAR(255) 로 비표준 자동 저장."""
     nav(d, "dmGroup", "nav_datamodelStatusColumn")
     select_autocomplete(d, "데이터모델명", MODEL_NAME)
     time.sleep(1)
+    _select_add_target_table_if_needed(d, TABLE_KR)
+    time.sleep(0.5)
     added = 0
     for term in COLUMN_TRIES:
         try:
-            if add_column(d, term):
-                added += 1
+            add_column_row(d, term)
+            added += 1
         except Exception as e:
-            print(f"  [warn] '{term}' 추가 중 예외: {e}")
-            close_any_dialog(d)
-        if added >= 2:
-            break
+            print(f"  [warn] '{term}' 그리드 추가 중 예외: {e}")
     shot(d, "04_columns_added")
     if added == 0:
         raise RuntimeError(
-            f"용어사전 매칭 0건 — 후보({COLUMN_TRIES}) 모두 표준 적용 실패. TB_TERMS 확인 필요"
+            f"컬럼 0건 추가 — btn-add-col-row 가 끝까지 비활성. 테이블 선택/권한 확인"
         )
-    print(f"  [info] 컬럼 {added}건 추가 성공")
+    print(f"  [info] 그리드에 {added}건 추가, 저장 시도")
+    _click_save_attrs(d)
 
 
 def step6_ddl(d):
     nav(d, "dmGroup", "nav_datamodelStatus")
     time.sleep(2)
-    # 그리드에서 MODEL_NAME row 찾기
-    page = d.page_source
-    if MODEL_NAME not in page:
-        shot(d, "06_missing_model")
-        raise RuntimeError(f"모델 현황에 '{MODEL_NAME}' 없음")
     shot(d, "06a_status")
-    # DDL 다운로드 API 직접 호출로 응답 검증 (UI 클릭은 세션 쿠키 공유 필요)
-    # 세션 쿠키를 가져와서 requests로 호출
+    # 데이터모델 현황 화면은 가상 스크롤 사용 → page_source 검색 불안정.
+    # API 로만 모델 존재 확인 (step 2 에서 만든 것이 실제로 있는지가 핵심).
     cookies = {c["name"]: c["value"] for c in d.get_cookies()}
-    # dataModelId 얻기 위해 모델 목록 API 사용
     r = requests.post(
         BASE_URL + "/api/dm/getDataModelStatsList", cookies=cookies, json={}, timeout=10
     )
@@ -441,7 +410,8 @@ def step6_ddl(d):
     models = r.json()
     target = next((m for m in models if m.get("dataModelNm") == MODEL_NAME), None)
     if not target:
-        raise RuntimeError(f"API에서 모델 '{MODEL_NAME}' 조회 실패")
+        shot(d, "06_missing_model")
+        raise RuntimeError(f"API 에서 모델 '{MODEL_NAME}' 조회 실패 (step2 에서 생성했는데 사라짐)")
     dm_id = target.get("dataModelId")
     r2 = requests.get(
         BASE_URL + "/api/dm/downloadDdl",

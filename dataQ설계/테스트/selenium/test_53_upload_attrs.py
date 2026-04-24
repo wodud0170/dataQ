@@ -205,15 +205,23 @@ def step4_upload_and_commit(d):
     time.sleep(1)
     shot(d, "04a_model_selected")
 
-    file_input = d.find_element(By.CSS_SELECTOR, "input[type='file'][accept='.xlsx']")
+    # keep-alive 로 Table/Column 두 컴포넌트 file input 이 공존할 수 있음.
+    # 컬럼 업로드 버튼(id=btn-upload-attrs) 이후의 첫 file input 으로 고정.
+    file_input = d.find_element(
+        By.XPATH,
+        "//*[@id='btn-upload-attrs']/following::input[@type='file'][1]"
+    )
     d.execute_script("arguments[0].style.display='block';", file_input)
     file_input.send_keys(state["xlsx"])
-    time.sleep(2)
-    shot(d, "04b_preview_dialog")
-
-    dialogs = d.find_elements(By.CSS_SELECTOR, ".v-dialog--active")
-    if not dialogs:
+    # preview 다이얼로그 오픈 대기 (서버 응답 기다림 포함)
+    try:
+        WebDriverWait(d, 15).until(
+            EC.visibility_of_element_located((By.CSS_SELECTOR, ".v-dialog--active"))
+        )
+    except TimeoutException:
+        shot(d, "04b_preview_dialog")
         raise RuntimeError("preview 다이얼로그 오픈 실패")
+    shot(d, "04b_preview_dialog")
 
     commit = WebDriverWait(d, 8).until(
         EC.presence_of_element_located((By.ID, "btn-upload-attrs-commit"))
