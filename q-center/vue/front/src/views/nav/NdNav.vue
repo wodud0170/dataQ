@@ -411,6 +411,22 @@
                         <v-list-item-title>데이터 소스</v-list-item-title>
                     </v-list-item>
 
+                    <v-list-item link id="nav_scheduleManage" href="#tab_scheduleManage" active-class="ndColor--text" title="진단 스케줄"
+                        v-on:click.stop=" addTabItem('진단 스케줄', 'scheduleManage'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>진단 스케줄</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_scheduleLog" href="#tab_scheduleLog" active-class="ndColor--text" title="스케줄 실행 이력"
+                        v-on:click.stop=" addTabItem('스케줄 실행 이력', 'scheduleLog'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>스케줄 실행 이력</v-list-item-title>
+                    </v-list-item>
+
                 </v-list-group>
 
                 <!-- 마이페이지 -->

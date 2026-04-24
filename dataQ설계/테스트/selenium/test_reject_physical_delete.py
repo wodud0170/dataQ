@@ -561,12 +561,12 @@ def main():
                 if not reject_ok:
                     time.sleep(1)
                     rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
-                    remaining = [r for r in rows if TEST_WORD_NM in (r.text or "")]
+                    remaining = [r for r in rows if TEST_WORD in (r.text or "")]
                     if not remaining:
                         reject_ok = True
-                        print(f"  [fallback-verify] 대기 목록에서 '{TEST_WORD_NM}' 사라짐 → 반려 완료로 판정")
+                        print(f"  [fallback-verify] 대기 목록에서 '{TEST_WORD}' 사라짐 → 반려 완료로 판정")
                     else:
-                        print(f"  [fallback-verify] 대기 목록에 여전히 '{TEST_WORD_NM}' 존재 → 반려 실패")
+                        print(f"  [fallback-verify] 대기 목록에 여전히 '{TEST_WORD}' 존재 → 반려 실패")
             else:
                 print("  [WARN] 상세 패널 최종 미발견")
 

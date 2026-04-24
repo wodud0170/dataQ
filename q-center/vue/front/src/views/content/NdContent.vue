@@ -224,6 +224,18 @@
                     <datasource :key="datasourceKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'scheduleManage'" id="tab_scheduleManage" class="tab_contents"
+                :class="{ active: this.activeContent === 'scheduleManage' }">
+                <keep-alive>
+                    <scheduleManage :key="scheduleManageKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'scheduleLog'" id="tab_scheduleLog" class="tab_contents"
+                :class="{ active: this.activeContent === 'scheduleLog' }">
+                <keep-alive>
+                    <scheduleLog :key="scheduleLogKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'system'" id="tab_system" class="tab_contents"
                 :class="{ active: this.activeContent === 'system' }">
                 <keep-alive>
@@ -329,6 +341,8 @@ import MMUser from "./../../components/MMUser.vue"
 import MMRoles from "./../../components/MMRoles.vue"
 import MMApproval from "./../../components/MMApproval.vue"
 import MMDatasource from "./../../components/MMDatasource.vue"
+import DSScheduleManage from "./../../components/DSScheduleManage.vue"
+import DSScheduleLog from "./../../components/DSScheduleLog.vue"
 import MMSystem from "./../../components/MMSystem.vue"
 import ANDscurrent from "./../../components/ANDscurrent.vue"
 import ANDqcurrent from "./../../components/ANDqcurrent.vue"
@@ -397,6 +411,8 @@ export default {
             rolesKey: this.createUUID(),
             approvalKey: this.createUUID(),
             datasourceKey: this.createUUID(),
+            scheduleManageKey: this.createUUID(),
+            scheduleLogKey: this.createUUID(),
             systemKey: this.createUUID(),
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
@@ -441,6 +457,8 @@ export default {
         "roles": MMRoles,
         "approval": MMApproval,
         "datasource": MMDatasource,
+        "scheduleManage": DSScheduleManage,
+        "scheduleLog": DSScheduleLog,
         "system": MMSystem,
         "scurrent": ANDscurrent,
         "qcurrent": ANDqcurrent,
@@ -555,6 +573,12 @@ export default {
                     break;
                 case "datasource":
                     this.datasourceKey = this.createUUID();
+                    break;
+                case "scheduleManage":
+                    this.scheduleManageKey = this.createUUID();
+                    break;
+                case "scheduleLog":
+                    this.scheduleLogKey = this.createUUID();
                     break;
                 case "system":
                     this.systemKey = this.createUUID();
