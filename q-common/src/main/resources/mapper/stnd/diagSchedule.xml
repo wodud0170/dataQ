@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="diagSchedule">
+
+    <!-- 진단 스케줄러 매퍼 (65번 문서) -->
+
+    <resultMap id="diagScheduleMap" type="com.ndata.quality.model.std.DiagScheduleVo">
+        <id     property="scheduleId"        column="SCHEDULE_ID"/>
+        <result property="scheduleNm"        column="SCHEDULE_NM"/>
+        <result property="diagType"          column="DIAG_TYPE"/>
+        <result property="dataModelId"       column="DATA_MODEL_ID"/>
+        <result property="dataModelNm"       column="DATA_MODEL_NM"/>
+        <result property="scheduleType"      column="SCHEDULE_TYPE"/>
+        <result property="repeatCycle"       column="REPEAT_CYCLE"/>
+        <result property="repeatTime"        column="REPEAT_TIME"/>
+        <result property="repeatDayOfWeek"   column="REPEAT_DAY_OF_WEEK"/>
+        <result property="repeatDayOfMonth"  column="REPEAT_DAY_OF_MONTH"/>
+        <result property="cronExpr"          column="CRON_EXPR"/>
+        <result property="useYn"             column="USE_YN"/>
+        <result property="lastExecDt"        column="LAST_EXEC_DT"/>
+        <result property="lastExecStatus"    column="LAST_EXEC_STATUS"/>
+        <result property="lastExecLogId"     column="LAST_EXEC_LOG_ID"/>
+        <result property="cretUserId"        column="CRET_USER_ID"/>
+        <result property="cretDt"            column="CRET_DT"/>
+        <result property="updtUserId"        column="UPDT_USER_ID"/>
+        <result property="updtDt"            column="UPDT_DT"/>
+    </resultMap>
+
+    <resultMap id="diagScheduleLogMap" type="com.ndata.quality.model.std.DiagScheduleLogVo">
+        <id     property="logId"              column="LOG_ID"/>
+        <result property="scheduleId"         column="SCHEDULE_ID"/>
+        <result property="scheduleNmSnapshot" column="SCHEDULE_NM_SNAPSHOT"/>
+        <result property="execDt"             column="EXEC_DT"/>
+        <result property="execEndDt"          column="EXEC_END_DT"/>
+        <result property="execStatus"         column="EXEC_STATUS"/>
+        <result property="triggerType"        column="TRIGGER_TYPE"/>
+        <result property="diagType"           column="DIAG_TYPE"/>
+        <result property="diagJobId"          column="DIAG_JOB_ID"/>
+        <result property="structDiagId"       column="STRUCT_DIAG_ID"/>
+        <result property="errorMsg"           column="ERROR_MSG"/>
+        <result property="execDurationSec"    column="EXEC_DURATION_SEC"/>
+    </resultMap>
+
+    <!-- ============ SCHEDULE CRUD ============ -->
+
+    <select id="selectScheduleList" parameterType="map" resultMap="diagScheduleMap">
+        SELECT S.SCHEDULE_ID, S.SCHEDULE_NM, S.DIAG_TYPE, S.DATA_MODEL_ID,
+               DM.DM_NM AS DATA_MODEL_NM,
+               S.SCHEDULE_TYPE, S.REPEAT_CYCLE, S.REPEAT_TIME,
+               S.REPEAT_DAY_OF_WEEK, S.REPEAT_DAY_OF_MONTH, S.CRON_EXPR,
+               S.USE_YN, S.LAST_EXEC_DT, S.LAST_EXEC_STATUS, S.LAST_EXEC_LOG_ID,
+               S.CRET_USER_ID, S.CRET_DT, S.UPDT_USER_ID, S.UPDT_DT
+          FROM TB_DIAG_SCHEDULE S
+          LEFT JOIN TB_DATA_MODEL DM ON DM.DM_ID = S.DATA_MODEL_ID
+         <where>
+            <if test="dataModelId != null and dataModelId != ''">
+                AND S.DATA_MODEL_ID = #{dataModelId}
+            </if>
+            <if test="diagType != null and diagType != ''">
+                AND S.DIAG_TYPE = #{diagType}
+            </if>
+            <if test="useYn != null and useYn != ''">
+                AND S.USE_YN = #{useYn}
+            </if>
+         </where>
+         ORDER BY S.CRET_DT DESC
+    </select>
+
+    <select id="selectScheduleById" parameterType="String" resultMap="diagScheduleMap">
+        SELECT S.SCHEDULE_ID, S.SCHEDULE_NM, S.DIAG_TYPE, S.DATA_MODEL_ID,
+               DM.DM_NM AS DATA_MODEL_NM,
+               S.SCHEDULE_TYPE, S.REPEAT_CYCLE, S.REPEAT_TIME,
+               S.REPEAT_DAY_OF_WEEK, S.REPEAT_DAY_OF_MONTH, S.CRON_EXPR,
+               S.USE_YN, S.LAST_EXEC_DT, S.LAST_EXEC_STATUS, S.LAST_EXEC_LOG_ID,
+               S.CRET_USER_ID, S.CRET_DT, S.UPDT_USER_ID, S.UPDT_DT
+          FROM TB_DIAG_SCHEDULE S
+          LEFT JOIN TB_DATA_MODEL DM ON DM.DM_ID = S.DATA_MODEL_ID
+         WHERE S.SCHEDULE_ID = #{scheduleId}
+    </select>
+
+    <!-- 스케줄러가 매 주기마다 호출: 활성 스케줄 전량 -->
+    <select id="selectActiveSchedules" resultMap="diagScheduleMap">
+        SELECT SCHEDULE_ID, SCHEDULE_NM, DIAG_TYPE, DATA_MODEL_ID,
+               SCHEDULE_TYPE, REPEAT_CYCLE, REPEAT_TIME,
+               REPEAT_DAY_OF_WEEK, REPEAT_DAY_OF_MONTH, CRON_EXPR,
+               USE_YN, LAST_EXEC_DT, LAST_EXEC_STATUS, LAST_EXEC_LOG_ID
+          FROM TB_DIAG_SCHEDULE
+         WHERE USE_YN = 'Y'
+    </select>
+
+    <insert id="insertSchedule" parameterType="com.ndata.quality.model.std.DiagScheduleVo">
+        INSERT INTO TB_DIAG_SCHEDULE (
+            SCHEDULE_ID, SCHEDULE_NM, DIAG_TYPE, DATA_MODEL_ID,
+            SCHEDULE_TYPE, REPEAT_CYCLE, REPEAT_TIME,
+            REPEAT_DAY_OF_WEEK, REPEAT_DAY_OF_MONTH, CRON_EXPR,
+            USE_YN, CRET_USER_ID, CRET_DT
+        ) VALUES (
+            #{scheduleId}, #{scheduleNm}, #{diagType}, #{dataModelId},
+            #{scheduleType}, #{repeatCycle}, #{repeatTime},
+            #{repeatDayOfWeek}, #{repeatDayOfMonth}, #{cronExpr},
+            COALESCE(#{useYn}, 'Y'), #{cretUserId}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateSchedule" parameterType="com.ndata.quality.model.std.DiagScheduleVo">
+        UPDATE TB_DIAG_SCHEDULE
+           SET SCHEDULE_NM         = #{scheduleNm},
+               DIAG_TYPE           = #{diagType},
+               DATA_MODEL_ID       = #{dataModelId},
+               SCHEDULE_TYPE       = #{scheduleType},
+               REPEAT_CYCLE        = #{repeatCycle},
+               REPEAT_TIME         = #{repeatTime},
+               REPEAT_DAY_OF_WEEK  = #{repeatDayOfWeek},
+               REPEAT_DAY_OF_MONTH = #{repeatDayOfMonth},
+               CRON_EXPR           = #{cronExpr},
+               USE_YN              = #{useYn},
+               UPDT_USER_ID        = #{updtUserId},
+               UPDT_DT             = CURRENT_TIMESTAMP
+         WHERE SCHEDULE_ID = #{scheduleId}
+    </update>
+
+    <update id="updateScheduleUseYn" parameterType="map">
+        UPDATE TB_DIAG_SCHEDULE
+           SET USE_YN       = #{useYn},
+               UPDT_USER_ID = #{updtUserId},
+               UPDT_DT      = CURRENT_TIMESTAMP
+         WHERE SCHEDULE_ID = #{scheduleId}
+    </update>
+
+    <update id="updateScheduleLastExec" parameterType="map">
+        UPDATE TB_DIAG_SCHEDULE
+           SET LAST_EXEC_DT     = CURRENT_TIMESTAMP,
+               LAST_EXEC_STATUS = #{status},
+               LAST_EXEC_LOG_ID = #{logId}
+         WHERE SCHEDULE_ID = #{scheduleId}
+    </update>
+
+    <delete id="deleteSchedule" parameterType="String">
+        DELETE FROM TB_DIAG_SCHEDULE WHERE SCHEDULE_ID = #{scheduleId}
+    </delete>
+
+    <!-- 동시 실행 방지용 중복 체크 (같은 모델+진단유형, RUNNING 상태) -->
+    <select id="countRunningByModelAndType" parameterType="map" resultType="int">
+        SELECT COUNT(1) FROM TB_DIAG_SCHEDULE_LOG L
+          JOIN TB_DIAG_SCHEDULE S ON S.SCHEDULE_ID = L.SCHEDULE_ID
+         WHERE S.DATA_MODEL_ID = #{dataModelId}
+           AND L.DIAG_TYPE     = #{diagType}
+           AND L.EXEC_STATUS   = 'RUNNING'
+    </select>
+
+    <!-- ============ LOG ============ -->
+
+    <select id="selectLogList" parameterType="map" resultMap="diagScheduleLogMap">
+        SELECT L.LOG_ID, L.SCHEDULE_ID, L.SCHEDULE_NM_SNAPSHOT,
+               L.EXEC_DT, L.EXEC_END_DT, L.EXEC_STATUS, L.TRIGGER_TYPE,
+               L.DIAG_TYPE, L.DIAG_JOB_ID, L.STRUCT_DIAG_ID,
+               L.ERROR_MSG, L.EXEC_DURATION_SEC
+          FROM TB_DIAG_SCHEDULE_LOG L
+         <where>
+            <if test="scheduleId != null and scheduleId != ''">
+                AND L.SCHEDULE_ID = #{scheduleId}
+            </if>
+            <if test="execStatus != null and execStatus != ''">
+                AND L.EXEC_STATUS = #{execStatus}
+            </if>
+            <if test="fromDt != null and fromDt != ''">
+                AND L.EXEC_DT &gt;= #{fromDt}::timestamp
+            </if>
+            <if test="toDt != null and toDt != ''">
+                AND L.EXEC_DT &lt;= #{toDt}::timestamp
+            </if>
+         </where>
+         ORDER BY L.EXEC_DT DESC
+         LIMIT COALESCE(#{limit}, 200)
+    </select>
+
+    <select id="selectLogById" parameterType="String" resultMap="diagScheduleLogMap">
+        SELECT LOG_ID, SCHEDULE_ID, SCHEDULE_NM_SNAPSHOT,
+               EXEC_DT, EXEC_END_DT, EXEC_STATUS, TRIGGER_TYPE,
+               DIAG_TYPE, DIAG_JOB_ID, STRUCT_DIAG_ID,
+               ERROR_MSG, EXEC_DURATION_SEC
+          FROM TB_DIAG_SCHEDULE_LOG
+         WHERE LOG_ID = #{logId}
+    </select>
+
+    <insert id="insertLog" parameterType="com.ndata.quality.model.std.DiagScheduleLogVo">
+        INSERT INTO TB_DIAG_SCHEDULE_LOG (
+            LOG_ID, SCHEDULE_ID, SCHEDULE_NM_SNAPSHOT,
+            EXEC_DT, EXEC_STATUS, TRIGGER_TYPE,
+            DIAG_TYPE, DIAG_JOB_ID, STRUCT_DIAG_ID
+        ) VALUES (
+            #{logId}, #{scheduleId}, #{scheduleNmSnapshot},
+            CURRENT_TIMESTAMP, COALESCE(#{execStatus}, 'RUNNING'), #{triggerType},
+            #{diagType}, #{diagJobId}, #{structDiagId}
+        )
+    </insert>
+
+    <update id="setLogDiagJobId" parameterType="map">
+        UPDATE TB_DIAG_SCHEDULE_LOG
+           SET DIAG_JOB_ID = #{diagJobId}
+         WHERE LOG_ID = #{logId}
+    </update>
+
+    <update id="setLogStructDiagId" parameterType="map">
+        UPDATE TB_DIAG_SCHEDULE_LOG
+           SET STRUCT_DIAG_ID = #{structDiagId}
+         WHERE LOG_ID = #{logId}
+    </update>
+
+    <update id="updateLogFinish" parameterType="map">
+        UPDATE TB_DIAG_SCHEDULE_LOG
+           SET EXEC_END_DT      = CURRENT_TIMESTAMP,
+               EXEC_STATUS      = #{execStatus},
+               ERROR_MSG        = #{errorMsg},
+               EXEC_DURATION_SEC= EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - EXEC_DT))::INTEGER,
+               DIAG_JOB_ID      = COALESCE(#{diagJobId},    DIAG_JOB_ID),
+               STRUCT_DIAG_ID   = COALESCE(#{structDiagId}, STRUCT_DIAG_ID)
+         WHERE LOG_ID = #{logId}
+    </update>
+
+    <!-- 타임아웃 감시: 너무 오래 RUNNING 인 이력을 EXPIRED 로 마감 -->
+    <update id="expireStaleRunningLogs" parameterType="map">
+        UPDATE TB_DIAG_SCHEDULE_LOG
+           SET EXEC_STATUS      = 'ERROR',
+               ERROR_MSG        = '[TIMEOUT] 진단 실행이 비정상 종료됨 (타임아웃 초과)',
+               EXEC_END_DT      = CURRENT_TIMESTAMP,
+               EXEC_DURATION_SEC= EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - EXEC_DT))::INTEGER
+         WHERE EXEC_STATUS = 'RUNNING'
+           AND EXEC_DT &lt; (CURRENT_TIMESTAMP - (#{minutes} || ' minutes')::interval)
+    </update>
+
+    <!-- 스케줄러 완료 감지 폴링용: RUNNING 이력 전부 조회 -->
+    <select id="selectRunningLogs" resultMap="diagScheduleLogMap">
+        SELECT LOG_ID, SCHEDULE_ID, SCHEDULE_NM_SNAPSHOT,
+               EXEC_DT, EXEC_END_DT, EXEC_STATUS, TRIGGER_TYPE,
+               DIAG_TYPE, DIAG_JOB_ID, STRUCT_DIAG_ID,
+               ERROR_MSG, EXEC_DURATION_SEC
+          FROM TB_DIAG_SCHEDULE_LOG
+         WHERE EXEC_STATUS = 'RUNNING'
+    </select>
+
+    <!-- TB_DIAG_JOB 상태 (STANDARD 진단) — 스케줄러 완료 감지 -->
+    <select id="selectDiagJobStatus" parameterType="String" resultType="String">
+        SELECT STATUS FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId}
+    </select>
+
+    <!-- TB_STRUCT_DIAG_HISTORY 상태 (STRUCT 진단) — 스케줄러 완료 감지 -->
+    <select id="selectStructDiagStatus" parameterType="String" resultType="String">
+        SELECT STATUS FROM TB_STRUCT_DIAG_HISTORY WHERE DIAG_ID = #{structDiagId}
+    </select>
+
+</mapper>
