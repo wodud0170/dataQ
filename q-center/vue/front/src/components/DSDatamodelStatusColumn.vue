@@ -48,7 +48,7 @@
           v-on:click="addEmptyRows(10)" :style="{ padding: '0 12px' }">+ 빈 행 10개</v-btn>
         <v-btn id="btn-save-attrs" color="success" :disabled="!selectedModelId || (newRows.length === 0 && pendingDeletes.length === 0)"
           v-on:click="saveAll" :style="{ padding: '0 12px' }">저장 ({{ newRows.length + pendingDeletes.length }})</v-btn>
-        <v-btn id="btn-resolve-selected" color="indigo" dark :disabled="selectedRows.length === 0"
+        <v-btn id="btn-resolve-selected" color="indigo" outlined :disabled="selectedRows.length === 0"
           v-on:click="resolveSelected" :loading="resolving" :style="{ padding: '0 12px' }">선택 컬럼 물리모델 변환</v-btn>
         <v-btn color="error" outlined :disabled="selectedRows.length === 0"
           v-on:click="deleteSelected" :style="{ padding: '0 12px' }">선택 행 삭제</v-btn>
@@ -98,8 +98,8 @@
       </template>
 
       <template #item.attrNm="{ item }">
-        <span :style="{ margin: '0px 8px', color: item._mode === 'add' ? '#9E9E9E' : 'inherit' }">
-          {{ item._mode === 'add' ? '(저장 후 자동)' : item.attrNm }}
+        <span :style="{ margin: '0px 8px', color: (item._mode === 'add' || item.termsStndYn === 'N') ? '#9E9E9E' : 'inherit' }">
+          {{ formatAttrNm(item) }}
         </span>
       </template>
       <template #item.dataType="{ item }">
@@ -360,6 +360,17 @@ export default {
     },
   },
   methods: {
+    /**
+     * 물리명(attrNm) 표시 포맷.
+     *  - 미저장 신규 행 (_mode='add'): '(저장 후 자동)' placeholder
+     *  - 저장된 행 중 비표준 (termsStndYn='N', 즉 자동 생성된 TMP_COL_N): 빈값
+     *  - 그 외: attrNm 그대로
+     */
+    formatAttrNm(item) {
+      if (item._mode === 'add') return '(저장 후 자동)';
+      if (item.termsStndYn === 'N') return '';
+      return item.attrNm || '';
+    },
     getModelList() {
       axios.post(this.$APIURL.base + "api/dm/getDataModelStatsList", {
         'schNm': null, 'schSysNm': null
