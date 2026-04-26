@@ -40,3 +40,24 @@ target/
 # local DB docker image (contains sensitive user data)
 dataq-db/
 BACKUP_before_clct_migration.sql
+
+# === Runtime debris (반복적으로 git status 에 떠서 git add . 시 잘못 포함되는 항목) ===
+# 보안: 세션 쿠키
+cookies.txt
+
+# 서버 런타임 로그 (q-center.log, q-executor.err.log 등)
+*.log
+*.err.log
+
+# Claude Code 내부 상태
+.claude/
+
+# Python 바이트코드
+**/__pycache__/
+
+# Obsidian 에디터 레이아웃 (기기마다 다름)
+**/.obsidian/workspace.json
+**/.obsidian/workspace*.json
+
+# 잘못된 logback 경로로 생성되는 디브리 디렉터리
+**/LOG_PATH_IS_UNDEFINED/
