@@ -258,9 +258,59 @@ def main():
             f"BOTH 결과 DONE 기대, got {final.get('execStatus')} msg={final.get('errorMsg')}"
     if not step("E. BOTH — STANDARD + STRUCT 병행 실행 + 둘 다 DONE 시 LOG DONE", _e_both): pass
 
+    # ======================= F. SKIP 정책 (동시 실행 방어) =======================
+    def _f_skip_policy():
+        # 분 boundary 가 너무 임박하면 다음 분으로 미루기 (안전 마진 25s)
+        now = datetime.now()
+        fire = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+        if (fire - now).total_seconds() < 25:
+            fire += timedelta(minutes=1)
+        repeat_time = fire.strftime("%H:%M")
+        print(f"  fire_at={repeat_time} (now={now.strftime('%H:%M:%S')})")
+
+        # 같은 모델+같은 유형(STANDARD) 스케줄 2개 — 같은 REPEAT_TIME
+        ts = datetime.now().strftime("%H%M%S")
+        sid1, _ = create_schedule(admin, dataModelId=state["dmId"],
+                                   diagType="STANDARD",
+                                   scheduleNm="cov_skip_A_" + ts,
+                                   repeatTime=repeat_time, repeatCycle="DAILY")
+        sid2, _ = create_schedule(admin, dataModelId=state["dmId"],
+                                   diagType="STANDARD",
+                                   scheduleNm="cov_skip_B_" + ts,
+                                   repeatTime=repeat_time, repeatCycle="DAILY")
+        state["f_sid1"] = sid1
+        state["f_sid2"] = sid2
+
+        # 두 스케줄 모두 같은 REPEAT_TIME 도래 → evaluator 가 둘 다 평가:
+        #  - 1번째: 정상 launch → RUNNING
+        #  - 2번째: countRunningByModelAndType > 0 → SKIPPED
+        # 자동 트리거 대기 (분 boundary + 평가 60s 주기, 최대 150s)
+        deadline = time.time() + 150
+        skipped_found = None
+        running_found = None
+        while time.time() < deadline:
+            for sid in (sid1, sid2):
+                logs = find_logs_by_schedule(admin, sid)
+                for l in logs:
+                    if l.get("triggerType") != "AUTO": continue
+                    if l.get("execStatus") == "SKIPPED": skipped_found = (sid, l)
+                    elif l.get("execStatus") in ("RUNNING", "DONE", "ERROR"): running_found = (sid, l)
+            if skipped_found and running_found: break
+            time.sleep(5)
+
+        assert running_found, "어느 스케줄도 정상 트리거되지 않음 (자동 평가 자체 실패)"
+        assert skipped_found, "SKIPPED 이력 없음 (동시 실행 방어 미동작)"
+        sid_run, log_run = running_found
+        sid_skip, log_skip = skipped_found
+        assert sid_run != sid_skip, "동일 스케줄에서 RUNNING/SKIPPED 동시 — 의도와 다름"
+        msg = log_skip.get("errorMsg") or ""
+        assert msg.startswith("[SKIPPED]"), f"SKIPPED prefix 누락: {msg[:80]}"
+        print(f"  RUNNING sid={sid_run[:8]}... / SKIPPED sid={sid_skip[:8]}... msg={msg[:80]}")
+    if not step("F. SKIP 정책 — 동시 실행 방어 (같은 모델+유형 2개 → 1 RUNNING, 1 SKIPPED)", _f_skip_policy): pass
+
     # ======================= 정리 =======================
     def _cleanup():
-        for k in ("a_sid", "b_sid", "c_sid", "d_sid", "e_sid"):
+        for k in ("a_sid", "b_sid", "c_sid", "d_sid", "e_sid", "f_sid1", "f_sid2"):
             sid = state.get(k)
             if sid:
                 try:
