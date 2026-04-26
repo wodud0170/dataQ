@@ -130,6 +130,16 @@ public class ScheduledDiagLauncher {
      * READY 행을 먼저 insert 해야 한다 (q-center StructDiagController 의 패턴과 동일).
      */
     private String startStructDiag(DiagScheduleVo sc) {
+        // 논리 모델(dsId 없음) 사전 차단 — launcher 의 catch 가 [CONFIG] errorMsg 로 LOG 마감
+        Map<String, Object> dmInfo = sql.selectOne("datamodel.selectDataModelById", sc.getDataModelId());
+        if (dmInfo == null) {
+            throw new IllegalStateException("[DATA_NOT_FOUND] 데이터모델 없음: " + sc.getDataModelId());
+        }
+        String dsId = (String) dmInfo.get("dataModelDsId");
+        if (dsId == null || dsId.trim().isEmpty()) {
+            throw new IllegalStateException("[CONFIG] 연결된 데이터소스가 없는 논리 모델은 구조 변경 진단 대상이 아닙니다.");
+        }
+
         String diagId = UUID.randomUUID().toString().replace("-", "");
         String userId = sc.getCretUserId() != null ? sc.getCretUserId() : "SCHEDULER";
 

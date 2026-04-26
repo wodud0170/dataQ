@@ -83,6 +83,13 @@ public class StructDiagService implements Runnable {
                 return;
             }
             String dsId = (String) dmInfo.get("dataModelDsId");
+            // 논리 모델(dsId 없음) 방어: 호출 경로상 q-center 컨트롤러가 사전 차단하지만,
+            // 스케줄러 등 다른 진입점 대비
+            if (dsId == null || dsId.trim().isEmpty()) {
+                log.warn(">> StructDiag: 논리 모델 — 데이터소스 없음. diagId={}", diagId);
+                updateStatus("ERROR");
+                return;
+            }
 
             // 2. 현재 모델의 OBJ/ATTR 로드 (DM_ID 기반, CLCT 폐기 후)
             List<Map<String, Object>> prevAttrs = sqlSessionTemplate.selectList(

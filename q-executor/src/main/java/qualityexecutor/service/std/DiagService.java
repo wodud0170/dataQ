@@ -103,8 +103,21 @@ public class DiagService implements Runnable {
             }
 
             // 3. 진단 대상 컬럼 목록 로드
-            List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList(
+            //    표준 변환 성공한 컬럼만 진단 대상 (TERMS_STND_YN='Y').
+            //    비표준(TMP_COL_N 등, TERMS_STND_YN='N')은 이미 그리드에서 빨간 배경 + ⚠ 로
+            //    표시되므로 표준 진단에서 다시 잡으면 중복. 제외 건수는 로그로만 남김.
+            List<StdDataModelAttrVo> all = sqlSessionTemplate.selectList(
                 "datamodel.selectDataModelAttrListByClctId", clctId);
+            int rawTotal = all.size();
+            List<StdDataModelAttrVo> attrs = new ArrayList<>();
+            for (StdDataModelAttrVo a : all) {
+                if ("Y".equals(a.getTermsStndYn())) attrs.add(a);
+            }
+            int excluded = rawTotal - attrs.size();
+            if (excluded > 0) {
+                log.info(">> 표준 진단: 비표준 컬럼 {} 건 제외 (TERMS_STND_YN!='Y'). 진단 대상 {} 건",
+                        excluded, attrs.size());
+            }
             int total = attrs.size();
             int processCnt = 0;
             int resultCnt  = 0;

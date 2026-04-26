@@ -72,6 +72,18 @@ public class StructDiagController {
 		}
 
 		try {
+			// 논리 모델(dsId 없음) 거부: 구조 변경 진단은 실 DBMS 스키마 비교라 데이터소스 필수
+			Map<String, Object> dmInfo = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataModelId);
+			if (dmInfo == null) {
+				result.setResultInfo(404, "데이터모델 없음: " + dataModelId);
+				return Mono.just(result);
+			}
+			String preDsId = (String) dmInfo.get("dataModelDsId");
+			if (preDsId == null || preDsId.trim().isEmpty()) {
+				result.setResultInfo(400, "[CONFIG] 연결된 데이터소스가 없는 논리 모델은 구조 변경 진단 대상이 아닙니다.");
+				return Mono.just(result);
+			}
+
 			// 중복 진단 체크: 동일 데이터모델에 READY/RUNNING 상태 진단이 있으면 거부
 			int activeCount = sqlSessionTemplate.selectOne("structdiag.selectActiveStructDiagCount", dataModelId);
 			if (activeCount > 0) {
