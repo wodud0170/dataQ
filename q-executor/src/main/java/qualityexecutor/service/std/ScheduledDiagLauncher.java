@@ -62,29 +62,22 @@ public class ScheduledDiagLauncher {
 
         try {
             String diagType = sc.getDiagType();
+            // STANDARD + BOTH: 표준화 진단 기동
             if ("STANDARD".equals(diagType) || "BOTH".equals(diagType)) {
                 String diagJobId = startStandardDiag(sc);
                 Map<String, Object> p = new HashMap<>();
-                p.put("logId",          logId);
-                p.put("execStatus",     "RUNNING");       // 완료 폴링 대기
-                p.put("errorMsg",       null);
-                p.put("diagJobId",      diagJobId);
-                p.put("structDiagId",   null);
-                // insertLog 에 이미 값들은 들어감. 여기선 diagJobId 만 추가로 반영 필요.
-                // 하지만 updateLogFinish 는 END_DT 까지 박기 때문에 부적절.
-                // 대체: scheduler runner 완료 폴링에서 TB_DIAG_JOB 상태 조회로 완료 판단.
-                // 따라서 LOG 의 DIAG_JOB_ID 만 저장하는 별도 업데이트 필요.
+                p.put("logId",     logId);
+                p.put("diagJobId", diagJobId);
                 sql.update("diagSchedule.setLogDiagJobId", p);
             }
-            if ("STRUCT".equals(diagType)) {
+            // STRUCT + BOTH: 구조변경 진단 기동 (BOTH 는 병행 실행)
+            if ("STRUCT".equals(diagType) || "BOTH".equals(diagType)) {
                 String structDiagId = startStructDiag(sc);
                 Map<String, Object> p = new HashMap<>();
                 p.put("logId",        logId);
                 p.put("structDiagId", structDiagId);
                 sql.update("diagSchedule.setLogStructDiagId", p);
             }
-            // BOTH 의 STRUCT 는 Phase 2 범위 외 — 완료 폴링에서 순차 실행 설계 필요.
-            // 현재는 STANDARD 만 실행된 상태로 남음 (문서 반영 필요).
 
             return logId;
         } catch (RuntimeException e) {
@@ -131,10 +124,22 @@ public class ScheduledDiagLauncher {
         return diagJobId;
     }
 
-    /** StructDiagService 기동. StructDiagService.run() 이 TB_STRUCT_DIAG_HISTORY insert 를 포함 */
+    /**
+     * StructDiagService 기동.
+     * StructDiagService.updateStatus 는 UPDATE 이므로 TB_STRUCT_DIAG_HISTORY 에
+     * READY 행을 먼저 insert 해야 한다 (q-center StructDiagController 의 패턴과 동일).
+     */
     private String startStructDiag(DiagScheduleVo sc) {
         String diagId = UUID.randomUUID().toString().replace("-", "");
         String userId = sc.getCretUserId() != null ? sc.getCretUserId() : "SCHEDULER";
+
+        // TB_STRUCT_DIAG_HISTORY READY 생성 (StructDiagService 의 UPDATE 가 유효하도록)
+        Map<String, Object> history = new HashMap<>();
+        history.put("diagId",      diagId);
+        history.put("dataModelId", sc.getDataModelId());
+        history.put("status",      "READY");
+        history.put("cretUserId",  userId);
+        sql.insert("structdiag.insertStructDiagHistory", history);
 
         StructDiagService svc = new StructDiagService(diagId, sc.getDataModelId(), userId, null);
         appContext.getAutowireCapableBeanFactory().autowireBean(svc);
