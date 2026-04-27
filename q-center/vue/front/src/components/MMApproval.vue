@@ -49,6 +49,35 @@
           {{ item.aprvStat }}
         </v-chip>
       </template>
+      <!-- 행별 처리 — 그리드 가장 오른쪽 -->
+      <template v-slot:[`item.rowActions`]="{ item }">
+        <template v-if="!isAdmin">
+          <span style="font-size:.75rem; color:#9E9E9E;">-</span>
+        </template>
+        <template v-else-if="rowRejectId === item.key">
+          <!-- 반려 사유 인라인 입력 모드 -->
+          <div class="d-flex align-center" style="gap:4px;" @click.stop>
+            <v-text-field v-model="rowRejectReason" dense hide-details outlined single-line
+              placeholder="사유" style="max-width:120px; font-size:.8rem;" autofocus></v-text-field>
+            <v-btn icon x-small color="red" @click.stop="confirmRowReject(item)" title="반려 확정">
+              <v-icon small>mdi-check</v-icon>
+            </v-btn>
+            <v-btn icon x-small @click.stop="cancelRowReject" title="취소">
+              <v-icon small>mdi-close</v-icon>
+            </v-btn>
+          </div>
+        </template>
+        <template v-else>
+          <v-btn x-small color="success" class="mr-1" :disabled="item.aprvStatRaw === 2"
+            @click.stop="approveItem(item)" title="승인">
+            <v-icon x-small left>mdi-check</v-icon>승인
+          </v-btn>
+          <v-btn x-small color="red" dark :disabled="item.aprvStatRaw === 3"
+            @click.stop="startRowReject(item)" title="반려">
+            <v-icon x-small left>mdi-close</v-icon>반려
+          </v-btn>
+        </template>
+      </template>
       <template v-slot:no-data>
         <v-alert>데이터가 존재하지 않습니다.</v-alert>
       </template>
@@ -230,7 +259,10 @@ export default {
       { text: '요청일', align: 'center', sortable: false, value: 'reqCretDt' },
       { text: '처리일', align: 'center', sortable: false, value: 'aprvStatUpdtDt' },
       { text: '사유', align: 'center', sortable: false, value: 'aprvStatUpdtRsn' },
+      { text: '처리', align: 'center', sortable: false, value: 'rowActions', width: '170px' },
     ],
+    rowRejectId: null,        // 인라인 반려 사유 입력 중인 행 key
+    rowRejectReason: '',      // 인라인 반려 사유 텍스트
   }),
   computed: {
     statusCounts() {
@@ -328,6 +360,24 @@ export default {
     },
     approveItem(item) {
       this.updateApproval([item], 'APPROVED', '');
+    },
+    /** 행별 반려 — 사유 입력 인라인 모드로 전환 */
+    startRowReject(item) {
+      this.rowRejectId = item.key;
+      this.rowRejectReason = '';
+    },
+    cancelRowReject() {
+      this.rowRejectId = null;
+      this.rowRejectReason = '';
+    },
+    confirmRowReject(item) {
+      var reason = (this.rowRejectReason || '').trim();
+      if (!reason) {
+        this.$swal.fire({ title: '반려 사유를 입력해주세요.', icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
+      this.updateApproval([item], 'REJECTED', reason);
+      this.cancelRowReject();
     },
     showRejectDialog(item) {
       this.showRejectInput = true;
