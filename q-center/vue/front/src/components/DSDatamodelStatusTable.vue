@@ -9,12 +9,12 @@
           @change="onModelChange" clearable dense outlined hide-details
           class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
         </v-autocomplete>
-        <span class="filterLabel">테이블명</span>
+        <span class="filterLabel">테이블 영문명 (물리)</span>
         <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
         </v-text-field>
-        <span class="filterLabel">테이블 한글명</span>
+        <span class="filterLabel">테이블 한글명 (논리)</span>
         <v-text-field v-model="searchTableKr" @click:clear="searchTableKr=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
@@ -81,9 +81,12 @@
       <v-card>
         <v-card-title>{{ objDialogMode === 'add' ? '테이블 추가' : '테이블 수정' }}</v-card-title>
         <v-card-text>
-          <v-text-field v-model="objForm.objNm" label="테이블명 (물리명, 예: TB_USER)" :disabled="objDialogMode === 'edit'"
-            hint="영문/숫자/언더바" persistent-hint outlined dense />
-          <v-text-field v-model="objForm.objNmKr" label="테이블 한글명 (논리명)" outlined dense />
+          <v-text-field v-model="objForm.objNm" label="테이블 영문명 (물리, 예: TB_USER)"
+            :hint="objDialogMode === 'edit' && objForm.objNm !== objForm.origObjNm
+              ? '물리명 변경 시 하위 컬럼·인덱스·제약조건의 참조까지 함께 갱신됩니다 (확인 단계 표시)'
+              : '영문/숫자/언더바'"
+            persistent-hint outlined dense />
+          <v-text-field v-model="objForm.objNmKr" label="테이블 한글명 (논리)" outlined dense />
           <v-text-field v-model="objForm.objOwner" label="소유자 (스키마)" outlined dense />
           <v-text-field v-model="objForm.objDesc" label="테이블 설명" outlined dense />
         </v-card-text>
@@ -166,8 +169,8 @@ export default {
     itemsPerPage: 10,
     tableViewLengthList: [10, 20, 30, 40, 50],
     dmTabledetaileHeaders: [
-      { text: '테이블명', align: 'center', sortable: false, value: 'objNm' },
-      { text: '테이블 한글명', sortable: false, align: 'center', value: 'objNmKr' },
+      { text: '테이블 영문명 (물리)', align: 'center', sortable: false, value: 'objNm' },
+      { text: '테이블 한글명 (논리)', sortable: false, align: 'center', value: 'objNmKr' },
       { text: '소유자', sortable: false, align: 'center', value: 'objOwner' },
       { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
       { text: '테이블 설명', sortable: false, align: 'center', value: 'objDesc' },
@@ -175,7 +178,7 @@ export default {
     ],
     objDialog: false,
     objDialogMode: 'add',
-    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '' },
+    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '' },
     // 엑셀 업로드
     uploadDialog: false,
     uploadFile: null,
@@ -283,7 +286,7 @@ export default {
     },
     openAddObjDialog() {
       this.objDialogMode = 'add';
-      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '' };
+      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '' };
       this.objDialog = true;
     },
     openEditObjDialog(item) {
@@ -291,13 +294,57 @@ export default {
       this.objForm = {
         objNm: item.objNm, objNmKr: item.objNmKr || '',
         objOwner: item.objOwner || '', objDesc: item.objDesc || '',
+        origObjNm: item.objNm,
       };
       this.objDialog = true;
     },
-    submitObj() {
+    async submitObj() {
       if ((!this.objForm.objNm || !this.objForm.objNm.trim()) && (!this.objForm.objNmKr || !this.objForm.objNmKr.trim())) {
         this.$swal.fire({ title: '테이블명(물리명) 또는 한글명(논리명) 중 하나는 입력해야 합니다.', confirmButtonText: '확인', icon: 'warning' });
         return;
+      }
+      // 편집 모드 + 물리명 변경됨 → 영향 범위 사전 알림
+      if (this.objDialogMode === 'edit' &&
+          this.objForm.origObjNm &&
+          this.objForm.objNm.trim() !== this.objForm.origObjNm) {
+        const newNm = this.objForm.objNm.trim();
+        try {
+          const pv = await axios.get(this.$APIURL.base + 'api/dm/previewObjRename', {
+            params: {
+              dataModelId: this.selectedModelId,
+              origObjNm:   this.objForm.origObjNm,
+              newObjNm:    newNm,
+            }
+          });
+          const d = pv.data || {};
+          if (d.conflict) {
+            this.$swal.fire({
+              title: '이미 같은 이름의 테이블이 있습니다',
+              text: `'${newNm}' 은(는) 이 모델 안에 이미 존재합니다. 다른 이름을 사용해주세요.`,
+              icon: 'error', confirmButtonText: '확인',
+            });
+            return;
+          }
+          const html =
+            `<div style="text-align:left; font-size:.9rem;">` +
+            `<b>${this.objForm.origObjNm}</b> → <b>${newNm}</b> 로 변경합니다.<br><br>` +
+            `함께 갱신되는 항목:<br>` +
+            `· 컬럼 <b>${d.attrCnt || 0}</b>건<br>` +
+            `· 인덱스 <b>${d.indexCnt || 0}</b>건<br>` +
+            `· 제약조건 (이 테이블) <b>${d.constraintCnt || 0}</b>건<br>` +
+            `· 외래키 참조 (다른 테이블 → 이 테이블) <b>${d.refConstraintCnt || 0}</b>건<br><br>` +
+            `진행하시겠습니까?` +
+            `</div>`;
+          const confirm = await this.$swal.fire({
+            title: '물리 테이블명 변경 확인',
+            html, icon: 'warning',
+            showCancelButton: true, confirmButtonText: '변경', cancelButtonText: '취소',
+          });
+          if (!confirm.isConfirmed) return;
+        } catch (err) {
+          this.$swal.fire({ title: '영향 범위 조회 실패', text: err.message, icon: 'error', confirmButtonText: '확인' });
+          return;
+        }
       }
       const url = this.objDialogMode === 'add' ? 'api/dm/addObj' : 'api/dm/updateObj';
       const payload = { ...this.objForm, dataModelId: this.selectedModelId };

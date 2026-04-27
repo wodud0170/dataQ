@@ -349,8 +349,8 @@ def add_column_row(d, term_kr):
     )
     _js_click(d, add_btn)
     time.sleep(0.4)
-    # 새로 추가된 행의 "컬럼 한글명" placeholder 입력 필드 — 마지막(가장 최근 추가) 항목 사용
-    kr_inputs = d.find_elements(By.XPATH, "//input[@placeholder='컬럼 한글명']")
+    # 새로 추가된 행의 "컬럼 한글명" placeholder 입력 필드 — substring 매칭(라벨 보강 대응)
+    kr_inputs = d.find_elements(By.XPATH, "//input[contains(@placeholder, '컬럼 한글명')]")
     if not kr_inputs:
         raise RuntimeError("+ 컬럼 추가 후 한글명 입력 필드 없음")
     target = kr_inputs[-1]

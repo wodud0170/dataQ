@@ -13,7 +13,7 @@
                         :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                         :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
                         :navMyPageGroup="navMyPageGroup"
-                        :navCommunityGroup="navCommunityGroup"
+                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup"
                         @addTabItem="addTabItem" @addActiveContent="addActiveContent" @navAllGroupClose="navAllGroupClose"
                         @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                         @addNavSubGroupData="addNavSubGroupData" @resetSplit="resetSplit"
@@ -36,7 +36,7 @@
                 :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                 :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
                         :navMyPageGroup="navMyPageGroup"
-                        :navCommunityGroup="navCommunityGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
+                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
                 @navAllGroupClose="navAllGroupClose" @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                 @addNavSubGroupData="addNavSubGroupData" />
             <router-view name="content" :isMobile="isMobile" :tab="tab" :drawer="drawer" :activeContent="activeContent"
@@ -75,6 +75,7 @@ export default {
         navStructDiagGroup: null,
         navAutoStdGroup: null,
         navCommunityGroup: null,
+        navScheduleGroup: null,
         navMyPageGroup: null,
         navApprovalStatus: []// 대시보드에서 승인 페이지 호출 시 승인 상태를 저장하는 변수
     }),
@@ -385,6 +386,7 @@ export default {
             this.navAutoStdGroup = null;
             this.navMyPageGroup = null;
             this.navCommunityGroup = null;
+            this.navScheduleGroup = null;
             this.navSubGropClose();
         },
         navSubGropClose() {
@@ -490,6 +492,15 @@ export default {
                         this.navCommunityGroup = false;
                     } else {
                         this.navCommunityGroup = !this.navCommunityGroup;
+                    }
+                    break;
+
+                case "scheduleGroup":
+
+                    if (this.navScheduleGroup === null) {
+                        this.navScheduleGroup = false;
+                    } else {
+                        this.navScheduleGroup = !this.navScheduleGroup;
                     }
                     break;
             }

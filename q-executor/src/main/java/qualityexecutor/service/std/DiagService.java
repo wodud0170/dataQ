@@ -102,22 +102,14 @@ public class DiagService implements Runnable {
                 if (t.getTermsEngAbrvNm() != null) termsByEng.put(t.getTermsEngAbrvNm(), t);
             }
 
-            // 3. 진단 대상 컬럼 목록 로드
-            //    표준 변환 성공한 컬럼만 진단 대상 (TERMS_STND_YN='Y').
-            //    비표준(TMP_COL_N 등, TERMS_STND_YN='N')은 이미 그리드에서 빨간 배경 + ⚠ 로
-            //    표시되므로 표준 진단에서 다시 잡으면 중복. 제외 건수는 로그로만 남김.
-            List<StdDataModelAttrVo> all = sqlSessionTemplate.selectList(
+            // 3. 진단 대상 컬럼 목록 로드 — 모델 전체 ATTR
+            //    표준 진단의 본래 목적 = "이 데이터 모델의 표준 유효성 진단".
+            //    임시 자동 채번(TMP_COL_*) / 사용자 직접 입력 비표준 모두 포함되어야 모델
+            //    상태가 준수율에 정직하게 반영된다. (이전 정책: TERMS_STND_YN='Y' 만 진단 →
+            //    e4aaeaf 에서 도입했으나 비표준 컬럼도 진단해야 사용자가 인지 + 표준화 유도 가능
+            //    하다는 정의로 회귀)
+            List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList(
                 "datamodel.selectDataModelAttrListByClctId", clctId);
-            int rawTotal = all.size();
-            List<StdDataModelAttrVo> attrs = new ArrayList<>();
-            for (StdDataModelAttrVo a : all) {
-                if ("Y".equals(a.getTermsStndYn())) attrs.add(a);
-            }
-            int excluded = rawTotal - attrs.size();
-            if (excluded > 0) {
-                log.info(">> 표준 진단: 비표준 컬럼 {} 건 제외 (TERMS_STND_YN!='Y'). 진단 대상 {} 건",
-                        excluded, attrs.size());
-            }
             int total = attrs.size();
             int processCnt = 0;
             int resultCnt  = 0;

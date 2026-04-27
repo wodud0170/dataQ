@@ -9,12 +9,12 @@
           @change="onModelChange" clearable dense outlined hide-details
           class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
         </v-autocomplete>
-        <span class="filterLabel">테이블명</span>
+        <span class="filterLabel">테이블 영문명 (물리)</span>
         <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
         </v-text-field>
-        <span class="filterLabel">컬럼명</span>
+        <span class="filterLabel">컬럼 영문명 (물리)</span>
         <v-text-field v-model="searchColumn" @click:clear="searchColumn=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
@@ -89,8 +89,8 @@ export default {
     tableViewLengthList: [10, 20, 30, 40, 50],
     headers: [
       { text: '소유자', sortable: true, align: 'center', value: 'objOwner' },
-      { text: '테이블명', sortable: true, align: 'center', value: 'tableNm' },
-      { text: '컬럼명', sortable: false, align: 'center', value: 'columnNm' },
+      { text: '테이블 영문명 (물리)', sortable: true, align: 'center', value: 'tableNm' },
+      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'columnNm' },
       { text: '컬럼 순서', sortable: true, align: 'center', value: 'columnPos' },
       { text: '인덱스명', sortable: true, align: 'center', value: 'indexNm' },
       { text: '인덱스 타입', sortable: true, align: 'center', value: 'indexType' },

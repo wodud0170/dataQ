@@ -26,6 +26,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -643,16 +644,88 @@ public class DataModelController {
 	}
 
 	/**
-	 * 테이블(OBJ) 수정 — 논리명/오너/설명
+	 * 테이블(OBJ) 물리명 rename 영향 범위 미리보기.
+	 *
+	 * 변경 전 사용자에게 "이 변경으로 N건이 함께 갱신됩니다" 알리기 위한 카운트 조회.
+	 *
+	 * @return attrCnt, indexCnt, constraintCnt, refConstraintCnt, conflict (newObjNm 이미 존재 여부)
+	 */
+	@GetMapping(value = "/previewObjRename")
+	public Map<String, Object> previewObjRename(@RequestParam("dataModelId") String dataModelId,
+	                                            @RequestParam("origObjNm") String origObjNm,
+	                                            @RequestParam("newObjNm") String newObjNm) {
+		Map<String, Object> q = new HashMap<>();
+		q.put("dataModelId", dataModelId);
+
+		Map<String, Object> result = new HashMap<>();
+		q.put("objNm", origObjNm);
+		result.put("attrCnt",           sqlSessionTemplate.selectOne("datamodel.countObjAttrForRename", q));
+		result.put("indexCnt",          sqlSessionTemplate.selectOne("datamodel.countObjIndexForRename", q));
+		result.put("constraintCnt",     sqlSessionTemplate.selectOne("datamodel.countObjConstraintForRename", q));
+		result.put("refConstraintCnt",  sqlSessionTemplate.selectOne("datamodel.countObjRefConstraintForRename", q));
+
+		// 새 이름 충돌 검사 (자기 자신은 제외)
+		boolean conflict = false;
+		if (newObjNm != null && !newObjNm.equals(origObjNm)) {
+			q.put("objNm", newObjNm);
+			Integer exists = sqlSessionTemplate.selectOne("datamodel.existsObjNmInModel", q);
+			conflict = exists != null && exists > 0;
+		}
+		result.put("conflict", conflict);
+		return result;
+	}
+
+	/**
+	 * 테이블(OBJ) 수정 — 논리명/오너/설명. origObjNm 가 다르면 물리명 rename 도 cascade 처리.
 	 */
 	@RequestMapping(value = "/updateObj", method = RequestMethod.POST)
-	public Mono<Response> updateObj(@RequestBody StdDataModelObjVo objVo) {
+	public Mono<Response> updateObj(@RequestBody Map<String, Object> body) {
 		Response result = new Response();
 		try {
+			String dataModelId = (String) body.get("dataModelId");
+			String origObjNm   = (String) body.get("origObjNm");
+			String newObjNm    = (String) body.get("objNm");
+			String objNmKr     = (String) body.get("objNmKr");
+			String objOwner    = (String) body.get("objOwner");
+			String objDesc     = (String) body.get("objDesc");
+
+			boolean rename = origObjNm != null && newObjNm != null && !origObjNm.equals(newObjNm);
+
+			if (rename) {
+				// 충돌 재확인 (프론트 preview 후 다른 세션이 같은 이름 만들 수 있음)
+				Map<String, Object> chk = new HashMap<>();
+				chk.put("dataModelId", dataModelId);
+				chk.put("objNm", newObjNm);
+				Integer exists = sqlSessionTemplate.selectOne("datamodel.existsObjNmInModel", chk);
+				if (exists != null && exists > 0) {
+					result.setResultInfo(RestResult.CODE_500.getCode(), "이미 같은 이름의 테이블이 존재합니다: " + newObjNm);
+					return Mono.just(result);
+				}
+
+				Map<String, Object> rn = new HashMap<>();
+				rn.put("dataModelId", dataModelId);
+				rn.put("origObjNm",   origObjNm);
+				rn.put("newObjNm",    newObjNm);
+
+				sqlSessionTemplate.update("datamodel.renameObjAttrCascade",          rn);
+				sqlSessionTemplate.update("datamodel.renameObjIndexCascade",         rn);
+				sqlSessionTemplate.update("datamodel.renameObjConstraintCascade",    rn);
+				sqlSessionTemplate.update("datamodel.renameObjConstraintRefCascade", rn);
+				sqlSessionTemplate.update("datamodel.renameObjPhysical",             rn);
+			}
+
+			// 한글명/오너/설명 update (PK 가 새 이름이거나 기존 이름이거나 동일 로직)
+			StdDataModelObjVo objVo = new StdDataModelObjVo();
+			objVo.setDataModelId(dataModelId);
+			objVo.setObjNm(newObjNm);
+			objVo.setObjNmKr(objNmKr);
+			objVo.setObjOwner(objOwner);
+			objVo.setObjDesc(objDesc);
 			sqlSessionTemplate.update("datamodel.updateDataModelObj", objVo);
+
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			log.error(">> updateObj failed : {}", e.getMessage());
+			log.error(">> updateObj failed : {}", e.getMessage(), e);
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
@@ -929,20 +1002,41 @@ public class DataModelController {
 						String attrNm = str(row.get("attrNm"));
 						if (attrNm == null || attrNm.trim().isEmpty())
 							throw new IllegalArgumentException("attrNm 누락");
+						// 기존 ATTR 조회 — dataType/dataLen/word_lst 등은 보존, 표준 플래그는 한글명 변경 여부에 따라 분기
+						Map<String, Object> sel = new HashMap<>();
+						sel.put("dataModelId", dataModelId);
+						sel.put("objNm", objNm);
+						sel.put("attrNm", attrNm);
+						StdDataModelAttrVo existing = session.selectOne("datamodel.selectDataModelAttrOne", sel);
+						if (existing == null) throw new IllegalArgumentException("수정 대상 ATTR 없음: " + objNm + "." + attrNm);
+
 						StdDataModelAttrVo vo = new StdDataModelAttrVo();
 						vo.setDataModelId(dataModelId);
 						vo.setObjNm(objNm);
 						vo.setAttrNm(attrNm);
-						vo.setAttrNmKr(str(row.get("attrNmKr")));
+						String newKr = str(row.get("attrNmKr"));
+						vo.setAttrNmKr(newKr);
 						vo.setPkYn("Y".equalsIgnoreCase(str(row.get("pkYn"))) ? "Y" : "N");
 						vo.setFkYn("Y".equalsIgnoreCase(str(row.get("fkYn"))) ? "Y" : "N");
 						String nullableYn = str(row.get("nullableYn"));
 						vo.setNullableYn("Y".equalsIgnoreCase(vo.getPkYn()) ? "N"
 								: (nullableYn == null || nullableYn.isEmpty() ? "Y" : nullableYn));
 						vo.setDefaultVal(str(row.get("defaultVal")));
-						// 물리명/타입은 수정하지 않음 — 53번 §6-0 원칙
-						vo.setTermsStndYn("N");
-						vo.setDomainStndYn("N");
+						// 물리명/타입/길이/단어 매핑은 기존값 보존 (53번 §6-0)
+						vo.setDataType(existing.getDataType());
+						vo.setDataLen(existing.getDataLen());
+						vo.setDataDecimalLen(existing.getDataDecimalLen());
+						vo.setWordLst(existing.getWordLst());
+						vo.setWordStndLst(existing.getWordStndLst());
+						// 한글명이 변경됐으면 표준 플래그 강등 (영문명-한글명 매칭 깨질 가능성 → 재변환 유도)
+						boolean krChanged = !Objects.equals(existing.getAttrNmKr(), newKr);
+						if (krChanged) {
+							vo.setTermsStndYn("N");
+							vo.setDomainStndYn("N");
+						} else {
+							vo.setTermsStndYn(existing.getTermsStndYn());
+							vo.setDomainStndYn(existing.getDomainStndYn());
+						}
 						session.update("datamodel.updateDataModelAttr", vo);
 						updated++;
 					} else if ("DELETE".equalsIgnoreCase(mode)) {

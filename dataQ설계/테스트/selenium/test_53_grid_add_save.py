@@ -262,8 +262,8 @@ def step4_grid_add_rows(d):
         time.sleep(0.3)
     shot(d, "04c_3_empty_rows")
 
-    # 각 행의 placeholder="컬럼 한글명" input에 순서대로 입력
-    inline_inputs = d.find_elements(By.CSS_SELECTOR, "input[placeholder='컬럼 한글명']")
+    # 각 행의 placeholder*='컬럼 한글명' input 에 순서대로 입력 (라벨 보강 substring 매칭)
+    inline_inputs = d.find_elements(By.CSS_SELECTOR, "input[placeholder*='컬럼 한글명']")
     if len(inline_inputs) < 3:
         raise RuntimeError(f"인라인 한글명 input이 3개 이상 아님 (있는 수: {len(inline_inputs)})")
     for i, kr in enumerate(COLUMN_KRS):

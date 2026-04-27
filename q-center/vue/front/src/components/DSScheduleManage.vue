@@ -12,9 +12,10 @@
           :text-color="filterUseYn === 'N' ? 'white' : ''"
           :outlined="filterUseYn !== 'N'" @click="filterUseYn = 'N'">비활성만</v-chip>
         <v-spacer></v-spacer>
-        <v-btn small class="gradient" @click="openAddDialog">
+        <v-btn v-if="isAdmin" small class="gradient" @click="openAddDialog">
           <v-icon small left>mdi-plus</v-icon>스케줄 추가
         </v-btn>
+        <span v-else style="font-size:.75rem; color:#9E9E9E;">조회 전용 (관리자만 등록/수정 가능)</span>
       </v-sheet>
 
       <!-- 목록 -->
@@ -22,7 +23,7 @@
         :items-per-page="30" class="elevation-0" :loading="loading">
         <template v-slot:item.useYn="{ item }">
           <v-switch v-model="item._useYnBool" inset hide-details dense
-            color="green" class="mt-0 ml-2" :ripple="false"
+            color="green" class="mt-0 ml-2" :ripple="false" :disabled="!isAdmin"
             @change="toggleUseYn(item)"></v-switch>
         </template>
         <template v-slot:item.diagType="{ item }">
@@ -48,24 +49,27 @@
           <span v-else style="font-size:.75rem; color:#9E9E9E;">-</span>
         </template>
         <template v-slot:item.actions="{ item }">
-          <v-btn icon x-small color="primary" @click="runNow(item)" :loading="item._running"
-            title="즉시 실행">
-            <v-icon small>mdi-play</v-icon>
-          </v-btn>
-          <v-btn icon x-small color="grey darken-2" @click="openEditDialog(item)" title="편집">
-            <v-icon small>mdi-pencil</v-icon>
-          </v-btn>
-          <v-menu offset-y>
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn icon x-small v-on="on" v-bind="attrs"><v-icon small>mdi-dots-vertical</v-icon></v-btn>
-            </template>
-            <v-list dense>
-              <v-list-item @click="confirmDelete(item)">
-                <v-list-item-icon><v-icon small color="red">mdi-delete</v-icon></v-list-item-icon>
-                <v-list-item-title class="red--text">삭제</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
+          <template v-if="isAdmin">
+            <v-btn icon x-small color="primary" @click="runNow(item)" :loading="item._running"
+              title="즉시 실행">
+              <v-icon small>mdi-play</v-icon>
+            </v-btn>
+            <v-btn icon x-small color="grey darken-2" @click="openEditDialog(item)" title="편집">
+              <v-icon small>mdi-pencil</v-icon>
+            </v-btn>
+            <v-menu offset-y>
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn icon x-small v-on="on" v-bind="attrs"><v-icon small>mdi-dots-vertical</v-icon></v-btn>
+              </template>
+              <v-list dense>
+                <v-list-item @click="confirmDelete(item)">
+                  <v-list-item-icon><v-icon small color="red">mdi-delete</v-icon></v-list-item-icon>
+                  <v-list-item-title class="red--text">삭제</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </template>
+          <span v-else style="font-size:.75rem; color:#9E9E9E;">-</span>
         </template>
         <template #no-data>
           <span class="grey--text">스케줄이 없습니다.</span>
@@ -153,6 +157,7 @@ export default {
       saving: false,
       items: [],
       dataModels: [],
+      isAdmin: false,
       filterUseYn: '',     // '', 'Y', 'N'
       headers: [
         { text: '스케줄명',    value: 'scheduleNm', sortable: false },
@@ -193,10 +198,17 @@ export default {
     },
   },
   mounted() {
+    this.checkAdmin();
     this.loadModels();
     this.loadList();
   },
   methods: {
+    checkAdmin() {
+      var self = this;
+      axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData && this.$loginStatusData.id } })
+        .then(function(res) { self.isAdmin = res.data === true; })
+        .catch(function() { self.isAdmin = false; });
+    },
     emptyForm() {
       return {
         scheduleId: null,

@@ -411,22 +411,32 @@
                         <v-list-item-title>데이터 소스</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_scheduleManage" href="#tab_scheduleManage" active-class="ndColor--text" title="진단 스케줄"
-                        v-on:click.stop=" addTabItem('진단 스케줄', 'scheduleManage'); ">
+                </v-list-group>
+
+                <!-- 진단 스케줄 (모든 사용자 조회. 관리자만 등록/수정/삭제) -->
+                <v-list-group link v-cloak :value="navScheduleGroup" prepend-icon="mdi-calendar-clock"
+                    active-class="ndColor--text" id="scheduleGroup" title="진단 스케줄" v-on:click.stop="addNavGroupData('scheduleGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">진단 스케줄</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_scheduleManage" href="#tab_scheduleManage" active-class="ndColor--text" title="스케줄 관리"
+                        v-on:click.stop="addTabItem('스케줄 관리', 'scheduleManage');">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
-                        <v-list-item-title>진단 스케줄</v-list-item-title>
+                        <v-list-item-title>스케줄 관리</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_scheduleLog" href="#tab_scheduleLog" active-class="ndColor--text" title="스케줄 실행 이력"
-                        v-on:click.stop=" addTabItem('스케줄 실행 이력', 'scheduleLog'); ">
+                    <v-list-item link id="nav_scheduleLog" href="#tab_scheduleLog" active-class="ndColor--text" title="실행 이력"
+                        v-on:click.stop="addTabItem('실행 이력', 'scheduleLog');">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
-                        <v-list-item-title>스케줄 실행 이력</v-list-item-title>
+                        <v-list-item-title>실행 이력</v-list-item-title>
                     </v-list-item>
-
                 </v-list-group>
 
                 <!-- 마이페이지 -->
@@ -488,6 +498,7 @@ export default {
         'navStructDiagGroup',
         'navAutoStdGroup',
         'navCommunityGroup',
+        'navScheduleGroup',
         'navMyPageGroup'],
     data: () => ({
         selectedList: null,

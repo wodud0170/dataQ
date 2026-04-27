@@ -13,26 +13,26 @@
       </v-row>
       <!-- Row 2: 상세 검색 조건 -->
       <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '6px' }">
-        <span class="filterLabel">테이블명</span>
+        <span class="filterLabel">테이블 영문명 (물리)</span>
         <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '100px' }">
         </v-text-field>
-        <span class="filterLabel">컬럼명</span>
+        <span class="filterLabel">컬럼 영문명 (물리)</span>
         <v-text-field v-model="searchColumn" @click:clear="searchColumn=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '100px' }">
         </v-text-field>
-        <span class="filterLabel">컬럼 한글명</span>
+        <span class="filterLabel">컬럼 한글명 (논리)</span>
         <v-text-field v-model="searchColumnKr" @click:clear="searchColumnKr=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '100px' }">
         </v-text-field>
         <v-checkbox class="checkboxStyle" hide-details v-model="showNonStandardOnly" label="비표준만 보기" color="error" dense></v-checkbox>
-        <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
-        <v-btn class="gradient" v-on:click="columnDataDownload" :disabled="dmColumnAllItems.length === 0">다운로드</v-btn>
-        <v-btn id="btn-upload-attrs" color="deep-purple" outlined :disabled="!selectedModelId" v-on:click="triggerUploadAttrs" :style="{ padding: '0 12px' }">엑셀 업로드</v-btn>
-        <v-btn id="btn-download-attrs-template" color="deep-purple" text v-on:click="downloadAttrsTemplate" :style="{ padding: '0 8px' }">양식 다운로드</v-btn>
+        <v-btn class="gradient btn-action" v-on:click="load">조회</v-btn>
+        <v-btn class="gradient btn-action" v-on:click="columnDataDownload" :disabled="dmColumnAllItems.length === 0">다운로드</v-btn>
+        <v-btn class="btn-action" id="btn-upload-attrs" color="deep-purple" outlined :disabled="!selectedModelId" v-on:click="triggerUploadAttrs">엑셀 업로드</v-btn>
+        <v-btn class="btn-action" id="btn-download-attrs-template" color="deep-purple" text v-on:click="downloadAttrsTemplate">양식 다운로드</v-btn>
         <input ref="uploadAttrsInput" type="file" accept=".xlsx" style="display:none" @change="onAttrFileSelected" />
       </v-row>
       <!-- Row 3: 그리드 편집 툴바 -->
@@ -42,16 +42,16 @@
           :disabled="!selectedModelId" dense outlined hide-details
           class="filterInput" :style="{ width: '220px' }" color="ndColor" placeholder="테이블 선택">
         </v-autocomplete>
-        <v-btn id="btn-add-col-row" color="primary" :disabled="!selectedModelId || !addTargetObjNm || newRows.length >= 100"
-          v-on:click="addEmptyRow" :style="{ padding: '0 12px' }">+ 컬럼 추가</v-btn>
-        <v-btn id="btn-add-col-rows-10" color="primary" outlined :disabled="!selectedModelId || !addTargetObjNm || newRows.length >= 100"
-          v-on:click="addEmptyRows(10)" :style="{ padding: '0 12px' }">+ 빈 행 10개</v-btn>
-        <v-btn id="btn-save-attrs" color="success" :disabled="!selectedModelId || (newRows.length === 0 && pendingDeletes.length === 0)"
-          v-on:click="saveAll" :style="{ padding: '0 12px' }">저장 ({{ newRows.length + pendingDeletes.length }})</v-btn>
-        <v-btn id="btn-resolve-selected" color="indigo" outlined :disabled="selectedRows.length === 0"
-          v-on:click="resolveSelected" :loading="resolving" :style="{ padding: '0 12px' }">선택 컬럼 물리모델 변환</v-btn>
-        <v-btn color="error" outlined :disabled="selectedRows.length === 0"
-          v-on:click="deleteSelected" :style="{ padding: '0 12px' }">선택 행 삭제</v-btn>
+        <v-btn class="btn-action" id="btn-add-col-row" color="primary" :disabled="!selectedModelId || !addTargetObjNm || newRows.length >= 100"
+          v-on:click="addEmptyRow">+ 컬럼 추가</v-btn>
+        <v-btn class="btn-action" id="btn-add-col-rows-10" color="primary" outlined :disabled="!selectedModelId || !addTargetObjNm || newRows.length >= 100"
+          v-on:click="addEmptyRows(10)">+ 빈 행 10개</v-btn>
+        <v-btn class="btn-action" id="btn-save-attrs" color="success" :disabled="!selectedModelId || (newRows.length === 0 && pendingDeletes.length === 0 && dirtyCount === 0)"
+          v-on:click="saveAll">저장 ({{ newRows.length + pendingDeletes.length + dirtyCount }})</v-btn>
+        <v-btn class="btn-action btn-wide" id="btn-resolve-selected" color="indigo" outlined :disabled="selectedRows.length === 0"
+          v-on:click="resolveSelected" :loading="resolving">선택 컬럼 물리모델 변환</v-btn>
+        <v-btn class="btn-action" color="error" outlined :disabled="selectedRows.length === 0"
+          v-on:click="deleteSelected">선택 행 삭제</v-btn>
         <span v-if="newRows.length >= 100" class="ml-2" style="color:#D32F2F;font-size:.8rem;">
           100행 도달 — 대량 입력은 엑셀 업로드 사용
         </span>
@@ -65,7 +65,9 @@
     <v-sheet class="tableSpt">
       <v-sheet>
         <span class="ndColor--text">총 {{ mergedItems.length }}건</span>
-        <span v-if="newRows.length > 0" class="ml-2" style="color:#F57C00;">(미저장 {{ newRows.length }}건)</span>
+        <span v-if="newRows.length > 0" class="ml-2" style="color:#F57C00;">(미저장 신규 {{ newRows.length }}건)</span>
+        <span v-if="dirtyCount > 0" class="ml-2" style="color:#F57C00;">(수정중 {{ dirtyCount }}건)</span>
+        <span v-if="pendingDeletes.length > 0" class="ml-2" style="color:#D32F2F;">(삭제 대기 {{ pendingDeletes.length }}건)</span>
       </v-sheet>
       <v-sheet :style="{ width: '80px' }">
         <v-select v-model.lazy="itemsPerPage" :items="tableViewLengthList"
@@ -87,14 +89,16 @@
       </template>
 
       <template #item.attrNmKr="{ item }">
-        <v-text-field v-if="item._mode === 'add'" v-model="item.attrNmKr"
-          :class="'inline-edit ' + (item._error ? 'inline-error' : '')"
-          dense hide-details outlined flat solo single-line autofocus
-          placeholder="컬럼 한글명" />
-        <span v-else class="ndColor--text" :style="{ cursor: 'pointer', margin: '0px 8px' }" @click="showTermData(item)">
-          <v-icon v-if="item.termsStndYn === 'N'" small color="error" class="mr-1"
-            title="비표준 용어">mdi-alert-circle</v-icon>{{ item.attrNmKr }}
-        </span>
+        <div style="display:flex; align-items:center;">
+          <v-icon v-if="item.termsStndYn === 'N' && item._mode !== 'add'" small color="error" class="mr-1"
+            title="비표준 용어">mdi-alert-circle</v-icon>
+          <v-text-field v-model="item.attrNmKr"
+            :class="'inline-edit ' + (item._error ? 'inline-error ' : '') + (isRowDirty(item) ? 'inline-dirty' : '')"
+            dense hide-details outlined flat solo single-line
+            :placeholder="item._mode === 'add' ? '컬럼 한글명 (논리)' : ''"
+            :autofocus="item._mode === 'add'"
+            @paste.native="onCellPaste(item, $event)" />
+        </div>
       </template>
 
       <template #item.attrNm="{ item }">
@@ -103,36 +107,40 @@
         </span>
       </template>
       <template #item.dataType="{ item }">
-        <span :style="{ margin: '0px 8px', color: item._mode === 'add' ? '#9E9E9E' : 'inherit' }">
-          {{ item._mode === 'add' ? '-' : item.dataType }}
+        <span :style="{ margin: '0px 8px', color: (item._mode === 'add' || item.termsStndYn === 'N') ? '#9E9E9E' : 'inherit' }">
+          {{ formatDataType(item) }}
         </span>
       </template>
       <template #item.dataLen="{ item }">
-        <span :style="{ margin: '0px 8px' }">{{ item._mode === 'add' ? '-' : item.dataLen }}</span>
+        <span :style="{ margin: '0px 8px', color: (item._mode === 'add' || item.termsStndYn === 'N') ? '#9E9E9E' : 'inherit' }">
+          {{ formatDataLen(item) }}
+        </span>
       </template>
       <template #item.dataDecimalLen="{ item }">
-        <span :style="{ margin: '0px 8px' }">{{ item._mode === 'add' ? '-' : item.dataDecimalLen }}</span>
+        <span :style="{ margin: '0px 8px', color: (item._mode === 'add' || item.termsStndYn === 'N') ? '#9E9E9E' : 'inherit' }">
+          {{ formatDataDecimalLen(item) }}
+        </span>
       </template>
 
       <template #item.nullableYn="{ item }">
-        <v-checkbox v-if="item._mode === 'add'" v-model="item.nullableYn"
-          true-value="Y" false-value="N" dense hide-details class="ma-0 pa-0" />
-        <span v-else :style="{ margin: '0px 8px' }">{{ item.nullableYn }}</span>
+        <v-checkbox v-model="item.nullableYn" true-value="Y" false-value="N"
+          :class="'ma-0 pa-0 ' + (isRowDirty(item) ? 'inline-dirty-cb' : '')"
+          dense hide-details />
       </template>
       <template #item.pkYn="{ item }">
-        <v-checkbox v-if="item._mode === 'add'" v-model="item.pkYn"
-          true-value="Y" false-value="N" dense hide-details class="ma-0 pa-0" />
-        <span v-else :style="{ margin: '0px 8px' }">{{ item.pkYn }}</span>
+        <v-checkbox v-model="item.pkYn" true-value="Y" false-value="N"
+          :class="'ma-0 pa-0 ' + (isRowDirty(item) ? 'inline-dirty-cb' : '')"
+          dense hide-details />
       </template>
       <template #item.fkYn="{ item }">
-        <v-checkbox v-if="item._mode === 'add'" v-model="item.fkYn"
-          true-value="Y" false-value="N" dense hide-details class="ma-0 pa-0" />
-        <span v-else :style="{ margin: '0px 8px' }">{{ item.fkYn }}</span>
+        <v-checkbox v-model="item.fkYn" true-value="Y" false-value="N"
+          :class="'ma-0 pa-0 ' + (isRowDirty(item) ? 'inline-dirty-cb' : '')"
+          dense hide-details />
       </template>
       <template #item.defaultVal="{ item }">
-        <v-text-field v-if="item._mode === 'add'" v-model="item.defaultVal"
+        <v-text-field v-model="item.defaultVal"
+          :class="'inline-edit ' + (isRowDirty(item) ? 'inline-dirty' : '')"
           dense hide-details outlined flat solo single-line placeholder="-" />
-        <span v-else :style="{ margin: '0px 8px' }">{{ item.defaultVal }}</span>
       </template>
 
       <template #item.termsStndYn="{ item }">
@@ -289,18 +297,22 @@ export default {
     selectedRows: [],       // show-select 체크된 행
     resolving: false,
     dmColumnDetaileHeaders: [
-      { text: '소유자', align: 'center', sortable: false, value: 'objOwner', width: '80px' },
-      { text: '테이블 한글명', sortable: false, align: 'center', value: 'objNmKr' },
-      { text: '테이블명', align: 'center', sortable: false, value: 'objNm' },
-      { text: '컬럼 한글명', sortable: false, align: 'center', value: 'attrNmKr' },
-      { text: '컬럼명', sortable: false, align: 'center', value: 'attrNm' },
-      { text: '데이터 타입', sortable: false, align: 'center', value: 'dataType' },
-      { text: '길이', sortable: false, align: 'center', value: 'dataLen', width: '60px' },
-      { text: '소수점', sortable: false, align: 'center', value: 'dataDecimalLen', width: '60px' },
-      { text: 'NULL', sortable: false, align: 'center', value: 'nullableYn', width: '60px' },
-      { text: 'PK', sortable: false, align: 'center', value: 'pkYn', width: '50px' },
-      { text: 'FK', sortable: false, align: 'center', value: 'fkYn', width: '50px' },
-      { text: '디폴트', sortable: false, align: 'center', value: 'defaultVal' },
+      // [그룹 1] 테이블 식별 — 회색-블루 (#ECEFF1)
+      { text: '소유자', align: 'center', sortable: false, value: 'objOwner', width: '80px', class: 'hdr-table' },
+      { text: '테이블 한글명 (논리)', sortable: false, align: 'center', value: 'objNmKr', class: 'hdr-table' },
+      { text: '테이블 영문명 (물리)', align: 'center', sortable: false, value: 'objNm', class: 'hdr-table' },
+      // [그룹 2] 논리 / 사용자 편집 — 연한 그린 (#E8F5E9)
+      { text: '컬럼 한글명 (논리)', sortable: false, align: 'center', value: 'attrNmKr', class: 'hdr-logical' },
+      { text: 'NULL', sortable: false, align: 'center', value: 'nullableYn', width: '60px', class: 'hdr-logical' },
+      { text: 'PK', sortable: false, align: 'center', value: 'pkYn', width: '50px', class: 'hdr-logical' },
+      { text: 'FK', sortable: false, align: 'center', value: 'fkYn', width: '50px', class: 'hdr-logical' },
+      { text: '디폴트', sortable: false, align: 'center', value: 'defaultVal', class: 'hdr-logical' },
+      // [그룹 3] 자동 채움 / 물리 — 연한 인디고 (#E3F2FD)
+      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'attrNm', class: 'hdr-physical' },
+      { text: '데이터 타입', sortable: false, align: 'center', value: 'dataType', class: 'hdr-physical' },
+      { text: '길이', sortable: false, align: 'center', value: 'dataLen', width: '60px', class: 'hdr-physical' },
+      { text: '소수점', sortable: false, align: 'center', value: 'dataDecimalLen', width: '60px', class: 'hdr-physical' },
+      // 메타 (기본 색)
       { text: '표준', sortable: false, align: 'center', value: 'termsStndYn', width: '60px' },
       { text: '변환 불가 사유', sortable: false, align: 'center', value: 'resolveReason', width: '160px' },
       { text: '', sortable: false, align: 'center', value: 'actions', width: '60px' },
@@ -358,6 +370,9 @@ export default {
       // 저장된 행 + 미저장 신규 행 (신규 행은 뒤에 붙임)
       return [...this.dmColumnItems, ...this.newRows];
     },
+    dirtyCount() {
+      return (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it)).length;
+    },
   },
   methods: {
     /**
@@ -370,6 +385,21 @@ export default {
       if (item._mode === 'add') return '(저장 후 자동)';
       if (item.termsStndYn === 'N') return '';
       return item.attrNm || '';
+    },
+    formatDataType(item) {
+      if (item._mode === 'add') return '-';
+      if (item.termsStndYn === 'N') return '';
+      return item.dataType || '';
+    },
+    formatDataLen(item) {
+      if (item._mode === 'add') return '-';
+      if (item.termsStndYn === 'N') return '';
+      return item.dataLen != null ? item.dataLen : '';
+    },
+    formatDataDecimalLen(item) {
+      if (item._mode === 'add') return '-';
+      if (item.termsStndYn === 'N') return '';
+      return item.dataDecimalLen != null ? item.dataDecimalLen : '';
     },
     getModelList() {
       axios.post(this.$APIURL.base + "api/dm/getDataModelStatsList", {
@@ -422,7 +452,22 @@ export default {
         _rowKey: 's_' + item.objNm + '_' + item.attrNm,
         _mode: 'saved',
         _resolveReason: null,
+        _orig: {
+          attrNmKr: item.attrNmKr || '',
+          nullableYn: item.nullableYn || 'Y',
+          pkYn: item.pkYn || 'N',
+          fkYn: item.fkYn || 'N',
+          defaultVal: item.defaultVal || '',
+        },
       }));
+    },
+    isRowDirty(item) {
+      if (!item || item._mode === 'add' || !item._orig) return false;
+      return (item.attrNmKr || '')   !== (item._orig.attrNmKr   || '')
+          || (item.nullableYn || '') !== (item._orig.nullableYn || '')
+          || (item.pkYn || '')       !== (item._orig.pkYn       || '')
+          || (item.fkYn || '')       !== (item._orig.fkYn       || '')
+          || (item.defaultVal || '') !== (item._orig.defaultVal || '');
     },
     loadObjOptions() {
       if (!this.selectedModelId) { this.objOptions = []; return; }
@@ -534,6 +579,54 @@ export default {
         });
       }
     },
+    onCellPaste(targetItem, e) {
+      // 한글명 inline input 에서 발생한 paste — 여러 줄이면 같은 컬럼의 행들에 분배
+      const cd = e.clipboardData || window.clipboardData;
+      if (!cd) return;
+      const text = cd.getData('text') || '';
+      // 줄바꿈 없으면 일반 paste 동작 (한 셀 안에 텍스트 그대로 들어감)
+      if (!/\r|\n/.test(text)) return;
+      e.preventDefault();
+      // 이미 저장된 행에서는 가로채지 않음
+      const startIdx = this.newRows.findIndex(r => r._rowKey === targetItem._rowKey);
+      if (startIdx < 0) {
+        this.$swal.fire({ title: '미저장 행에서만 멀티 paste 가능', icon: 'info', timer: 1500, showConfirmButton: false });
+        return;
+      }
+      const lines = text.replace(/\r\n?/g, '\n').split('\n').map(s => s.trim()).filter(Boolean);
+      if (lines.length === 0) return;
+      // 100행 상한
+      const totalCap = 100;
+      let appliedCnt = 0;
+      let truncated = 0;
+      const targetObj = this.objOptions.find(o => o.objNm === this.addTargetObjNm)
+        || { objNm: this.addTargetObjNm, label: '' };
+      for (let i = 0; i < lines.length; i++) {
+        const idx = startIdx + i;
+        if (this.newRows.length >= totalCap && idx >= this.newRows.length) {
+          truncated = lines.length - i;
+          break;
+        }
+        if (idx >= this.newRows.length) {
+          // 빈 행 자동 추가
+          this.newRows.push(this._makeBlankRow(targetObj, this.newRows.length));
+        }
+        this.$set(this.newRows[idx], 'attrNmKr', lines[i]);
+        appliedCnt++;
+      }
+      if (appliedCnt > 0) {
+        this.$swal.fire({
+          title: `${appliedCnt}행 분배 완료`, icon: 'success', timer: 1200, showConfirmButton: false,
+        });
+      }
+      if (truncated > 0) {
+        this.$swal.fire({
+          title: '최대 100행 제한 초과',
+          text: `${truncated}행은 잘림. 대량은 엑셀 업로드 사용.`,
+          icon: 'warning',
+        });
+      }
+    },
     removeNewRow(item) {
       this.newRows = this.newRows.filter(r => r._rowKey !== item._rowKey);
       this.selectedRows = this.selectedRows.filter(r => r._rowKey !== item._rowKey);
@@ -567,10 +660,52 @@ export default {
       });
     },
     _validateNewRows() {
+      this._dupErrorList = [];
       let ok = true;
+      // 1) 빈값 검사 (newRows 한글명/objNm 필수)
       this.newRows.forEach(r => {
         r._error = !r.attrNmKr || !r.attrNmKr.trim() || !r.objNm;
         if (r._error) ok = false;
+      });
+      // dirty 수정 행도 한글명 빈값 안됨
+      const dirtyItems = (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it));
+      dirtyItems.forEach(r => {
+        r._error = !r.attrNmKr || !r.attrNmKr.trim();
+        if (r._error) ok = false;
+      });
+      // 2) 한글명 중복 검사 — 같은 테이블(objNm) 내에서
+      // 2-1) 변경되는 모든 행 (newRows + dirty) 내부 중복
+      const seen = {}; // key: objNm|attrNmKr → first row 참조
+      const changing = [
+        ...this.newRows.filter(r => r.attrNmKr && r.objNm),
+        ...dirtyItems.filter(r => r.attrNmKr && r.objNm),
+      ];
+      changing.forEach(r => {
+        const key = r.objNm + '|' + r.attrNmKr.trim();
+        if (seen[key]) {
+          r._error = true;
+          seen[key]._error = true;
+          this._dupErrorList.push(`${r.objNmKr || r.objNm} 테이블 : '${r.attrNmKr.trim()}' 중복 (입력/수정 행)`);
+          ok = false;
+        } else {
+          seen[key] = r;
+        }
+      });
+      // 2-2) 변경되지 않는 기존 행과의 중복 (dirty 가 아닌 saved 와 충돌)
+      const existing = {};
+      (this.dmColumnAllItems || []).forEach(it => {
+        if (it._mode === 'add' || !it.attrNmKr || !it.objNm) return;
+        if (this.isRowDirty(it)) return; // dirty 는 위에서 changing 으로 검사 중
+        existing[it.objNm + '|' + (it.attrNmKr || '').trim()] = it;
+      });
+      changing.forEach(r => {
+        const key = r.objNm + '|' + r.attrNmKr.trim();
+        // dirty 행 자기 자신이 existing 에 있는 케이스는 제외 (자기 자신 비교가 됨 — 위에서 dirty 는 existing 에 안 들어감)
+        if (existing[key]) {
+          r._error = true;
+          this._dupErrorList.push(`${r.objNmKr || r.objNm} 테이블 : '${r.attrNmKr.trim()}' 이미 등록됨`);
+          ok = false;
+        }
       });
       return ok;
     },
@@ -585,12 +720,23 @@ export default {
     },
     saveAll() {
       if (!this._validateNewRows()) {
-        this.$swal.fire({ title: '입력 오류', text: '빨간 행의 한글명을 채워주세요.', icon: 'warning' });
+        const dups = this._dupErrorList || [];
+        if (dups.length > 0) {
+          const list = dups.slice(0, 6).map(e => '· ' + e).join('<br>');
+          const more = dups.length > 6 ? `<br>외 ${dups.length - 6}건` : '';
+          this.$swal.fire({ title: '한글명 중복 — 같은 테이블 내 중복 불가', html: list + more, icon: 'error' });
+        } else {
+          this.$swal.fire({ title: '입력 오류', text: '빨간 행의 한글명을 채워주세요.', icon: 'warning' });
+        }
         return;
       }
+      const dirtyItems = (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it));
       const addGroups = this._groupByObj(this.newRows);
       const delGroups = this._groupByObj(this.pendingDeletes);
-      const objNms = new Set([...Object.keys(addGroups), ...Object.keys(delGroups)]);
+      const updGroups = this._groupByObj(dirtyItems);
+      const objNms = new Set([
+        ...Object.keys(addGroups), ...Object.keys(delGroups), ...Object.keys(updGroups),
+      ]);
       if (objNms.size === 0) return;
 
       const requests = [];
@@ -598,6 +744,11 @@ export default {
         const attrs = [];
         (addGroups[objNm] || []).forEach(r => attrs.push({
           mode: 'ADD', attrNmKr: r.attrNmKr, pkYn: r.pkYn, fkYn: r.fkYn,
+          nullableYn: r.nullableYn, defaultVal: r.defaultVal,
+        }));
+        (updGroups[objNm] || []).forEach(r => attrs.push({
+          mode: 'UPDATE', attrNm: r.attrNm,
+          attrNmKr: r.attrNmKr, pkYn: r.pkYn, fkYn: r.fkYn,
           nullableYn: r.nullableYn, defaultVal: r.defaultVal,
         }));
         (delGroups[objNm] || []).forEach(r => attrs.push({
@@ -838,7 +989,16 @@ pre { font-family: 'Roboto'; }
 .inline-edit { min-width: 100px; }
 .inline-edit >>> input { padding: 2px 6px; }
 .inline-error >>> .v-input__slot { background-color: #FFEBEE !important; }
+.inline-dirty >>> .v-input__slot { background-color: #FFF8E1 !important; }
+.inline-dirty-cb >>> .v-input--selection-controls__input { background-color: #FFF8E1 !important; border-radius: 4px; }
 .row-upload-error > td { background-color: #FFEBEE !important; }
 .row-upload-skip > td { background-color: #FFF8E1 !important; }
 .preview-grid { border: 1px solid #E0E0E0; }
+/* 컬럼 화면 액션 버튼 — 글자 대비 충분한 폭 확보 */
+.btn-action { min-width: 110px !important; padding: 0 16px !important; letter-spacing: 0 !important; }
+.btn-action.btn-wide { min-width: 170px !important; padding: 0 18px !important; }
+/* 컬럼 그리드 헤더 3색 — 테이블 식별 / 논리 사용자 편집 / 자동 채움 물리 */
+#clTable_table >>> th.hdr-table    { background-color: #ECEFF1 !important; color: #455A64 !important; }
+#clTable_table >>> th.hdr-logical  { background-color: #E8F5E9 !important; color: #2E7D32 !important; font-weight: 600 !important; }
+#clTable_table >>> th.hdr-physical { background-color: #E3F2FD !important; color: #1565C0 !important; }
 </style>

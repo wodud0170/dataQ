@@ -742,6 +742,45 @@
 		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm}
 	</update>
 
+	<!-- 테이블 물리명(OBJ_NM) rename 미리보기용 영향 카운트 -->
+	<select id="countObjAttrForRename" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND USE_YN = 'Y'
+	</select>
+	<select id="countObjIndexForRename" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_INDEX WHERE DM_ID = #{dataModelId} AND TABLE_NM = #{objNm} AND USE_YN = 'Y'
+	</select>
+	<select id="countObjConstraintForRename" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_CONSTRAINT WHERE DM_ID = #{dataModelId} AND TABLE_NM = #{objNm} AND USE_YN = 'Y'
+	</select>
+	<select id="countObjRefConstraintForRename" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_CONSTRAINT WHERE DM_ID = #{dataModelId} AND REF_TABLE_NM = #{objNm} AND USE_YN = 'Y'
+	</select>
+	<select id="existsObjNmInModel" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm}
+	</select>
+
+	<!-- 테이블 물리명 rename — 5단계 cascade -->
+	<update id="renameObjPhysical" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ SET OBJ_NM = #{newObjNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{origObjNm}
+	</update>
+	<update id="renameObjAttrCascade" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR SET OBJ_NM = #{newObjNm}
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{origObjNm}
+	</update>
+	<update id="renameObjIndexCascade" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_INDEX SET TABLE_NM = #{newObjNm}
+		WHERE DM_ID = #{dataModelId} AND TABLE_NM = #{origObjNm}
+	</update>
+	<update id="renameObjConstraintCascade" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CONSTRAINT SET TABLE_NM = #{newObjNm}
+		WHERE DM_ID = #{dataModelId} AND TABLE_NM = #{origObjNm}
+	</update>
+	<update id="renameObjConstraintRefCascade" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CONSTRAINT SET REF_TABLE_NM = #{newObjNm}
+		WHERE DM_ID = #{dataModelId} AND REF_TABLE_NM = #{origObjNm}
+	</update>
+
 	<!-- 테이블 삭제 (하위 컬럼 함께 삭제) -->
 	<delete id="deleteDataModelAttrsByObj" parameterType="java.util.Map">
 		DELETE FROM TB_DATA_MODEL_ATTR
@@ -753,6 +792,12 @@
 	</delete>
 
 	<!-- 컬럼 수정 -->
+	<!-- 단건 ATTR 조회 (UPDATE 시 기존 표준 메타 보존용) -->
+	<select id="selectDataModelAttrOne" parameterType="java.util.Map" resultMap="stdDataModelAttrMap">
+		SELECT * FROM TB_DATA_MODEL_ATTR
+		WHERE DM_ID = #{dataModelId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+	</select>
+
 	<update id="updateDataModelAttr" parameterType="com.ndata.quality.model.std.StdDataModelAttrVo">
 		UPDATE TB_DATA_MODEL_ATTR SET
 			 ATTR_NM_KR       = #{attrNmKr, jdbcType=VARCHAR}

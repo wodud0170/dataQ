@@ -302,18 +302,18 @@ export default {
     ],
     // 하단 테이블 탭 헤더
     dmTabledetaileHeaders: [
-      { text: '테이블명', align: 'start', sortable: false, value: 'objNm' },
-      { text: '테이블 한글명', sortable: false, align: 'start', value: 'objNmKr' },
+      { text: '테이블 영문명 (물리)', align: 'start', sortable: false, value: 'objNm' },
+      { text: '테이블 한글명 (논리)', sortable: false, align: 'start', value: 'objNmKr' },
       { text: '소유자', sortable: false, align: 'start', value: 'objOwner' },
       { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
       { text: '테이블 설명', sortable: false, align: 'start', value: 'objDesc' },
     ],
     // 하단 컬럼 탭 헤더
     dmColumnDetaileHeaders: [
-      { text: '테이블명', align: 'center', sortable: false, value: 'objNm' },
-      { text: '테이블 한글명', sortable: false, align: 'center', value: 'objNmKr' },
-      { text: '컬럼명', sortable: false, align: 'center', value: 'attrNm' },
-      { text: '컬럼\n한글명', sortable: false, align: 'center', value: 'attrNmKr' },
+      { text: '테이블 영문명 (물리)', align: 'center', sortable: false, value: 'objNm' },
+      { text: '테이블 한글명 (논리)', sortable: false, align: 'center', value: 'objNmKr' },
+      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'attrNm' },
+      { text: '컬럼 한글명\n(논리)', sortable: false, align: 'center', value: 'attrNmKr' },
       { text: '데이터\n타입', sortable: false, align: 'center', value: 'dataType' },
       { text: '데이터\n길이', sortable: false, align: 'center', value: 'dataLen' },
       { text: '데이터\n소수점\n길이', sortable: false, align: 'center', value: 'dataDecimalLen' },
@@ -368,18 +368,18 @@ export default {
     modelViewMode: 'physical',
     // 논리 모델용 테이블 헤더 (한글명 먼저)
     dmTableLogicalHeaders: [
-      { text: '테이블 한글명', align: 'start', sortable: false, value: 'objNmKr' },
-      { text: '테이블명', sortable: false, align: 'start', value: 'objNm' },
+      { text: '테이블 한글명 (논리)', align: 'start', sortable: false, value: 'objNmKr' },
+      { text: '테이블 영문명 (물리)', sortable: false, align: 'start', value: 'objNm' },
       { text: '소유자', sortable: false, align: 'start', value: 'objOwner' },
       { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
       { text: '테이블 설명', sortable: false, align: 'start', value: 'objDesc' },
     ],
     // 논리 모델용 컬럼 헤더 (한글명 먼저)
     dmColumnLogicalHeaders: [
-      { text: '테이블 한글명', sortable: false, align: 'center', value: 'objNmKr' },
-      { text: '테이블명', align: 'center', sortable: false, value: 'objNm' },
-      { text: '컬럼\n한글명', sortable: false, align: 'center', value: 'attrNmKr' },
-      { text: '컬럼명', sortable: false, align: 'center', value: 'attrNm' },
+      { text: '테이블 한글명 (논리)', sortable: false, align: 'center', value: 'objNmKr' },
+      { text: '테이블 영문명 (물리)', align: 'center', sortable: false, value: 'objNm' },
+      { text: '컬럼 한글명\n(논리)', sortable: false, align: 'center', value: 'attrNmKr' },
+      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'attrNm' },
       { text: '데이터\n타입', sortable: false, align: 'center', value: 'dataType' },
       { text: '데이터\n길이', sortable: false, align: 'center', value: 'dataLen' },
       { text: '데이터\n소수점\n길이', sortable: false, align: 'center', value: 'dataDecimalLen' },

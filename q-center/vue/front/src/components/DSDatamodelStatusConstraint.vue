@@ -9,7 +9,7 @@
           @change="onModelChange" clearable dense outlined hide-details
           class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
         </v-autocomplete>
-        <span class="filterLabel">테이블명</span>
+        <span class="filterLabel">테이블 영문명 (물리)</span>
         <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
@@ -91,10 +91,10 @@ export default {
     tableViewLengthList: [10, 20, 30, 40, 50],
     headers: [
       { text: '소유자', sortable: true, align: 'center', value: 'objOwner' },
-      { text: '테이블명', sortable: true, align: 'center', value: 'tableNm' },
+      { text: '테이블 영문명 (물리)', sortable: true, align: 'center', value: 'tableNm' },
       { text: '제약조건명', sortable: true, align: 'center', value: 'constraintNm' },
       { text: '유형', sortable: true, align: 'center', value: 'constraintType' },
-      { text: '컬럼명', sortable: false, align: 'center', value: 'columnNm' },
+      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'columnNm' },
       { text: '컬럼 순서', sortable: true, align: 'center', value: 'columnPos' },
       { text: '참조 테이블', sortable: false, align: 'center', value: 'refTableNm' },
       { text: '참조 컬럼', sortable: false, align: 'center', value: 'refColumnNm' },
