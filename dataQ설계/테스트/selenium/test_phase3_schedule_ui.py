@@ -108,7 +108,7 @@ def main():
 
         # 2
         def _nav_manage():
-            nav(d, "mmGroup", "nav_scheduleManage")
+            nav(d, "scheduleGroup", "nav_scheduleManage")
             WebDriverWait(d, 10).until(
                 EC.visibility_of_element_located((By.XPATH, "//button[contains(., '스케줄 추가')]"))
             )
@@ -187,7 +187,7 @@ def main():
 
         # 5. 실행 이력 메뉴 이동
         def _nav_log():
-            nav(d, "mmGroup", "nav_scheduleLog")
+            nav(d, "scheduleGroup", "nav_scheduleLog")
             WebDriverWait(d, 10).until(
                 EC.visibility_of_element_located((By.XPATH, "//button[contains(., '조회')]"))
             )
@@ -228,7 +228,7 @@ def main():
 
         # 8. 정리: 다시 관리 화면으로 돌아가 스케줄 삭제
         def _cleanup():
-            nav(d, "mmGroup", "nav_scheduleManage")
+            nav(d, "scheduleGroup", "nav_scheduleManage")
             time.sleep(1.5)
             name = state["name"]
             rows = d.find_elements(By.CSS_SELECTOR, "table tbody tr")

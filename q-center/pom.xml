@@ -109,6 +109,13 @@
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 		</dependency>
+		<!-- Maven 3.9+ 가 q-common 의 systemPath warning 을 invalid POM 으로 격상시켜
+		     transitive 가 fat jar 에 안 들어가는 케이스 보강. q-common 과 동일 GAV(4.4) -->
+		<dependency>
+			<groupId>com.twitter.penguin</groupId>
+			<artifactId>korean-text</artifactId>
+			<version>4.4</version>
+		</dependency>
 		<!-- jasypt -->
 		<dependency>
 			<groupId>com.github.ulisesbocchio</groupId>

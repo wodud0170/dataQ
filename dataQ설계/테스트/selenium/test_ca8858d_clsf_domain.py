@@ -180,8 +180,20 @@ def run():
         def _analyze():
             ta = d.find_element(By.CSS_SELECTOR, "textarea")
             _click_el(d, ta)
-            ta.send_keys(INPUT_KOREAN)
+            # native textarea 의 prototype value setter 통해 React/Vue 모두 호환되는 set
+            d.execute_script(
+                "var el=arguments[0], val=arguments[1];"
+                "var setter=Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value').set;"
+                "setter.call(el,val);"
+                "el.dispatchEvent(new Event('input',{bubbles:true}));"
+                "el.dispatchEvent(new Event('change',{bubbles:true}));",
+                ta, INPUT_KOREAN
+            )
             time.sleep(0.5)
+            # 진단 — value 인식 + 분석 시작 버튼 활성화 여부
+            ta_val = d.execute_script("return arguments[0].value;", ta)
+            print(f"  [diag] textarea.value len={len(ta_val)} repr={ta_val[:30]!r}")
+            shot(d, "02a_textarea_set")
             # 분석 시작 버튼 찾기 (v-btn 에 포함된 '분석 시작' 텍스트)
             btns = d.find_elements(By.CSS_SELECTOR, "button.v-btn")
             target = None
@@ -190,6 +202,8 @@ def run():
                     target = b; break
             if not target: raise RuntimeError("분석 시작 버튼 없음")
             _click_el(d, target)
+            time.sleep(3)
+            shot(d, "02b_after_click")
             # STEP 3 도달 대기 — "분석 결과" 제목 카드가 보이는 것까지. 분석 시간 최대 60초.
             def _step3_visible(drv):
                 elems = drv.find_elements(By.XPATH, "//span[text()='분석 결과']")
