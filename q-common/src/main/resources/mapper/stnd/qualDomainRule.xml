@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="qualDomainRule">
+
+    <!-- 70번 §2.1 도메인별 검증 규칙 1:N -->
+
+    <resultMap id="domainRuleMap" type="com.ndata.quality.model.std.DomainRuleVo">
+        <id     property="domainRuleId" column="DOMAIN_RULE_ID"/>
+        <result property="domainId"     column="DOMAIN_ID"/>
+        <result property="domainNm"     column="DOMAIN_NM"/>
+        <result property="ruleNm"       column="RULE_NM"/>
+        <result property="ruleType"     column="RULE_TYPE"/>
+        <result property="ruleParams"   column="RULE_PARAMS"/>
+        <result property="sortOrd"      column="SORT_ORD"/>
+        <result property="useYn"        column="USE_YN"/>
+        <result property="descr"        column="DESCR"/>
+        <result property="cretUserId"   column="CRET_USER_ID"/>
+        <result property="cretDt"       column="CRET_DT"/>
+        <result property="updtUserId"   column="UPDT_USER_ID"/>
+        <result property="updtDt"       column="UPDT_DT"/>
+    </resultMap>
+
+    <select id="selectByDomain" parameterType="String" resultMap="domainRuleMap">
+        SELECT dr.*, d.DOMAIN_NM
+          FROM TB_DOMAIN_RULE dr
+          LEFT JOIN TB_DOMAIN d ON d.DOMAIN_ID = dr.DOMAIN_ID
+         WHERE dr.DOMAIN_ID = #{domainId}
+           AND dr.USE_YN    = 'Y'
+         ORDER BY dr.SORT_ORD
+    </select>
+
+    <select id="selectById" parameterType="String" resultMap="domainRuleMap">
+        SELECT dr.*, d.DOMAIN_NM
+          FROM TB_DOMAIN_RULE dr
+          LEFT JOIN TB_DOMAIN d ON d.DOMAIN_ID = dr.DOMAIN_ID
+         WHERE dr.DOMAIN_RULE_ID = #{domainRuleId}
+    </select>
+
+    <insert id="insertRule" parameterType="com.ndata.quality.model.std.DomainRuleVo">
+        INSERT INTO TB_DOMAIN_RULE (
+            DOMAIN_RULE_ID, DOMAIN_ID, RULE_NM, RULE_TYPE, RULE_PARAMS,
+            SORT_ORD, USE_YN, DESCR, CRET_USER_ID, CRET_DT
+        ) VALUES (
+            #{domainRuleId}, #{domainId}, #{ruleNm}, #{ruleType}, #{ruleParams},
+            COALESCE(#{sortOrd}, 1), COALESCE(#{useYn}, 'Y'),
+            #{descr}, #{cretUserId}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateRule" parameterType="com.ndata.quality.model.std.DomainRuleVo">
+        UPDATE TB_DOMAIN_RULE SET
+            RULE_NM      = #{ruleNm},
+            RULE_TYPE    = #{ruleType},
+            RULE_PARAMS  = #{ruleParams},
+            SORT_ORD     = #{sortOrd},
+            USE_YN       = #{useYn},
+            DESCR        = #{descr},
+            UPDT_USER_ID = #{updtUserId},
+            UPDT_DT      = CURRENT_TIMESTAMP
+         WHERE DOMAIN_RULE_ID = #{domainRuleId}
+    </update>
+
+    <delete id="deleteRule" parameterType="String">
+        DELETE FROM TB_DOMAIN_RULE WHERE DOMAIN_RULE_ID = #{domainRuleId}
+    </delete>
+
+    <!-- 도메인의 SORT_ORD=1 default 룰 -->
+    <select id="selectDefaultByDomain" parameterType="String" resultMap="domainRuleMap">
+        SELECT dr.*, d.DOMAIN_NM
+          FROM TB_DOMAIN_RULE dr
+          LEFT JOIN TB_DOMAIN d ON d.DOMAIN_ID = dr.DOMAIN_ID
+         WHERE dr.DOMAIN_ID = #{domainId}
+           AND dr.USE_YN    = 'Y'
+         ORDER BY dr.SORT_ORD
+         LIMIT 1
+    </select>
+
+</mapper>

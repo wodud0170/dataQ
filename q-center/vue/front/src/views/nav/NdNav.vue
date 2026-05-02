@@ -413,6 +413,46 @@
 
                 </v-list-group>
 
+                <!-- 데이터 품질 진단 (값 진단 + 업무 규칙) — 67번 -->
+                <v-list-group link v-cloak :value="navQualGroup" prepend-icon="mdi-database-check"
+                    active-class="ndColor--text" id="qualGroup" title="데이터 품질 진단" v-on:click.stop="addNavGroupData('qualGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">데이터 품질 진단</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_valueProfile" href="#tab_valueProfile" active-class="ndColor--text" title="값 프로파일링"
+                        v-on:click.stop="addTabItem('값 프로파일링', 'qualValueProfile');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>값 프로파일링</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_ruleManage" href="#tab_ruleManage" active-class="ndColor--text" title="업무 규칙 관리"
+                        v-on:click.stop="addTabItem('업무 규칙 관리', 'qualRuleManage');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>업무 규칙 관리</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_ruleResult" href="#tab_ruleResult" active-class="ndColor--text" title="업무 규칙 진단 결과"
+                        v-on:click.stop="addTabItem('업무 규칙 진단 결과', 'qualRuleResult');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>업무 규칙 진단 결과</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_qualColRule" href="#tab_qualColRule" active-class="ndColor--text" title="컬럼 규칙 매핑"
+                        v-on:click.stop="addTabItem('컬럼 규칙 매핑', 'qualColRule');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>컬럼 규칙 매핑</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_qualStats" href="#tab_qualStats" active-class="ndColor--text" title="진단 통계"
+                        v-on:click.stop="addTabItem('진단 통계', 'qualStats');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>진단 통계</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
                 <!-- 진단 스케줄 (모든 사용자 조회. 관리자만 등록/수정/삭제) -->
                 <v-list-group link v-cloak :value="navScheduleGroup" prepend-icon="mdi-calendar-clock"
                     active-class="ndColor--text" id="scheduleGroup" title="진단 스케줄" v-on:click.stop="addNavGroupData('scheduleGroup');">
@@ -499,6 +539,7 @@ export default {
         'navAutoStdGroup',
         'navCommunityGroup',
         'navScheduleGroup',
+        'navQualGroup',
         'navMyPageGroup'],
     data: () => ({
         selectedList: null,

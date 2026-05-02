@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="qualColRule">
+
+    <!-- 70번 §2.2 컬럼 → 적용 규칙 매핑 + effective rule 조회 -->
+
+    <!--
+      effective rule 결정 흐름 (1 SQL):
+        1. TB_QUAL_COL_RULE 매핑 우선
+           - EXCLUDE_YN='Y' → exclude
+           - CUSTOM_RULE_ID → TB_QUAL_RULE
+           - DOMAIN_RULE_ID → TB_DOMAIN_RULE 직접
+        2. 매핑 없으면 컬럼 한글명 → 용어(TB_TERMS) → 도메인(TB_DOMAIN) → SORT_ORD=1 룰
+        3. 매핑/도메인 모두 없으면 NULL → 진단 제외 skip
+    -->
+    <select id="selectEffectiveRulesByModel" parameterType="map"
+            resultType="com.ndata.quality.model.std.QualColRuleVo">
+        WITH col_meta AS (
+          SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM, a.ATTR_NM_KR,
+                 d.DOMAIN_ID,
+                 t.DOMAIN_NM AS TERM_DOMAIN_NM
+            FROM TB_DATA_MODEL_ATTR a
+            LEFT JOIN TB_TERMS t  ON t.TERMS_NM    = a.ATTR_NM_KR
+            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM   = t.DOMAIN_NM
+           WHERE a.DM_ID  = #{dmId}
+             AND a.USE_YN = 'Y'
+            <if test="objNm != null">  AND a.OBJ_NM  = #{objNm}  </if>
+            <if test="attrNm != null"> AND a.ATTR_NM = #{attrNm} </if>
+        ),
+        col_default_dom AS (
+          SELECT cm.DM_ID, cm.OBJ_NM, cm.ATTR_NM, cm.DOMAIN_ID,
+                 dr.DOMAIN_RULE_ID AS DEFAULT_DR_ID,
+                 dr.RULE_NM        AS DEFAULT_RULE_NM,
+                 dr.RULE_TYPE      AS DEFAULT_RULE_TYPE,
+                 dr.RULE_PARAMS    AS DEFAULT_RULE_PARAMS,
+                 dr.SORT_ORD       AS DEFAULT_SORT_ORD
+            FROM col_meta cm
+            LEFT JOIN LATERAL (
+              SELECT * FROM TB_DOMAIN_RULE
+               WHERE DOMAIN_ID = cm.DOMAIN_ID AND USE_YN = 'Y'
+               ORDER BY SORT_ORD LIMIT 1
+            ) dr ON true
+        )
+        SELECT cm.DM_ID    AS dmId,
+               cm.OBJ_NM   AS objNm,
+               cm.ATTR_NM  AS attrNm,
+               cr.DOMAIN_RULE_ID AS domainRuleId,
+               cr.CUSTOM_RULE_ID AS customRuleId,
+               COALESCE(cr.EXCLUDE_YN, 'N') AS excludeYn,
+               cr.UPDT_USER_ID AS updtUserId,
+               cr.UPDT_DT      AS updtDt,
+               -- effective rule 결정
+               CASE
+                 WHEN cr.EXCLUDE_YN = 'Y'                THEN NULL
+                 WHEN cr.CUSTOM_RULE_ID IS NOT NULL      THEN ur.RULE_NM
+                 WHEN cr.DOMAIN_RULE_ID IS NOT NULL      THEN udr.RULE_NM
+                 ELSE cd.DEFAULT_RULE_NM
+               END AS effectiveRuleNm,
+               CASE
+                 WHEN cr.EXCLUDE_YN = 'Y'                THEN NULL
+                 WHEN cr.CUSTOM_RULE_ID IS NOT NULL      THEN ur.RULE_TYPE
+                 WHEN cr.DOMAIN_RULE_ID IS NOT NULL      THEN udr.RULE_TYPE
+                 ELSE cd.DEFAULT_RULE_TYPE
+               END AS effectiveRuleType,
+               CASE
+                 WHEN cr.EXCLUDE_YN = 'Y'                THEN NULL
+                 WHEN cr.CUSTOM_RULE_ID IS NOT NULL      THEN ur.RULE_PARAMS
+                 WHEN cr.DOMAIN_RULE_ID IS NOT NULL      THEN udr.RULE_PARAMS
+                 ELSE cd.DEFAULT_RULE_PARAMS
+               END AS effectiveRuleParams,
+               CASE
+                 WHEN cr.EXCLUDE_YN = 'Y'                THEN NULL
+                 WHEN cr.CUSTOM_RULE_ID IS NOT NULL      THEN udr.SORT_ORD
+                 WHEN cr.DOMAIN_RULE_ID IS NOT NULL      THEN udr.SORT_ORD
+                 ELSE cd.DEFAULT_SORT_ORD
+               END AS effectiveSortOrd,
+               CASE
+                 WHEN cr.EXCLUDE_YN = 'Y'              THEN 'EXCLUDED'
+                 WHEN cr.CUSTOM_RULE_ID IS NOT NULL    THEN 'CUSTOM'
+                 WHEN cr.DOMAIN_RULE_ID IS NOT NULL    THEN 'DOMAIN'
+                 WHEN cd.DEFAULT_RULE_NM IS NOT NULL   THEN 'DEFAULT'
+                 ELSE 'NONE'
+               END AS effectiveSource
+          FROM col_meta cm
+          LEFT JOIN col_default_dom cd
+            ON cd.DM_ID = cm.DM_ID AND cd.OBJ_NM = cm.OBJ_NM AND cd.ATTR_NM = cm.ATTR_NM
+          LEFT JOIN TB_QUAL_COL_RULE cr
+            ON cr.DM_ID = cm.DM_ID AND cr.OBJ_NM = cm.OBJ_NM AND cr.ATTR_NM = cm.ATTR_NM
+          LEFT JOIN TB_QUAL_RULE ur
+            ON ur.RULE_ID = cr.CUSTOM_RULE_ID
+          LEFT JOIN TB_DOMAIN_RULE udr
+            ON udr.DOMAIN_RULE_ID = cr.DOMAIN_RULE_ID
+         ORDER BY cm.OBJ_NM, cm.ATTR_NM
+    </select>
+
+    <insert id="upsertColRule" parameterType="com.ndata.quality.model.std.QualColRuleVo">
+        INSERT INTO TB_QUAL_COL_RULE (
+            DM_ID, OBJ_NM, ATTR_NM, DOMAIN_RULE_ID, CUSTOM_RULE_ID, EXCLUDE_YN,
+            UPDT_USER_ID, UPDT_DT
+        ) VALUES (
+            #{dmId}, #{objNm}, #{attrNm},
+            #{domainRuleId}, #{customRuleId}, COALESCE(#{excludeYn}, 'N'),
+            #{updtUserId}, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (DM_ID, OBJ_NM, ATTR_NM) DO UPDATE SET
+            DOMAIN_RULE_ID = EXCLUDED.DOMAIN_RULE_ID,
+            CUSTOM_RULE_ID = EXCLUDED.CUSTOM_RULE_ID,
+            EXCLUDE_YN     = EXCLUDED.EXCLUDE_YN,
+            UPDT_USER_ID   = EXCLUDED.UPDT_USER_ID,
+            UPDT_DT        = CURRENT_TIMESTAMP
+    </insert>
+
+    <delete id="deleteColRule" parameterType="map">
+        DELETE FROM TB_QUAL_COL_RULE
+         WHERE DM_ID = #{dmId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+    </delete>
+
+    <!--
+      effective rule + 직전 PROFILE + 직전 RULE 적합률 (DSQualValueProfile 화면용)
+      반환 type: Map (effective + latest profile + latest rule rate)
+    -->
+    <select id="selectEffectiveWithLatest" parameterType="map" resultType="map">
+        WITH col_meta AS (
+          SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM, a.ATTR_NM_KR,
+                 d.DOMAIN_ID
+            FROM TB_DATA_MODEL_ATTR a
+            LEFT JOIN TB_TERMS t  ON t.TERMS_NM    = a.ATTR_NM_KR
+            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM   = t.DOMAIN_NM
+           WHERE a.DM_ID  = #{dmId}
+             AND a.USE_YN = 'Y'
+            <if test="objNm != null">  AND a.OBJ_NM  = #{objNm}  </if>
+        ),
+        col_default_dom AS (
+          SELECT cm.DM_ID, cm.OBJ_NM, cm.ATTR_NM, cm.DOMAIN_ID,
+                 dr.DOMAIN_RULE_ID AS DEFAULT_DR_ID,
+                 dr.RULE_NM        AS DEFAULT_RULE_NM,
+                 dr.RULE_TYPE      AS DEFAULT_RULE_TYPE,
+                 dr.RULE_PARAMS    AS DEFAULT_RULE_PARAMS,
+                 dr.SORT_ORD       AS DEFAULT_SORT_ORD
+            FROM col_meta cm
+            LEFT JOIN LATERAL (
+              SELECT * FROM TB_DOMAIN_RULE
+               WHERE DOMAIN_ID = cm.DOMAIN_ID AND USE_YN = 'Y'
+               ORDER BY SORT_ORD LIMIT 1
+            ) dr ON true
+        )
+        SELECT cm.DM_ID    AS "dmId",
+               cm.OBJ_NM   AS "objNm",
+               cm.ATTR_NM  AS "attrNm",
+               cm.ATTR_NM_KR AS "attrNmKr",
+               cr.DOMAIN_RULE_ID AS "domainRuleId",
+               cr.CUSTOM_RULE_ID AS "customRuleId",
+               COALESCE(cr.EXCLUDE_YN, 'N') AS "excludeYn",
+               CASE
+                 WHEN cr.EXCLUDE_YN = 'Y'                THEN NULL
+                 WHEN cr.CUSTOM_RULE_ID IS NOT NULL      THEN ur.RULE_NM
+                 WHEN cr.DOMAIN_RULE_ID IS NOT NULL      THEN udr.RULE_NM
+                 ELSE cd.DEFAULT_RULE_NM
+               END AS "effectiveRuleNm",
+               CASE
+                 WHEN cr.EXCLUDE_YN = 'Y'                THEN NULL
+                 WHEN cr.CUSTOM_RULE_ID IS NOT NULL      THEN ur.RULE_TYPE
+                 WHEN cr.DOMAIN_RULE_ID IS NOT NULL      THEN udr.RULE_TYPE
+                 ELSE cd.DEFAULT_RULE_TYPE
+               END AS "effectiveRuleType",
+               CASE
+                 WHEN cr.EXCLUDE_YN = 'Y'              THEN 'EXCLUDED'
+                 WHEN cr.CUSTOM_RULE_ID IS NOT NULL    THEN 'CUSTOM'
+                 WHEN cr.DOMAIN_RULE_ID IS NOT NULL    THEN 'DOMAIN'
+                 WHEN cd.DEFAULT_RULE_NM IS NOT NULL   THEN 'DEFAULT'
+                 ELSE 'NONE'
+               END AS "effectiveSource",
+               -- 직전 값 진단
+               pr.TOTAL_CNT     AS "profTotal",
+               pr.NULL_CNT      AS "profNull",
+               pr.DISTINCT_CNT  AS "profDistinct",
+               pr.MIN_VAL       AS "profMin",
+               pr.MAX_VAL       AS "profMax",
+               pr.MIN_LEN       AS "profMinLen",
+               pr.MAX_LEN       AS "profMaxLen",
+               pr.UPDATED_DT    AS "profUpdatedDt",
+               -- 직전 룰 진단 적합률 (max diag_dt 의 RULE_RESULT)
+               lr.VIOLATION_CNT  AS "ruleViolation",
+               lr.TOTAL_CNT      AS "ruleTotal",
+               lr.VIOLATION_RATE AS "ruleViolationRate",
+               (CASE WHEN lr.VIOLATION_RATE IS NULL THEN NULL
+                     ELSE 100.0 - lr.VIOLATION_RATE END) AS "ruleConformRate"
+          FROM col_meta cm
+          LEFT JOIN col_default_dom cd
+            ON cd.DM_ID = cm.DM_ID AND cd.OBJ_NM = cm.OBJ_NM AND cd.ATTR_NM = cm.ATTR_NM
+          LEFT JOIN TB_QUAL_COL_RULE cr
+            ON cr.DM_ID = cm.DM_ID AND cr.OBJ_NM = cm.OBJ_NM AND cr.ATTR_NM = cm.ATTR_NM
+          LEFT JOIN TB_QUAL_RULE ur
+            ON ur.RULE_ID = cr.CUSTOM_RULE_ID
+          LEFT JOIN TB_DOMAIN_RULE udr
+            ON udr.DOMAIN_RULE_ID = cr.DOMAIN_RULE_ID
+          LEFT JOIN TB_QUAL_PROFILE_RESULT pr
+            ON pr.DM_ID = cm.DM_ID AND pr.OBJ_NM = cm.OBJ_NM AND pr.ATTR_NM = cm.ATTR_NM
+          LEFT JOIN LATERAL (
+            SELECT rr.VIOLATION_CNT, rr.TOTAL_CNT, rr.VIOLATION_RATE
+              FROM TB_QUAL_RULE_RESULT rr
+              JOIN TB_QUAL_DIAG_HISTORY dh ON dh.DIAG_ID = rr.DIAG_ID
+             WHERE rr.OBJ_NM = cm.OBJ_NM AND rr.ATTR_NM = cm.ATTR_NM
+               AND dh.DM_ID = cm.DM_ID AND dh.STATUS = 'DONE'
+             ORDER BY dh.DIAG_DT DESC
+             LIMIT 1
+          ) lr ON true
+         ORDER BY cm.OBJ_NM, cm.ATTR_NM
+    </select>
+
+</mapper>

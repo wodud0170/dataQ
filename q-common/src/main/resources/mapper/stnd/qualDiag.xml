@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="qualDiag">
+
+    <!-- 데이터 품질 진단 — 실행/결과 매퍼 (67번 문서) -->
+
+    <!-- ========================================================== -->
+    <!-- 진단 이력 (값/룰 공용)                                       -->
+    <!-- ========================================================== -->
+    <insert id="insertHistory" parameterType="com.ndata.quality.model.std.QualDiagHistoryVo">
+        INSERT INTO TB_QUAL_DIAG_HISTORY (
+            DIAG_ID, DM_ID, DIAG_TYPE, STATUS,
+            TARGET_OBJ_LIST, SAMPLE_RATE, INCREMENTAL_YN, LAST_DIAG_DT,
+            EXEC_USER_ID
+        ) VALUES (
+            #{diagId}, #{dmId}, #{diagType}, COALESCE(#{status}, 'READY'),
+            #{targetObjList}, COALESCE(#{sampleRate}, 100),
+            COALESCE(#{incrementalYn}, 'N'), #{lastDiagDt},
+            #{execUserId}
+        )
+    </insert>
+
+    <update id="updateHistoryStatus" parameterType="map">
+        UPDATE TB_QUAL_DIAG_HISTORY SET
+            STATUS    = #{status},
+            END_DT    = CASE WHEN #{status} IN ('DONE','ERROR') THEN CURRENT_TIMESTAMP ELSE END_DT END,
+            ERROR_MSG = #{errorMsg},
+            TOTAL_VIOLATIONS = COALESCE(#{totalViolations}, TOTAL_VIOLATIONS),
+            TOTAL_RULES      = COALESCE(#{totalRules}, TOTAL_RULES),
+            TOTAL_COLS       = COALESCE(#{totalCols}, TOTAL_COLS)
+         WHERE DIAG_ID = #{diagId}
+    </update>
+
+    <select id="selectHistoryById" parameterType="String"
+            resultType="com.ndata.quality.model.std.QualDiagHistoryVo">
+        SELECT h.DIAG_ID         AS diagId,
+               h.DM_ID           AS dmId,
+               dm.DM_NM          AS dataModelNm,
+               h.DIAG_TYPE       AS diagType,
+               h.DIAG_DT         AS diagDt,
+               h.END_DT          AS endDt,
+               h.STATUS          AS status,
+               h.TARGET_OBJ_LIST AS targetObjList,
+               h.SAMPLE_RATE     AS sampleRate,
+               h.INCREMENTAL_YN  AS incrementalYn,
+               h.LAST_DIAG_DT    AS lastDiagDt,
+               h.TOTAL_RULES     AS totalRules,
+               h.TOTAL_COLS      AS totalCols,
+               h.TOTAL_VIOLATIONS AS totalViolations,
+               h.EXEC_USER_ID    AS execUserId,
+               h.ERROR_MSG       AS errorMsg
+          FROM TB_QUAL_DIAG_HISTORY h
+          LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DM_ID
+         WHERE h.DIAG_ID = #{diagId}
+    </select>
+
+    <!-- 직전 DONE 시점 — 증분 검증 기준 -->
+    <select id="selectLastDoneDt" parameterType="map" resultType="String">
+        SELECT MAX(END_DT)
+          FROM TB_QUAL_DIAG_HISTORY
+         WHERE DM_ID     = #{dmId}
+           AND DIAG_TYPE = #{diagType}
+           AND STATUS    = 'DONE'
+    </select>
+
+    <!-- DS_ID 기준 동시 실행 SKIP 카운트 -->
+    <select id="countRunningByDs" parameterType="String" resultType="int">
+        SELECT COUNT(*)
+          FROM TB_QUAL_DIAG_HISTORY h
+          JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DM_ID
+         WHERE dm.DM_DS_ID = #{dsId}
+           AND h.STATUS IN ('READY','RUNNING')
+    </select>
+
+    <!-- ========================================================== -->
+    <!-- 값 프로파일링 결과 (UPSERT)                                   -->
+    <!-- ========================================================== -->
+    <insert id="upsertProfileResult" parameterType="com.ndata.quality.model.std.QualProfileResultVo">
+        INSERT INTO TB_QUAL_PROFILE_RESULT (
+            DM_ID, OBJ_NM, ATTR_NM, DIAG_ID,
+            TOTAL_CNT, NULL_CNT, DISTINCT_CNT, EMPTY_CNT,
+            MIN_VAL, MAX_VAL, AVG_VAL, STD_VAL,
+            MIN_LEN, MAX_LEN, TOP_VALUES, UPDATED_DT
+        ) VALUES (
+            #{dmId}, #{objNm}, #{attrNm}, #{diagId},
+            #{totalCnt}, #{nullCnt}, #{distinctCnt}, #{emptyCnt},
+            #{minVal}, #{maxVal}, #{avgVal}, #{stdVal},
+            #{minLen}, #{maxLen}, #{topValues}, CURRENT_TIMESTAMP
+        )
+        ON CONFLICT (DM_ID, OBJ_NM, ATTR_NM) DO UPDATE SET
+            DIAG_ID      = EXCLUDED.DIAG_ID,
+            TOTAL_CNT    = EXCLUDED.TOTAL_CNT,
+            NULL_CNT     = EXCLUDED.NULL_CNT,
+            DISTINCT_CNT = EXCLUDED.DISTINCT_CNT,
+            EMPTY_CNT    = EXCLUDED.EMPTY_CNT,
+            MIN_VAL      = EXCLUDED.MIN_VAL,
+            MAX_VAL      = EXCLUDED.MAX_VAL,
+            AVG_VAL      = EXCLUDED.AVG_VAL,
+            STD_VAL      = EXCLUDED.STD_VAL,
+            MIN_LEN      = EXCLUDED.MIN_LEN,
+            MAX_LEN      = EXCLUDED.MAX_LEN,
+            TOP_VALUES   = EXCLUDED.TOP_VALUES,
+            UPDATED_DT   = CURRENT_TIMESTAMP
+    </insert>
+
+    <select id="selectProfileResults" parameterType="map"
+            resultType="com.ndata.quality.model.std.QualProfileResultVo">
+        SELECT DM_ID         AS dmId,
+               OBJ_NM        AS objNm,
+               ATTR_NM       AS attrNm,
+               DIAG_ID       AS diagId,
+               TOTAL_CNT     AS totalCnt,
+               NULL_CNT      AS nullCnt,
+               DISTINCT_CNT  AS distinctCnt,
+               EMPTY_CNT     AS emptyCnt,
+               MIN_VAL       AS minVal,
+               MAX_VAL       AS maxVal,
+               AVG_VAL       AS avgVal,
+               STD_VAL       AS stdVal,
+               MIN_LEN       AS minLen,
+               MAX_LEN       AS maxLen,
+               TOP_VALUES    AS topValues,
+               UPDATED_DT    AS updatedDt
+          FROM TB_QUAL_PROFILE_RESULT
+         WHERE DM_ID = #{dmId}
+        <if test="objNm != null"> AND OBJ_NM = #{objNm} </if>
+         ORDER BY OBJ_NM, ATTR_NM
+    </select>
+
+    <!-- ========================================================== -->
+    <!-- 룰 진단 결과                                                 -->
+    <!-- ========================================================== -->
+    <insert id="insertRuleResult" parameterType="com.ndata.quality.model.std.QualRuleResultVo">
+        INSERT INTO TB_QUAL_RULE_RESULT (
+            DIAG_ID, RULE_ID, OBJ_NM, ATTR_NM,
+            TOTAL_CNT, VIOLATION_CNT, VIOLATION_RATE, SAMPLE_CNT, ERROR_MSG
+        ) VALUES (
+            #{diagId}, #{ruleId},
+            COALESCE(#{objNm}, ''), COALESCE(#{attrNm}, ''),
+            #{totalCnt}, #{violationCnt}, #{violationRate},
+            COALESCE(#{sampleCnt}, 0), #{errorMsg}
+        )
+    </insert>
+
+    <select id="selectRuleResults" parameterType="map"
+            resultType="com.ndata.quality.model.std.QualRuleResultVo">
+        SELECT rr.DIAG_ID         AS diagId,
+               rr.RULE_ID         AS ruleId,
+               r.RULE_NM          AS ruleNm,
+               r.RULE_TYPE        AS ruleType,
+               r.SEVERITY         AS severity,
+               rr.OBJ_NM          AS objNm,
+               rr.ATTR_NM         AS attrNm,
+               rr.TOTAL_CNT       AS totalCnt,
+               rr.VIOLATION_CNT   AS violationCnt,
+               rr.VIOLATION_RATE  AS violationRate,
+               rr.SAMPLE_CNT      AS sampleCnt,
+               rr.ERROR_MSG       AS errorMsg
+          FROM TB_QUAL_RULE_RESULT rr
+          LEFT JOIN TB_QUAL_RULE r ON r.RULE_ID = rr.RULE_ID
+         WHERE rr.DIAG_ID = #{diagId}
+         ORDER BY rr.OBJ_NM, rr.ATTR_NM, r.RULE_NM
+    </select>
+
+    <!-- 위반 샘플 -->
+    <insert id="insertViolationSample" parameterType="com.ndata.quality.model.std.QualViolationSampleVo">
+        INSERT INTO TB_QUAL_VIOLATION_SAMPLE (
+            DIAG_ID, RULE_ID, OBJ_NM, ATTR_NM, SEQ,
+            PK_VALUES, VIOLATING_VAL
+        ) VALUES (
+            #{diagId}, #{ruleId},
+            COALESCE(#{objNm}, ''), COALESCE(#{attrNm}, ''),
+            #{seq}, #{pkValues}, #{violatingVal}
+        )
+    </insert>
+
+    <select id="selectViolationSamples" parameterType="map"
+            resultType="com.ndata.quality.model.std.QualViolationSampleVo">
+        SELECT DIAG_ID      AS diagId,
+               RULE_ID      AS ruleId,
+               OBJ_NM       AS objNm,
+               ATTR_NM      AS attrNm,
+               SEQ          AS seq,
+               PK_VALUES    AS pkValues,
+               VIOLATING_VAL AS violatingVal
+          FROM TB_QUAL_VIOLATION_SAMPLE
+         WHERE DIAG_ID = #{diagId}
+           AND RULE_ID = #{ruleId}
+         ORDER BY OBJ_NM, ATTR_NM, SEQ
+    </select>
+
+    <!-- ========================================================== -->
+    <!-- 70번 §2.3 시계열 누적 (통계 메뉴용)                           -->
+    <!-- ========================================================== -->
+    <insert id="insertProfileHistory" parameterType="com.ndata.quality.model.std.QualProfileResultVo">
+        INSERT INTO TB_QUAL_PROFILE_HISTORY (
+            DIAG_ID, DM_ID, OBJ_NM, ATTR_NM,
+            TOTAL_CNT, NULL_CNT, DISTINCT_CNT, EMPTY_CNT,
+            MIN_VAL, MAX_VAL, AVG_VAL, STD_VAL,
+            MIN_LEN, MAX_LEN, DIAG_DT
+        ) VALUES (
+            #{diagId}, #{dmId}, #{objNm}, #{attrNm},
+            #{totalCnt}, #{nullCnt}, #{distinctCnt}, #{emptyCnt},
+            #{minVal}, #{maxVal}, #{avgVal}, #{stdVal},
+            #{minLen}, #{maxLen}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <select id="selectProfileTrend" parameterType="map"
+            resultType="com.ndata.quality.model.std.QualProfileHistoryVo">
+        SELECT DIAG_ID      AS diagId,
+               DM_ID        AS dmId,
+               OBJ_NM       AS objNm,
+               ATTR_NM      AS attrNm,
+               TOTAL_CNT    AS totalCnt,
+               NULL_CNT     AS nullCnt,
+               DISTINCT_CNT AS distinctCnt,
+               EMPTY_CNT    AS emptyCnt,
+               MIN_VAL      AS minVal,
+               MAX_VAL      AS maxVal,
+               AVG_VAL      AS avgVal,
+               STD_VAL      AS stdVal,
+               MIN_LEN      AS minLen,
+               MAX_LEN      AS maxLen,
+               DIAG_DT      AS diagDt
+          FROM TB_QUAL_PROFILE_HISTORY
+         WHERE DM_ID = #{dmId}
+        <if test="objNm != null"> AND OBJ_NM  = #{objNm}  </if>
+        <if test="attrNm != null"> AND ATTR_NM = #{attrNm} </if>
+         ORDER BY DIAG_DT DESC
+         LIMIT 100
+    </select>
+
+</mapper>

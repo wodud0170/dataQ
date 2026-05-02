@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="qualRule">
+
+    <!-- 데이터 품질 진단 — 룰 정의 매퍼 (67번 문서) -->
+
+    <resultMap id="qualRuleMap" type="com.ndata.quality.model.std.QualRuleVo">
+        <id     property="ruleId"          column="RULE_ID"/>
+        <result property="dmId"            column="DM_ID"/>
+        <result property="dataModelNm"     column="DATA_MODEL_NM"/>
+        <result property="objNm"           column="OBJ_NM"/>
+        <result property="attrNm"          column="ATTR_NM"/>
+        <result property="domainId"        column="DOMAIN_ID"/>
+        <result property="domainNm"        column="DOMAIN_NM"/>
+        <result property="ruleNm"          column="RULE_NM"/>
+        <result property="ruleType"        column="RULE_TYPE"/>
+        <result property="ruleParams"      column="RULE_PARAMS"/>
+        <result property="severity"        column="SEVERITY"/>
+        <result property="useYn"           column="USE_YN"/>
+        <result property="incrementalCol"  column="INCREMENTAL_COL"/>
+        <result property="estCost"         column="EST_COST"/>
+        <result property="descr"           column="DESCR"/>
+        <result property="cretUserId"      column="CRET_USER_ID"/>
+        <result property="cretDt"          column="CRET_DT"/>
+        <result property="updtUserId"      column="UPDT_USER_ID"/>
+        <result property="updtDt"          column="UPDT_DT"/>
+        <result property="lastDiagDt"      column="LAST_DIAG_DT"/>
+        <result property="lastViolationCnt"  column="LAST_VIOLATION_CNT"/>
+        <result property="lastViolationRate" column="LAST_VIOLATION_RATE"/>
+    </resultMap>
+
+    <select id="selectRules" parameterType="map" resultMap="qualRuleMap">
+        SELECT r.RULE_ID, r.DM_ID, dm.DM_NM AS DATA_MODEL_NM,
+               r.OBJ_NM, r.ATTR_NM,
+               r.DOMAIN_ID, d.DOMAIN_NM,
+               r.RULE_NM, r.RULE_TYPE, r.RULE_PARAMS,
+               r.SEVERITY, r.USE_YN,
+               r.INCREMENTAL_COL, r.EST_COST,
+               r.DESCR, r.CRET_USER_ID, r.CRET_DT, r.UPDT_USER_ID, r.UPDT_DT
+          FROM TB_QUAL_RULE r
+          LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = r.DM_ID
+          LEFT JOIN TB_DOMAIN     d  ON d.DOMAIN_ID      = r.DOMAIN_ID
+         WHERE 1=1
+        <if test="dmId != null">  AND r.DM_ID  = #{dmId}  </if>
+        <if test="objNm != null"> AND r.OBJ_NM = #{objNm} </if>
+        <if test="useYn != null"> AND r.USE_YN = #{useYn} </if>
+         ORDER BY r.UPDT_DT DESC NULLS LAST, r.CRET_DT DESC
+    </select>
+
+    <select id="selectRuleById" parameterType="String" resultMap="qualRuleMap">
+        SELECT r.*, dm.DM_NM AS DATA_MODEL_NM, d.DOMAIN_NM
+          FROM TB_QUAL_RULE r
+          LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = r.DM_ID
+          LEFT JOIN TB_DOMAIN     d  ON d.DOMAIN_ID      = r.DOMAIN_ID
+         WHERE r.RULE_ID = #{ruleId}
+    </select>
+
+    <insert id="insertRule" parameterType="com.ndata.quality.model.std.QualRuleVo">
+        INSERT INTO TB_QUAL_RULE (
+            RULE_ID, DM_ID, OBJ_NM, ATTR_NM, DOMAIN_ID,
+            RULE_NM, RULE_TYPE, RULE_PARAMS, SEVERITY, USE_YN,
+            INCREMENTAL_COL, EST_COST, DESCR,
+            CRET_USER_ID, CRET_DT
+        ) VALUES (
+            #{ruleId}, #{dmId}, #{objNm}, #{attrNm}, #{domainId},
+            #{ruleNm}, #{ruleType}, #{ruleParams},
+            COALESCE(#{severity}, 'WARN'), COALESCE(#{useYn}, 'Y'),
+            #{incrementalCol}, #{estCost}, #{descr},
+            #{cretUserId}, CURRENT_TIMESTAMP
+        )
+    </insert>
+
+    <update id="updateRule" parameterType="com.ndata.quality.model.std.QualRuleVo">
+        UPDATE TB_QUAL_RULE SET
+            OBJ_NM          = #{objNm},
+            ATTR_NM         = #{attrNm},
+            DOMAIN_ID       = #{domainId},
+            RULE_NM         = #{ruleNm},
+            RULE_TYPE       = #{ruleType},
+            RULE_PARAMS     = #{ruleParams},
+            SEVERITY        = #{severity},
+            USE_YN          = #{useYn},
+            INCREMENTAL_COL = #{incrementalCol},
+            EST_COST        = #{estCost},
+            DESCR           = #{descr},
+            UPDT_USER_ID    = #{updtUserId},
+            UPDT_DT         = CURRENT_TIMESTAMP
+         WHERE RULE_ID = #{ruleId}
+    </update>
+
+    <update id="softDeleteRule" parameterType="map">
+        UPDATE TB_QUAL_RULE SET USE_YN='N',
+            UPDT_USER_ID = #{userId}, UPDT_DT = CURRENT_TIMESTAMP
+         WHERE RULE_ID = #{ruleId}
+    </update>
+
+    <!-- 카탈로그 -->
+    <select id="selectCatalog" resultType="com.ndata.quality.model.std.QualRuleCatalogVo">
+        SELECT CATALOG_ID    AS catalogId,
+               CATALOG_NM    AS catalogNm,
+               RULE_TYPE     AS ruleType,
+               RULE_PARAMS   AS ruleParams,
+               CATEGORY      AS category,
+               DESCR         AS descr,
+               USE_YN        AS useYn
+          FROM TB_QUAL_RULE_CATALOG
+         WHERE USE_YN = 'Y'
+         ORDER BY CATEGORY, CATALOG_NM
+    </select>
+
+    <!-- 도메인 묶음 룰 → 컬럼별 전개 (RULE_TYPE/RULE_PARAMS 그대로 재사용) -->
+    <select id="expandDomainRuleToColumns" parameterType="map" resultType="map">
+        SELECT a.OBJ_NM    AS objNm,
+               a.ATTR_NM   AS attrNm
+          FROM TB_DATA_MODEL_ATTR a
+         WHERE a.DM_ID    = #{dmId}
+           AND a.DOMAIN_ID = #{domainId}
+           AND a.USE_YN   = 'Y'
+    </select>
+
+</mapper>

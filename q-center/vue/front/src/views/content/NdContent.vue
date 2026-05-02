@@ -236,6 +236,36 @@
                     <scheduleLog :key="scheduleLogKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'qualValueProfile'" id="tab_valueProfile" class="tab_contents"
+                :class="{ active: this.activeContent === 'qualValueProfile' }">
+                <keep-alive>
+                    <qualValueProfile :key="qualValueProfileKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'qualRuleManage'" id="tab_ruleManage" class="tab_contents"
+                :class="{ active: this.activeContent === 'qualRuleManage' }">
+                <keep-alive>
+                    <qualRuleManage :key="qualRuleManageKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'qualRuleResult'" id="tab_ruleResult" class="tab_contents"
+                :class="{ active: this.activeContent === 'qualRuleResult' }">
+                <keep-alive>
+                    <qualRuleResult :key="qualRuleResultKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'qualColRule'" id="tab_qualColRule" class="tab_contents"
+                :class="{ active: this.activeContent === 'qualColRule' }">
+                <keep-alive>
+                    <qualColRule :key="qualColRuleKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'qualStats'" id="tab_qualStats" class="tab_contents"
+                :class="{ active: this.activeContent === 'qualStats' }">
+                <keep-alive>
+                    <qualStats :key="qualStatsKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'system'" id="tab_system" class="tab_contents"
                 :class="{ active: this.activeContent === 'system' }">
                 <keep-alive>
@@ -342,6 +372,11 @@ import MMRoles from "./../../components/MMRoles.vue"
 import MMApproval from "./../../components/MMApproval.vue"
 import MMDatasource from "./../../components/MMDatasource.vue"
 import DSScheduleManage from "./../../components/DSScheduleManage.vue"
+import DSQualValueProfile from "./../../components/DSQualValueProfile.vue"
+import DSQualRuleManage   from "./../../components/DSQualRuleManage.vue"
+import DSQualRuleResult   from "./../../components/DSQualRuleResult.vue"
+import DSQualColRule      from "./../../components/DSQualColRule.vue"
+import DSQualStats        from "./../../components/DSQualStats.vue"
 import DSScheduleLog from "./../../components/DSScheduleLog.vue"
 import MMSystem from "./../../components/MMSystem.vue"
 import ANDscurrent from "./../../components/ANDscurrent.vue"
@@ -413,6 +448,11 @@ export default {
             datasourceKey: this.createUUID(),
             scheduleManageKey: this.createUUID(),
             scheduleLogKey: this.createUUID(),
+            qualValueProfileKey: this.createUUID(),
+            qualRuleManageKey:   this.createUUID(),
+            qualRuleResultKey:   this.createUUID(),
+            qualColRuleKey:      this.createUUID(),
+            qualStatsKey:        this.createUUID(),
             systemKey: this.createUUID(),
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
@@ -459,6 +499,11 @@ export default {
         "datasource": MMDatasource,
         "scheduleManage": DSScheduleManage,
         "scheduleLog": DSScheduleLog,
+        "qualValueProfile": DSQualValueProfile,
+        "qualRuleManage":   DSQualRuleManage,
+        "qualRuleResult":   DSQualRuleResult,
+        "qualColRule":      DSQualColRule,
+        "qualStats":        DSQualStats,
         "system": MMSystem,
         "scurrent": ANDscurrent,
         "qcurrent": ANDqcurrent,
@@ -573,6 +618,21 @@ export default {
                     break;
                 case "datasource":
                     this.datasourceKey = this.createUUID();
+                    break;
+                case "qualValueProfile":
+                    this.qualValueProfileKey = this.createUUID();
+                    break;
+                case "qualRuleManage":
+                    this.qualRuleManageKey = this.createUUID();
+                    break;
+                case "qualRuleResult":
+                    this.qualRuleResultKey = this.createUUID();
+                    break;
+                case "qualColRule":
+                    this.qualColRuleKey = this.createUUID();
+                    break;
+                case "qualStats":
+                    this.qualStatsKey = this.createUUID();
                     break;
                 case "scheduleManage":
                     this.scheduleManageKey = this.createUUID();

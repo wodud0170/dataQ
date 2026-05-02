@@ -1,0 +1,77 @@
+-- ============================================================
+-- dataQ 메타 등록 (PostgreSQL dataq-db)
+-- 적용: docker exec dataq-db psql -U admin -d postgres -f ...
+--
+-- 데이터소스: 기존 'oralce새로' (ds_id='auKCmbwFQtm8aiazz7b2bf') 재사용
+--   → CAMS 모델과 같은 데이터소스, 다른 dm_id
+-- 모델     : TEST_QUAL_MODEL  (dm_id='TESTQUALDM00000000001A')
+-- 스키마   : TESTUSER (Oracle)
+-- ============================================================
+
+-- 모델 등록
+INSERT INTO quality.TB_DATA_MODEL (
+    DM_ID, DM_NM, DM_DS_ID, VER, MODEL_TYPE, USE_YN,
+    CRET_DT, CRET_USER_ID, STRUCT_DIAG_YN
+) VALUES (
+    'TESTQUALDM00000000001A',
+    'TEST_QUAL_MODEL',
+    'auKCmbwFQtm8aiazz7b2bf',
+    '1.0',
+    'PHYSICAL',
+    'Y',
+    to_char(now(), 'YYYYMMDDHH24MISS'),
+    'space',
+    'N'
+)
+ON CONFLICT (DM_ID) DO UPDATE SET
+    DM_NM    = EXCLUDED.DM_NM,
+    DM_DS_ID = EXCLUDED.DM_DS_ID,
+    USE_YN   = 'Y';
+
+-- OBJ 등록
+INSERT INTO quality.TB_DATA_MODEL_OBJ (DM_ID, OBJ_NM, OBJ_NM_KR, OBJ_OWNER, OBJ_ATTR_CNT, USE_YN) VALUES
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER',  '품질진단_회원', 'TESTUSER', 8, 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',   '품질진단_주문', 'TESTUSER', 8, 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_PRODUCT', '품질진단_상품', 'TESTUSER', 6, 'Y')
+ON CONFLICT (DM_ID, OBJ_NM) DO UPDATE SET
+    OBJ_NM_KR    = EXCLUDED.OBJ_NM_KR,
+    OBJ_OWNER    = EXCLUDED.OBJ_OWNER,
+    OBJ_ATTR_CNT = EXCLUDED.OBJ_ATTR_CNT,
+    USE_YN       = 'Y';
+
+-- ATTR 등록
+INSERT INTO quality.TB_DATA_MODEL_ATTR (
+    DM_ID, OBJ_NM, ATTR_NM, ATTR_NM_KR,
+    DATA_TYPE, DATA_LEN, DATA_DECIMAL_LEN,
+    NULLABLE_YN, PK_YN, FK_YN, ATTR_ORD, OBJ_OWNER, USE_YN
+) VALUES
+-- TB_TEST_MEMBER
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER', 'MEMBER_ID','회원ID',   'VARCHAR2', 20, 0, 'N', 'Y', 'N', 1, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER', 'EMAIL',    '이메일',   'VARCHAR2',100, 0, 'Y', 'N', 'N', 2, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER', 'PHONE',    '전화번호', 'VARCHAR2', 20, 0, 'Y', 'N', 'N', 3, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER', 'NAME',     '이름',     'VARCHAR2', 50, 0, 'Y', 'N', 'N', 4, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER', 'AGE',      '나이',     'NUMBER',    5, 0, 'Y', 'N', 'N', 5, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER', 'GENDER',   '성별',     'VARCHAR2',  2, 0, 'Y', 'N', 'N', 6, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER', 'REG_DT',   '등록일시', 'TIMESTAMP', 0, 0, 'N', 'N', 'N', 7, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_MEMBER', 'UPDT_DT',  '수정일시', 'TIMESTAMP', 0, 0, 'Y', 'N', 'N', 8, 'TESTUSER', 'Y'),
+-- TB_TEST_ORDER
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',  'ORDER_ID', '주문ID',   'VARCHAR2', 20, 0, 'N', 'Y', 'N', 1, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',  'MEMBER_ID','회원ID',   'VARCHAR2', 20, 0, 'Y', 'N', 'Y', 2, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',  'AMOUNT',   '금액',     'NUMBER',  15, 2, 'Y', 'N', 'N', 3, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',  'STATUS',   '상태',     'VARCHAR2', 10, 0, 'Y', 'N', 'N', 4, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',  'START_DT', '시작일',   'DATE',      0, 0, 'Y', 'N', 'N', 5, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',  'END_DT',   '종료일',   'DATE',      0, 0, 'Y', 'N', 'N', 6, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',  'REG_DT',   '등록일시', 'TIMESTAMP', 0, 0, 'N', 'N', 'N', 7, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_ORDER',  'UPDT_DT',  '수정일시', 'TIMESTAMP', 0, 0, 'Y', 'N', 'N', 8, 'TESTUSER', 'Y'),
+-- TB_TEST_PRODUCT
+('TESTQUALDM00000000001A', 'TB_TEST_PRODUCT','PRODUCT_CODE','상품코드','VARCHAR2',20, 0, 'Y', 'N', 'N', 1, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_PRODUCT','NAME',        '상품명', 'VARCHAR2',100, 0, 'Y', 'N', 'N', 2, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_PRODUCT','PRICE',       '가격',   'NUMBER',  15, 2, 'Y', 'N', 'N', 3, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_PRODUCT','CATEGORY',    '카테고리','VARCHAR2',20, 0, 'Y', 'N', 'N', 4, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_PRODUCT','REG_DT',      '등록일시','TIMESTAMP', 0, 0, 'N', 'N', 'N', 5, 'TESTUSER', 'Y'),
+('TESTQUALDM00000000001A', 'TB_TEST_PRODUCT','UPDT_DT',     '수정일시','TIMESTAMP', 0, 0, 'Y', 'N', 'N', 6, 'TESTUSER', 'Y')
+ON CONFLICT (DM_ID, OBJ_NM, ATTR_NM) DO UPDATE SET
+    ATTR_NM_KR = EXCLUDED.ATTR_NM_KR,
+    DATA_TYPE  = EXCLUDED.DATA_TYPE,
+    DATA_LEN   = EXCLUDED.DATA_LEN,
+    USE_YN     = 'Y';
