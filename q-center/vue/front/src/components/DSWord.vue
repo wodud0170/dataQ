@@ -42,6 +42,7 @@
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-btn class="gradient" id="addWordBtn" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
             <v-btn v-if="isAdmin" class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
+            <v-btn class="gradient" v-on:click="downloadWordTemplate()" title="템플릿 다운로드">템플릿 다운로드</v-btn>
             <v-btn class="gradient" v-on:click="wordListDownload()" title="다운로드">다운로드</v-btn>
             <v-btn v-if="isAdmin" class="gradient" v-on:click="wordRemoveItem()" title="삭제">삭제</v-btn>
             <v-btn v-if="isAdmin" class="gradient" color="red lighten-4" v-on:click="wordBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
@@ -1261,6 +1262,13 @@ export default {
       if (fileUpload != null) {
         fileUpload.click()
       }
+    },
+    downloadWordTemplate() {
+      var link = document.createElement('a');
+      link.href = this.$APIURL.base + 'api/std/downloadWordTemplate';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     },
     showModal(value) {
       // 모달 보여주기

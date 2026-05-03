@@ -142,7 +142,7 @@ export default {
   },
   methods: {
     loadModels() {
-      axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', {}).then(r => {
+      axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' }).then(r => {
         this.dataModels = (r.data || []).filter(m => m.modelType === 'PHYSICAL');
       });
     },

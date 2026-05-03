@@ -93,6 +93,10 @@
     <if test="schSysNm != null">
             AND A.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM ILIKE '%' || #{schSysNm} || '%')
     </if>
+    <if test="connectedOnly != null and connectedOnly != ''">
+            AND A.DM_DS_ID IS NOT NULL
+            AND EXISTS (SELECT 1 FROM ndata.TB_DATA_SOURCE WHERE DS_ID = A.DM_DS_ID)
+    </if>
         order by A.DM_NM
     </select>
 

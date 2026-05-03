@@ -1309,16 +1309,10 @@ export default {
       });
     },
     downloadTermTemplate() {
-      var headers = ['No', '제정차수', '용어명', '용어설명', '용어영문약어명', '도메인명', '허용값', '저장형식', '표현형식', '코드그룹명', '소관기관명', '이음동의어목록', '요청시스템', '표준여부'];
-      var csvContent = '\uFEFF' + headers.join(',') + '\n';
-      var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      var url = window.URL.createObjectURL(blob);
       var link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', '용어_일괄등록_템플릿.csv');
+      link.href = this.$APIURL.base + 'api/std/downloadTermTemplate';
       document.body.appendChild(link);
       link.click();
-      window.URL.revokeObjectURL(url);
       link.remove();
     },
     resetDetail() {

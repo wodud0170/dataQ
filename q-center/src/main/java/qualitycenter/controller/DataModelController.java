@@ -1472,31 +1472,25 @@ public class DataModelController {
 	}
 
 	/**
-	 * 업로드 양식 xlsx 스트리밍 다운로드 (서버에서 POI 로 동적 생성)
+	 * 업로드 양식 xlsx 다운로드 (resources/templates/ 의 고정 파일 서빙)
 	 * scope=tables|attrs
 	 */
 	@RequestMapping(value = "/uploadTemplate", method = RequestMethod.GET)
 	public void uploadTemplate(@RequestParam(value = "scope", defaultValue = "tables") String scope,
 	                            HttpServletResponse res) throws Exception {
-		String[] headers;
+		String resource;
 		String fileName;
 		if ("attrs".equalsIgnoreCase(scope)) {
-			headers = ATTR_HEADERS;
+			resource = "templates/attrs_template.xlsx";
 			fileName = "dataq_attrs_template.xlsx";
 		} else {
-			headers = TABLE_HEADERS;
+			resource = "templates/tables_template.xlsx";
 			fileName = "dataq_tables_template.xlsx";
 		}
-		try (XSSFWorkbook wb = new XSSFWorkbook()) {
-			Sheet sh = wb.createSheet("Sheet1");
-			Row h = sh.createRow(0);
-			for (int i = 0; i < headers.length; i++) {
-				h.createCell(i).setCellValue(headers[i]);
-				sh.setColumnWidth(i, 5000);
-			}
-			res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-			res.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-			wb.write(res.getOutputStream());
+		res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		res.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+		try (java.io.InputStream in = new org.springframework.core.io.ClassPathResource(resource).getInputStream()) {
+			org.springframework.util.StreamUtils.copy(in, res.getOutputStream());
 			res.getOutputStream().flush();
 		}
 	}

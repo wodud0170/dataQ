@@ -370,49 +370,6 @@
                     </v-list-item>
                 </v-list-group>
 
-                <!-- 관리 (관리자만) -->
-                <v-list-group v-if="isAdmin" link v-cloak :value=" navMmGroup " prepend-icon="app_registration"
-                    active-class="ndColor--text" id="mmGroup" title="관리" v-on:click.stop=" addNavGroupData('mmGroup'); ">
-                    <template v-slot:activator>
-                        <v-list-item-content>
-                            <v-list-item-title :ripple=" false ">관리</v-list-item-title>
-                        </v-list-item-content>
-                    </template>
-
-                    <v-list-item link id="nav_user" href="#tab_user" active-class="ndColor--text" title="사용자"
-                        v-on:click.stop=" addTabItem('사용자', 'user'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>사용자</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item link id="nav_roles" href="#tab_roles" active-class="ndColor--text" title="역할 및 권한"
-                        :style=" { 'display': 'none' } " v-on:click.stop=" addTabItem('역할 및 권한', 'roles'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>역할 및 권한</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item link id="nav_approval" href="#tab_approval" active-class="ndColor--text" title="승인"
-                        v-on:click.stop=" sendApprovalStatus(); addTabItem('승인', 'approval'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>승인</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item link id="nav_datasource" href="#tab_datasource" active-class="ndColor--text" title="데이터 소스"
-                        v-on:click.stop=" addTabItem('데이터 소스', 'datasource'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>데이터 소스</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group>
-
                 <!-- 데이터 품질 진단 (값 진단 + 업무 규칙) — 67번 -->
                 <v-list-group link v-cloak :value="navQualGroup" prepend-icon="mdi-database-check"
                     active-class="ndColor--text" id="qualGroup" title="데이터 품질 진단" v-on:click.stop="addNavGroupData('qualGroup');">
@@ -502,6 +459,49 @@
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>요청 현황</v-list-item-title>
                     </v-list-item>
+                </v-list-group>
+
+                <!-- 관리 (관리자만) -->
+                <v-list-group v-if="isAdmin" link v-cloak :value=" navMmGroup " prepend-icon="app_registration"
+                    active-class="ndColor--text" id="mmGroup" title="관리" v-on:click.stop=" addNavGroupData('mmGroup'); ">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple=" false ">관리</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_user" href="#tab_user" active-class="ndColor--text" title="사용자"
+                        v-on:click.stop=" addTabItem('사용자', 'user'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>사용자</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_roles" href="#tab_roles" active-class="ndColor--text" title="역할 및 권한"
+                        :style=" { 'display': 'none' } " v-on:click.stop=" addTabItem('역할 및 권한', 'roles'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>역할 및 권한</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_approval" href="#tab_approval" active-class="ndColor--text" title="승인"
+                        v-on:click.stop=" sendApprovalStatus(); addTabItem('승인', 'approval'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>승인</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_datasource" href="#tab_datasource" active-class="ndColor--text" title="데이터 소스"
+                        v-on:click.stop=" addTabItem('데이터 소스', 'datasource'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 소스</v-list-item-title>
+                    </v-list-item>
+
                 </v-list-group>
             </v-list>
         </v-list-item-group>

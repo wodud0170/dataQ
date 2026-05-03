@@ -8,8 +8,6 @@
         <v-stepper-step :complete="currentStep > 2" step="2" color="ndColor">분석</v-stepper-step>
         <v-divider></v-divider>
         <v-stepper-step :complete="currentStep > 3" step="3" color="ndColor">리뷰</v-stepper-step>
-        <v-divider></v-divider>
-        <v-stepper-step :complete="currentStep > 4" step="4" color="ndColor">완료</v-stepper-step>
       </v-stepper-header>
 
       <!-- STEP 1: Input -->
@@ -21,7 +19,7 @@
               <v-card-subtitle class="px-0 pt-0">엑셀 업로드, 붙여넣기, 또는 직접 입력</v-card-subtitle>
             </div>
             <v-spacer></v-spacer>
-            <v-btn small outlined color="ndColor" @click="downloadTemplate">
+            <v-btn small outlined color="ndColor" class="btn-wide" @click="downloadTemplate">
               <v-icon small left>mdi-download</v-icon>양식 다운로드
             </v-btn>
           </div>
@@ -47,7 +45,7 @@
 
           <div class="d-flex justify-space-between align-center mt-2">
             <span class="grey--text">입력: {{ parsedNames.length }}건</span>
-            <v-btn color="ndColor" class="white--text" :disabled="parsedNames.length === 0 || isAnalyzing" :loading="isAnalyzing" @click="startAnalysis">
+            <v-btn color="ndColor" class="white--text btn-wide-lg" :disabled="parsedNames.length === 0 || isAnalyzing" :loading="isAnalyzing" @click="startAnalysis">
               <v-icon left>mdi-magnify</v-icon>분석 시작
             </v-btn>
           </div>
@@ -67,7 +65,7 @@
       <v-stepper-content step="3">
         <v-card flat>
           <!-- Summary bar -->
-          <v-card-title class="px-4 pt-2 pb-2 d-flex align-center">
+          <v-card-title class="px-4 pt-2 pb-2 d-flex align-center flex-wrap" style="gap:4px;">
             <span>분석 결과</span>
             <v-spacer></v-spacer>
             <v-chip small color="blue" text-color="white" class="mr-1">전체 {{ analysisResults.length }}</v-chip>
@@ -75,30 +73,53 @@
             <v-chip small color="green" text-color="white" class="mr-1" v-if="countByStatus('AUTO') > 0">자동완성 {{ countByStatus('AUTO') }}</v-chip>
             <v-chip small color="orange" text-color="white" class="mr-1" v-if="countByStatus('PARTIAL') > 0">부분매칭 {{ countByStatus('PARTIAL') }}</v-chip>
             <v-chip small color="red" text-color="white" class="mr-1" v-if="countByStatus('FAILED') > 0">미매칭 {{ countByStatus('FAILED') }}</v-chip>
+            <v-divider vertical class="mx-2" v-if="countPost('SUCCESS') + countPost('FAIL') > 0"></v-divider>
+            <v-chip small :color="isAdmin ? 'green' : 'blue'" text-color="white" class="mr-1" v-if="countPost('SUCCESS') > 0">
+              {{ isAdmin ? '등록완료' : '등록신청' }} {{ countPost('SUCCESS') }}
+            </v-chip>
+            <v-chip small color="red" text-color="white" class="mr-1" v-if="countPost('FAIL') > 0">실패 {{ countPost('FAIL') }}</v-chip>
           </v-card-title>
 
-          <!-- Filter + Action buttons -->
-          <v-card-actions class="px-4 pt-0">
+          <!-- Filter + Column toggle + Action buttons -->
+          <v-card-actions class="px-4 pt-0 flex-wrap" style="gap:4px;">
             <v-chip class="mr-1" :color="filterStatus === 'all' ? 'primary' : ''" :outlined="filterStatus !== 'all'" small @click="filterStatus = 'all'">전체</v-chip>
             <v-chip class="mr-1" :color="filterStatus === 'AUTO' ? 'green' : ''" :outlined="filterStatus !== 'AUTO'" :text-color="filterStatus === 'AUTO' ? 'white' : ''" small @click="filterStatus = 'AUTO'">자동완성</v-chip>
-            <v-chip class="mr-1" :color="filterStatus === 'PARTIAL' ? 'orange' : ''" :outlined="filterStatus !== 'PARTIAL'" :text-color="filterStatus === 'PARTIAL' ? 'white' : ''" small @click="filterStatus = 'PARTIAL'">이슈</v-chip>
+            <v-chip class="mr-1" :color="filterStatus === 'PARTIAL' ? 'orange' : ''" :outlined="filterStatus !== 'PARTIAL'" :text-color="filterStatus === 'PARTIAL' ? 'white' : ''" small @click="filterStatus = 'PARTIAL'">부분매칭</v-chip>
+            <v-chip class="mr-1" :color="filterStatus === 'FAILED' ? 'red' : ''" :outlined="filterStatus !== 'FAILED'" :text-color="filterStatus === 'FAILED' ? 'white' : ''" small @click="filterStatus = 'FAILED'">미매칭</v-chip>
             <v-chip class="mr-1" :color="filterStatus === 'REGISTERED' ? 'grey' : ''" :outlined="filterStatus !== 'REGISTERED'" :text-color="filterStatus === 'REGISTERED' ? 'white' : ''" small @click="filterStatus = 'REGISTERED'">기등록</v-chip>
+            <v-chip v-if="countPost('FAIL') > 0" class="mr-1" :color="filterStatus === 'POST_FAIL' ? 'red' : ''" :outlined="filterStatus !== 'POST_FAIL'" :text-color="filterStatus === 'POST_FAIL' ? 'white' : ''" small @click="filterStatus = 'POST_FAIL'">등록실패</v-chip>
+
             <v-spacer></v-spacer>
-            <v-btn small color="ndColor" class="white--text" @click="approveAll" :disabled="approvableCount === 0">
-              <v-icon left small>mdi-check-all</v-icon>전체 승인 ({{ approvableCount }}건)
+
+            <!-- 표시 컬럼 토글 -->
+            <v-menu offset-y :close-on-content-click="false">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn small text v-bind="attrs" v-on="on" class="mr-1 btn-wide">
+                  <v-icon small left>mdi-table-eye</v-icon>표시 컬럼
+                </v-btn>
+              </template>
+              <v-list dense>
+                <v-list-item v-for="col in toggleableCols" :key="col.value">
+                  <v-list-item-action class="mr-2">
+                    <v-checkbox v-model="visibleCols" :value="col.value" hide-details></v-checkbox>
+                  </v-list-item-action>
+                  <v-list-item-title>{{ col.text }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+
+            <v-btn small color="primary" class="white--text btn-wide-lg" @click="registerAll"
+              :disabled="registerableCount === 0 || isRegistering" :loading="isRegistering">
+              <v-icon left small>mdi-database-plus</v-icon>용어 등록 ({{ registerableCount }}건)
             </v-btn>
-            <v-btn small color="primary" class="white--text ml-2" @click="registerAll"
-              :disabled="approvedCount === 0 || isRegistering" :loading="isRegistering">
-              <v-icon left small>mdi-database-plus</v-icon>용어 등록
-            </v-btn>
-            <v-btn small outlined @click="currentStep = 1" class="ml-2">
+            <v-btn small outlined @click="currentStep = 1" class="ml-2 btn-wide">
               <v-icon left small>mdi-arrow-left</v-icon>다시 입력
             </v-btn>
           </v-card-actions>
 
           <!-- Review table -->
           <v-data-table
-            :headers="reviewHeaders"
+            :headers="visibleHeaders"
             :items="filteredResults"
             item-key="inputNm"
             show-select
@@ -142,7 +163,8 @@
               <v-select v-else-if="item.domainCandidates && item.domainCandidates.length > 1"
                 v-model="item.recommendedDomainNm"
                 :items="item.domainCandidates" item-text="domainNm" item-value="domainNm"
-                dense hide-details solo flat style="max-width:180px;font-size:0.8rem;">
+                dense hide-details solo flat style="max-width:180px;font-size:0.8rem;"
+                @change="onGridDomainChange(item)">
               </v-select>
               <span v-else>{{ item.recommendedDomainNm || '-' }}</span>
             </template>
@@ -162,11 +184,49 @@
             <!-- Action column -->
             <template v-slot:[`item.action`]="{ item }">
               <span v-if="item.status === 'REGISTERED'" class="grey--text text-caption">기등록</span>
+              <template v-else-if="item._postStatus === 'SUCCESS'">
+                <v-chip small :color="isAdmin ? 'green' : 'blue'" text-color="white" class="chip-status">
+                  <v-icon small left>mdi-check-circle</v-icon>{{ isAdmin ? '등록완료' : '등록신청 완료' }}
+                </v-chip>
+              </template>
+              <template v-else-if="item._postStatus === 'SKIPPED'">
+                <v-chip small color="grey" text-color="white" class="chip-status-sm">
+                  <v-icon small left>mdi-information-outline</v-icon>이미 등록됨
+                </v-chip>
+              </template>
+              <template v-else-if="item._postStatus === 'FAIL'">
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-chip small color="red" text-color="white" v-bind="attrs" v-on="on" class="mr-1 chip-status-sm">
+                      <v-icon small left>mdi-alert-circle</v-icon>등록실패
+                    </v-chip>
+                  </template>
+                  <span style="font-size:.8rem;">{{ item._postMessage || '등록 중 오류' }}</span>
+                </v-tooltip>
+                <v-btn small color="orange" dark class="btn-cell" @click="editItem(item)">
+                  <v-icon small left>mdi-pencil</v-icon>재수정
+                </v-btn>
+              </template>
+              <template v-else-if="!isRowRegisterable(item)">
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-chip small color="amber darken-2" text-color="white" v-bind="attrs" v-on="on" class="mr-1 chip-status-sm">
+                      <v-icon small left>mdi-alert-outline</v-icon>{{ getBlockReason(item) }}
+                    </v-chip>
+                  </template>
+                  <span style="font-size:.8rem;">{{ getBlockReasonDetail(item) }}</span>
+                </v-tooltip>
+                <v-btn small color="orange" dark class="btn-cell" @click="editItem(item)">
+                  <v-icon small left>mdi-pencil</v-icon>수정
+                </v-btn>
+              </template>
               <template v-else>
-                <v-icon v-if="item._approved" color="green" small class="mr-1">mdi-check-circle</v-icon>
-                <v-btn x-small :color="item._approved ? 'grey' : 'orange'" :dark="!item._approved"
-                  :outlined="item._approved" @click="editItem(item)">
-                  <v-icon x-small left>mdi-pencil</v-icon>{{ item._approved ? '재수정' : '수정' }}
+                <v-btn small color="grey" outlined class="mr-1 btn-cell" @click="editItem(item)">
+                  <v-icon small left>mdi-pencil</v-icon>수정
+                </v-btn>
+                <v-btn small color="primary" dark class="btn-cell"
+                  :loading="item._registering" @click="registerOne(item)">
+                  <v-icon small left>mdi-database-plus</v-icon>용어 등록
                 </v-btn>
               </template>
             </template>
@@ -174,58 +234,6 @@
         </v-card>
       </v-stepper-content>
 
-      <!-- STEP 4: Complete -->
-      <v-stepper-content step="4">
-        <v-card flat class="pa-6 text-center">
-          <v-icon color="green" size="64">mdi-check-circle-outline</v-icon>
-          <div class="text-h5 mt-4">표준화 등록 완료</div>
-          <div class="mt-3" v-if="registerResult">
-            <v-chip color="green" text-color="white" class="mx-1">단어 등록: {{ registerResult.registeredWords }}건</v-chip>
-            <v-chip color="blue" text-color="white" class="mx-1">용어 등록: {{ registerResult.registeredTerms }}건</v-chip>
-            <v-chip color="grey" text-color="white" class="mx-1" v-if="registerResult.skipped > 0">스킵: {{ registerResult.skipped }}건</v-chip>
-            <v-chip color="red" text-color="white" class="mx-1" v-if="registerResult.failed > 0">실패: {{ registerResult.failed }}건</v-chip>
-          </div>
-          <div class="mt-4" v-if="registerResult && registerResult.details">
-            <template v-for="(d, idx) in registerResult.details">
-              <v-alert v-if="d.status === 'FAIL'" :key="idx" type="error" dense text class="text-left mb-1" style="font-size:13px;">
-                {{ d.termsNm }}: {{ d.message }}
-              </v-alert>
-            </template>
-          </div>
-
-          <!-- DDL Generation -->
-          <v-divider class="my-6"></v-divider>
-          <div class="text-h6 mb-4">DDL 생성</div>
-          <v-row justify="center" class="mb-4">
-            <v-col cols="3">
-              <v-select v-model="ddlDbmsType" :items="['ORACLE','POSTGRESQL','MYSQL']" label="DBMS" dense outlined hide-details></v-select>
-            </v-col>
-            <v-col cols="3">
-              <v-text-field v-model="ddlTableName" label="테이블명" dense outlined hide-details placeholder="TB_EXAMPLE"
-                @input="ddlTableName = (ddlTableName || '').toUpperCase()"></v-text-field>
-            </v-col>
-            <v-col cols="2">
-              <v-btn color="ndColor" class="white--text" @click="generateDDL" :disabled="!ddlTableName" style="height:40px">
-                DDL 생성
-              </v-btn>
-            </v-col>
-          </v-row>
-
-          <v-sheet v-if="ddlScript" outlined rounded class="pa-4 text-left mx-auto" style="max-width:800px; background:#f5f5f5;">
-            <pre style="white-space:pre-wrap; font-size:0.85rem; margin:0;">{{ ddlScript }}</pre>
-            <div class="text-right mt-2">
-              <v-btn small color="ndColor" class="white--text" @click="copyDDL">
-                <v-icon small left>mdi-content-copy</v-icon>복사
-              </v-btn>
-            </div>
-          </v-sheet>
-
-          <v-divider class="my-6"></v-divider>
-          <v-btn color="ndColor" class="white--text" @click="resetAll">
-            <v-icon left>mdi-restart</v-icon>새로운 분석 시작
-          </v-btn>
-        </v-card>
-      </v-stepper-content>
     </v-stepper>
 
     <!-- Edit dialog for PARTIAL items -->
@@ -277,8 +285,8 @@
                   <v-chip v-else x-small color="green" text-color="white">등록됨</v-chip>
                 </td>
                 <td>
-                  <v-btn v-if="(w.status === 'NEW' || w.status === 'UNRECOGNIZED') && !w._registered" x-small color="primary"
-                    :loading="w._registering"
+                  <v-btn v-if="(w.status === 'NEW' || w.status === 'UNRECOGNIZED') && !w._registered" small color="primary"
+                    class="btn-cell" :loading="w._registering"
                     @click="registerSingleWord(w)">단어등록</v-btn>
                   <v-icon v-if="w._registered" small color="green">mdi-check-circle</v-icon>
                 </td>
@@ -293,14 +301,14 @@
           <div class="d-flex align-center flex-wrap mt-2" style="gap:8px;">
             <v-text-field v-model="newWordInput" dense outlined hide-details placeholder="추가할 한글 단어명"
               style="max-width:200px;" @keyup.enter="addEditWord"></v-text-field>
-            <v-btn x-small color="primary" outlined @click="addEditWord">
-              <v-icon x-small left>mdi-plus</v-icon>단어 추가
+            <v-btn small color="primary" outlined class="btn-cell" @click="addEditWord">
+              <v-icon small left>mdi-plus</v-icon>단어 추가
             </v-btn>
             <v-divider vertical class="mx-1"></v-divider>
             <v-autocomplete v-model="selectedClsfWord" :items="classWords" :item-text="clsfItemText"
-              return-object dense outlined hide-details clearable placeholder="분류어 검색/선택"
+              return-object dense outlined hide-details clearable placeholder="형식단어 검색/선택"
               :loading="loadingClsfWords" :menu-props="{ maxHeight: 320 }"
-              no-data-text="일치하는 분류어 없음"
+              no-data-text="일치하는 형식단어 없음"
               style="max-width:260px;">
               <template v-slot:selection="{ item }">
                 <span>{{ item.wordNm }}</span>
@@ -311,8 +319,8 @@
                 <span v-if="item.domainClsfNm" style="font-size:.75rem; color:#9E9E9E; margin-left:6px;">[{{ item.domainClsfNm }}]</span>
               </template>
             </v-autocomplete>
-            <v-btn x-small color="indigo" dark :disabled="!selectedClsfWord" @click="addClassificationWord">
-              <v-icon x-small left>mdi-plus</v-icon>분류어 추가
+            <v-btn small color="indigo" dark class="btn-wide" :disabled="!selectedClsfWord" @click="addClassificationWord">
+              <v-icon small left>mdi-plus</v-icon>형식단어 추가
             </v-btn>
           </div>
 
@@ -335,7 +343,7 @@
               </template>
             </v-select>
             <span v-if="!lastWordDomainClsfNm" style="font-size:.75rem; color:#B71C1C;">
-              마지막 단어가 분류어가 아니거나 도메인 분류가 지정되지 않았습니다.
+              마지막 단어가 형식단어가 아니거나 도메인 분류가 지정되지 않았습니다.
             </span>
           </div>
           <!-- 실시간 조합 미리보기 -->
@@ -393,20 +401,29 @@ export default {
       loadingClsfWords: false,
       loadingDomains: false,
 
-      // Step 4
+      // 등록 결과 (요약용 — STEP 4 제거됨)
       registerResult: null,
-      ddlDbmsType: 'ORACLE',
-      ddlTableName: '',
-      ddlScript: '',
+
+      // 권한 (등록완료/등록신청 라벨 분기)
+      isAdmin: false,
+
+      // 표시 컬럼 토글
+      visibleCols: ['words', 'recommendedEngAbrvNm', 'recommendedDomainNm', 'typeLen'],
+      toggleableCols: [
+        { text: '구성단어', value: 'words' },
+        { text: '영문약어', value: 'recommendedEngAbrvNm' },
+        { text: '도메인', value: 'recommendedDomainNm' },
+        { text: '타입/길이', value: 'typeLen' },
+      ],
 
       reviewHeaders: [
-        { text: '한글명', value: 'inputNm', width: '15%' },
+        { text: '한글명', value: 'inputNm', width: '14%' },
         { text: '상태', value: 'status', width: '8%' },
-        { text: '구성단어', value: 'words', width: '20%', sortable: false },
-        { text: '영문약어', value: 'recommendedEngAbrvNm', width: '17%' },
-        { text: '도메인', value: 'recommendedDomainNm', width: '15%' },
-        { text: '타입/길이', value: 'typeLen', width: '10%', sortable: false },
-        { text: '액션', value: 'action', width: '10%', sortable: false, align: 'center' },
+        { text: '구성단어', value: 'words', width: '17%', sortable: false, _toggle: true },
+        { text: '영문약어', value: 'recommendedEngAbrvNm', width: '14%', _toggle: true },
+        { text: '도메인', value: 'recommendedDomainNm', width: '13%', _toggle: true },
+        { text: '타입/길이', value: 'typeLen', width: '10%', sortable: false, _toggle: true },
+        { text: '액션', value: 'action', width: '24%', sortable: false, align: 'center' },
       ],
     };
   },
@@ -444,18 +461,20 @@ export default {
     filteredResults: function() {
       var self = this;
       if (self.filterStatus === 'all') return self.analysisResults;
-      if (self.filterStatus === 'PARTIAL') {
-        return self.analysisResults.filter(function(r) { return r.status === 'PARTIAL' || r.status === 'FAILED'; });
+      if (self.filterStatus === 'POST_FAIL') {
+        return self.analysisResults.filter(function(r) { return r._postStatus === 'FAIL'; });
       }
       return self.analysisResults.filter(function(r) { return r.status === self.filterStatus; });
     },
-    approvableCount: function() {
-      return this.analysisResults.filter(function(r) {
-        return (r.status === 'AUTO' || r.status === 'PARTIAL') && !r._approved;
-      }).length;
+    visibleHeaders: function() {
+      var self = this;
+      return self.reviewHeaders.filter(function(h) {
+        return !h._toggle || self.visibleCols.indexOf(h.value) !== -1;
+      });
     },
-    approvedCount: function() {
-      return this.analysisResults.filter(function(r) { return r._approved; }).length;
+    registerableCount: function() {
+      var self = this;
+      return this.analysisResults.filter(function(r) { return self.isRowRegisterable(r); }).length;
     },
     // 마지막 단어의 domainClsfNm (도메인 드롭다운 기준)
     lastWordDomainClsfNm: function() {
@@ -562,9 +581,6 @@ export default {
         termNames: self.parsedNames
       }).then(function(res) {
         if (res.data) {
-          for (var i = 0; i < res.data.length; i++) {
-            res.data[i]._approved = false;
-          }
           self.analysisResults = res.data;
         }
         self.currentStep = 3;
@@ -579,6 +595,9 @@ export default {
     countByStatus: function(status) {
       return this.analysisResults.filter(function(r) { return r.status === status; }).length;
     },
+    countPost: function(status) {
+      return this.analysisResults.filter(function(r) { return r._postStatus === status; }).length;
+    },
     statusColor: function(status) {
       var map = { 'REGISTERED': 'grey', 'AUTO': 'green', 'PARTIAL': 'orange', 'FAILED': 'red' };
       return map[status] || 'grey';
@@ -587,16 +606,69 @@ export default {
       var map = { 'REGISTERED': '기등록', 'AUTO': '자동완성', 'PARTIAL': '부분매칭', 'FAILED': '미매칭' };
       return map[status] || status;
     },
-    approveItem: function(item) {
-      this.$set(item, '_approved', true);
+    /**
+     * 그리드 인라인 도메인 v-select 변경 시 type/len 도 같이 갱신
+     */
+    onGridDomainChange: function(item) {
+      if (!item || !item.domainCandidates) return;
+      var nm = item.recommendedDomainNm;
+      var cand = item.domainCandidates.find(function(d) { return d.domainNm === nm; });
+      if (cand) {
+        this.$set(item, 'recommendedDomainId', cand.domainId);
+        this.$set(item, 'recommendedDataType', cand.dataType);
+        this.$set(item, 'recommendedDataLen', cand.dataLen);
+        this.$set(item, 'recommendedDataDecimalLen', cand.dataDecimalLen);
+      }
     },
-    approveAll: function() {
-      for (var i = 0; i < this.analysisResults.length; i++) {
-        var r = this.analysisResults[i];
-        if (r.status === 'AUTO' || r.status === 'PARTIAL') {
-          this.$set(r, '_approved', true);
+    /**
+     * 등록 가능 판정 — 모든 단어가 MATCHED + 도메인 지정 + 미등록/미실패 상태
+     * (수정 모달 거치지 않아도 데이터가 충족되면 즉시 등록 가능)
+     */
+    isRowRegisterable: function(r) {
+      if (!r) return false;
+      if (r.status === 'REGISTERED') return false;
+      if (r._postStatus === 'SUCCESS' || r._postStatus === 'SKIPPED') return false;
+      if (!r.words || !r.words.length) return false;
+      for (var i = 0; i < r.words.length; i++) {
+        if (r.words[i].status !== 'MATCHED') return false;
+      }
+      if (!r.recommendedDomainNm || !String(r.recommendedDomainNm).trim()) return false;
+      return true;
+    },
+    /**
+     * 등록 불가 사유 — 칩에 짧게 표시
+     */
+    getBlockReason: function(r) {
+      if (!r || !r.words || !r.words.length) return '단어 미분석';
+      var hasNew = false, hasUnrec = false;
+      for (var i = 0; i < r.words.length; i++) {
+        if (r.words[i].status === 'NEW') hasNew = true;
+        else if (r.words[i].status === 'UNRECOGNIZED') hasUnrec = true;
+      }
+      if (hasUnrec) return '단어 미인식';
+      if (hasNew) return '단어 미등록';
+      if (!r.recommendedDomainNm || !String(r.recommendedDomainNm).trim()) return '도메인 미지정';
+      return '수정 필요';
+    },
+    /**
+     * 등록 불가 사유 상세 — 툴팁용
+     */
+    getBlockReasonDetail: function(r) {
+      if (!r) return '';
+      var msgs = [];
+      var newWords = [], unrecWords = [];
+      if (r.words) {
+        for (var i = 0; i < r.words.length; i++) {
+          var w = r.words[i];
+          if (w.status === 'NEW') newWords.push(w.wordNm);
+          else if (w.status === 'UNRECOGNIZED') unrecWords.push(w.wordNm);
         }
       }
+      if (unrecWords.length) msgs.push('미인식 단어: ' + unrecWords.join(', '));
+      if (newWords.length) msgs.push('미등록 단어 (등록 필요): ' + newWords.join(', '));
+      if (!r.recommendedDomainNm || !String(r.recommendedDomainNm).trim()) msgs.push('도메인이 지정되지 않았습니다.');
+      if (!msgs.length) msgs.push('[수정] 으로 보완해주세요.');
+      return msgs.join('\n');
     },
     summarizeSplit: function(words) {
       if (!words) return '';
@@ -777,7 +849,7 @@ export default {
       axios.get(self.$APIURL.base + 'api/std/getClassificationWords').then(function(res) {
         self.classWords = res.data || [];
       }).catch(function() {
-        self.$swal.fire({ title: '분류어 조회 실패', icon: 'error', confirmButtonText: '확인' });
+        self.$swal.fire({ title: '형식단어 조회 실패', icon: 'error', confirmButtonText: '확인' });
       }).finally(function() {
         self.loadingClsfWords = false;
       });
@@ -814,7 +886,7 @@ export default {
     addClassificationWord: function() {
       var self = this;
       if (!self.selectedClsfWord) {
-        self.$swal.fire({ title: '분류어를 선택해주세요.', icon: 'warning', confirmButtonText: '확인' });
+        self.$swal.fire({ title: '형식단어를 선택해주세요.', icon: 'warning', confirmButtonText: '확인' });
         return;
       }
       var c = self.selectedClsfWord;
@@ -1019,49 +1091,77 @@ export default {
       item.termName = korParts.join('');
       item.recommendedEngAbrvNm = engParts.join('_');
 
-      this.$set(item, '_approved', true);
+      // [버그 fix] selectedDomain 이 자동 set 된 경우 @change 가 발화 안 해서
+      // editingItem.recommendedDomain* 가 옛 분석값으로 남아있는 문제 — 확인 시 강제 동기화.
+      if (this.selectedDomain) {
+        item.recommendedDomainId = this.selectedDomain.domainId;
+        item.recommendedDomainNm = this.selectedDomain.domainNm;
+        item.recommendedDataType = this.selectedDomain.dataType;
+        item.recommendedDataLen = this.selectedDomain.dataLen;
+        item.recommendedDataDecimalLen = this.selectedDomain.dataDecimalLen;
+      }
+      // grid 의 도메인 인라인 v-select 가 모달 수정 후에도 작동하도록
+      // domainCandidates 를 새 분류어 기준 도메인 목록으로 갱신
+      this.$set(item, 'domainCandidates', this.domainsInClsf ? this.domainsInClsf.slice() : []);
+
+      // 등록 결과 잔존 상태 초기화 (재수정 시)
+      this.$set(item, '_postStatus', null);
+      this.$set(item, '_postMessage', '');
       this.editDialog = false;
+    },
+    /**
+     * 한 row 의 등록 페이로드 빌드 (registerAll/registerOne 공용)
+     */
+    buildItemPayload: function(r) {
+      var wordIds = [];
+      var newWords = [];
+      if (r.words) {
+        for (var j = 0; j < r.words.length; j++) {
+          var w = r.words[j];
+          if (w.status === 'MATCHED' && w.selected) {
+            wordIds.push({ wordId: w.selected.wordId, wordOrd: j });
+          } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w._registered && w.selected) {
+            wordIds.push({ wordId: w.selected.wordId, wordOrd: j });
+          } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w.newWord) {
+            wordIds.push({ wordId: null, wordOrd: j, newWordIndex: newWords.length });
+            newWords.push({
+              wordNm: w.wordNm,
+              wordEngAbrvNm: w.newWord.wordEngAbrvNm,
+              wordEngNm: w.newWord.wordEngNm,
+              wordDesc: w.wordNm,
+              domainClsfNm: w.newWord.domainClsfNm || ''
+            });
+          }
+        }
+      }
+      return {
+        termsNm: r.inputNm,
+        termsEngAbrvNm: r.recommendedEngAbrvNm,
+        termsDesc: r.inputNm,
+        domainNm: r.recommendedDomainNm || '',
+        words: wordIds,
+        newWords: newWords
+      };
+    },
+    /**
+     * details[] 응답을 analysisResults 의 row 에 매핑하여 _postStatus/_postMessage 갱신
+     */
+    applyDetailsToRows: function(details, targetRows) {
+      var self = this;
+      if (!details || !details.length) return;
+      for (var i = 0; i < details.length; i++) {
+        var d = details[i];
+        var row = targetRows.find(function(r) { return r.inputNm === d.termsNm; });
+        if (!row) continue;
+        self.$set(row, '_postStatus', d.status);
+        self.$set(row, '_postMessage', d.message || '');
+        // 등록(또는 이미 존재)된 row 는 isRowRegisterable 이 false 가 되어 더 이상 등록 불가
+      }
     },
     registerAll: function() {
       var self = this;
-      var items = [];
-
-      for (var i = 0; i < self.analysisResults.length; i++) {
-        var r = self.analysisResults[i];
-        if (!r._approved || r.status === 'REGISTERED') continue;
-
-        var wordIds = [];
-        var newWords = [];
-        if (r.words) {
-          for (var j = 0; j < r.words.length; j++) {
-            var w = r.words[j];
-            if (w.status === 'MATCHED' && w.selected) {
-              wordIds.push({ wordId: w.selected.wordId, wordOrd: j });
-            } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w._registered && w.selected) {
-              // 수정 다이얼로그에서 단어등록 완료된 경우
-              wordIds.push({ wordId: w.selected.wordId, wordOrd: j });
-            } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w.newWord) {
-              wordIds.push({ wordId: null, wordOrd: j, newWordIndex: newWords.length });
-              newWords.push({
-                wordNm: w.wordNm,
-                wordEngAbrvNm: w.newWord.wordEngAbrvNm,
-                wordEngNm: w.newWord.wordEngNm,
-                wordDesc: w.wordNm,
-                domainClsfNm: w.newWord.domainClsfNm || ''
-              });
-            }
-          }
-        }
-
-        items.push({
-          termsNm: r.inputNm,
-          termsEngAbrvNm: r.recommendedEngAbrvNm,
-          termsDesc: r.inputNm,
-          domainNm: r.recommendedDomainNm || '',
-          words: wordIds,
-          newWords: newWords
-        });
-      }
+      var targetRows = self.analysisResults.filter(function(r) { return self.isRowRegisterable(r); });
+      var items = targetRows.map(function(r) { return self.buildItemPayload(r); });
 
       if (items.length === 0) {
         self.$swal.fire({ title: '등록할 항목이 없습니다.', icon: 'info', confirmButtonText: '확인' });
@@ -1082,7 +1182,17 @@ export default {
         axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: items })
           .then(function(res) {
             self.registerResult = res.data;
-            self.currentStep = 4;
+            self.applyDetailsToRows(res.data && res.data.details, targetRows);
+            var rt = (res.data && res.data.registeredTerms) || 0;
+            var sk = (res.data && res.data.skipped) || 0;
+            var fl = (res.data && res.data.failed) || 0;
+            var lbl = self.isAdmin ? '등록' : '등록 신청';
+            self.$swal.fire({
+              title: '처리 완료',
+              html: lbl + ' ' + rt + '건 / 기등록 ' + sk + '건 / 실패 ' + fl + '건',
+              icon: fl > 0 ? 'warning' : 'success',
+              confirmButtonText: '확인'
+            });
           }).catch(function(err) {
             var msg = (err.response && err.response.data && err.response.data.message) || '등록 중 오류가 발생했습니다.';
             self.$swal.fire({ title: '등록 실패', text: msg, icon: 'error', confirmButtonText: '확인' });
@@ -1091,108 +1201,37 @@ export default {
           });
       });
     },
-    generateDDL: function() {
+    /**
+     * row 1 건만 등록
+     */
+    registerOne: function(item) {
       var self = this;
-      if (!self.ddlTableName) return;
-
-      var terms = [];
-      for (var i = 0; i < self.analysisResults.length; i++) {
-        var r = self.analysisResults[i];
-        if (r.status === 'REGISTERED') {
-          terms.push({
-            engAbrv: r.existingTerm && r.existingTerm.termsEngAbrvNm || '',
-            korNm: r.inputNm,
-            dataType: r.existingTerm && r.existingTerm.dataType || '',
-            dataLen: r.existingTerm && r.existingTerm.dataLen || 0
-          });
-        } else if (r._approved) {
-          terms.push({
-            engAbrv: r.recommendedEngAbrvNm,
-            korNm: r.inputNm,
-            dataType: r.recommendedDataType || '',
-            dataLen: r.recommendedDataLen || 0
-          });
-        }
+      if (!self.isRowRegisterable(item)) {
+        self.$swal.fire({ title: '등록 불가', text: self.getBlockReasonDetail(item), icon: 'info', confirmButtonText: '확인' });
+        return;
       }
-
-      var dbms = self.ddlDbmsType;
-      var tbl = self.ddlTableName;
-      var ddl = '';
-      var comments = '';
-
-      if (dbms === 'ORACLE') {
-        ddl = 'ALTER TABLE ' + tbl + ' ADD (\n';
-        for (var j = 0; j < terms.length; j++) {
-          var t = terms[j];
-          var typeStr = self.oracleType(t.dataType, t.dataLen);
-          ddl += '    ' + self.pad(t.engAbrv, 25) + typeStr;
-          ddl += (j < terms.length - 1 ? ',' : '') + '  -- ' + t.korNm + '\n';
-          comments += 'COMMENT ON COLUMN ' + tbl + '.' + t.engAbrv + " IS '" + t.korNm + "';\n";
-        }
-        ddl += ');\n\n' + comments;
-      } else if (dbms === 'POSTGRESQL') {
-        for (var k = 0; k < terms.length; k++) {
-          var p = terms[k];
-          var pType = self.pgType(p.dataType, p.dataLen);
-          ddl += 'ALTER TABLE ' + tbl + ' ADD COLUMN ' + p.engAbrv + ' ' + pType + ';  -- ' + p.korNm + '\n';
-          comments += 'COMMENT ON COLUMN ' + tbl + '.' + p.engAbrv + " IS '" + p.korNm + "';\n";
-        }
-        ddl += '\n' + comments;
-      } else if (dbms === 'MYSQL') {
-        for (var m = 0; m < terms.length; m++) {
-          var q = terms[m];
-          var mType = self.mysqlType(q.dataType, q.dataLen);
-          ddl += "ALTER TABLE " + tbl + " ADD COLUMN " + q.engAbrv + " " + mType + " COMMENT '" + q.korNm + "';\n";
-        }
-      }
-
-      self.ddlScript = ddl;
-    },
-    oracleType: function(type, len) {
-      if (!type) return 'VARCHAR2(100)';
-      var t = type.toUpperCase();
-      if (t === 'DATE' || t === 'DATETIME') return 'DATE';
-      if (t === 'VARCHAR' || t === 'VARCHAR2' || t === 'CHAR') return 'VARCHAR2(' + (len || 100) + ')';
-      if (t === 'NUMBER' || t === 'NUMERIC' || t === 'DECIMAL') return 'NUMBER(' + (len || 22) + ')';
-      if (t === 'CLOB') return 'CLOB';
-      return t + (len ? '(' + len + ')' : '');
-    },
-    pgType: function(type, len) {
-      if (!type) return 'VARCHAR(100)';
-      var t = type.toUpperCase();
-      if (t === 'DATE') return 'DATE';
-      if (t === 'DATETIME') return 'TIMESTAMP';
-      if (t === 'VARCHAR' || t === 'VARCHAR2' || t === 'CHAR') return 'VARCHAR(' + (len || 100) + ')';
-      if (t === 'NUMBER' || t === 'NUMERIC' || t === 'DECIMAL') return 'NUMERIC(' + (len || 22) + ')';
-      return t + (len ? '(' + len + ')' : '');
-    },
-    mysqlType: function(type, len) {
-      if (!type) return 'VARCHAR(100)';
-      var t = type.toUpperCase();
-      if (t === 'DATE') return 'DATE';
-      if (t === 'DATETIME') return 'DATETIME';
-      if (t === 'VARCHAR' || t === 'VARCHAR2' || t === 'CHAR') return 'VARCHAR(' + (len || 100) + ')';
-      if (t === 'NUMBER' || t === 'NUMERIC' || t === 'DECIMAL') return 'DECIMAL(' + (len || 22) + ')';
-      return t + (len ? '(' + len + ')' : '');
-    },
-    pad: function(str, len) {
-      if (!str) str = '';
-      while (str.length < len) str += ' ';
-      return str;
-    },
-    copyDDL: function() {
-      var self = this;
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(self.ddlScript);
-      } else {
-        var ta = document.createElement('textarea');
-        ta.value = self.ddlScript;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
-      self.$swal.fire({ title: '복사되었습니다.', icon: 'success', showConfirmButton: false, timer: 1500 });
+      var payload = self.buildItemPayload(item);
+      self.$set(item, '_registering', true);
+      axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: [payload] })
+        .then(function(res) {
+          self.applyDetailsToRows(res.data && res.data.details, [item]);
+          var d = (res.data && res.data.details && res.data.details[0]) || {};
+          if (d.status === 'SUCCESS') {
+            self.$swal.fire({
+              title: self.isAdmin ? '등록 완료' : '등록 신청 완료',
+              icon: 'success', confirmButtonText: '확인', timer: 1500
+            });
+          } else if (d.status === 'SKIPPED') {
+            self.$swal.fire({ title: '이미 등록된 용어입니다.', icon: 'info', confirmButtonText: '확인' });
+          } else {
+            self.$swal.fire({ title: '등록 실패', text: d.message || '오류', icon: 'error', confirmButtonText: '확인' });
+          }
+        }).catch(function(err) {
+          var msg = (err.response && err.response.data && err.response.data.message) || '등록 중 오류가 발생했습니다.';
+          self.$swal.fire({ title: '등록 실패', text: msg, icon: 'error', confirmButtonText: '확인' });
+        }).finally(function() {
+          self.$set(item, '_registering', false);
+        });
     },
     resetAll: function() {
       this.currentStep = 1;
@@ -1202,9 +1241,28 @@ export default {
       this.selectedItems = [];
       this.filterStatus = 'all';
       this.registerResult = null;
-      this.ddlScript = '';
-      this.ddlTableName = '';
     },
+  },
+  mounted: function() {
+    var self = this;
+    var uid = self.$loginStatusData && self.$loginStatusData.id;
+    axios.get(self.$APIURL.base + 'api/login/isAdmin', { params: { user: uid } })
+      .then(function(res) { self.isAdmin = res.data === true; })
+      .catch(function() { self.isAdmin = false; });
   },
 };
 </script>
+
+<style scoped>
+/* 버튼 글씨 잘림 방지 — 한글 라벨이 길어도 펼쳐지게 */
+::v-deep .v-btn { letter-spacing: 0 !important; }
+::v-deep .v-btn__content { white-space: nowrap; }
+.btn-wide { min-width: 110px !important; padding: 0 14px !important; }
+.btn-wide-lg { min-width: 140px !important; padding: 0 16px !important; }
+.btn-cell { min-width: 64px !important; padding: 0 8px !important; }
+/* 액션 컬럼 칩: 한글이 길어도 안 잘리게 */
+.chip-status { min-width: 110px; justify-content: center; padding: 0 10px !important; }
+.chip-status-sm { min-width: 90px; justify-content: center; padding: 0 8px !important; }
+::v-deep .chip-status .v-chip__content,
+::v-deep .chip-status-sm .v-chip__content { white-space: nowrap; }
+</style>

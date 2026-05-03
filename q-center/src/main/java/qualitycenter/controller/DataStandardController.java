@@ -1793,8 +1793,17 @@ public class DataStandardController {
 
 		List<StdWordVo> allWords = sqlSessionTemplate.selectList("word.selectAllWords");
 		Map<String, List<StdWordVo>> wordsByNm = new HashMap<>();
+		// 동의어 → 원본 단어 매핑 (예: 카테고리 → 범주)
+		Map<String, StdWordVo> synmToWord = new HashMap<>();
 		for (StdWordVo w : allWords) {
 			wordsByNm.computeIfAbsent(w.getWordNm(), k -> new ArrayList<>()).add(w);
+			if (w.getAllophSynmLst() != null) {
+				for (String syn : w.getAllophSynmLst()) {
+					if (syn != null && !syn.trim().isEmpty()) {
+						synmToWord.putIfAbsent(syn.trim(), w);
+					}
+				}
+			}
 		}
 
 		List<Map<String, Object>> usageCounts = sqlSessionTemplate.selectList("word.selectWordUsageCounts");
@@ -1887,20 +1896,24 @@ public class DataStandardController {
 			// 1순위: DP 기반 최적 분리
 			log.info("[TermAnalysis] candidateSet size for '{}': {}", cleanName, candidateSet.size());
 			List<String> primaryTokens = dpSplit(cleanName, candidateSet, wordsByNm, wordDict);
-			log.info("[TermAnalysis] 1순위 for '{}': {}", cleanName, primaryTokens);
+			log.info("[TermAnalysis] 1순위 (DP) for '{}': {}", cleanName, primaryTokens);
+
+			// 사후처리: DP 결과에서 미신뢰 토큰 연속 구간을 합쳐 사전(TB_WORD/DICT/동의어) 재검색
+			primaryTokens = resolveUncertainRuns(primaryTokens, wordsByNm, wordDict, synmToWord);
+			log.info("[TermAnalysis] 1순위 (사후처리) for '{}': {}", cleanName, primaryTokens);
 
 			// 2순위: 1순위에서 미등록 단어를 추가 분리
 			List<String> altTokens = generateAlternativeSplit(primaryTokens, candidateSet, wordsByNm);
 			log.info("[TermAnalysis] 2순위 for '{}': {}", cleanName, altTokens);
 
 			// 1순위 토큰 → WordAnalysis 변환
-			List<TermAnalysisResult.WordAnalysis> wordAnalyses = buildWordAnalyses(primaryTokens, wordsByNm, wordDict, usageMap);
+			List<TermAnalysisResult.WordAnalysis> wordAnalyses = buildWordAnalyses(primaryTokens, wordsByNm, wordDict, usageMap, synmToWord);
 			result.setWords(wordAnalyses);
 			result.setRecommendedEngAbrvNm(composeEngAbrv(wordAnalyses));
 
 			// 2순위가 1순위와 다르면 세팅
 			if (!primaryTokens.equals(altTokens)) {
-				List<TermAnalysisResult.WordAnalysis> altAnalyses = buildWordAnalyses(altTokens, wordsByNm, wordDict, usageMap);
+				List<TermAnalysisResult.WordAnalysis> altAnalyses = buildWordAnalyses(altTokens, wordsByNm, wordDict, usageMap, synmToWord);
 				result.setAlternativeWords(altAnalyses);
 				result.setAlternativeEngAbrvNm(composeEngAbrv(altAnalyses));
 			}
@@ -2357,53 +2370,35 @@ public class DataStandardController {
 	}
 
 	/**
-	 * 표준화 추천 엑셀 업로드용 양식 다운로드.
-	 *
-	 * A열에 "한글 컬럼명" 헤더 + 예시 5건. B열은 사용자 참고용 주석 (서버는 A열만 파싱).
+	 * 표준화 추천 엑셀 업로드용 양식 다운로드 (resources/templates/ 의 고정 파일 서빙).
 	 */
 	@GetMapping(value = "/downloadTermRecommendTemplate")
 	public void downloadTermRecommendTemplate(HttpServletResponse res) throws Exception {
-		String fileName = "term_recommend_template.xlsx";
-		String[] examples = { "고객명", "주문일자", "상품코드", "결제금액", "등록일시" };
+		streamTemplate(res, "templates/term_recommend_template.xlsx", "term_recommend_template.xlsx");
+	}
 
-		try (XSSFWorkbook wb = new XSSFWorkbook()) {
-			Sheet sh = wb.createSheet("표준화추천");
-			sh.setColumnWidth(0, 6000);
-			sh.setColumnWidth(1, 8000);
+	/**
+	 * 용어 일괄등록 양식 다운로드 (resources/templates/term_template.xlsx).
+	 */
+	@GetMapping(value = "/downloadTermTemplate")
+	public void downloadTermTemplate(HttpServletResponse res) throws Exception {
+		streamTemplate(res, "templates/term_template.xlsx", "용어_일괄등록_템플릿.xlsx");
+	}
 
-			Font headerFont = wb.createFont();
-			headerFont.setBold(true);
-			headerFont.setColor(IndexedColors.WHITE.getIndex());
-			CellStyle headerStyle = wb.createCellStyle();
-			headerStyle.setFont(headerFont);
-			headerStyle.setFillForegroundColor(IndexedColors.INDIGO.getIndex());
-			headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+	/**
+	 * 단어 일괄등록 양식 다운로드 (resources/templates/word_template.xlsx).
+	 */
+	@GetMapping(value = "/downloadWordTemplate")
+	public void downloadWordTemplate(HttpServletResponse res) throws Exception {
+		streamTemplate(res, "templates/word_template.xlsx", "단어_일괄등록_템플릿.xlsx");
+	}
 
-			Font noteFont = wb.createFont();
-			noteFont.setItalic(true);
-			noteFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
-			CellStyle noteStyle = wb.createCellStyle();
-			noteStyle.setFont(noteFont);
-
-			Row header = sh.createRow(0);
-			Cell h0 = header.createCell(0);
-			h0.setCellValue("한글 컬럼명");
-			h0.setCellStyle(headerStyle);
-			Cell h1 = header.createCell(1);
-			h1.setCellValue("(참고) B열은 무시됩니다. 한글명만 A열에 입력하세요");
-			h1.setCellStyle(noteStyle);
-
-			for (int i = 0; i < examples.length; i++) {
-				Row r = sh.createRow(i + 1);
-				r.createCell(0).setCellValue(examples[i]);
-				Cell c1 = r.createCell(1);
-				c1.setCellValue("(예시 - 지우고 사용)");
-				c1.setCellStyle(noteStyle);
-			}
-
-			res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-			res.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-			wb.write(res.getOutputStream());
+	private void streamTemplate(HttpServletResponse res, String resourcePath, String fileName) throws Exception {
+		res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		res.setHeader("Content-Disposition", "attachment; filename=\""
+				+ java.net.URLEncoder.encode(fileName, "UTF-8").replace("+", "%20") + "\"");
+		try (java.io.InputStream in = new org.springframework.core.io.ClassPathResource(resourcePath).getInputStream()) {
+			org.springframework.util.StreamUtils.copy(in, res.getOutputStream());
 			res.getOutputStream().flush();
 		}
 	}
@@ -2433,6 +2428,11 @@ public class DataStandardController {
 		Arrays.fill(parent, -1);
 		dp[0] = 0;
 
+		// [B] 토큰 추가 시 적용하는 split penalty.
+		// 같은 길이를 단일 매칭으로 cover 가능하면 그쪽을 우선시키기 위함.
+		// (예: 상품카테고리 → 상품+카테고리 vs 상품+카테고+리 — 후자가 분리 점수 합이 더 커지는 함정 방지)
+		final int SPLIT_PENALTY = 8000;
+
 		for (int i = 0; i < n; i++) {
 			if (dp[i] == Integer.MIN_VALUE / 2) continue;
 
@@ -2441,7 +2441,7 @@ public class DataStandardController {
 				// 전체 입력이 하나의 등록 단어인 경우는 허용
 				if (c.equals(input) && !wordsByNm.containsKey(c) && !wordDict.containsKey(c)) continue;
 				if (i + c.length() <= n && input.startsWith(c, i)) {
-					int score = calculateTokenScore(c, wordsByNm, wordDict);
+					int score = calculateTokenScore(c, wordsByNm, wordDict) - SPLIT_PENALTY;
 					if (dp[i] + score > dp[i + c.length()]) {
 						dp[i + c.length()] = dp[i] + score;
 						parent[i + c.length()] = i;
@@ -2452,7 +2452,7 @@ public class DataStandardController {
 
 			// 1글자 스킵 (매칭 안 될 때)
 			String oneChar = input.substring(i, i + 1);
-			int skipScore = dp[i] - 500;
+			int skipScore = dp[i] - 500 - SPLIT_PENALTY;
 			if (skipScore > dp[i + 1]) {
 				dp[i + 1] = skipScore;
 				parent[i + 1] = i;
@@ -2566,10 +2566,21 @@ public class DataStandardController {
 	 *
 	 * TB_WORD 등록 단어 > TB_WORD_DICT 추천 사전 > OKT 토큰 순으로 점수 부여.
 	 * 같은 유형 내에서는 긴 토큰이 더 높은 점수를 받는다.
+	 *
+	 * [D] 1자 + 비분류어(WORD_CLSF_YN='N') TB_WORD 는 점수 격하.
+	 *   - 분류어(명/수/월 등 clsf='Y') 는 정상 점수 → "고객명" → 고객+명 정상 분리
+	 *   - 비분류어 1자(리/산/층/팀 등) 는 격하 → 카테고리/메모리 같은 외래어 끝 우연 매칭 방지
 	 */
 	private int calculateTokenScore(String token, Map<String, List<StdWordVo>> wordsByNm,
 			Map<String, Map<String, Object>> wordDict) {
 		if (wordsByNm.containsKey(token)) {
+			if (token.length() == 1) {
+				boolean isClsf = false;
+				for (StdWordVo w : wordsByNm.get(token)) {
+					if ("Y".equals(w.getWordClsfYn())) { isClsf = true; break; }
+				}
+				if (!isClsf) return 5000;  // 1자 비분류어: 격하 (TB_WORD 보너스 약화)
+			}
 			return 10000 + token.length() * 100;
 		}
 		if (wordDict.containsKey(token)) {
@@ -2687,7 +2698,7 @@ public class DataStandardController {
 	 */
 	private List<TermAnalysisResult.WordAnalysis> buildWordAnalyses(List<String> tokens,
 			Map<String, List<StdWordVo>> wordsByNm, Map<String, Map<String, Object>> wordDict,
-			Map<String, Integer> usageMap) {
+			Map<String, Integer> usageMap, Map<String, StdWordVo> synmToWord) {
 		List<TermAnalysisResult.WordAnalysis> list = new ArrayList<>();
 		for (String token : tokens) {
 			TermAnalysisResult.WordAnalysis wa = new TermAnalysisResult.WordAnalysis();
@@ -2719,6 +2730,27 @@ public class DataStandardController {
 				if (best != null) best.setSelected(true);
 				wa.setCandidates(cands);
 				wa.setSelected(best);
+			} else if (synmToWord != null && synmToWord.containsKey(token)) {
+				// 동의어 매칭: 입력은 동의어이지만 원본 단어 정보로 처리 (예: 카테고리 → 범주)
+				StdWordVo w = synmToWord.get(token);
+				wa.setStatus("MATCHED");
+				TermAnalysisResult.WordCandidate c = new TermAnalysisResult.WordCandidate();
+				c.setWordId(w.getId());
+				c.setWordNm(w.getWordNm());
+				c.setWordEngAbrvNm(w.getWordEngAbrvNm());
+				c.setWordEngNm(w.getWordEngNm());
+				c.setDomainClsfNm(w.getDomainClsfNm());
+				c.setWordClsfYn(w.getWordClsfYn());
+				c.setSelected(true);
+				int score = 0;
+				Integer usage = usageMap.get(w.getWordNm());
+				if (usage != null) score += usage * 100;
+				if (w.getWordEngAbrvNm() != null) score += Math.min(w.getWordEngAbrvNm().length(), 10) * 10;
+				c.setScore(score);
+				List<TermAnalysisResult.WordCandidate> cands = new ArrayList<>();
+				cands.add(c);
+				wa.setCandidates(cands);
+				wa.setSelected(c);
 			} else {
 				Map<String, Object> dictEntry = wordDict.get(token);
 				if (dictEntry != null) {
@@ -2742,6 +2774,69 @@ public class DataStandardController {
 			list.add(wa);
 		}
 		return list;
+	}
+
+	/**
+	 * 토큰이 "미신뢰" 인지 판정.
+	 * - 트러스트: TB_WORD ≥2자 / TB_WORD 1자 분류어 / DICT 매치
+	 * - 미신뢰: OKT-only / TB_WORD 1자 비분류어 (예: 리/산/팀)
+	 */
+	private boolean isUncertainToken(String token,
+			Map<String, List<StdWordVo>> wordsByNm,
+			Map<String, Map<String, Object>> wordDict) {
+		if (token == null || token.isEmpty()) return false;
+		List<StdWordVo> matches = wordsByNm.get(token);
+		if (matches != null && !matches.isEmpty()) {
+			if (token.length() == 1) {
+				for (StdWordVo w : matches) {
+					if ("Y".equals(w.getWordClsfYn())) return false;  // 1자 분류어: 트러스트
+				}
+				return true;  // 1자 비분류어: 미신뢰
+			}
+			return false;  // 2자+ TB_WORD: 트러스트
+		}
+		if (wordDict.containsKey(token)) return false;  // DICT 매치: 트러스트
+		return true;  // OKT-only / 미매치: 미신뢰
+	}
+
+	/**
+	 * DP 결과에서 미신뢰 토큰 연속 구간(2개 이상)을 합쳐 사전(TB_WORD/DICT/동의어목록) 재검색.
+	 * 발견되면 단일 토큰으로 치환, 없으면 원래 분리 유지.
+	 *
+	 * 예: [상품, 카테고, 리] 에서 [카테고, 리] 가 미신뢰 → "카테고리" 합쳐서 검색
+	 *      → 범주의 동의어로 발견 → [상품, 카테고리]
+	 */
+	private List<String> resolveUncertainRuns(List<String> tokens,
+			Map<String, List<StdWordVo>> wordsByNm,
+			Map<String, Map<String, Object>> wordDict,
+			Map<String, StdWordVo> synmToWord) {
+		if (tokens == null || tokens.size() <= 1) return tokens;
+		List<String> result = new ArrayList<>();
+		int i = 0;
+		while (i < tokens.size()) {
+			if (isUncertainToken(tokens.get(i), wordsByNm, wordDict)) {
+				int start = i;
+				StringBuilder sb = new StringBuilder();
+				while (i < tokens.size() && isUncertainToken(tokens.get(i), wordsByNm, wordDict)) {
+					sb.append(tokens.get(i));
+					i++;
+				}
+				int runSize = i - start;
+				String chunk = sb.toString();
+				boolean foundInDict = wordsByNm.containsKey(chunk)
+						|| wordDict.containsKey(chunk)
+						|| (synmToWord != null && synmToWord.containsKey(chunk));
+				if (runSize >= 2 && foundInDict) {
+					result.add(chunk);  // 사전 매칭: 통째 치환
+				} else {
+					for (int j = start; j < i; j++) result.add(tokens.get(j));  // 그대로 유지
+				}
+			} else {
+				result.add(tokens.get(i));
+				i++;
+			}
+		}
+		return result;
 	}
 
 	private String composeEngAbrv(List<TermAnalysisResult.WordAnalysis> wordAnalyses) {

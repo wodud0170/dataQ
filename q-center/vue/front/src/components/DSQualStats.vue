@@ -49,7 +49,7 @@ export default {
   },
   mounted() {
     var self = this;
-    axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', {})
+    axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' })
       .then(function(r) {
         self.dataModels = (r.data || []).filter(function(m) { return m.modelType === 'PHYSICAL'; });
       });

@@ -39,5 +39,8 @@ public class NDQualityRetrieveCond {
     private String schDataType;
     private String schDataLen;
 
+    // 데이터 품질 진단: DB 가 연결된 모델만 (Y 일 때 DM_DS_ID 가 있고 ndata.TB_DATA_SOURCE 에 존재하는 모델만 반환)
+    private String connectedOnly;
+
 }
 
