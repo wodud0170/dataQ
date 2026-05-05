@@ -7,8 +7,8 @@ ca8858d (DSTermRecommend.vue 분류어 autocomplete + 도메인 cascade) E2E 테
   3. UI 메뉴 진입: 자동 표준화 지원 > 컬럼 표준화
   4. 입력 단계에서 한글명 입력 후 분석 시작 → STEP 3 도달
   5. 리뷰 행의 [수정] 버튼 → 모달 열림
-  6. 모달에 분류어 autocomplete + [분류어 추가] + 도메인 v-select 존재 확인
-  7. 분류어 선택 → [분류어 추가] 클릭 → 단어 테이블에 행이 한 건 늘어나는지
+  6. 모달에 분류어 autocomplete + [형식단어 추가] + 도메인 v-select 존재 확인
+  7. 분류어 선택 → [형식단어 추가] 클릭 → 단어 테이블에 행이 한 건 늘어나는지
 """
 import os
 import sys
@@ -256,13 +256,13 @@ def run():
             dialog = d.find_element(By.CSS_SELECTOR, ".v-dialog--active")
             html = dialog.get_attribute("innerHTML") or ""
             missing = []
-            if "분류어 검색/선택" not in html: missing.append("분류어 autocomplete placeholder")
-            if "분류어 추가" not in html: missing.append("[분류어 추가] 버튼 텍스트")
+            if "형식단어 검색/선택" not in html: missing.append("형식단어 autocomplete placeholder")
+            if "형식단어 추가" not in html: missing.append("[형식단어 추가] 버튼 텍스트")
             if "도메인 선택" not in html: missing.append("도메인 v-select placeholder")
             if "용어 도메인" not in html: missing.append("도메인 라벨")
             if missing:
                 raise RuntimeError("모달 요소 누락: " + ", ".join(missing))
-            print("  [ui] 분류어 autocomplete + [분류어 추가] + 도메인 v-select 전부 렌더됨")
+            print("  [ui] 분류어 autocomplete + [형식단어 추가] + 도메인 v-select 전부 렌더됨")
         if not step("7. 모달 UI 요소 확인", _check_elements): return
 
         # 8. 분류어 선택 → 도메인 드롭다운 활성화
@@ -286,7 +286,7 @@ def run():
             shot(d, "04_clsf_picked")
         if not step("8. 분류어 autocomplete 선택", _pick_clsf): return
 
-        # 9. [분류어 추가] 클릭 → 테이블에 행 증가
+        # 9. [형식단어 추가] 클릭 → 테이블에 행 증가
         def _add_clsf():
             dialog = d.find_element(By.CSS_SELECTOR, ".v-dialog--active")
             # 현재 테이블 행 수 — Vuetify 의 v-simple-table 는 실제 DOM 에서 단순 table 로 렌더됨
@@ -296,18 +296,18 @@ def run():
             before = count_rows()
             add_btn = None
             for b in dialog.find_elements(By.CSS_SELECTOR, "button"):
-                if "분류어 추가" in (b.text or ""):
+                if "형식단어 추가" in (b.text or ""):
                     add_btn = b; break
-            if not add_btn: raise RuntimeError("[분류어 추가] 버튼 없음")
+            if not add_btn: raise RuntimeError("[형식단어 추가] 버튼 없음")
             if not add_btn.is_enabled():
-                raise RuntimeError("[분류어 추가] 버튼 disabled (selectedClsfWord 미설정)")
+                raise RuntimeError("[형식단어 추가] 버튼 disabled (selectedClsfWord 미설정)")
             _click_el(d, add_btn); time.sleep(0.8)
             after = count_rows()
             if after != before + 1:
                 raise RuntimeError(f"행 수 변화 이상: {before} → {after}")
             print(f"  [ui] 단어 테이블 행: {before} → {after}")
             shot(d, "05_added")
-        if not step("9. [분류어 추가] 로 단어 테이블에 push", _add_clsf): return
+        if not step("9. [형식단어 추가] 로 단어 테이블에 push", _add_clsf): return
 
         # 10. 모달 닫기
         def _close():

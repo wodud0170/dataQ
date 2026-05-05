@@ -41,6 +41,15 @@
 		<result property="fkYn" column="FK_YN"/>
 		<result property="defaultVal" column="DEFAULT_VAL"/>
 		<result property="attrOrder" column="ATTR_ORD"/>
+		<!-- 79번 진단 대상 제외 관리 -->
+		<result property="stndDiagTargetYn"     column="STND_DIAG_TARGET_YN"/>
+		<result property="stndDiagTargetReason" column="STND_DIAG_TARGET_REASON"/>
+		<result property="structDiagTargetYn"     column="STRUCT_DIAG_TARGET_YN"/>
+		<result property="structDiagTargetReason" column="STRUCT_DIAG_TARGET_REASON"/>
+		<result property="qualDiagTargetYn"     column="QUAL_DIAG_TARGET_YN"/>
+		<result property="qualDiagTargetReason" column="QUAL_DIAG_TARGET_REASON"/>
+		<result property="diagTargetUpdtUserId" column="DIAG_TARGET_UPDT_USER_ID"/>
+		<result property="diagTargetUpdtDt"     column="DIAG_TARGET_UPDT_DT"/>
 	</resultMap>
 
 	<select id="selectDataModelStatsList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDataModelMap">
@@ -187,6 +196,14 @@
 				,OBJ_COMMENT   as objComment
 				,OBJ_ATTR_CNT  as objAttrCnt
 				,USE_YN        as useYn
+				,COALESCE(STND_DIAG_TARGET_YN,'Y')   as stndDiagTargetYn
+				,STND_DIAG_TARGET_REASON              as stndDiagTargetReason
+				,COALESCE(STRUCT_DIAG_TARGET_YN,'Y') as structDiagTargetYn
+				,STRUCT_DIAG_TARGET_REASON            as structDiagTargetReason
+				,COALESCE(QUAL_DIAG_TARGET_YN,'Y')   as qualDiagTargetYn
+				,QUAL_DIAG_TARGET_REASON              as qualDiagTargetReason
+				,DIAG_TARGET_UPDT_USER_ID             as diagTargetUpdtUserId
+				,to_char(to_timestamp(DIAG_TARGET_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as diagTargetUpdtDt
 			from TB_DATA_MODEL_OBJ
 			where DM_ID = #{clctId} AND USE_YN = 'Y'
 			order by OBJ_NM
@@ -247,9 +264,92 @@
 				,A.FK_YN
 				,A.DEFAULT_VAL
 				,A.ATTR_ORD
+				,A.STND_DIAG_TARGET_YN
+				,A.STND_DIAG_TARGET_REASON
+				,A.STRUCT_DIAG_TARGET_YN
+				,A.STRUCT_DIAG_TARGET_REASON
+				,A.QUAL_DIAG_TARGET_YN
+				,A.QUAL_DIAG_TARGET_REASON
+				,A.DIAG_TARGET_UPDT_USER_ID
+				,A.DIAG_TARGET_UPDT_DT
 			from TB_DATA_MODEL_ATTR	A
 			where A.DM_ID = #{clctId} AND A.USE_YN = 'Y'
 			order by A.OBJ_NM, A.ATTR_ORD
+	</select>
+
+	<!-- 79번 표준화 진단 전용 — TARGET_YN='Y' 인 행만 (OBJ + ATTR cascade) -->
+	<select id="selectAttrListForStndDiag" parameterType="String" resultMap="stdDataModelAttrMap">
+			select
+				 COALESCE(A.OBJ_OWNER, '') as OBJ_OWNER
+				,A.OBJ_NM
+				,O.OBJ_NM_KR
+				,A.ATTR_NM
+				,A.ATTR_NM_KR
+				,A.ATTR_COMMENT
+				,A.DATA_TYPE
+				,A.DATA_LEN
+				,A.DATA_DECIMAL_LEN
+				,A.TERMS_STND_YN
+				,A.DOMAIN_STND_YN
+				,A.WORD_LST
+				,A.WORD_STND_LST
+				,A.NULLABLE_YN
+				,A.PK_YN
+				,A.FK_YN
+				,A.DEFAULT_VAL
+				,A.ATTR_ORD
+			from TB_DATA_MODEL_ATTR A
+			INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID=O.DM_ID AND A.OBJ_NM=O.OBJ_NM
+			where A.DM_ID = #{clctId}
+			  AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
+			  AND COALESCE(O.STND_DIAG_TARGET_YN,'Y') = 'Y'
+			  AND COALESCE(A.STND_DIAG_TARGET_YN,'Y') = 'Y'
+			order by A.OBJ_NM, A.ATTR_ORD
+	</select>
+
+	<!-- 79번 구조 변경 진단 전용 — TARGET_YN='Y' (Raw HashMap 형식, StructDiagService 호환) -->
+	<select id="selectAttrListForStructDiagRaw" parameterType="String" resultType="java.util.HashMap">
+			select
+				 A.OBJ_NM         as "objNm"
+				,A.ATTR_NM        as "attrNm"
+				,A.ATTR_NM_KR     as "attrNmKr"
+				,A.ATTR_COMMENT   as "attrComment"
+				,A.DATA_TYPE      as "dataType"
+				,A.DATA_LEN       as "dataLen"
+				,A.DATA_DECIMAL_LEN as "dataDecimalLen"
+				,A.NULLABLE_YN    as "nullableYn"
+				,A.PK_YN          as "pkYn"
+				,A.FK_YN          as "fkYn"
+				,A.DEFAULT_VAL    as "defaultVal"
+				,A.ATTR_ORD       as "attrOrd"
+			from TB_DATA_MODEL_ATTR A
+			INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID=O.DM_ID AND A.OBJ_NM=O.OBJ_NM
+			where A.DM_ID = #{clctId}
+			  AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
+			  AND COALESCE(O.STRUCT_DIAG_TARGET_YN,'Y') = 'Y'
+			  AND COALESCE(A.STRUCT_DIAG_TARGET_YN,'Y') = 'Y'
+			order by A.OBJ_NM, A.ATTR_ORD
+	</select>
+
+	<!-- 79번 진단 메타에 제외 카운트 (모델별) -->
+	<select id="selectDiagExcludedCount" parameterType="java.util.Map" resultType="int">
+			select COUNT(*) FROM TB_DATA_MODEL_ATTR A
+			INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID=O.DM_ID AND A.OBJ_NM=O.OBJ_NM
+			where A.DM_ID = #{dmId}
+			  AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
+			  AND (
+			    <choose>
+			      <when test="diagType == 'STND'">
+			        COALESCE(O.STND_DIAG_TARGET_YN,'Y')='N' OR COALESCE(A.STND_DIAG_TARGET_YN,'Y')='N'
+			      </when>
+			      <when test="diagType == 'STRUCT'">
+			        COALESCE(O.STRUCT_DIAG_TARGET_YN,'Y')='N' OR COALESCE(A.STRUCT_DIAG_TARGET_YN,'Y')='N'
+			      </when>
+			      <otherwise>
+			        COALESCE(O.QUAL_DIAG_TARGET_YN,'Y')='N' OR COALESCE(A.QUAL_DIAG_TARGET_YN,'Y')='N'
+			      </otherwise>
+			    </choose>
+			  )
 	</select>
 
 	<!-- 비표준 컬럼 목록 (일괄 변환용) -->

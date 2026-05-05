@@ -14,6 +14,14 @@
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
+              <!-- 등록일자 (범위) -->
+              <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">등록일자</span>
+              <v-text-field class="pl-2" v-model="searchFromDt" type="date" dense outlined hide-details
+                color="ndColor" :style="{ width: '160px' }" />
+              <span :style="{ fontSize: '.875rem' }" class="px-1">~</span>
+              <v-text-field class="pr-4" v-model="searchToDt" type="date" dense outlined hide-details
+                color="ndColor" :style="{ width: '160px' }" />
+
               <!-- 승인 여부 추가 -->
               <v-checkbox class="codeSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
@@ -920,6 +928,9 @@ export default {
     codeDataItems: [],
     // 검색 코드
     searchCode: '',
+    // 검색 등록일자 (범위, YYYY-MM-DD)
+    searchFromDt: '',
+    searchToDt: '',
     // 관리자 여부
     isAdmin: false,
     // 검색 승인 여부
@@ -1100,6 +1111,8 @@ export default {
     resetSearch() {
       this.searchCode = '';
       this.searchApproval = true;
+      this.searchFromDt = '';
+      this.searchToDt = '';
     },
     setListPage() {
       // 페이지네이션 버튼 개수
@@ -1186,7 +1199,9 @@ export default {
 
         axios.post(_url, {
           'schNm': schNm,
-          'schAprvYn': schAprvYn
+          'schAprvYn': schAprvYn,
+          'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
+          'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null
         }).then(result => {
           this.codeItems = result.data;
 

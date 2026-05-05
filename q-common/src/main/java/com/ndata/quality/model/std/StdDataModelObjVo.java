@@ -16,4 +16,14 @@ public class StdDataModelObjVo {
 	private String objUpdtDt;
 	private String useYn;
 	private String deletedDt;
+
+	// 79번 진단 대상 제외 관리
+	private String stndDiagTargetYn;
+	private String stndDiagTargetReason;
+	private String structDiagTargetYn;
+	private String structDiagTargetReason;
+	private String qualDiagTargetYn;
+	private String qualDiagTargetReason;
+	private String diagTargetUpdtUserId;
+	private String diagTargetUpdtDt;
 }

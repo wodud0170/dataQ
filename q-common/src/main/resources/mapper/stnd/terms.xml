@@ -102,6 +102,12 @@
 				<if test="schAprvYn != null">
 					AND A.APRV_YN = #{schAprvYn}
 				</if>
+				<if test="from != null and from != ''">
+					AND A.CRET_DT &gt;= #{from}
+				</if>
+				<if test="to != null and to != ''">
+					AND A.CRET_DT &lt;= #{to}
+				</if>
 				order by A.TERMS_NM
 	</select>
 
@@ -413,12 +419,18 @@
 							THEN ALLOPH_SYNM_LST
 							ELSE '{null}'::text[] END
 						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM) A
-      		where A.CODE_GRP is not null 
+      		where A.CODE_GRP is not null
 			<if test="schNm != null">
 				AND (A.TERMS_NM ILIKE '%' || #{schNm} || '%' OR A.ALLOPH_SYNM ILIKE '%' || #{schNm} || '%')
 			</if>
 			<if test="schAprvYn != null">
 				AND A.APRV_YN = #{schAprvYn}
+			</if>
+			<if test="from != null and from != ''">
+				AND A.CRET_DT &gt;= #{from}
+			</if>
+			<if test="to != null and to != ''">
+				AND A.CRET_DT &lt;= #{to}
 			</if>
 			order by A.TERMS_NM
 	</select>

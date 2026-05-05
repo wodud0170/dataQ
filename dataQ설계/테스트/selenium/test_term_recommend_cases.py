@@ -119,10 +119,11 @@ def t2_auto():
             assert it, f"'{ko}' 결과 없음"
             assert it["status"] in ("AUTO","REGISTERED","PARTIAL"), \
                 f"'{ko}' status={it['status']}"
-            # 각 단어 약어 정확
-            for w_ko, w_abbr in zip(expected_words, expected_abbrs):
-                actual = word_abbr(it, w_ko)
-                assert actual == w_abbr, f"'{ko}.{w_ko}' 약어 {actual} != {w_abbr}"
+            # 각 단어 약어 — REGISTERED 케이스는 words 배열이 비어있으므로 스킵
+            if it["status"] != "REGISTERED":
+                for w_ko, w_abbr in zip(expected_words, expected_abbrs):
+                    actual = word_abbr(it, w_ko)
+                    assert actual == w_abbr, f"'{ko}.{w_ko}' 약어 {actual} != {w_abbr}"
             # recommendedEngAbrvNm 정확 매칭 (REGISTERED 인 경우는 existingTerm.termsEngAbrvNm 비교)
             if it["status"] == "REGISTERED":
                 got = (it.get("existingTerm") or {}).get("termsEngAbrvNm")
@@ -140,11 +141,12 @@ def t2_auto():
 def t3_partial():
     log("T3. PARTIAL — 일부 단어 NEW")
     s = requests.Session(); login(s)
-    # '회원' = MATCHED, '이름' = NEW
-    # '주문' = MATCHED, '나이' = NEW
+    # 행안부 표준 단어 + 진짜 미등록(사전·동의어 모두 부재) 단어 조합.
+    # '이름/나이' 같은 단어는 알고리즘이 ALLOPH_SYNM_LST(명/연령) 로 자동 복원하므로
+    # PARTIAL 검증용으로 부적절. 명백히 사전 미등록인 의미없는 토큰 사용.
     cases = [
-        ("회원이름", "회원", "이름"),
-        ("주문나이", "주문", "나이")
+        ("회원라랄라", "회원", "라랄라"),
+        ("주문룰루",  "주문", "룰루")
     ]
 
     def _run():

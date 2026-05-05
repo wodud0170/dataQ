@@ -87,6 +87,12 @@
 			<if test="wordClsfYn != null and wordClsfYn != ''">
 				AND A.WORD_CLSF_YN = #{wordClsfYn}
 			</if>
+			<if test="from != null and from != ''">
+				AND A.CRET_DT &gt;= #{from}
+			</if>
+			<if test="to != null and to != ''">
+				AND A.CRET_DT &lt;= #{to}
+			</if>
 			order by A.WORD_NM
 	</select>
 

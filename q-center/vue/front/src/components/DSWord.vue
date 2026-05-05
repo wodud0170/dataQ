@@ -29,6 +29,14 @@
                 dense outlined hide-details single-line
                 :style="{ maxWidth: '120px' }">
               </v-select>
+              <!-- 등록일자 (범위) -->
+              <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">등록일자</span>
+              <v-text-field class="pl-2" v-model="searchFromDt" type="date" dense outlined hide-details
+                color="ndColor" :style="{ width: '160px' }" />
+              <span :style="{ fontSize: '.875rem' }" class="px-1">~</span>
+              <v-text-field class="pr-4" v-model="searchToDt" type="date" dense outlined hide-details
+                color="ndColor" :style="{ width: '160px' }" />
+
               <v-checkbox class="wordSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
               <v-btn class="gradient" title="검색" v-on:click="getWordData"
@@ -606,6 +614,9 @@ export default {
     searchApproval: true,
     // 형식단어 여부 필터
     searchWordClsfYn: '',
+    // 검색 등록일자 (범위, YYYY-MM-DD)
+    searchFromDt: '',
+    searchToDt: '',
     wordClsfYnOptions: [
       { text: '전체', value: '' },
       { text: '형식단어', value: 'Y' },
@@ -722,6 +733,8 @@ export default {
       this.searchEngWord = '';
       this.searchApproval = true;
       this.searchWordClsfYn = '';
+      this.searchFromDt = '';
+      this.searchToDt = '';
     },
     checkEngAbrvDuplicate() {
       var vm = this;
@@ -1179,7 +1192,9 @@ export default {
               'schNm': schNm,
               'searchEngWord': searchEngWord,
               'schAprvYn': schAprvYn,
-              'wordClsfYn': this.searchWordClsfYn || null
+              'wordClsfYn': this.searchWordClsfYn || null,
+              'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
+              'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null
             }).then(result => {
               let _data = result.data;
 

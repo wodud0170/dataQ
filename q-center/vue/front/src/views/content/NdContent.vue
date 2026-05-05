@@ -86,6 +86,12 @@
                     <datamodelStatus :key="datamodelStatusKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'diagTargetMgmt'" id="tab_diagTargetMgmt" class="tab_contents"
+                :class="{ active: this.activeContent === 'diagTargetMgmt' }">
+                <keep-alive>
+                    <diagTargetMgmt :key="diagTargetMgmtKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'datamodelStatusTable'" id="tab_datamodelStatusTable" class="tab_contents"
                 :class="{ active: this.activeContent === 'datamodelStatusTable' }">
                 <keep-alive>
@@ -342,6 +348,7 @@ import DSDomain from "./../../components/DSDomain.vue"
 import DSDomainGroup from "./../../components/DSDomainGroup.vue"
 import DSDomainClassification from "./../../components/DSDomainClassification.vue"
 import DSDatamodelStatus from "../../components/DSDatamodelStatus.vue"
+import DSDiagTargetMgmt from "../../components/DSDiagTargetMgmt.vue"
 import DSDatamodelStatusTable from "../../components/DSDatamodelStatusTable.vue"
 import DSDatamodelStatusColumn from "../../components/DSDatamodelStatusColumn.vue"
 import DSDatamodelStatusIndex from "../../components/DSDatamodelStatusIndex.vue"
@@ -423,6 +430,7 @@ export default {
             domainGroupKey: this.createUUID(),
             domainClassificationKey: this.createUUID(),
             datamodelStatusKey: this.createUUID(),
+            diagTargetMgmtKey: this.createUUID(),
             datamodelStatusTableKey: this.createUUID(),
             datamodelStatusColumnKey: this.createUUID(),
             datamodelStatusIndexKey: this.createUUID(),
@@ -474,6 +482,7 @@ export default {
         "domainGroup": DSDomainGroup,
         "domainClassification": DSDomainClassification,
         "datamodelStatus": DSDatamodelStatus,
+        "diagTargetMgmt": DSDiagTargetMgmt,
         "datamodelStatusTable": DSDatamodelStatusTable,
         "datamodelStatusColumn": DSDatamodelStatusColumn,
         "datamodelStatusIndex": DSDatamodelStatusIndex,
@@ -546,6 +555,9 @@ export default {
                     break;
                 case "datamodelStatus":
                     this.datamodelStatusKey = this.createUUID();
+                    break;
+                case "diagTargetMgmt":
+                    this.diagTargetMgmtKey = this.createUUID();
                     break;
                 case "datamodelStatusTable":
                     this.datamodelStatusTableKey = this.createUUID();

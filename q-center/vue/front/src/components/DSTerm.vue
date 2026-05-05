@@ -35,6 +35,14 @@
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
 
+              <!-- 등록일자 (범위) -->
+              <span :style="{ fontSize: '.875rem' }">등록일자</span>
+              <v-text-field class="pl-2" v-model="searchFromDt" type="date" dense outlined hide-details
+                color="ndColor" :style="{ width: '160px' }" />
+              <span :style="{ fontSize: '.875rem' }" class="px-1">~</span>
+              <v-text-field class="pr-4" v-model="searchToDt" type="date" dense outlined hide-details
+                color="ndColor" :style="{ width: '160px' }" />
+
               <!-- 승인 여부 추가 -->
               <v-checkbox class="tarmSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
@@ -882,6 +890,10 @@ export default {
     searchTerm: '',
     searchTermMode: 'contains',
 
+    //검색 등록일자 (범위, YYYY-MM-DD)
+    searchFromDt: '',
+    searchToDt: '',
+
     //검색 용어영문약어명
     searchEngTerm: '',
     searchEngTermMode: 'contains',
@@ -1050,6 +1062,8 @@ export default {
       this.searchEngTerm = '';
       this.searchEngTermMode = 'contains';
       this.searchDomain = '';
+      this.searchFromDt = '';
+      this.searchToDt = '';
       this.searchApproval = true;
     },
     getSystemList() {
@@ -1149,7 +1163,9 @@ export default {
           'searchEngTerm': searchEngTerm,
           'searchEngTermMode': this.searchEngTermMode,
           'searchDomain': searchDomain,
-          'schAprvYn': schAprvYn
+          'schAprvYn': schAprvYn,
+          'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
+          'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null
         }).then((res) => {
           // console.log(res.data)
           this.termItems = res.data;

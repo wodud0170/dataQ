@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  79번 진단 대상 제외 관리 — TB_DATA_MODEL_OBJ + ATTR 의 진단 종류별 TARGET_YN 토글
+  diagType: STND / STRUCT / QUAL
+-->
+<mapper namespace="diagTarget">
+
+  <!-- OBJ 단건 토글 -->
+  <update id="updateObjTarget" parameterType="java.util.Map">
+    UPDATE TB_DATA_MODEL_OBJ
+       SET
+       <choose>
+         <when test="diagType == 'STND'">
+           STND_DIAG_TARGET_YN     = #{targetYn},
+           STND_DIAG_TARGET_REASON = #{reason}
+         </when>
+         <when test="diagType == 'STRUCT'">
+           STRUCT_DIAG_TARGET_YN     = #{targetYn},
+           STRUCT_DIAG_TARGET_REASON = #{reason}
+         </when>
+         <when test="diagType == 'QUAL'">
+           QUAL_DIAG_TARGET_YN     = #{targetYn},
+           QUAL_DIAG_TARGET_REASON = #{reason}
+         </when>
+       </choose>
+       , DIAG_TARGET_UPDT_USER_ID = #{userId}
+       , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
+     WHERE DM_ID  = #{dmId}
+       AND OBJ_NM = #{objNm}
+  </update>
+
+  <!-- OBJ 일괄 토글 -->
+  <update id="updateObjTargetBatch" parameterType="java.util.Map">
+    UPDATE TB_DATA_MODEL_OBJ
+       SET
+       <choose>
+         <when test="diagType == 'STND'">
+           STND_DIAG_TARGET_YN     = #{targetYn},
+           STND_DIAG_TARGET_REASON = #{reason}
+         </when>
+         <when test="diagType == 'STRUCT'">
+           STRUCT_DIAG_TARGET_YN     = #{targetYn},
+           STRUCT_DIAG_TARGET_REASON = #{reason}
+         </when>
+         <when test="diagType == 'QUAL'">
+           QUAL_DIAG_TARGET_YN     = #{targetYn},
+           QUAL_DIAG_TARGET_REASON = #{reason}
+         </when>
+       </choose>
+       , DIAG_TARGET_UPDT_USER_ID = #{userId}
+       , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
+     WHERE DM_ID  = #{dmId}
+       AND OBJ_NM IN
+       <foreach item="nm" collection="objNms" open="(" separator="," close=")">
+         #{nm}
+       </foreach>
+  </update>
+
+  <!-- ATTR 단건 토글 -->
+  <update id="updateAttrTarget" parameterType="java.util.Map">
+    UPDATE TB_DATA_MODEL_ATTR
+       SET
+       <choose>
+         <when test="diagType == 'STND'">
+           STND_DIAG_TARGET_YN     = #{targetYn},
+           STND_DIAG_TARGET_REASON = #{reason}
+         </when>
+         <when test="diagType == 'STRUCT'">
+           STRUCT_DIAG_TARGET_YN     = #{targetYn},
+           STRUCT_DIAG_TARGET_REASON = #{reason}
+         </when>
+         <when test="diagType == 'QUAL'">
+           QUAL_DIAG_TARGET_YN     = #{targetYn},
+           QUAL_DIAG_TARGET_REASON = #{reason}
+         </when>
+       </choose>
+       , DIAG_TARGET_UPDT_USER_ID = #{userId}
+       , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
+     WHERE DM_ID   = #{dmId}
+       AND OBJ_NM  = #{objNm}
+       AND ATTR_NM = #{attrNm}
+  </update>
+
+  <!-- ATTR 일괄 토글 -->
+  <update id="updateAttrTargetBatch" parameterType="java.util.Map">
+    UPDATE TB_DATA_MODEL_ATTR
+       SET
+       <choose>
+         <when test="diagType == 'STND'">
+           STND_DIAG_TARGET_YN     = #{targetYn},
+           STND_DIAG_TARGET_REASON = #{reason}
+         </when>
+         <when test="diagType == 'STRUCT'">
+           STRUCT_DIAG_TARGET_YN     = #{targetYn},
+           STRUCT_DIAG_TARGET_REASON = #{reason}
+         </when>
+         <when test="diagType == 'QUAL'">
+           QUAL_DIAG_TARGET_YN     = #{targetYn},
+           QUAL_DIAG_TARGET_REASON = #{reason}
+         </when>
+       </choose>
+       , DIAG_TARGET_UPDT_USER_ID = #{userId}
+       , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
+     WHERE DM_ID  = #{dmId}
+       AND OBJ_NM = #{objNm}
+       AND ATTR_NM IN
+       <foreach item="nm" collection="attrNms" open="(" separator="," close=")">
+         #{nm}
+       </foreach>
+  </update>
+
+  <!-- 통계: 모델별 OBJ/ATTR 진단 대상 카운트 -->
+  <select id="selectDiagTargetStats" parameterType="String" resultType="java.util.HashMap">
+    SELECT
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID=#{dmId} AND USE_YN='Y') AS totalObj,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID=#{dmId} AND USE_YN='Y' AND COALESCE(STND_DIAG_TARGET_YN,'Y')='N')   AS objStndOff,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID=#{dmId} AND USE_YN='Y' AND COALESCE(STRUCT_DIAG_TARGET_YN,'Y')='N') AS objStructOff,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID=#{dmId} AND USE_YN='Y' AND COALESCE(QUAL_DIAG_TARGET_YN,'Y')='N')   AS objQualOff,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR WHERE DM_ID=#{dmId} AND USE_YN='Y') AS totalAttr,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR a INNER JOIN TB_DATA_MODEL_OBJ o ON a.DM_ID=o.DM_ID AND a.OBJ_NM=o.OBJ_NM
+                WHERE a.DM_ID=#{dmId} AND a.USE_YN='Y' AND o.USE_YN='Y'
+                  AND (COALESCE(a.STND_DIAG_TARGET_YN,'Y')='N' OR COALESCE(o.STND_DIAG_TARGET_YN,'Y')='N')) AS attrStndOff,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR a INNER JOIN TB_DATA_MODEL_OBJ o ON a.DM_ID=o.DM_ID AND a.OBJ_NM=o.OBJ_NM
+                WHERE a.DM_ID=#{dmId} AND a.USE_YN='Y' AND o.USE_YN='Y'
+                  AND (COALESCE(a.STRUCT_DIAG_TARGET_YN,'Y')='N' OR COALESCE(o.STRUCT_DIAG_TARGET_YN,'Y')='N')) AS attrStructOff,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR a INNER JOIN TB_DATA_MODEL_OBJ o ON a.DM_ID=o.DM_ID AND a.OBJ_NM=o.OBJ_NM
+                WHERE a.DM_ID=#{dmId} AND a.USE_YN='Y' AND o.USE_YN='Y'
+                  AND (COALESCE(a.QUAL_DIAG_TARGET_YN,'Y')='N' OR COALESCE(o.QUAL_DIAG_TARGET_YN,'Y')='N')) AS attrQualOff
+  </select>
+
+  <!-- OBJ 단건 상세 -->
+  <select id="selectObjDiagTargetDetail" parameterType="java.util.Map" resultType="java.util.HashMap">
+    SELECT
+       OBJ_NM        AS "objNm"
+      ,OBJ_NM_KR     AS "objNmKr"
+      ,OBJ_ATTR_CNT  AS "attrCnt"
+      ,COALESCE(STND_DIAG_TARGET_YN,'Y')   AS "stndDiagTargetYn"
+      ,STND_DIAG_TARGET_REASON              AS "stndDiagTargetReason"
+      ,COALESCE(STRUCT_DIAG_TARGET_YN,'Y') AS "structDiagTargetYn"
+      ,STRUCT_DIAG_TARGET_REASON            AS "structDiagTargetReason"
+      ,COALESCE(QUAL_DIAG_TARGET_YN,'Y')   AS "qualDiagTargetYn"
+      ,QUAL_DIAG_TARGET_REASON              AS "qualDiagTargetReason"
+      ,DIAG_TARGET_UPDT_USER_ID             AS "diagTargetUpdtUserId"
+      ,to_char(to_timestamp(DIAG_TARGET_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') AS "diagTargetUpdtDt"
+    FROM TB_DATA_MODEL_OBJ
+    WHERE DM_ID = #{dmId} AND OBJ_NM = #{objNm}
+  </select>
+
+</mapper>

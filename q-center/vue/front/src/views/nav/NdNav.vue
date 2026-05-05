@@ -162,6 +162,15 @@
                         <v-list-item-title>데이터 모델 현황</v-list-item-title>
                     </v-list-item>
 
+                    <v-list-item link id="nav_diagTargetMgmt" href="#tab_diagTargetMgmt"
+                        active-class="ndColor--text" title="진단 제외 관리"
+                        v-on:click.stop="addTabItem('진단 제외 관리', 'diagTargetMgmt');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>진단 제외 관리</v-list-item-title>
+                    </v-list-item>
+
                 </v-list-group>
 
                 <!-- 표준 진단 -->
