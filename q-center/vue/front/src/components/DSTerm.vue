@@ -257,14 +257,13 @@
                   </v-data-table>
                 </v-col>
               </v-row>
-              <!-- 신규 단어가 있다면 별도 영역으로 안내 (필요 시 인라인 등록 흐름은 v2 에서 추가) -->
+              <!-- 미등록 단어 인라인 등록 폼 (82번 v2: analyzeTermsBatch 의 NEW/UNRECOGNIZED 토큰 모두 표시) -->
               <v-row v-for="(item, index) in addTerm_wordListArr" :key="'add-word-new-' + index"
-                v-if="!(item.wordLst && item.wordLst.length > 0 && item.wordLst[0] && item.wordLst[0].wordEngAbrvNm)
-                      && item.wordNm === addTerm_termNm"
+                v-if="!(item.wordLst && item.wordLst.length > 0 && item.wordLst[0] && item.wordLst[0].wordEngAbrvNm)"
                 :style="{ margin: '0 0 12px 0' }">
                 <v-col cols="12" :style="{ padding: '0' }">
                   <h4 :style="{ margin: '6px 0' }">{{ item.wordNm }}
-                    <v-chip x-small color="red" text-color="white" class="ml-2">전체 일치 단어 미등록 — 분리된 매칭 단어만 사용</v-chip>
+                    <v-chip x-small color="orange" text-color="white" class="ml-2">미등록 — 인라인 등록 가능</v-chip>
                   </h4>
                   <v-sheet outlined rounded class="pa-3">
                     <v-row dense>
@@ -2105,33 +2104,96 @@ export default {
         console.error(error)
       }
     },
-    /** 81번 — 자동 분석 (debounce 호출). 기존 단어 분리 API 재사용 + 중복 용어 체크 + 진행 표시 */
+    /**
+     * 81번/82번 — 자동 분석.
+     * v1 (858f091) 은 getTermsTokenListByNm 사용했으나 부분문자열 모든 매칭이 반환돼
+     * '가로세로일시' → 27개 분류 같은 잡음 발생.
+     * v2 (82번 §3) — DSTermRecommend 의 analyzeTermsBatch 로 교체.
+     * 응답이 단어 1개당 분류 1개 (가장 긴 매칭 우선 + 미매칭 NEW) 라 잡음 없음.
+     * MATCHED 단어는 자동 선택, 추천 도메인 자동 채움.
+     */
     runAutoAnalyze() {
       if (!this.addTermModalShow) return;
       var nm = (this.addTerm_termNm || '').trim();
       if (!nm) return;
-      // 동일 용어명 재호출 방지
       if (this.addTerm_lastCheckedNm === nm && this.addTerm_wordListArr.length > 0) return;
       var self = this;
       self.addTerm_analyzing = true;
-      // 1) 중복 체크 (이미 등록된 용어면 알림만, 분석은 계속)
-      axios.get(this.$APIURL.base + 'api/std/getTermsInfoByNm', { params: { termsNm: nm } })
+      self.addTerm_lastCheckedNm = nm;
+
+      axios.post(this.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm] })
         .then(function(res) {
-          if (res.data && res.data.length > 0) {
+          var arr = res.data || [];
+          var result = arr[0];
+          if (!result) {
+            self.addTerm_wordListArr = [];
+            return;
+          }
+          // 기등록 용어: 알림 + 분석 결과는 그대로 표시
+          if (result.status === 'REGISTERED') {
             self.$swal.fire({
               title: '이미 등록된 용어입니다.',
               text: '"' + nm + '" 용어가 이미 존재합니다.',
               confirmButtonText: '확인', icon: 'warning'
             });
           }
+
+          var words = result.words || [];
+          var wordListArr = [];
+          var newSelectedList = [];
+          for (var i = 0; i < words.length; i++) {
+            var w = words[i];
+            if (w.status === 'MATCHED' && w.selected) {
+              // MATCHED: 단일 후보 (selected 사용 — score 가장 높은 것 백엔드가 선택)
+              var s = w.selected;
+              var item = {
+                id: s.wordId,
+                wordNm: s.wordNm,
+                wordEngAbrvNm: s.wordEngAbrvNm,
+                wordEngNm: s.wordEngNm,
+                domainClsfNm: s.domainClsfNm,
+                partOfSpeech: 'NN',
+                index: i
+              };
+              wordListArr.push({
+                wordNm: w.wordNm,
+                wordLst: [item],
+                inlineWordNm: '',
+                inlineWordEngAbrvNm: '',
+                inlineWordEngNm: '',
+                inlineSaving: false
+              });
+              // 자동 선택 — 사용자 클릭 1번 줄임
+              newSelectedList[i] = [item];
+            } else {
+              // NEW / UNRECOGNIZED: 인라인 등록 폼 노출
+              var nw = w.newWord || {};
+              wordListArr.push({
+                wordNm: w.wordNm,
+                wordLst: [],
+                inlineWordNm: w.wordNm || '',
+                inlineWordEngAbrvNm: nw.wordEngAbrvNm || '',
+                inlineWordEngNm: nw.wordEngNm || '',
+                inlineSaving: false
+              });
+              newSelectedList[i] = [];
+            }
+          }
+          self.addTerm_wordListArr = wordListArr;
+          // selected_word_list 갱신 → watcher 가 addTerm_wordList 재구성 + checkSelectedWordStatus 검증
+          self.addTerm_selected_word_list = newSelectedList;
+
+          // 추천 도메인 자동 채움 (사용자 미선택 시만, 코드 타입이 아닐 때만)
+          if (result.recommendedDomainNm && !self.addTerm_domainNm && self.addTerm_domainType !== 'code') {
+            self.addTerm_domainNm = result.recommendedDomainNm;
+          }
         })
-        .catch(function() { /* 무시 */ })
+        .catch(function(err) {
+          console.error('analyzeTermsBatch 실패', err);
+          self.addTerm_wordListArr = [];
+        })
         .finally(function() {
-          // 2) 단어 분리 (DSTerm 의 기존 API)
-          self.addTerm_lastCheckedNm = nm;
-          self.getWordListByNm();
-          // getWordListByNm 은 axios then 내부에서 addTerm_wordListArr 채움 — 약간의 지연 후 끔
-          setTimeout(function() { self.addTerm_analyzing = false; }, 300);
+          self.addTerm_analyzing = false;
         });
     },
     /** 81번 — 코드 picker 열기. 코드 목록이 비어있으면 onAddDomainTypeChange 가 채워줌 */

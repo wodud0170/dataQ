@@ -35,6 +35,10 @@ os.makedirs(SCREEN_DIR, exist_ok=True)
 _SUFFIX = str(random.randint(100, 999))
 TERM_NORMAL = f"셀명_{_SUFFIX}"      # 마지막 단어 '명' (일반 도메인)
 TERM_CODE   = f"셀유형코드_{_SUFFIX}"  # 마지막 단어 '코드' (CD → 코드 도메인 자동 토글)
+# 82번 §3 v2 케이스 — analyzeTermsBatch 단어 정확 분리 검증
+# (사전 등록 단어가 늘어나면 케이스 무용 — 미등록 토큰을 일부러 의미없는 문자열로 구성)
+TERM_MIXED  = "블라블라일자"           # UNRECOGNIZED(블라블라) + MATCHED(일자) 혼합
+TERM_FAILED = "라랄라룰루"             # 전 토큰 미인식 → FAILED status
 
 results = []
 
@@ -312,6 +316,51 @@ def main():
             close_modal(driver)
             time.sleep(1)
         step("STEP 6 [CASE C2]. 중복 용어명 → swal 경고", caseC2)
+
+        # ---------- CASE D: NEW + MATCHED 혼합 (analyzeTermsBatch 정확 분리 검증) ----------
+        # 82번 §3: getTermsTokenListByNm 시절엔 부분문자열 매칭 잡음 다수.
+        # analyzeTermsBatch 로 교체 후 정확히 N개 토큰만 표시되어야.
+        # 의도적 미등록 토큰(블라블라) + 표준 매칭(일자) 혼합 케이스.
+        def caseD():
+            open_add_modal(driver)
+            inp = find_term_input_in_modal(driver)
+            inp.clear()
+            inp.send_keys(TERM_MIXED)
+            print(f"  용어명 입력: {TERM_MIXED} → 자동 분석 대기")
+            time.sleep(3)
+            screenshot(driver, "D1_mixed_analyzed")
+            heads = driver.find_elements(By.XPATH,
+                "//div[contains(@class,'v-dialog--active')]//div[contains(@class,'v-card__text')]//h4")
+            head_texts = [h.text.strip().split('\n')[0] for h in heads if h.text.strip()]
+            print(f"  분석된 토큰: {head_texts}")
+            assert len(head_texts) <= 4, f"토큰이 너무 많음 (analyzeTermsBatch 미적용 의심): {len(head_texts)}개"
+            modal_text = get_modal_text(driver)
+            # MATCHED('일자') + UNRECOGNIZED('블라블라') 혼합 칩 검증
+            assert "일자" in modal_text, "MATCHED 토큰 '일자' 가 표시되지 않음"
+            assert "블라블라" in modal_text, "UNRECOGNIZED 토큰 '블라블라' 표시 누락"
+            assert "미등록" in modal_text, "NEW/UNRECOGNIZED 칩 표시 누락"
+            assert "등록됨" in modal_text, "MATCHED 칩 표시 누락"
+            print(f"  '블라블라' 미등록 + '일자' 등록됨 혼합 칩 OK")
+            close_modal(driver)
+            time.sleep(1)
+        step("STEP 7 [CASE D]. NEW+MATCHED 혼합 — analyzeTermsBatch 정확 분리", caseD)
+
+        # ---------- CASE E: 전부 미인식 (FAILED) ----------
+        def caseE():
+            open_add_modal(driver)
+            inp = find_term_input_in_modal(driver)
+            inp.clear()
+            inp.send_keys(TERM_FAILED)
+            print(f"  용어명 입력: {TERM_FAILED} → 자동 분석 대기")
+            time.sleep(3)
+            screenshot(driver, "E1_failed_analyzed")
+            modal_text = get_modal_text(driver)
+            assert "미등록" in modal_text, "FAILED 케이스에서 '미등록' 칩 안 보임"
+            assert "등록됨" not in modal_text, "FAILED 케이스에 '등록됨' 칩이 잘못 표시됨"
+            print(f"  전 토큰 미등록 표시 OK")
+            close_modal(driver)
+            time.sleep(1)
+        step("STEP 8 [CASE E]. 전 토큰 미인식 (FAILED)", caseE)
 
         # ---------- 종합 ----------
         screenshot(driver, "Z_final")

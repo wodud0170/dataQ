@@ -61,6 +61,7 @@ GROUPS = [
         "test_full_approval_flow.py",
         "test_global_search.py",
         "test_term_recommend_cases.py",
+        "test_term_register_v2.py",
     ]),
     ("데이터 모델 (Phase 5 / attr / cascade)", [
         "test_53_grid_add_save.py",
