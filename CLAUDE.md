@@ -76,12 +76,13 @@ mvn clean package -DskipTests -T 1C # 깨끗하게 (build.bat 과 동일)
 - **import 누락, 매핑 누락 하지 말 것** (새 필드 추가 시 VO → XML resultMap → 프론트 map 함수 모두 체크)
 
 ### 반드시 할 것
-- **DDL 단일 진실 정책** — `dataQ설계/DDL_claude_generated.sql` 이 schema 의 단일 진실. 모든 PC/세션이 이 파일로 동기화. 다음 절차 강제:
-  1. **DDL 변경(CREATE TABLE / ALTER / DROP / 컬럼 추가/변경/삭제 / 제약조건 / 인덱스) 발생 시 같은 작업 사이클 안에서 즉시** 이 파일에 추가 (날짜 + 사유 주석 헤더 + `IF NOT EXISTS` 멱등 형식)
-  2. **새 매퍼/VO 작성 시 grep 검증 필수** — `INSERT INTO TB_*` / `FROM TB_*` 로 참조하는 모든 테이블이 이 파일에 정의돼 있는지 확인. 누락 발견 즉시 DDL 작성 + DB 적용 + 커밋
-  3. **push 전 self-check** — `grep -oE 'TB_[A-Z_]+' q-common/src/main/resources/mapper/stnd/*.xml | sort -u` 로 매퍼 참조 테이블 추출 → DDL 파일에 모두 정의돼 있어야 함. 빠진 게 있으면 push 거부 + 즉시 정정
-  4. **DDL 누락 사고 회복** — 다른 PC 가 DDL 파일 갱신 빠뜨린 경우 매퍼 INSERT/UPSERT + VO 필드/타입 + ON CONFLICT PK 절에서 역산하여 보강 (헤더에 "코드 역산 보강" 명시)
-  5. **사고 이력**: `0281003` (4-22 PC2 미커밋), 5월 작업의 `TB_DOMAIN_RULE` / `TB_QUAL_COL_RULE` / `TB_QUAL_PROFILE_HISTORY` 누락. 같은 패턴 반복 방지 위해 위 4단계 강제
+- **DDL 단일 진실 정책 (2026-05-06 재정립)** — `dataQ설계/DDL_full_schema.sql` 이 schema 의 단일 진실. PC1·PC2 양쪽이 이 파일로 동기화. **pg_dump 결과** 라 사람 손이 안 닿음 → 누락 사고 원천 차단:
+  1. **DDL 변경(CREATE/ALTER/DROP/컬럼·제약·인덱스 추가·변경·삭제) 후 즉시** dataq-db 에 적용 → `docker exec -i dataq-db pg_dump -U admin -d postgres -n quality --schema-only --no-owner --no-privileges --encoding=UTF8 > dataQ설계/DDL_full_schema.sql` 로 갱신
+  2. `dataQ설계/DDL_변경이력.md` 에 한 줄 추가 (날짜 / 세션 / PC / 변경내용 / 사유) — 사람용 changelog
+  3. **push 전 self-check**: `grep -oE 'TB_[A-Z_]+' q-common/src/main/resources/mapper/stnd/*.xml | sort -u` 로 매퍼 참조 테이블 추출 → `DDL_full_schema.sql` 에 (case-insensitive) 모두 있는지 확인
+  4. **PC 간 sync ALTER 가 필요한 경우** (한쪽만 적용된 변경 발견 시) `dataQ설계/sync/<PC>_align_<날짜>.sql` 에 멱등 ALTER 작성 + 적용 절차 주석. 적용 후 양쪽 dump 가 동일해지면 sync 파일은 archive
+  5. **사고 이력 누적 시** `dataQ설계/DDL_변경이력.md` 헤더에 사고 케이스 기록. 같은 패턴 반복 방지
+  6. **참고**: `DDL_claude_generated.sql` 은 **점진적 ALTER 히스토리** (legacy). 새 변경은 `DDL_full_schema.sql` + `DDL_변경이력.md` 만 사용. 신규 환경 구축은 `DDL_full_schema.sql` 한 파일 실행으로 완성
 - 기능 구현 시 입력 검증/에러처리/UX 흐름을 먼저 확인하고 구현
 - Vue 컴포넌트 수정 후 필요한 import가 모두 있는지 검증
 - 새 필드 추가 시 체크리스트: Java VO → MyBatis resultMap → SQL SELECT → 프론트 data/map/template
