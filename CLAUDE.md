@@ -7,7 +7,7 @@
 - Backend: Spring Boot 2 + MyBatis 3 + PostgreSQL 13+
 - Frontend: Vue.js 2 + Vuetify 2 (SPA, keep-alive 탭 기반)
 - External: lib/common-0.0.1-SNAPSHOT.jar (DBHandler, DataSourceVo, drivers.xml)
-- 빌드: Maven (q-common → q-center → q-executor 순서)
+- 빌드: Maven 루트 reactor (`mvn package -DskipTests -T 1C` / build.bat)
 
 ## 모듈 구조
 - **q-common**: 공유 VO, MyBatis Mapper XML, 유틸리티
@@ -51,12 +51,15 @@ activated() {
 ```
 **주의**: eventBus 사용 시 `import { eventBus } from '../eventBus'` 반드시 추가.
 
-### 빌드 순서
+### 빌드
+루트 [pom.xml](pom.xml)이 aggregator (`<packaging>pom</packaging>` + modules: q-common/q-center/q-executor). 루트에서 한 번에 reactor 빌드.
 ```bash
-cd q-common && mvn install -q -DskipTests
-cd ../q-center && mvn package -q -DskipTests
-cd ../q-executor && mvn package -q -DskipTests
+# 루트에서
+mvn package -DskipTests -T 1C       # 전체 (Vue webpack 포함, ~60s)
+mvn clean package -DskipTests -T 1C # 깨끗하게 (build.bat 과 동일)
 ```
+서버 기동 포함 일괄 실행은 [build.bat](build.bat) (포트 kill → mvn → q-center/q-executor/vue 3창 기동).
+모듈 단독 빌드가 필요할 때만 `cd q-common && mvn install -DskipTests` 식으로 개별 실행.
 
 ### Oracle 접속 (SID/Service Name)
 - drivers.xml에 Oracle(SID)와 Oracle(Service Name) 별도 드라이버 정의
@@ -73,7 +76,12 @@ cd ../q-executor && mvn package -q -DskipTests
 - **import 누락, 매핑 누락 하지 말 것** (새 필드 추가 시 VO → XML resultMap → 프론트 map 함수 모두 체크)
 
 ### 반드시 할 것
-- DDL 변경 시 `dataQ설계/DDL_claude_generated.sql`에 먼저 반영 후 안내
+- **DDL 단일 진실 정책** — `dataQ설계/DDL_claude_generated.sql` 이 schema 의 단일 진실. 모든 PC/세션이 이 파일로 동기화. 다음 절차 강제:
+  1. **DDL 변경(CREATE TABLE / ALTER / DROP / 컬럼 추가/변경/삭제 / 제약조건 / 인덱스) 발생 시 같은 작업 사이클 안에서 즉시** 이 파일에 추가 (날짜 + 사유 주석 헤더 + `IF NOT EXISTS` 멱등 형식)
+  2. **새 매퍼/VO 작성 시 grep 검증 필수** — `INSERT INTO TB_*` / `FROM TB_*` 로 참조하는 모든 테이블이 이 파일에 정의돼 있는지 확인. 누락 발견 즉시 DDL 작성 + DB 적용 + 커밋
+  3. **push 전 self-check** — `grep -oE 'TB_[A-Z_]+' q-common/src/main/resources/mapper/stnd/*.xml | sort -u` 로 매퍼 참조 테이블 추출 → DDL 파일에 모두 정의돼 있어야 함. 빠진 게 있으면 push 거부 + 즉시 정정
+  4. **DDL 누락 사고 회복** — 다른 PC 가 DDL 파일 갱신 빠뜨린 경우 매퍼 INSERT/UPSERT + VO 필드/타입 + ON CONFLICT PK 절에서 역산하여 보강 (헤더에 "코드 역산 보강" 명시)
+  5. **사고 이력**: `0281003` (4-22 PC2 미커밋), 5월 작업의 `TB_DOMAIN_RULE` / `TB_QUAL_COL_RULE` / `TB_QUAL_PROFILE_HISTORY` 누락. 같은 패턴 반복 방지 위해 위 4단계 강제
 - 기능 구현 시 입력 검증/에러처리/UX 흐름을 먼저 확인하고 구현
 - Vue 컴포넌트 수정 후 필요한 import가 모두 있는지 검증
 - 새 필드 추가 시 체크리스트: Java VO → MyBatis resultMap → SQL SELECT → 프론트 data/map/template
@@ -82,7 +90,7 @@ cd ../q-executor && mvn package -q -DskipTests
 - 짧고 직접적인 응답 선호, 불필요한 설명 생략
 - 작업 전에 묻지 말고 바로 실행 (모호하면 그때 질문)
 - 문서 작성 요청 시 `dataQ설계/` 폴더에 번호_제목.md 형식으로 생성
-- 빌드 요청 시 q-common → q-center → q-executor 순서로 한 번에 실행
+- 빌드 요청 시 루트에서 `mvn package -DskipTests -T 1C` 한 번에 실행 (기동은 사용자 IDE)
 
 ## 주요 테이블
 | 테이블 | 용도 |

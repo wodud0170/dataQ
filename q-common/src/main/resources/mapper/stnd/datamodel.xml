@@ -307,28 +307,39 @@
 			order by A.OBJ_NM, A.ATTR_ORD
 	</select>
 
-	<!-- 79번 구조 변경 진단 전용 — TARGET_YN='Y' (Raw HashMap 형식, StructDiagService 호환) -->
+	<!-- 79번 구조 변경 진단 전용 — TARGET_YN='Y' (Raw HashMap, StructDiagService 호환).
+	     alias·컬럼셋은 기존 selectDataModelAttrListByClctIdRaw 와 동일해야 함
+	     (StructDiagService 가 owner|tableNm|columnNm 키로 prev/curr diff). -->
 	<select id="selectAttrListForStructDiagRaw" parameterType="String" resultType="java.util.HashMap">
-			select
-				 A.OBJ_NM         as "objNm"
-				,A.ATTR_NM        as "attrNm"
-				,A.ATTR_NM_KR     as "attrNmKr"
-				,A.ATTR_COMMENT   as "attrComment"
-				,A.DATA_TYPE      as "dataType"
-				,A.DATA_LEN       as "dataLen"
-				,A.DATA_DECIMAL_LEN as "dataDecimalLen"
-				,A.NULLABLE_YN    as "nullableYn"
-				,A.PK_YN          as "pkYn"
-				,A.FK_YN          as "fkYn"
-				,A.DEFAULT_VAL    as "defaultVal"
-				,A.ATTR_ORD       as "attrOrd"
-			from TB_DATA_MODEL_ATTR A
-			INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID=O.DM_ID AND A.OBJ_NM=O.OBJ_NM
-			where A.DM_ID = #{clctId}
-			  AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
-			  AND COALESCE(O.STRUCT_DIAG_TARGET_YN,'Y') = 'Y'
-			  AND COALESCE(A.STRUCT_DIAG_TARGET_YN,'Y') = 'Y'
-			order by A.OBJ_NM, A.ATTR_ORD
+		SELECT O.OBJ_OWNER  AS "owner"
+		     , A.OBJ_NM     AS "tableNm"
+		     , A.ATTR_NM    AS "columnNm"
+		     , A.DATA_TYPE  AS "dataType"
+		     , A.DATA_LEN   AS "dataLen"
+		     , A.NULLABLE_YN AS "nullableYn"
+		FROM TB_DATA_MODEL_ATTR A
+		INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID=O.DM_ID AND A.OBJ_NM=O.OBJ_NM
+		WHERE A.DM_ID = #{clctId}
+		  AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
+		  AND COALESCE(O.STRUCT_DIAG_TARGET_YN,'Y') = 'Y'
+		  AND COALESCE(A.STRUCT_DIAG_TARGET_YN,'Y') = 'Y'
+		ORDER BY A.OBJ_NM, A.ATTR_ORD
+	</select>
+
+	<!-- 79번 구조 진단 OFF set — q-executor 가 curr (Oracle 실제) ResultSet 필터에 사용 -->
+	<select id="selectStructDiagOffSet" parameterType="String" resultType="java.util.HashMap">
+		SELECT 'OBJ' AS "kind", OBJ_NM AS "tableNm", '' AS "columnNm"
+		FROM TB_DATA_MODEL_OBJ
+		WHERE DM_ID = #{dmId} AND USE_YN = 'Y'
+		  AND COALESCE(STRUCT_DIAG_TARGET_YN,'Y') = 'N'
+		UNION ALL
+		SELECT 'ATTR' AS "kind", A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm"
+		FROM TB_DATA_MODEL_ATTR A
+		INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID=O.DM_ID AND A.OBJ_NM=O.OBJ_NM
+		WHERE A.DM_ID = #{dmId}
+		  AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
+		  AND COALESCE(O.STRUCT_DIAG_TARGET_YN,'Y') = 'Y'
+		  AND COALESCE(A.STRUCT_DIAG_TARGET_YN,'Y') = 'N'
 	</select>
 
 	<!-- 79번 진단 메타에 제외 카운트 (모델별) -->

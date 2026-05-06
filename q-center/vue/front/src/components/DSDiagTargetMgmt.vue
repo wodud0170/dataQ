@@ -1,19 +1,28 @@
 <template>
   <v-main>
-    <v-card flat class="pa-3">
-      <!-- 모델 + 통계 -->
-      <v-row align="center" class="px-2">
+    <v-card flat>
+      <!-- 상단: 모델 선택 + 통계 (다른 화면 splitTopWrapper 패턴) -->
+      <v-sheet class="splitTopWrapper pt-4 pb-4 px-3" :style="{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:'12px' }">
+        <span :style="{ fontSize: '.875rem' }">모델</span>
         <v-autocomplete v-model="dmId" :items="dataModels" item-text="dataModelNm" item-value="dataModelId"
-          label="모델" dense hide-details style="max-width:280px" @change="loadAll"></v-autocomplete>
-        <span v-if="stats" class="ml-4 text-caption">
-          테이블 {{ stats.totalobj }} (표준제외 {{ stats.objstndoff }}/구조 {{ stats.objstructoff }}/품질 {{ stats.objqualoff }})
-          | 컬럼 {{ stats.totalattr }} (표준 {{ stats.attrstndoff }}/구조 {{ stats.attrstructoff }}/품질 {{ stats.attrqualoff }})
-        </span>
-        <v-spacer></v-spacer>
-      </v-row>
+          placeholder="진단 대상 모델 선택" color="ndColor" outlined dense hide-details
+          :style="{ maxWidth: '320px' }" @change="loadAll"></v-autocomplete>
+        <template v-if="stats">
+          <v-divider vertical />
+          <v-chip small label outlined>테이블 {{ stats.totalobj }}</v-chip>
+          <v-chip small label color="error" outlined>표준 OFF {{ stats.objstndoff }}</v-chip>
+          <v-chip small label color="error" outlined>구조 OFF {{ stats.objstructoff }}</v-chip>
+          <v-chip small label color="error" outlined>품질 OFF {{ stats.objqualoff }}</v-chip>
+          <v-divider vertical />
+          <v-chip small label outlined>컬럼 {{ stats.totalattr }}</v-chip>
+          <v-chip small label color="error" outlined>표준 OFF {{ stats.attrstndoff }}</v-chip>
+          <v-chip small label color="error" outlined>구조 OFF {{ stats.attrstructoff }}</v-chip>
+          <v-chip small label color="error" outlined>품질 OFF {{ stats.attrqualoff }}</v-chip>
+        </template>
+      </v-sheet>
 
       <!-- 탭 -->
-      <v-tabs v-model="tab" class="mt-2">
+      <v-tabs v-model="tab" class="px-3">
         <v-tab>테이블 단위</v-tab>
         <v-tab>컬럼 단위</v-tab>
       </v-tabs>
@@ -21,18 +30,23 @@
       <v-tabs-items v-model="tab">
         <!-- 테이블 단위 -->
         <v-tab-item>
-          <v-row class="px-2 py-1" align="center" style="gap:8px;">
+          <v-sheet class="px-3 py-2" :style="{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:'8px' }">
             <v-text-field v-model="objSearch" placeholder="테이블명 검색" dense hide-details outlined
-              style="max-width:240px" prepend-inner-icon="search"></v-text-field>
+              color="ndColor" prepend-inner-icon="search" :style="{ maxWidth: '240px' }"></v-text-field>
             <v-spacer></v-spacer>
-            <v-btn small color="ndColor" dark @click="bulkObjToggle('STND','N')">표준 OFF</v-btn>
-            <v-btn small outlined @click="bulkObjToggle('STND','Y')">표준 ON</v-btn>
-            <v-btn small color="ndColor" dark @click="bulkObjToggle('STRUCT','N')">구조 OFF</v-btn>
-            <v-btn small outlined @click="bulkObjToggle('STRUCT','Y')">구조 ON</v-btn>
-            <v-btn small color="ndColor" dark @click="bulkObjToggle('QUAL','N')">품질 OFF</v-btn>
-            <v-btn small outlined @click="bulkObjToggle('QUAL','Y')">품질 ON</v-btn>
-          </v-row>
-          <v-data-table :headers="objHeaders" :items="filteredObjs" item-key="objNm"
+            <span class="text-caption grey--text mr-1">표준</span>
+            <v-btn small class="gradient" @click="bulkObjToggle('STND','N')">OFF</v-btn>
+            <v-btn small outlined @click="bulkObjToggle('STND','Y')">ON</v-btn>
+            <v-divider vertical class="mx-1" />
+            <span class="text-caption grey--text mr-1">구조</span>
+            <v-btn small class="gradient" @click="bulkObjToggle('STRUCT','N')">OFF</v-btn>
+            <v-btn small outlined @click="bulkObjToggle('STRUCT','Y')">ON</v-btn>
+            <v-divider vertical class="mx-1" />
+            <span class="text-caption grey--text mr-1">품질</span>
+            <v-btn small class="gradient" @click="bulkObjToggle('QUAL','N')">OFF</v-btn>
+            <v-btn small outlined @click="bulkObjToggle('QUAL','Y')">ON</v-btn>
+          </v-sheet>
+          <v-data-table class="px-3 pb-3" :headers="objHeaders" :items="filteredObjs" item-key="objNm"
             v-model="selectedObjs" show-select dense hide-default-footer :items-per-page="-1">
             <template v-slot:[`item.stndDiagTargetYn`]="{ item }">
               <v-icon small :color="item.stndDiagTargetYn==='Y' ? 'green' : 'red'"
@@ -60,20 +74,26 @@
 
         <!-- 컬럼 단위 -->
         <v-tab-item>
-          <v-row class="px-2 py-1" align="center" style="gap:8px;">
+          <v-sheet class="px-3 py-2" :style="{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:'8px' }">
             <v-autocomplete v-model="selObj" :items="objs" item-text="objNm" item-value="objNm"
-              label="테이블" dense hide-details outlined style="max-width:280px" @change="loadAttrs"></v-autocomplete>
+              placeholder="테이블 선택" color="ndColor" outlined dense hide-details
+              :style="{ maxWidth: '260px' }" @change="loadAttrs"></v-autocomplete>
             <v-text-field v-model="attrSearch" placeholder="컬럼명 검색" dense hide-details outlined
-              style="max-width:240px" prepend-inner-icon="search"></v-text-field>
+              color="ndColor" prepend-inner-icon="search" :style="{ maxWidth: '240px' }"></v-text-field>
             <v-spacer></v-spacer>
-            <v-btn small color="ndColor" dark @click="bulkAttrToggle('STND','N')" :disabled="!selObj">표준 OFF</v-btn>
-            <v-btn small outlined @click="bulkAttrToggle('STND','Y')" :disabled="!selObj">표준 ON</v-btn>
-            <v-btn small color="ndColor" dark @click="bulkAttrToggle('STRUCT','N')" :disabled="!selObj">구조 OFF</v-btn>
-            <v-btn small outlined @click="bulkAttrToggle('STRUCT','Y')" :disabled="!selObj">구조 ON</v-btn>
-            <v-btn small color="ndColor" dark @click="bulkAttrToggle('QUAL','N')" :disabled="!selObj">품질 OFF</v-btn>
-            <v-btn small outlined @click="bulkAttrToggle('QUAL','Y')" :disabled="!selObj">품질 ON</v-btn>
-          </v-row>
-          <v-data-table :headers="attrHeaders" :items="filteredAttrs" item-key="attrNm"
+            <span class="text-caption grey--text mr-1">표준</span>
+            <v-btn small class="gradient" @click="bulkAttrToggle('STND','N')" :disabled="!selObj">OFF</v-btn>
+            <v-btn small outlined @click="bulkAttrToggle('STND','Y')" :disabled="!selObj">ON</v-btn>
+            <v-divider vertical class="mx-1" />
+            <span class="text-caption grey--text mr-1">구조</span>
+            <v-btn small class="gradient" @click="bulkAttrToggle('STRUCT','N')" :disabled="!selObj">OFF</v-btn>
+            <v-btn small outlined @click="bulkAttrToggle('STRUCT','Y')" :disabled="!selObj">ON</v-btn>
+            <v-divider vertical class="mx-1" />
+            <span class="text-caption grey--text mr-1">품질</span>
+            <v-btn small class="gradient" @click="bulkAttrToggle('QUAL','N')" :disabled="!selObj">OFF</v-btn>
+            <v-btn small outlined @click="bulkAttrToggle('QUAL','Y')" :disabled="!selObj">ON</v-btn>
+          </v-sheet>
+          <v-data-table class="px-3 pb-3" :headers="attrHeaders" :items="filteredAttrs" item-key="attrNm"
             v-model="selectedAttrs" show-select dense hide-default-footer :items-per-page="-1">
             <template v-slot:[`item.stndDiagTargetYn`]="{ item }">
               <v-icon small :color="item.stndDiagTargetYn==='Y' ? 'green' : 'red'"
@@ -197,7 +217,9 @@ export default {
     }
   },
   mounted() {
-    axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' })
+    // 진단 제외 관리는 모델 메타데이터 설정이라 DB 연결 여부 무관 — connectedOnly 제거.
+    // 진단 대상은 물리 변환된 모델만 (LOGICAL 은 OBJ/ATTR 메타가 다른 의미라 제외)
+    axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', {})
       .then(r => { this.dataModels = (r.data || []).filter(m => m.modelType === 'PHYSICAL'); });
   },
   methods: {

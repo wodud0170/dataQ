@@ -97,12 +97,31 @@
                     <span v-else class="grey--text text-caption">미진단</span>
                   </div>
                 </template>
-                <!-- DDL 다운로드 -->
+                <!-- DDL 다운로드 (DBMS 선택 드롭다운) -->
                 <template v-else-if="ci === 'ddl'">
                   <div :style="{ textAlign: 'center' }">
-                    <v-btn icon small color="ndColor" title="DDL 다운로드" @click.stop="downloadDdl(props.item)">
-                      <v-icon small>mdi-file-download</v-icon>
-                    </v-btn>
+                    <v-menu offset-y>
+                      <template #activator="{ on, attrs }">
+                        <v-btn icon small color="ndColor" title="DDL 다운로드 (DBMS 선택)" v-bind="attrs" v-on="on" @click.stop>
+                          <v-icon small>mdi-file-download</v-icon>
+                        </v-btn>
+                      </template>
+                      <v-list dense>
+                        <v-list-item @click="downloadDdl(props.item, '')">
+                          <v-list-item-icon class="mr-2"><v-icon small>mdi-auto-fix</v-icon></v-list-item-icon>
+                          <v-list-item-title>자동 (연결된 DBMS, 미연결 시 Oracle)</v-list-item-title>
+                        </v-list-item>
+                        <v-divider />
+                        <v-list-item @click="downloadDdl(props.item, 'postgres')">
+                          <v-list-item-icon class="mr-2"><v-icon small>mdi-elephant</v-icon></v-list-item-icon>
+                          <v-list-item-title>PostgreSQL</v-list-item-title>
+                        </v-list-item>
+                        <v-list-item @click="downloadDdl(props.item, 'oracle')">
+                          <v-list-item-icon class="mr-2"><v-icon small>mdi-database</v-icon></v-list-item-icon>
+                          <v-list-item-title>Oracle</v-list-item-title>
+                        </v-list-item>
+                      </v-list>
+                    </v-menu>
                   </div>
                 </template>
                 <!-- 일반 아이템 -->
@@ -402,9 +421,10 @@ export default {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.dmStatusItems.length / this.itemsPerPage);
     },
-    downloadDdl(item) {
+    downloadDdl(item, dbType) {
       if (!item || !item.dataModelId) return;
-      const url = this.$APIURL.base + 'api/dm/downloadDdl?dataModelId=' + encodeURIComponent(item.dataModelId);
+      let url = this.$APIURL.base + 'api/dm/downloadDdl?dataModelId=' + encodeURIComponent(item.dataModelId);
+      if (dbType) url += '&dbType=' + encodeURIComponent(dbType);
       const a = document.createElement('a');
       a.href = url;
       a.download = '';

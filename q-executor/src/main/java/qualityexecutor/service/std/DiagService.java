@@ -108,8 +108,10 @@ public class DiagService implements Runnable {
             //    상태가 준수율에 정직하게 반영된다. (이전 정책: TERMS_STND_YN='Y' 만 진단 →
             //    e4aaeaf 에서 도입했으나 비표준 컬럼도 진단해야 사용자가 인지 + 표준화 유도 가능
             //    하다는 정의로 회귀)
+            // 79번 진단 제외: DIAG_TARGET_YN='Y' 인 OBJ/ATTR 만 진단 대상으로 가져옴.
+            // OBJ 단위 OFF 시 그 OBJ 의 ATTR 도 cascade 로 빠짐 (매퍼 INNER JOIN + 두 컬럼 동시 'Y' 조건).
             List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList(
-                "datamodel.selectDataModelAttrListByClctId", clctId);
+                "datamodel.selectAttrListForStndDiag", clctId);
             int total = attrs.size();
             int processCnt = 0;
             int resultCnt  = 0;

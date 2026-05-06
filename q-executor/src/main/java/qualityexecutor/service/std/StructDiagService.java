@@ -92,9 +92,27 @@ public class StructDiagService implements Runnable {
             }
 
             // 2. 현재 모델의 OBJ/ATTR 로드 (DM_ID 기반, CLCT 폐기 후)
+            //    79번 진단 제외: STRUCT_DIAG_TARGET_YN='Y' 인 OBJ/ATTR 만 prev 로 가져옴 (cascade 포함)
             List<Map<String, Object>> prevAttrs = sqlSessionTemplate.selectList(
-                    "datamodel.selectDataModelAttrListByClctIdRaw", dataModelId);
+                    "datamodel.selectAttrListForStructDiagRaw", dataModelId);
             log.info(">> StructDiag: 모델 컬럼 {} 로드 (dataModelId={})", prevAttrs.size(), dataModelId);
+
+            // 79번 진단 제외: curr 에도 OFF 된 OBJ/ATTR 를 빼야 결과에서 완전히 사라짐.
+            // (prev 만 빼면 curr 에는 그대로 남아 ADDED 로 잘못 잡힘)
+            List<Map<String, Object>> offRows = sqlSessionTemplate.selectList(
+                    "datamodel.selectStructDiagOffSet", dataModelId);
+            Set<String> offObjs = new HashSet<>();    // tableNm
+            Set<String> offAttrs = new HashSet<>();   // tableNm|columnNm
+            for (Map<String, Object> r : offRows) {
+                String kind = String.valueOf(r.get("kind"));
+                String tbl  = String.valueOf(r.get("tableNm"));
+                if ("OBJ".equals(kind)) {
+                    offObjs.add(tbl);
+                } else {
+                    offAttrs.add(tbl + "|" + r.get("columnNm"));
+                }
+            }
+            log.info(">> StructDiag: OFF OBJ {}, OFF ATTR {}", offObjs.size(), offAttrs.size());
 
             // 최신 수집일시 조회 (이력 기록용)
             String targetClctDt = null;
@@ -128,10 +146,14 @@ public class StructDiagService implements Runnable {
                 pstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
                 ResultSet rs = dbHandler.executeSql(pstmt);
                 while (rs.next()) {
+                    String tbl = rs.getString("objNm");
+                    String col = rs.getString("attrNm");
+                    // 79번 진단 제외: OFF 된 OBJ/ATTR 는 curr 에도 포함 안 함 → 결과에서 완전 제외
+                    if (offObjs.contains(tbl) || offAttrs.contains(tbl + "|" + col)) continue;
                     Map<String, Object> attr = new HashMap<>();
                     attr.put("owner", schema);
-                    attr.put("tableNm", rs.getString("objNm"));
-                    attr.put("columnNm", rs.getString("attrNm"));
+                    attr.put("tableNm", tbl);
+                    attr.put("columnNm", col);
                     attr.put("dataType", rs.getString("dataType"));
                     attr.put("dataLen", rs.getLong("dataLen"));
                     attr.put("nullableYn", rs.getString("nullableYn"));
@@ -140,7 +162,7 @@ public class StructDiagService implements Runnable {
                 pstmt.close();
                 rs.close();
             }
-            log.info(">> StructDiag: 실제 DB {} 컬럼 읽기 완료 (스키마: {})", currAttrs.size(), schemaNm);
+            log.info(">> StructDiag: 실제 DB {} 컬럼 읽기 완료 (스키마: {}, OFF 제외 후)", currAttrs.size(), schemaNm);
 
             // 4. Diff: 수집 스냅샷(prev) vs 실제 DB(curr)
             Map<String, Map<String, Object>> prevMap = toAttrMap(prevAttrs);
@@ -470,7 +492,8 @@ public class StructDiagService implements Runnable {
     private Map<String, Map<String, Object>> toAttrMap(List<Map<String, Object>> attrs) {
         Map<String, Map<String, Object>> map = new LinkedHashMap<>();
         for (Map<String, Object> attr : attrs) {
-            String owner = attr.get("owner") != null ? attr.get("owner").toString() : "";
+            // owner 는 prev (메타 OBJ_OWNER) 와 curr (실제 DB schema 변수) 케이스가 다를 수 있어 통일
+            String owner = attr.get("owner") != null ? attr.get("owner").toString().toUpperCase() : "";
             String key = owner + "|" + attr.get("tableNm") + "|" + attr.get("columnNm");
             map.put(key, attr);
         }
@@ -594,8 +617,21 @@ public class StructDiagService implements Runnable {
             String dsId = (String) dmInfo.get("dataModelDsId");
 
             // 2. 현재 모델 OBJ/ATTR 로드 (DM_ID 기반)
+            //    79번 진단 제외: STRUCT_DIAG_TARGET_YN='Y' 만 prev 로 (cascade 포함)
             List<Map<String, Object>> prevAttrs = sqlSessionTemplate.selectList(
-                    "datamodel.selectDataModelAttrListByClctIdRaw", dataModelId);
+                    "datamodel.selectAttrListForStructDiagRaw", dataModelId);
+
+            // 79번 진단 제외: curr 도 OFF 된 OBJ/ATTR 빼야 결과에서 완전 사라짐
+            List<Map<String, Object>> offRows = sqlSessionTemplate.selectList(
+                    "datamodel.selectStructDiagOffSet", dataModelId);
+            Set<String> offObjs = new HashSet<>();
+            Set<String> offAttrs = new HashSet<>();
+            for (Map<String, Object> r : offRows) {
+                String kind = String.valueOf(r.get("kind"));
+                String tbl  = String.valueOf(r.get("tableNm"));
+                if ("OBJ".equals(kind)) offObjs.add(tbl);
+                else offAttrs.add(tbl + "|" + r.get("columnNm"));
+            }
 
             // 3. 실제 DBMS 접속하여 현재 스키마 읽기
             DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
@@ -617,10 +653,13 @@ public class StructDiagService implements Runnable {
                 pstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
                 ResultSet rs = dbHandler.executeSql(pstmt);
                 while (rs.next()) {
+                    String tbl = rs.getString("objNm");
+                    String col = rs.getString("attrNm");
+                    if (offObjs.contains(tbl) || offAttrs.contains(tbl + "|" + col)) continue;
                     Map<String, Object> attr = new HashMap<>();
                     attr.put("owner", schema);
-                    attr.put("tableNm", rs.getString("objNm"));
-                    attr.put("columnNm", rs.getString("attrNm"));
+                    attr.put("tableNm", tbl);
+                    attr.put("columnNm", col);
                     attr.put("dataType", rs.getString("dataType"));
                     attr.put("dataLen", rs.getLong("dataLen"));
                     attr.put("nullableYn", rs.getString("nullableYn"));

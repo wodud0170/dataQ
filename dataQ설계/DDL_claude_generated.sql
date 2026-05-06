@@ -1135,3 +1135,67 @@ COMMENT ON COLUMN TB_DATA_MODEL_ATTR.QUAL_DIAG_TARGET_YN     IS '품질 진단 �
 COMMENT ON COLUMN TB_DATA_MODEL_ATTR.QUAL_DIAG_TARGET_REASON IS '품질 OFF 사유';
 COMMENT ON COLUMN TB_DATA_MODEL_ATTR.DIAG_TARGET_UPDT_USER_ID IS '진단 대상 마지막 변경자';
 COMMENT ON COLUMN TB_DATA_MODEL_ATTR.DIAG_TARGET_UPDT_DT      IS '진단 대상 마지막 변경일시';
+
+-- ==========================================================================
+-- 2026-05-06 PC1 — DDL 누락 분 보강 (코드 역산)
+-- 5-02 (5a105b8) 커밋 메시지엔 9 신규 테이블 적혀있는데 실제 DDL 파일엔 6개만 있고
+-- TB_DOMAIN_RULE / TB_QUAL_COL_RULE / TB_QUAL_PROFILE_HISTORY 가 빠져있음.
+-- VO + 매퍼 INSERT/UPSERT 로부터 컬럼·타입·PK 추출. 다른 PC dataq-db 와 정확히
+-- 같은 정의가 아닐 위험은 있으나, 매퍼 쿼리가 동일하게 동작하도록 컬럼명/PK는
+-- 매퍼 기준으로 작성. 차후 실제 PC2 DB 의 \d 결과와 비교 권장.
+-- ==========================================================================
+
+-- TB_DOMAIN_RULE (도메인별 룰 정의 — 1:N)
+CREATE TABLE IF NOT EXISTS TB_DOMAIN_RULE (
+    DOMAIN_RULE_ID  VARCHAR(40)  NOT NULL,
+    DOMAIN_ID       VARCHAR(40)  NOT NULL,
+    RULE_NM         VARCHAR(200) NOT NULL,
+    RULE_TYPE       VARCHAR(20)  NOT NULL,    -- REGEX/RANGE/LENGTH/ENUM
+    RULE_PARAMS     TEXT,                     -- JSON
+    SORT_ORD        INTEGER      DEFAULT 1,
+    USE_YN          VARCHAR(1)   DEFAULT 'Y',
+    DESCR           VARCHAR(500),
+    CRET_USER_ID    VARCHAR(50),
+    CRET_DT         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    UPDT_USER_ID    VARCHAR(50),
+    UPDT_DT         TIMESTAMP,
+    CONSTRAINT PK_TB_DOMAIN_RULE PRIMARY KEY (DOMAIN_RULE_ID)
+);
+CREATE INDEX IF NOT EXISTS ix_domain_rule_domain ON TB_DOMAIN_RULE (DOMAIN_ID, USE_YN);
+COMMENT ON TABLE TB_DOMAIN_RULE IS '도메인별 룰 정의 (1:N) — 70번';
+
+-- TB_QUAL_COL_RULE (컬럼-룰 매핑: 도메인룰 OR 사용자커스텀룰 OR 진단제외)
+CREATE TABLE IF NOT EXISTS TB_QUAL_COL_RULE (
+    DM_ID           VARCHAR(40)  NOT NULL,
+    OBJ_NM          VARCHAR(100) NOT NULL,
+    ATTR_NM         VARCHAR(100) NOT NULL,
+    DOMAIN_RULE_ID  VARCHAR(40),
+    CUSTOM_RULE_ID  VARCHAR(40),
+    EXCLUDE_YN      VARCHAR(1)   DEFAULT 'N',
+    UPDT_USER_ID    VARCHAR(50),
+    UPDT_DT         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT PK_TB_QUAL_COL_RULE PRIMARY KEY (DM_ID, OBJ_NM, ATTR_NM)
+);
+COMMENT ON TABLE TB_QUAL_COL_RULE IS '컬럼별 룰 매핑 (도메인룰 우선 / 커스텀 / 제외) — 70번';
+
+-- TB_QUAL_PROFILE_HISTORY (값 프로파일 시계열 누적)
+CREATE TABLE IF NOT EXISTS TB_QUAL_PROFILE_HISTORY (
+    DIAG_ID         VARCHAR(40)  NOT NULL,
+    DM_ID           VARCHAR(40)  NOT NULL,
+    OBJ_NM          VARCHAR(100) NOT NULL,
+    ATTR_NM         VARCHAR(100) NOT NULL,
+    TOTAL_CNT       BIGINT,
+    NULL_CNT        BIGINT,
+    DISTINCT_CNT    BIGINT,
+    EMPTY_CNT       BIGINT,
+    MIN_VAL         VARCHAR(200),
+    MAX_VAL         VARCHAR(200),
+    AVG_VAL         NUMERIC(20,4),
+    STD_VAL         NUMERIC(20,4),
+    MIN_LEN         INTEGER,
+    MAX_LEN         INTEGER,
+    DIAG_DT         TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT PK_TB_QUAL_PROFILE_HISTORY PRIMARY KEY (DIAG_ID, DM_ID, OBJ_NM, ATTR_NM)
+);
+CREATE INDEX IF NOT EXISTS ix_qual_profile_history_attr ON TB_QUAL_PROFILE_HISTORY (DM_ID, OBJ_NM, ATTR_NM, DIAG_DT DESC);
+COMMENT ON TABLE TB_QUAL_PROFILE_HISTORY IS '값 프로파일 시계열 누적 (MIN/MAX/AVG/STD/LEN/COUNT) — 70번';

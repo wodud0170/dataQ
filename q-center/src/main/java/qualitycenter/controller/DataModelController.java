@@ -183,7 +183,8 @@ public class DataModelController {
 	 * 데이터모델 DDL 다운로드
 	 *
 	 * @param dataModelId 데이터모델 ID
-	 * @param dbType      DB 타입 (oracle/postgres 등, 미지정 시 모델의 데이터소스 타입으로 자동 판정)
+	 * @param dbType      DB 타입 (oracle/postgres 등). 미지정 시 모델의 데이터소스 driverName 으로 자동 판정.
+	 *                    물리 DB 미연결(데이터소스 미지정/누락)이거나 driverName 식별 불가 시 'oracle' 로 폴백.
 	 * @param response    HTTP 응답 (파일 스트림)
 	 */
 	@RequestMapping(value = "/downloadDdl", method = RequestMethod.GET)
@@ -219,21 +220,23 @@ public class DataModelController {
 	}
 
 	private String resolveDbTypeByModel(String dataModelId) {
+		// 정책: 물리 DB 가 연결돼 있으면 그 DBMS 의 타입 (driverName 으로 판별), 미연결/식별 불가 시 'oracle' 폴백
 		try {
 			Map<String, Object> model = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataModelId);
-			if (model == null) return "postgres";
+			if (model == null) return "oracle";
 			String dsId = model.get("dataModelDsId") == null ? null : String.valueOf(model.get("dataModelDsId"));
-			if (dsId == null || dsId.trim().isEmpty() || "null".equals(dsId)) return "postgres";
+			if (dsId == null || dsId.trim().isEmpty() || "null".equals(dsId)) return "oracle";
 			DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
-			if (ds == null) return "postgres";
+			if (ds == null) return "oracle";
 			String driverName = ds.getDriverName();
-			if (driverName == null) return "postgres";
+			if (driverName == null) return "oracle";
 			String lower = driverName.toLowerCase();
 			if (lower.contains("oracle")) return "oracle";
-			return "postgres";
+			if (lower.contains("postgres")) return "postgres";
+			return "oracle";
 		} catch (Exception e) {
 			log.warn("resolveDbTypeByModel failed: {}", e.getMessage());
-			return "postgres";
+			return "oracle";
 		}
 	}
 
