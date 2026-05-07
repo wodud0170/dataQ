@@ -23,4 +23,7 @@ public class QualDiagHistoryVo {
     private Integer totalViolations;
     private String execUserId;
     private String errorMsg;
+    // 83번 Step5 — 진행률
+    private Integer progressDone;
+    private Integer progressTotal;
 }

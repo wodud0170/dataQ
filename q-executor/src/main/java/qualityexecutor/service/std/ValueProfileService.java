@@ -107,6 +107,21 @@ public class ValueProfileService implements Runnable {
                     "datamodel.selectDataModelAttrListByClctIdRaw", dataModelId);
             log.info(">> 컬럼 {} 개 로드", attrs.size());
 
+            // 83번 Step5 — 진행률 totalCols 산정 (필터 적용 후)
+            int progressTotal = 0;
+            for (Map<String, Object> a : attrs) {
+                String oN  = (String) (a.get("tableNm") != null ? a.get("tableNm") : a.get("objNm"));
+                String aN = (String) (a.get("columnNm") != null ? a.get("columnNm") : a.get("attrNm"));
+                if (targetObj  != null && !targetObj.equals(oN))   continue;
+                if (targetAttr != null && !targetAttr.equals(aN)) continue;
+                if (oN == null || aN == null) continue;
+                if (targetKeys != null && !targetKeys.isEmpty()
+                        && !targetKeys.contains(oN + "." + aN)) continue;
+                progressTotal++;
+            }
+            updateProgress(0, progressTotal);
+            int progressDone = 0;
+
             for (Map<String, Object> a : attrs) {
                 if (System.currentTimeMillis() - startedAt > TOTAL_TIMEOUT_SEC * 1000L) {
                     throw new IllegalStateException("[TIMEOUT] 30분 누적 초과");
@@ -145,6 +160,8 @@ public class ValueProfileService implements Runnable {
                     log.warn(">> 컬럼 프로파일 실패 obj={} attr={}: {}", objNm, attrNm, e.getMessage());
                 } finally {
                     lockService.release(dataModelId, objNm, attrNm);
+                    progressDone++;
+                    updateProgress(progressDone, progressTotal);
                 }
             }
 
@@ -309,5 +326,13 @@ public class ValueProfileService implements Runnable {
         p.put("errorMsg", errorMsg);
         p.put("totalCols", totalCols);
         sql.update("qualDiag.updateHistoryStatus", p);
+    }
+
+    private void updateProgress(int done, int total) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("diagId", diagId);
+        p.put("progressDone",  done);
+        p.put("progressTotal", total);
+        sql.update("qualDiag.updateProgress", p);
     }
 }

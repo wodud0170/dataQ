@@ -50,15 +50,47 @@ public class QualColRuleController {
         return sql.selectList("qualColRule.selectEffectiveRulesByModel", p);
     }
 
-    /** DSQualValueProfile 화면용 — effective + 직전 값/룰 결과 join */
+    /**
+     * DSQualValueProfile / DSQualColRule 화면용 — effective + 직전 값/룰 결과 join.
+     * 83번 §5-3 + §5-4 — 도메인 분류 + 컬럼 검색 + 적합률 범위 필터.
+     */
     @GetMapping("/listWithLatest")
     public List<Map<String, Object>> listWithLatest(
             @RequestParam String dmId,
-            @RequestParam(required = false) String objNm) {
+            @RequestParam(required = false) String objNm,
+            @RequestParam(required = false) String attrNm,
+            @RequestParam(required = false) String domainClsfNm,
+            @RequestParam(required = false) Double rateMin,
+            @RequestParam(required = false) Double rateMax) {
         Map<String, Object> p = new HashMap<>();
         p.put("dmId", dmId);
         p.put("objNm", objNm);
+        p.put("attrNm", attrNm);
+        p.put("domainClsfNm", domainClsfNm);
+        p.put("rateMin", rateMin);
+        p.put("rateMax", rateMax);
         return sql.selectList("qualColRule.selectEffectiveWithLatest", p);
+    }
+
+    /**
+     * 83번 §5-3 — drawer 미리보기용 위반 샘플 5건.
+     * GET /detail?dmId=&objNm=&attrNm=
+     */
+    @GetMapping("/detail")
+    public Map<String, Object> detail(
+            @RequestParam String dmId,
+            @RequestParam String objNm,
+            @RequestParam String attrNm) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("dmId", dmId);
+        p.put("objNm", objNm);
+        p.put("attrNm", attrNm);
+        Map<String, Object> result = new HashMap<>();
+        result.put("violationSamples",
+                sql.selectList("qualColRule.selectViolationSamplePreview", p));
+        result.put("ruleResults",
+                sql.selectList("qualColRule.selectRuleResultsByColumn", p));
+        return result;
     }
 
     @PostMapping("/save")

@@ -275,6 +275,13 @@ public class QualRuleController {
         return sqlSessionTemplate.selectList("qualDiag.selectViolationSamples", p);
     }
 
+    /** 83번 Step5 — 룰 진단 진행률 폴링용 */
+    @GetMapping("/history/{diagId}")
+    public QualDiagHistoryVo historyDetail(
+            @org.springframework.web.bind.annotation.PathVariable String diagId) {
+        return sqlSessionTemplate.selectOne("qualDiag.selectHistoryById", diagId);
+    }
+
     // ==================== 카탈로그 (83번 §5-2 재설계) ====================
 
     /**

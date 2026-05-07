@@ -48,11 +48,21 @@
                h.TOTAL_COLS      AS totalCols,
                h.TOTAL_VIOLATIONS AS totalViolations,
                h.EXEC_USER_ID    AS execUserId,
-               h.ERROR_MSG       AS errorMsg
+               h.ERROR_MSG       AS errorMsg,
+               h.PROGRESS_DONE   AS progressDone,
+               h.PROGRESS_TOTAL  AS progressTotal
           FROM TB_QUAL_DIAG_HISTORY h
           LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DM_ID
          WHERE h.DIAG_ID = #{diagId}
     </select>
+
+    <!-- 83번 Step5 — 진행률 갱신 (컬럼 처리 직후 호출) -->
+    <update id="updateProgress" parameterType="map">
+        UPDATE TB_QUAL_DIAG_HISTORY SET
+            PROGRESS_DONE  = COALESCE(#{progressDone},  PROGRESS_DONE),
+            PROGRESS_TOTAL = COALESCE(#{progressTotal}, PROGRESS_TOTAL)
+         WHERE DIAG_ID = #{diagId}
+    </update>
 
     <!-- 직전 DONE 시점 — 증분 검증 기준 -->
     <select id="selectLastDoneDt" parameterType="map" resultType="String">

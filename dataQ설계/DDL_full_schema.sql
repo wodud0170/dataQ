@@ -970,7 +970,9 @@ CREATE TABLE quality.tb_qual_diag_history (
     total_cols integer DEFAULT 0,
     total_violations integer DEFAULT 0,
     exec_user_id character varying(40),
-    error_msg text
+    error_msg text,
+    progress_done integer DEFAULT 0,
+    progress_total integer DEFAULT 0
 );
 
 
@@ -979,6 +981,20 @@ CREATE TABLE quality.tb_qual_diag_history (
 --
 
 COMMENT ON TABLE quality.tb_qual_diag_history IS '데이터 품질 진단 실행 이력 (값/룰 공용, 67번 §5)';
+
+
+--
+-- Name: COLUMN tb_qual_diag_history.progress_done; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_diag_history.progress_done IS '83번 Step5 — 처리 완료 컬럼 수 (실시간 갱신)';
+
+
+--
+-- Name: COLUMN tb_qual_diag_history.progress_total; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_diag_history.progress_total IS '83번 Step5 — 진단 대상 총 컬럼 수';
 
 
 --

@@ -5,27 +5,49 @@
       <!-- 상단: 모델 + 샘플링 + 시작 -->
       <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:8px;">
         <v-autocomplete v-model="dmId" :items="dataModels" item-text="dataModelNm" item-value="dataModelId"
-          label="모델" dense hide-details style="max-width:280px" @change="loadCols"></v-autocomplete>
+          label="모델" dense hide-details style="max-width:280px" @change="loadCols" id="cmb-model"></v-autocomplete>
         <v-select v-model="sampleRate" :items="sampleOpts" item-text="text" item-value="value"
-          label="샘플링" dense hide-details style="max-width:130px"></v-select>
+          label="샘플링" dense hide-details style="max-width:130px" id="cmb-sample"></v-select>
         <v-spacer></v-spacer>
-        <span style="font-size:.8rem; color:#546E7A;">선택 {{ selected.length }}건</span>
+        <span style="font-size:.8rem; color:#546E7A;">선택 {{ selected.length }}건 / 표시 {{ filtered.length }}건</span>
         <v-btn small class="ml-2 gradient" @click="runSelected"
-          :disabled="!dmId || selected.length===0" id="btn-run-selected">
-          <v-icon small left>mdi-play</v-icon>선택 컬럼 프로파일링
+          :disabled="!dmId || selected.length===0 || running" id="btn-run-selected">
+          <v-icon small left>mdi-play</v-icon>선택 컬럼 진단
         </v-btn>
       </v-sheet>
 
-      <!-- 검색 필터 -->
-      <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #ECEFF1; gap:8px; background:#FAFBFC;">
-        <v-text-field v-model="filterObj"  label="테이블 필터" dense hide-details clearable style="max-width:200px"></v-text-field>
-        <v-text-field v-model="filterAttr" label="컬럼 필터"  dense hide-details clearable style="max-width:200px"></v-text-field>
+      <!-- 검색 필터: 테이블 + 컬럼 + 도메인 분류 multi -->
+      <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #ECEFF1; gap:8px; background:#FAFBFC; flex-wrap:wrap;">
+        <v-text-field v-model="filterObj"  label="테이블 필터" dense hide-details clearable style="max-width:200px" id="txt-obj"></v-text-field>
+        <v-text-field v-model="filterAttr" label="컬럼 필터"  dense hide-details clearable style="max-width:200px" id="txt-attr"></v-text-field>
+        <v-autocomplete v-model="selectedClsfs" :items="clsfOptions" label="도메인 분류 (다중)"
+          dense hide-details multiple chips small-chips clearable
+          style="min-width:280px; max-width:480px;" id="cmb-clsf"></v-autocomplete>
         <v-spacer></v-spacer>
-        <v-btn x-small text @click="selectAll">전체선택</v-btn>
-        <v-btn x-small text @click="selectNone">선택해제</v-btn>
+        <v-btn x-small text @click="selectAll" id="btn-select-all">전체선택</v-btn>
+        <v-btn x-small text @click="selectNone" id="btn-select-none">선택해제</v-btn>
       </v-sheet>
 
-      <!-- 컬럼 그리드: 체크박스 + 적용 규칙 + 적합률 + [상세] -->
+      <!-- 진행률 표시 -->
+      <v-sheet v-if="running || progress.total > 0" class="pa-2" style="background:#F1F8E9; border-bottom:1px solid #DCEDC8;">
+        <div class="d-flex align-center" style="gap:12px;">
+          <v-icon small color="green">mdi-progress-clock</v-icon>
+          <span style="font-size:.85rem; min-width:140px;">
+            {{ running ? '진단 진행 중' : '진단 완료' }} ({{ progress.done }}/{{ progress.total }})
+          </span>
+          <v-progress-linear :value="progress.pct" height="14" color="green" rounded striped
+            style="flex:1;" id="bar-progress">
+            <template v-slot:default>
+              <span style="font-size:.7rem; color:white; font-weight:600;">{{ progress.pct }}%</span>
+            </template>
+          </v-progress-linear>
+          <span style="font-size:.7rem; color:#546E7A;" v-if="progress.statusV || progress.statusR">
+            값:{{ progress.statusV || '-' }} 룰:{{ progress.statusR || '-' }}
+          </span>
+        </div>
+      </v-sheet>
+
+      <!-- 컬럼 그리드 -->
       <v-data-table
         v-model="selected"
         :headers="headers"
@@ -33,8 +55,13 @@
         item-key="rowKey"
         show-select
         dense hide-default-footer
-        :items-per-page="200"
-        class="elevation-0" :loading="loading">
+        :items-per-page="500"
+        class="elevation-0" :loading="loading"
+        id="grid-cols">
+        <template v-slot:item.domainClsfNm="{ item }">
+          <v-chip v-if="item.domainClsfNm" x-small color="indigo lighten-4">{{ item.domainClsfNm }}</v-chip>
+          <span v-else style="color:#BDBDBD; font-size:.75rem">-</span>
+        </template>
         <template v-slot:item.effectiveSource="{ item }">
           <v-chip x-small :color="srcColor(item.effectiveSource)" text-color="white">
             {{ item.effectiveSource || '-' }}
@@ -69,6 +96,12 @@
           <span style="font-size:.7rem; color:#90A4AE; margin-left:6px;">({{ detail.attrNmKr || '-' }})</span>
         </h3>
         <v-divider class="my-3"></v-divider>
+
+        <p><b>도메인</b></p>
+        <p style="font-size:.85rem">
+          {{ detail.domainNm || '-' }}
+          <v-chip v-if="detail.domainClsfNm" x-small class="ml-2" color="indigo lighten-4">{{ detail.domainClsfNm }}</v-chip>
+        </p>
 
         <p><b>적용 규칙</b></p>
         <p style="font-size:.85rem">{{ detail.effectiveRuleNm || '없음' }}
@@ -124,28 +157,45 @@ export default {
       selected: [],
       filterObj: '',
       filterAttr: '',
+      selectedClsfs: [],
       loading: false,
       drawer: false,
       detail: null,
+      // 진행률 폴링
+      running: false,
+      pollTimer: null,
+      diagIdValue: null,
+      diagIdRule:  null,
+      progress: { done: 0, total: 0, pct: 0, statusV: null, statusR: null },
       headers: [
-        { text: '테이블',    value: 'objNm' },
-        { text: '컬럼',      value: 'attrNm' },
-        { text: '한글명',    value: 'attrNmKr' },
-        { text: '적용 규칙', value: 'effectiveRuleNm' },
-        { text: '소스',      value: 'effectiveSource' },
-        { text: 'NULL%',     value: 'profNullPct' },
-        { text: '적합률',    value: 'ruleConformRate' },
-        { text: '',          value: 'actions', sortable: false, width: 50 }
+        { text: '테이블',     value: 'objNm', width: 140 },
+        { text: '컬럼',       value: 'attrNm', width: 140 },
+        { text: '한글명',     value: 'attrNmKr', width: 140 },
+        { text: '도메인분류', value: 'domainClsfNm', width: 120 },
+        { text: '적용 규칙',  value: 'effectiveRuleNm' },
+        { text: '소스',       value: 'effectiveSource', width: 90 },
+        { text: 'NULL%',      value: 'profNullPct', width: 80 },
+        { text: '적합률',     value: 'ruleConformRate', width: 90 },
+        { text: '',           value: 'actions', sortable: false, width: 50 }
       ]
     };
   },
   computed: {
+    clsfOptions() {
+      var set = {};
+      this.rows.forEach(function(r) { if (r.domainClsfNm) set[r.domainClsfNm] = true; });
+      return Object.keys(set).sort();
+    },
     filtered() {
       var fo = (this.filterObj || '').toLowerCase();
       var fa = (this.filterAttr || '').toLowerCase();
+      var cls = this.selectedClsfs;
       return this.rows.filter(function(r) {
         if (fo && (r.objNm || '').toLowerCase().indexOf(fo) === -1) return false;
         if (fa && (r.attrNm || '').toLowerCase().indexOf(fa) === -1) return false;
+        if (cls && cls.length > 0) {
+          if (!r.domainClsfNm || cls.indexOf(r.domainClsfNm) === -1) return false;
+        }
         return true;
       });
     }
@@ -157,6 +207,9 @@ export default {
         self.dataModels = (r.data || []).filter(function(m) { return m.modelType === 'PHYSICAL'; });
       });
   },
+  beforeDestroy() {
+    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+  },
   methods: {
     loadCols() {
       if (!this.dmId) { this.rows = []; this.selected = []; return; }
@@ -165,7 +218,6 @@ export default {
       axios.get(this.$APIURL.base + 'api/qual/colrule/listWithLatest',
                 { params: { dmId: this.dmId } })
         .then(function(r) {
-          // EXCLUDED/NONE 빼고 표시 (값 진단 가능한 컬럼만)
           self.rows = (r.data || []).map(function(x) {
             x.rowKey = x.objNm + '.' + x.attrNm;
             return x;
@@ -185,20 +237,62 @@ export default {
       });
       var body = { dataModelId: this.dmId, sampleRate: this.sampleRate, targets: targets };
 
-      // 값 진단 + 룰 진단 둘 다 실행 (적합률도 같이 갱신)
-      axios.post(this.$APIURL.base + 'api/qual/value/runColumns', body).then(function(rv) {
-        axios.post(self.$APIURL.base + 'api/qual/rule/runColumns', body).then(function(rr) {
-          self.$swal.fire({
-            icon: 'success',
-            title: targets.length + '개 컬럼 진단 시작',
-            html: '값 ' + (rv.data.contents || '') + '<br>룰 ' + (rr.data.contents || '') +
-                  '<br><span style="font-size:.75rem;color:#9E9E9E">완료 후 [새로고침]</span>',
-            timer: 2500, showConfirmButton: false
-          });
-          // 30초 후 자동 새로고침
-          setTimeout(function() { self.loadCols(); }, 30000);
+      this.running = true;
+      this.progress = { done: 0, total: targets.length * 2, pct: 0, statusV: 'READY', statusR: 'READY' };
+
+      // 값 진단 + 룰 진단 동시 실행
+      Promise.all([
+        axios.post(this.$APIURL.base + 'api/qual/value/runColumns', body),
+        axios.post(this.$APIURL.base + 'api/qual/rule/runColumns',  body)
+      ]).then(function(arr) {
+        self.diagIdValue = arr[0].data.contents;
+        self.diagIdRule  = arr[1].data.contents;
+        self.$swal.fire({
+          icon: 'success',
+          title: targets.length + '개 컬럼 진단 시작',
+          html: '진행률은 화면 상단에서 확인',
+          timer: 1500, showConfirmButton: false
         });
+        self.startPoll();
+      }).catch(function(err) {
+        self.running = false;
+        self.$swal.fire({ icon: 'error', title: '진단 시작 실패', text: (err.message || '') });
       });
+    },
+    startPoll() {
+      var self = this;
+      if (this.pollTimer) clearInterval(this.pollTimer);
+      this.pollTimer = setInterval(function() { self.poll(); }, 3000);
+      this.poll();
+    },
+    poll() {
+      var self = this;
+      var promises = [];
+      if (this.diagIdValue) promises.push(axios.get(this.$APIURL.base + 'api/qual/value/history/' + this.diagIdValue));
+      if (this.diagIdRule)  promises.push(axios.get(this.$APIURL.base + 'api/qual/rule/history/'  + this.diagIdRule));
+      if (promises.length === 0) return;
+      Promise.all(promises).then(function(arr) {
+        var hv = arr[0] ? arr[0].data : null;
+        var hr = arr[1] ? arr[1].data : null;
+        var doneV  = hv ? (hv.progressDone  || 0) : 0;
+        var totalV = hv ? (hv.progressTotal || 0) : 0;
+        var doneR  = hr ? (hr.progressDone  || 0) : 0;
+        var totalR = hr ? (hr.progressTotal || 0) : 0;
+        var done  = doneV + doneR;
+        var total = Math.max(totalV + totalR, 1);
+        self.progress.done    = done;
+        self.progress.total   = total;
+        self.progress.pct     = Math.min(100, Math.round(done / total * 100));
+        self.progress.statusV = hv ? hv.status : null;
+        self.progress.statusR = hr ? hr.status : null;
+        var vDone = !hv || hv.status === 'DONE' || hv.status === 'ERROR' || hv.status === 'SKIPPED';
+        var rDone = !hr || hr.status === 'DONE' || hr.status === 'ERROR' || hr.status === 'SKIPPED';
+        if (vDone && rDone) {
+          self.running = false;
+          if (self.pollTimer) { clearInterval(self.pollTimer); self.pollTimer = null; }
+          self.loadCols();
+        }
+      }).catch(function() { /* 일시 오류 무시, 다음 폴링 */ });
     },
     openDetail(item) {
       this.detail = item;

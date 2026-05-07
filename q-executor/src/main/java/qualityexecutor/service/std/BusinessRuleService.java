@@ -122,6 +122,18 @@ public class BusinessRuleService implements Runnable {
             List<QualColRuleVo> effList = sql.selectList("qualColRule.selectEffectiveRulesByModel", p);
             log.info(">> effective rules: {} columns", effList.size());
 
+            // 83번 Step5 — 진행률 totalCols (필터·EXCLUDE·NONE 제외)
+            int progressTotal = 0;
+            for (QualColRuleVo e : effList) {
+                String src = e.getEffectiveSource();
+                if ("EXCLUDED".equals(src) || "NONE".equals(src) || e.getEffectiveRuleType() == null) continue;
+                if (scopeKeys != null && !scopeKeys.isEmpty()
+                        && !scopeKeys.contains(e.getObjNm() + "." + e.getAttrNm())) continue;
+                progressTotal++;
+            }
+            updateProgress(0, progressTotal);
+            int progressDone = 0;
+
             for (QualColRuleVo eff : effList) {
                 if (System.currentTimeMillis() - startedAt > TOTAL_TIMEOUT_SEC * 1000L) {
                     throw new IllegalStateException("[TIMEOUT] 진단 30분 누적 초과");
@@ -160,6 +172,8 @@ public class BusinessRuleService implements Runnable {
                 } finally {
                     // lock 은 정상/예외 무관 무조건 해제
                     lockService.release(eff.getDmId(), eff.getObjNm(), eff.getAttrNm());
+                    progressDone++;
+                    updateProgress(progressDone, progressTotal);
                 }
             }
 
@@ -244,5 +258,13 @@ public class BusinessRuleService implements Runnable {
         p.put("totalRules", totalRules);
         p.put("totalViolations", (int) Math.min(Integer.MAX_VALUE, totalViolations));
         sql.update("qualDiag.updateHistoryStatus", p);
+    }
+
+    private void updateProgress(int done, int total) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("diagId", diagId);
+        p.put("progressDone",  done);
+        p.put("progressTotal", total);
+        sql.update("qualDiag.updateProgress", p);
     }
 }

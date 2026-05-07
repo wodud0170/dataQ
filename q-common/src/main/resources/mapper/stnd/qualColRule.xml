@@ -116,19 +116,23 @@
     </delete>
 
     <!--
-      effective rule + 직전 PROFILE + 직전 RULE 적합률 (DSQualValueProfile 화면용)
-      반환 type: Map (effective + latest profile + latest rule rate)
+      effective rule + 직전 PROFILE + 직전 RULE 적합률 (DSQualValueProfile / DSQualColRule 화면용).
+      83번 §5-3 + §5-4 — 도메인 분류 필터 + 적합률 범위 + 컬럼 검색 추가.
     -->
     <select id="selectEffectiveWithLatest" parameterType="map" resultType="map">
         WITH col_meta AS (
           SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM, a.ATTR_NM_KR,
-                 d.DOMAIN_ID
+                 d.DOMAIN_ID, d.DOMAIN_NM, d.DOMAIN_CLSF_NM
             FROM TB_DATA_MODEL_ATTR a
             LEFT JOIN TB_TERMS t  ON t.TERMS_NM    = a.ATTR_NM_KR
             LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM   = t.DOMAIN_NM
            WHERE a.DM_ID  = #{dmId}
              AND a.USE_YN = 'Y'
-            <if test="objNm != null">  AND a.OBJ_NM  = #{objNm}  </if>
+            <if test="objNm != null and objNm != ''">     AND a.OBJ_NM   ILIKE '%' || #{objNm}  || '%' </if>
+            <if test="attrNm != null and attrNm != ''">   AND a.ATTR_NM  ILIKE '%' || #{attrNm} || '%' </if>
+            <if test="domainClsfNm != null and domainClsfNm != ''">
+                AND d.DOMAIN_CLSF_NM = #{domainClsfNm}
+            </if>
         ),
         col_default_dom AS (
           SELECT cm.DM_ID, cm.OBJ_NM, cm.ATTR_NM, cm.DOMAIN_ID,
@@ -144,10 +148,12 @@
                ORDER BY SORT_ORD LIMIT 1
             ) dr ON true
         )
-        SELECT cm.DM_ID    AS "dmId",
-               cm.OBJ_NM   AS "objNm",
-               cm.ATTR_NM  AS "attrNm",
-               cm.ATTR_NM_KR AS "attrNmKr",
+        SELECT cm.DM_ID                    AS "dmId",
+               cm.OBJ_NM                   AS "objNm",
+               cm.ATTR_NM                  AS "attrNm",
+               COALESCE(cm.ATTR_NM_KR, '')    AS "attrNmKr",
+               COALESCE(cm.DOMAIN_NM, '')     AS "domainNm",
+               COALESCE(cm.DOMAIN_CLSF_NM,'') AS "domainClsfNm",
                cr.DOMAIN_RULE_ID AS "domainRuleId",
                cr.CUSTOM_RULE_ID AS "customRuleId",
                COALESCE(cr.EXCLUDE_YN, 'N') AS "excludeYn",
@@ -205,7 +211,59 @@
              ORDER BY dh.DIAG_DT DESC
              LIMIT 1
           ) lr ON true
+        <where>
+          <!-- 적합률 범위 필터 (NULL 인 행은 maxRate 만 지정해도 보임 / minRate 만 지정 시 NULL 제외) -->
+          <if test="rateMin != null">
+              AND (lr.VIOLATION_RATE IS NULL OR (100.0 - lr.VIOLATION_RATE) &gt;= #{rateMin})
+          </if>
+          <if test="rateMax != null">
+              AND (lr.VIOLATION_RATE IS NULL OR (100.0 - lr.VIOLATION_RATE) &lt;= #{rateMax})
+          </if>
+        </where>
          ORDER BY cm.OBJ_NM, cm.ATTR_NM
+    </select>
+
+    <!--
+      83번 §5-3 — drawer 미리보기용 위반 샘플 5건. 직전 진단 기준.
+      TB_QUAL_VIOLATION_SAMPLE 실 컬럼명 — pk_values, violating_val
+    -->
+    <select id="selectViolationSamplePreview" parameterType="map" resultType="map">
+        SELECT vs.PK_VALUES    AS "pkVal",
+               vs.VIOLATING_VAL AS "violationValue",
+               vs.RULE_ID       AS "ruleId",
+               r.RULE_NM        AS "ruleNm"
+          FROM TB_QUAL_VIOLATION_SAMPLE vs
+          JOIN TB_QUAL_DIAG_HISTORY dh ON dh.DIAG_ID = vs.DIAG_ID
+          LEFT JOIN TB_QUAL_RULE r ON r.RULE_ID = vs.RULE_ID
+         WHERE dh.DM_ID = #{dmId}
+           AND vs.OBJ_NM = #{objNm}
+           AND vs.ATTR_NM = #{attrNm}
+           AND dh.STATUS = 'DONE'
+         ORDER BY dh.DIAG_DT DESC
+         LIMIT 5
+    </select>
+
+    <!--
+      83번 §5-3 — 컬럼 단위 룰별 적합률 (drawer 룰별 분포용).
+    -->
+    <select id="selectRuleResultsByColumn" parameterType="map" resultType="map">
+        SELECT rr.RULE_ID         AS "ruleId",
+               r.RULE_NM           AS "ruleNm",
+               r.RULE_TYPE         AS "ruleType",
+               rr.TOTAL_CNT        AS "totalCnt",
+               rr.VIOLATION_CNT    AS "violationCnt",
+               rr.VIOLATION_RATE   AS "violationRate",
+               (100.0 - rr.VIOLATION_RATE) AS "conformRate",
+               dh.DIAG_DT          AS "diagDt"
+          FROM TB_QUAL_RULE_RESULT rr
+          JOIN TB_QUAL_DIAG_HISTORY dh ON dh.DIAG_ID = rr.DIAG_ID
+          LEFT JOIN TB_QUAL_RULE r ON r.RULE_ID = rr.RULE_ID
+         WHERE dh.DM_ID = #{dmId}
+           AND rr.OBJ_NM = #{objNm}
+           AND rr.ATTR_NM = #{attrNm}
+           AND dh.STATUS = 'DONE'
+         ORDER BY dh.DIAG_DT DESC
+         LIMIT 20
     </select>
 
 </mapper>

@@ -21,6 +21,7 @@
 - 2026-05-07 | PC2 | 83번 데이터 품질 진단 재설계 Step 1 | `TB_QUAL_RUNNING_LOCK` 신규 (PK: DM_ID+OBJ_NM+ATTR_NM, START_DT, USER_ID, DIAG_ID) | 컬럼 단위 application-level 동시 진단 방지 — 운영 DB 락 절대 X 원칙. stale lock 30분 경과 시 자동 정리 | PC2 (PC1 도 sync 필요)
 - 2026-05-07 | PC2 | 83번 Step 2 | `TB_QUAL_RULE_CATALOG` 에 `IS_BUILT_IN VARCHAR(1) DEFAULT 'N'` + `DOMAIN_CLSF_NM VARCHAR(50)` 추가 + 인덱스 (DOMAIN_CLSF_NM, IS_BUILT_IN) | 시스템 기본 (Y, 읽기전용) vs 사용자 정의 (N) 분리 + 행안부 도메인 분류 자동 매칭 키 | PC2 (PC1 도 sync 필요) |
 - 2026-05-07 | PC2 | 83번 Step 2 시드 | TB_QUAL_RULE_CATALOG 에 행안부 도메인 분류 시스템 기본 룰 43건 시드 (`CATALOG_ID LIKE 'SEED_%'`) | 33개 분류 자동 추천 + 공통 NOT_NULL. 시드 SQL: `dataQ설계/sync/qual_rule_catalog_seed_2026-05-07.sql` | PC2 (PC1 도 같은 시드 SQL 실행 필요) |
+- 2026-05-07 | PC2 | 83번 Step 5 | `TB_QUAL_DIAG_HISTORY` 에 `PROGRESS_DONE INTEGER DEFAULT 0` + `PROGRESS_TOTAL INTEGER DEFAULT 0` 추가 | 진단 실행 시 컬럼 단위 진행률 추적 (실시간 폴링용). 30s setTimeout 대신 정확한 % 표시 | PC2 (PC1 도 sync 필요 — `dataQ설계/sync/qual_diag_progress_2026-05-07.sql`) |
 
 ---
 
