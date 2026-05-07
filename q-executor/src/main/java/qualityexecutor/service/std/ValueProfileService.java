@@ -42,6 +42,9 @@ public class ValueProfileService implements Runnable {
     @Autowired
     private DataSourceUtils dataSourceUtils;
 
+    @Autowired
+    private QualLockService lockService;
+
     private static final int SQL_TIMEOUT_SEC   = 30;
     private static final int TOTAL_TIMEOUT_SEC = 1800;
     private static final Gson gson = new Gson();
@@ -73,8 +76,18 @@ public class ValueProfileService implements Runnable {
         long startedAt = System.currentTimeMillis();
         log.info(">> ValueProfileService start: diagId={} dmId={} obj={} sampleRate={}",
                 diagId, dataModelId, targetObj, sampleRate);
+
+        // 83번 §6-4 글로벌 동시 진단 N건 제한 — 슬롯 못 얻으면 SKIP.
+        if (!lockService.tryAcquireGlobalSlot()) {
+            log.warn(">> ValueProfileService SKIPPED — 글로벌 동시 진단 큐 가득 (max={}, used={})",
+                    lockService.globalMax(), lockService.globalMax() - lockService.globalAvailable());
+            updateStatus("SKIPPED", "글로벌 동시 진단 큐 가득. 잠시 후 재시도");
+            return;
+        }
+
         DBHandler dbHandler = null;
         int totalCols = 0;
+        int skippedCols = 0;
 
         try {
             updateStatus("RUNNING", null);
@@ -108,6 +121,13 @@ public class ValueProfileService implements Runnable {
                 if (targetKeys != null && !targetKeys.isEmpty()
                         && !targetKeys.contains(objNm + "." + attrNm)) continue;
 
+                // 83번 §6-2 컬럼 단위 application-level lock.
+                if (!lockService.acquire(dataModelId, objNm, attrNm, diagId, userId)) {
+                    skippedCols++;
+                    log.info(">> 컬럼 SKIP — {}.{} 다른 진단 점유 중", objNm, attrNm);
+                    continue;
+                }
+
                 try {
                     QualProfileResultVo r = profileColumn(dbHandler, dbmsType, objNm, attrNm, dataType);
                     if (r != null) {
@@ -123,11 +143,15 @@ public class ValueProfileService implements Runnable {
                     }
                 } catch (Exception e) {
                     log.warn(">> 컬럼 프로파일 실패 obj={} attr={}: {}", objNm, attrNm, e.getMessage());
+                } finally {
+                    lockService.release(dataModelId, objNm, attrNm);
                 }
             }
 
-            updateFinal("DONE", null, totalCols);
-            log.info(">> ValueProfileService DONE: cols={}", totalCols);
+            String doneMsg = skippedCols > 0
+                    ? String.format("동시 진단 SKIP 컬럼 %d개", skippedCols) : null;
+            updateFinal("DONE", doneMsg, totalCols);
+            log.info(">> ValueProfileService DONE: cols={} skipped={}", totalCols, skippedCols);
         } catch (Exception e) {
             log.error(">> ValueProfileService failed", e);
             String msg = e.getMessage();
@@ -135,6 +159,8 @@ public class ValueProfileService implements Runnable {
             updateStatus("ERROR", msg);
         } finally {
             try { if (dbHandler != null) dbHandler.close(); } catch (Exception ignore) {}
+            // 83번 §6-4 글로벌 슬롯 해제
+            lockService.releaseGlobalSlot();
         }
     }
 

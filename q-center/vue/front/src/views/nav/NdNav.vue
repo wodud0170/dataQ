@@ -388,6 +388,13 @@
                         </v-list-item-content>
                     </template>
 
+                    <!-- 83번 신규: 도메인 룰 관리 (분류 트리 + 룰 정의 + 카탈로그 가져오기) -->
+                    <v-list-item link id="nav_qualDomainRule" href="#tab_qualDomainRule" active-class="ndColor--text" title="도메인 룰 관리"
+                        v-on:click.stop="addTabItem('도메인 룰 관리', 'qualDomainRule');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>도메인 룰 관리</v-list-item-title>
+                    </v-list-item>
+
                     <v-list-item link id="nav_valueProfile" href="#tab_valueProfile" active-class="ndColor--text" title="값 프로파일링"
                         v-on:click.stop="addTabItem('값 프로파일링', 'qualValueProfile');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>

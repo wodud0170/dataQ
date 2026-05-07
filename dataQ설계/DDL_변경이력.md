@@ -18,6 +18,9 @@
 - 2026-05-06 | PC2 | DDL sync 정렬 | `tb_domain_rule.cret_user_id / updt_user_id`, `tb_qual_col_rule.updt_user_id`: VARCHAR(40) → VARCHAR(50) | PC1·PC2 길이 불일치 (40 vs 50). 큰쪽으로 통일 | PC2
 - 2026-05-06 | PC2 | DDL sync 정렬 | `tb_data_model_attr.use_yn / tb_data_model_obj.use_yn / tb_domain_rule.use_yn / tb_qual_col_rule.exclude_yn`: CHAR(1) → VARCHAR(1) (DEFAULT cast 도 ::varchar) | PC1·PC2 cosmetic 차이 통일. PC1 표준이 varchar(1) | PC2
 - 2026-05-06 | PC1 (예정) | DDL sync 정렬 | `tb_domain_rule.descr` VARCHAR(500) → TEXT, `sort_ord/use_yn` NOT NULL 추가 | PC1·PC2 의미 차이. PC2 가 더 strict/wider — 그 쪽으로 통일 | PC1 → `dataQ설계/sync/PC1_align_2026-05-06.sql` 실행 후 적용 완료 처리
+- 2026-05-07 | PC2 | 83번 데이터 품질 진단 재설계 Step 1 | `TB_QUAL_RUNNING_LOCK` 신규 (PK: DM_ID+OBJ_NM+ATTR_NM, START_DT, USER_ID, DIAG_ID) | 컬럼 단위 application-level 동시 진단 방지 — 운영 DB 락 절대 X 원칙. stale lock 30분 경과 시 자동 정리 | PC2 (PC1 도 sync 필요)
+- 2026-05-07 | PC2 | 83번 Step 2 | `TB_QUAL_RULE_CATALOG` 에 `IS_BUILT_IN VARCHAR(1) DEFAULT 'N'` + `DOMAIN_CLSF_NM VARCHAR(50)` 추가 + 인덱스 (DOMAIN_CLSF_NM, IS_BUILT_IN) | 시스템 기본 (Y, 읽기전용) vs 사용자 정의 (N) 분리 + 행안부 도메인 분류 자동 매칭 키 | PC2 (PC1 도 sync 필요) |
+- 2026-05-07 | PC2 | 83번 Step 2 시드 | TB_QUAL_RULE_CATALOG 에 행안부 도메인 분류 시스템 기본 룰 43건 시드 (`CATALOG_ID LIKE 'SEED_%'`) | 33개 분류 자동 추천 + 공통 NOT_NULL. 시드 SQL: `dataQ설계/sync/qual_rule_catalog_seed_2026-05-07.sql` | PC2 (PC1 도 같은 시드 SQL 실행 필요) |
 
 ---
 

@@ -1085,7 +1085,9 @@ CREATE TABLE quality.tb_qual_rule_catalog (
     rule_params text,
     category character varying(50),
     descr text,
-    use_yn character(1) DEFAULT 'Y'::bpchar
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    is_built_in character varying(1) DEFAULT 'N'::character varying,
+    domain_clsf_nm character varying(50)
 );
 
 
@@ -1094,6 +1096,20 @@ CREATE TABLE quality.tb_qual_rule_catalog (
 --
 
 COMMENT ON TABLE quality.tb_qual_rule_catalog IS '룰 템플릿 (이메일/주민번호 등 표준 정규식)';
+
+
+--
+-- Name: COLUMN tb_qual_rule_catalog.is_built_in; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_rule_catalog.is_built_in IS '시스템 기본 (Y, 읽기전용 + fork만 가능) / 사용자 정의 (N) — 83번';
+
+
+--
+-- Name: COLUMN tb_qual_rule_catalog.domain_clsf_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_rule_catalog.domain_clsf_nm IS '행안부 도메인 분류명 (전화번호/금액/연월일 등). 분류 단위 자동 추천 키';
 
 
 --
@@ -1118,6 +1134,69 @@ CREATE TABLE quality.tb_qual_rule_result (
 --
 
 COMMENT ON TABLE quality.tb_qual_rule_result IS '업무 규칙 진단 결과 (DIAG_ID + RULE_ID + 도메인 룰의 경우 OBJ/ATTR)';
+
+
+--
+-- Name: tb_qual_running_lock; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_qual_running_lock (
+    dm_id character varying(36) NOT NULL,
+    obj_nm character varying(200) NOT NULL,
+    attr_nm character varying(200) NOT NULL,
+    diag_id character varying(50),
+    user_id character varying(50),
+    start_dt character varying(14) NOT NULL
+);
+
+
+--
+-- Name: TABLE tb_qual_running_lock; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_qual_running_lock IS '품질 진단 컬럼 단위 동시 실행 방지 — application-level mutex (운영 DB 락 X). 83번';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.dm_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.dm_id IS '데이터 모델 ID';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.obj_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.obj_nm IS '테이블명';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.attr_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.attr_nm IS '컬럼명';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.diag_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.diag_id IS '진행 중 진단 ID';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.user_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.user_id IS '진단 트리거한 사용자';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.start_dt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.start_dt IS 'lock 획득 시각 (YYYYMMDDHH24MISS) — 30분 경과 시 stale 자동 정리';
 
 
 --
@@ -1750,6 +1829,14 @@ ALTER TABLE ONLY quality.tb_qual_rule_result
 
 
 --
+-- Name: tb_qual_running_lock pk_tb_qual_running_lock; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_qual_running_lock
+    ADD CONSTRAINT pk_tb_qual_running_lock PRIMARY KEY (dm_id, obj_nm, attr_nm);
+
+
+--
 -- Name: tb_qual_violation_sample pk_tb_qual_violation_sample; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -1952,6 +2039,13 @@ CREATE INDEX idx_change_history_dt ON quality.tb_change_history USING btree (cha
 --
 
 CREATE INDEX idx_change_history_target ON quality.tb_change_history USING btree (target_type, change_dt DESC);
+
+
+--
+-- Name: idx_qual_rule_catalog_clsf; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX idx_qual_rule_catalog_clsf ON quality.tb_qual_rule_catalog USING btree (domain_clsf_nm, is_built_in);
 
 
 --

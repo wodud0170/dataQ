@@ -40,6 +40,60 @@ public class QualDomainRuleController {
         return sql.selectList("qualDomainRule.selectByDomain", domainId);
     }
 
+    /**
+     * 83번 §5-1 — 도메인 트리 (분류 → 도메인) + 룰 카운트.
+     * 좌측 트리 패널 데이터.
+     * GET /api/qual/domain/tree?schNm=...
+     */
+    @GetMapping("/tree")
+    public List<Map<String, Object>> tree(
+            @RequestParam(value="schNm", required=false) String schNm) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("schNm", schNm);
+        return sql.selectList("qualDomainRule.selectDomainTreeWithRuleCount", p);
+    }
+
+    /**
+     * 카탈로그에서 도메인 룰로 매핑 (시스템/사용자 카탈로그 → TB_DOMAIN_RULE 신규 row).
+     * 시스템 기본은 fork 없이 직접 매핑 가능 (TB_DOMAIN_RULE 자체는 사용자 정의 영역).
+     */
+    @PostMapping("/rule/importFromCatalog")
+    public Response importFromCatalog(@RequestBody Map<String, String> body) {
+        Response res = new Response();
+        try {
+            assertAdmin();
+            String domainId  = body.get("domainId");
+            String catalogId = body.get("catalogId");
+            if (domainId == null || catalogId == null) {
+                throw new IllegalArgumentException("domainId, catalogId 필수");
+            }
+            // 카탈로그 row 조회
+            com.ndata.quality.model.std.QualRuleCatalogVo cat =
+                    sql.selectOne("qualRule.selectCatalogById", catalogId);
+            if (cat == null) throw new IllegalArgumentException("카탈로그 없음: " + catalogId);
+
+            DomainRuleVo vo = new DomainRuleVo();
+            vo.setDomainRuleId(StringUtils.getUUID());
+            vo.setDomainId(domainId);
+            vo.setRuleNm(cat.getCatalogNm());
+            vo.setRuleType(cat.getRuleType());
+            vo.setRuleParams(cat.getRuleParams());
+            vo.setSortOrd(1);
+            vo.setUseYn("Y");
+            vo.setDescr(cat.getDescr());
+            vo.setCretUserId(session.getUserId());
+            sql.insert("qualDomainRule.insertRule", vo);
+            res.setContents(vo.getDomainRuleId());
+            res.setResultInfo(RestResult.CODE_200.getCode(), "매핑 완료");
+        } catch (IllegalAccessException e)  { res.setResultInfo(403, e.getMessage()); }
+        catch (IllegalArgumentException e)  { res.setResultInfo(400, e.getMessage()); }
+        catch (Exception e) {
+            log.error(">> import from catalog failed", e);
+            res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+        }
+        return res;
+    }
+
     @PostMapping("/rule/save")
     public Response save(@RequestBody DomainRuleVo vo) {
         Response res = new Response();

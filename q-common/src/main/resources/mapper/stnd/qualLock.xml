@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  83번 §6-2 품질 진단 컬럼 단위 application-level mutex.
+  운영 DB 락 X — 우리 메타DB(quality.tb_qual_running_lock) 에만 row 1개 INSERT.
+-->
+<mapper namespace="qualLock">
+
+    <!--
+      lock 획득 시도. 동일 (DM_ID, OBJ_NM, ATTR_NM) 이 이미 있으면 INSERT 0건 반환.
+      반환 0 = 다른 진단이 점유 중 → 호출 측이 SKIP 처리.
+    -->
+    <insert id="acquire" parameterType="com.ndata.quality.model.std.QualRunningLockVo">
+        INSERT INTO TB_QUAL_RUNNING_LOCK (DM_ID, OBJ_NM, ATTR_NM, DIAG_ID, USER_ID, START_DT)
+        VALUES (
+            #{dmId}, #{objNm}, #{attrNm},
+            #{diagId, jdbcType=VARCHAR},
+            #{userId, jdbcType=VARCHAR},
+            COALESCE(#{startDt, jdbcType=VARCHAR}, to_char(now(),'YYYYMMDDHH24MISS'))
+        )
+        ON CONFLICT (DM_ID, OBJ_NM, ATTR_NM) DO NOTHING
+    </insert>
+
+    <!-- lock 해제 (정상/예외 무관 try-finally 에서 호출) -->
+    <delete id="release" parameterType="com.ndata.quality.model.std.QualRunningLockVo">
+        DELETE FROM TB_QUAL_RUNNING_LOCK
+         WHERE DM_ID = #{dmId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+    </delete>
+
+    <!--
+      stale lock 정리 — START_DT 가 30분 (1800초) 이상 경과한 row 자동 삭제.
+      q-executor 시작 시 + 5분 cron 으로 호출.
+    -->
+    <delete id="cleanupStale" parameterType="map">
+        DELETE FROM TB_QUAL_RUNNING_LOCK
+         WHERE START_DT &lt; to_char(now() - INTERVAL '30 minutes', 'YYYYMMDDHH24MISS')
+    </delete>
+
+    <!-- 현재 점유 중 lock 목록 (모니터링용) -->
+    <select id="listAll" resultType="com.ndata.quality.model.std.QualRunningLockVo">
+        SELECT DM_ID    AS dmId,
+               OBJ_NM   AS objNm,
+               ATTR_NM  AS attrNm,
+               DIAG_ID  AS diagId,
+               USER_ID  AS userId,
+               START_DT AS startDt
+          FROM TB_QUAL_RUNNING_LOCK
+         ORDER BY START_DT DESC
+    </select>
+
+    <!-- 특정 lock 조회 -->
+    <select id="get" parameterType="com.ndata.quality.model.std.QualRunningLockVo"
+            resultType="com.ndata.quality.model.std.QualRunningLockVo">
+        SELECT DM_ID    AS dmId,
+               OBJ_NM   AS objNm,
+               ATTR_NM  AS attrNm,
+               DIAG_ID  AS diagId,
+               USER_ID  AS userId,
+               START_DT AS startDt
+          FROM TB_QUAL_RUNNING_LOCK
+         WHERE DM_ID = #{dmId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+    </select>
+
+    <!-- 점유 건수 (Throttle 모니터링용) -->
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM TB_QUAL_RUNNING_LOCK
+    </select>
+
+</mapper>

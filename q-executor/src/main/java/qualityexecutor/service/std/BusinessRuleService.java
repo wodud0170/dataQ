@@ -53,6 +53,9 @@ public class BusinessRuleService implements Runnable {
     @Autowired
     private DataSourceUtils dataSourceUtils;
 
+    @Autowired
+    private QualLockService lockService;
+
     private static final int TOTAL_TIMEOUT_SEC      = 1800;
     private static final int SQL_TIMEOUT_SEC        = 30;
     private static final double VIOLATION_RATE_BREAK = 0.90;
@@ -82,9 +85,20 @@ public class BusinessRuleService implements Runnable {
         long startedAt = System.currentTimeMillis();
         log.info(">> BusinessRuleService start: diagId={} dmId={} obj={} attr={}",
                 diagId, dataModelId, scopeObjNm, scopeAttrNm);
+
+        // 83번 §6-4 글로벌 동시 진단 N건 제한 (default 5).
+        // 슬롯 못 얻으면 SKIP 상태로 종료 — 사용자에게 큐 적재 안내.
+        if (!lockService.tryAcquireGlobalSlot()) {
+            log.warn(">> BusinessRuleService SKIPPED — 글로벌 동시 진단 큐 가득 (max={}, used={})",
+                    lockService.globalMax(), lockService.globalMax() - lockService.globalAvailable());
+            updateStatus("SKIPPED", "글로벌 동시 진단 큐 가득. 잠시 후 재시도");
+            return;
+        }
+
         DBHandler dbHandler = null;
         long totalViolations = 0;
         int  totalRules = 0;
+        int  skippedColumns = 0;
 
         try {
             updateStatus("RUNNING", null);
@@ -122,22 +136,38 @@ public class BusinessRuleService implements Runnable {
                     continue;
                 }
 
-                // effective rule 을 QualRuleVo 로 wrap (RuleSqlBuilder 가 받는 형태)
-                QualRuleVo rule = new QualRuleVo();
-                rule.setRuleId(eff.getDomainRuleId() != null ? eff.getDomainRuleId() : eff.getCustomRuleId());
-                if (rule.getRuleId() == null) rule.setRuleId("DEFAULT_" + eff.getObjNm() + "_" + eff.getAttrNm());
-                rule.setRuleNm(eff.getEffectiveRuleNm());
-                rule.setRuleType(eff.getEffectiveRuleType());
-                rule.setRuleParams(eff.getEffectiveRuleParams());
-                rule.setSeverity("WARN");
+                // 83번 §6-2 컬럼 단위 application-level lock.
+                // 동일 컬럼이 다른 진단에 점유 중이면 SKIP — 운영 DB 락 X, 우리 메타DB 만 사용.
+                if (!lockService.acquire(eff.getDmId(), eff.getObjNm(), eff.getAttrNm(), diagId, userId)) {
+                    skippedColumns++;
+                    log.info(">> 컬럼 SKIP — {}.{} 다른 진단 점유 중", eff.getObjNm(), eff.getAttrNm());
+                    continue;
+                }
 
-                totalViolations += executeRuleOnColumn(rule, eff.getObjNm(), eff.getAttrNm(),
-                        builder, dbHandler);
-                totalRules++;
+                try {
+                    // effective rule 을 QualRuleVo 로 wrap (RuleSqlBuilder 가 받는 형태)
+                    QualRuleVo rule = new QualRuleVo();
+                    rule.setRuleId(eff.getDomainRuleId() != null ? eff.getDomainRuleId() : eff.getCustomRuleId());
+                    if (rule.getRuleId() == null) rule.setRuleId("DEFAULT_" + eff.getObjNm() + "_" + eff.getAttrNm());
+                    rule.setRuleNm(eff.getEffectiveRuleNm());
+                    rule.setRuleType(eff.getEffectiveRuleType());
+                    rule.setRuleParams(eff.getEffectiveRuleParams());
+                    rule.setSeverity("WARN");
+
+                    totalViolations += executeRuleOnColumn(rule, eff.getObjNm(), eff.getAttrNm(),
+                            builder, dbHandler);
+                    totalRules++;
+                } finally {
+                    // lock 은 정상/예외 무관 무조건 해제
+                    lockService.release(eff.getDmId(), eff.getObjNm(), eff.getAttrNm());
+                }
             }
 
-            updateFinalStats("DONE", null, totalRules, totalViolations);
-            log.info(">> BusinessRuleService DONE: rules={} totalViol={}", totalRules, totalViolations);
+            String doneMsg = skippedColumns > 0
+                    ? String.format("동시 진단 SKIP 컬럼 %d개", skippedColumns) : null;
+            updateFinalStats("DONE", doneMsg, totalRules, totalViolations);
+            log.info(">> BusinessRuleService DONE: rules={} totalViol={} skipped={}",
+                    totalRules, totalViolations, skippedColumns);
         } catch (Exception e) {
             log.error(">> BusinessRuleService failed", e);
             String msg = e.getMessage();
@@ -145,6 +175,8 @@ public class BusinessRuleService implements Runnable {
             updateStatus("ERROR", msg);
         } finally {
             try { if (dbHandler != null) dbHandler.close(); } catch (Exception ignore) {}
+            // 글로벌 슬롯 해제 — 다른 진단이 진입 가능
+            lockService.releaseGlobalSlot();
         }
     }
 

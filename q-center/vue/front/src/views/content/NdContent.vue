@@ -242,6 +242,13 @@
                     <scheduleLog :key="scheduleLogKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 83번 신규: 도메인 룰 관리 -->
+            <div v-if="this.activeContent === 'qualDomainRule'" id="tab_qualDomainRule" class="tab_contents"
+                :class="{ active: this.activeContent === 'qualDomainRule' }">
+                <keep-alive>
+                    <qualDomainRule :key="qualDomainRuleKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'qualValueProfile'" id="tab_valueProfile" class="tab_contents"
                 :class="{ active: this.activeContent === 'qualValueProfile' }">
                 <keep-alive>
@@ -379,6 +386,7 @@ import MMRoles from "./../../components/MMRoles.vue"
 import MMApproval from "./../../components/MMApproval.vue"
 import MMDatasource from "./../../components/MMDatasource.vue"
 import DSScheduleManage from "./../../components/DSScheduleManage.vue"
+import DSQualDomainRule   from "./../../components/DSQualDomainRule.vue"   // 83번 신규
 import DSQualValueProfile from "./../../components/DSQualValueProfile.vue"
 import DSQualRuleManage   from "./../../components/DSQualRuleManage.vue"
 import DSQualRuleResult   from "./../../components/DSQualRuleResult.vue"
@@ -456,6 +464,7 @@ export default {
             datasourceKey: this.createUUID(),
             scheduleManageKey: this.createUUID(),
             scheduleLogKey: this.createUUID(),
+            qualDomainRuleKey: this.createUUID(),
             qualValueProfileKey: this.createUUID(),
             qualRuleManageKey:   this.createUUID(),
             qualRuleResultKey:   this.createUUID(),
@@ -508,6 +517,7 @@ export default {
         "datasource": MMDatasource,
         "scheduleManage": DSScheduleManage,
         "scheduleLog": DSScheduleLog,
+        "qualDomainRule":   DSQualDomainRule,
         "qualValueProfile": DSQualValueProfile,
         "qualRuleManage":   DSQualRuleManage,
         "qualRuleResult":   DSQualRuleResult,
@@ -630,6 +640,9 @@ export default {
                     break;
                 case "datasource":
                     this.datasourceKey = this.createUUID();
+                    break;
+                case "qualDomainRule":
+                    this.qualDomainRuleKey = this.createUUID();
                     break;
                 case "qualValueProfile":
                     this.qualValueProfileKey = this.createUUID();

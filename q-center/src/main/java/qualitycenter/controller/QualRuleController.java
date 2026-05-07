@@ -275,11 +275,123 @@ public class QualRuleController {
         return sqlSessionTemplate.selectList("qualDiag.selectViolationSamples", p);
     }
 
-    // ==================== 카탈로그 ====================
+    // ==================== 카탈로그 (83번 §5-2 재설계) ====================
 
+    /**
+     * 카탈로그 목록 — 시스템/사용자 분리 + 분류/룰타입/이름 필터.
+     * GET /api/qual/rule/catalog?isBuiltIn=Y&domainClsfNm=전화번호&ruleType=REGEX&schNm=...
+     */
     @GetMapping("/catalog")
-    public List<QualRuleCatalogVo> catalog() {
-        return sqlSessionTemplate.selectList("qualRule.selectCatalog");
+    public List<QualRuleCatalogVo> catalog(
+            @RequestParam(value="isBuiltIn", required=false) String isBuiltIn,
+            @RequestParam(value="domainClsfNm", required=false) String domainClsfNm,
+            @RequestParam(value="ruleType", required=false) String ruleType,
+            @RequestParam(value="schNm", required=false) String schNm) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("isBuiltIn", isBuiltIn);
+        p.put("domainClsfNm", domainClsfNm);
+        p.put("ruleType", ruleType);
+        p.put("schNm", schNm);
+        return sqlSessionTemplate.selectList("qualRule.selectCatalog", p);
+    }
+
+    /**
+     * 사용자 정의 룰 추가/수정 (IS_BUILT_IN='N' 강제). 관리자만.
+     *
+     * <p>분기:</p>
+     * <ul>
+     *   <li>catalogId 미제공 → 새 UUID 발급 + INSERT</li>
+     *   <li>catalogId 제공 + 존재 안 함 → 그 ID 로 INSERT (멱등 신규)</li>
+     *   <li>catalogId 제공 + 존재 + IS_BUILT_IN='N' → UPDATE</li>
+     *   <li>catalogId 제공 + 존재 + IS_BUILT_IN='Y' → 거부 (시스템 기본 보호)</li>
+     * </ul>
+     */
+    @PostMapping("/catalog/save")
+    public Response saveCatalog(@RequestBody QualRuleCatalogVo vo) {
+        Response res = new Response();
+        try {
+            assertAdmin();
+            if (vo.getCatalogNm() == null || vo.getCatalogNm().trim().isEmpty()
+                    || vo.getRuleType() == null) {
+                throw new IllegalArgumentException("catalogNm, ruleType 필수");
+            }
+
+            String catalogId = vo.getCatalogId();
+            QualRuleCatalogVo existing = (catalogId != null && !catalogId.trim().isEmpty())
+                    ? sqlSessionTemplate.selectOne("qualRule.selectCatalogById", catalogId)
+                    : null;
+
+            if (existing != null) {
+                // 기존 row — 시스템 기본은 거부
+                if (!"N".equals(existing.getIsBuiltIn())) {
+                    throw new IllegalStateException(
+                        "수정 거부 — 시스템 기본 룰 (IS_BUILT_IN='Y') 은 수정 불가. [복사] 후 사용자 정의로 편집하세요.");
+                }
+                int n = sqlSessionTemplate.update("qualRule.updateUserCatalog", vo);
+                if (n == 0) throw new IllegalStateException("UPDATE 실패 (동시성 또는 권한)");
+            } else {
+                // 신규 INSERT
+                if (catalogId == null || catalogId.trim().isEmpty()) {
+                    vo.setCatalogId(StringUtils.getUUID());
+                }
+                int n = sqlSessionTemplate.insert("qualRule.insertUserCatalog", vo);
+                if (n != 1) throw new IllegalStateException("INSERT 실패");
+            }
+            res.setContents(vo.getCatalogId());
+            res.setResultInfo(RestResult.CODE_200);
+        } catch (Exception e) {
+            res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+        }
+        return res;
+    }
+
+    /** 사용자 정의 룰 삭제 — IS_BUILT_IN='N' 가드. */
+    @PostMapping("/catalog/delete")
+    public Response deleteCatalog(@RequestBody Map<String, String> body) {
+        Response res = new Response();
+        try {
+            assertAdmin();
+            String catalogId = body.get("catalogId");
+            if (catalogId == null) throw new IllegalArgumentException("catalogId 필수");
+            int n = sqlSessionTemplate.delete("qualRule.deleteUserCatalog", catalogId);
+            if (n == 0) {
+                throw new IllegalStateException(
+                    "삭제 거부 — 시스템 기본 룰은 삭제 불가 (또는 존재하지 않음).");
+            }
+            res.setResultInfo(RestResult.CODE_200);
+        } catch (Exception e) {
+            res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+        }
+        return res;
+    }
+
+    /**
+     * 카탈로그 [복사] (fork) — 시스템/사용자 무관 row 를 사용자 정의 신규 row 로 복제.
+     * 새 catalog_id 발급 + 'IS_BUILT_IN'=N 강제. 이름은 '<원본> (복사본)' 자동 (override 가능).
+     */
+    @PostMapping("/catalog/fork")
+    public Response forkCatalog(@RequestBody Map<String, String> body) {
+        Response res = new Response();
+        try {
+            assertAdmin();
+            String srcId = body.get("srcCatalogId");
+            if (srcId == null) throw new IllegalArgumentException("srcCatalogId 필수");
+            QualRuleCatalogVo src = sqlSessionTemplate.selectOne("qualRule.selectCatalogById", srcId);
+            if (src == null) throw new IllegalArgumentException("원본 카탈로그 없음: " + srcId);
+
+            Map<String, Object> p = new HashMap<>();
+            String newId = StringUtils.getUUID();
+            p.put("newCatalogId",   newId);
+            p.put("newCatalogNm",   body.get("newCatalogNm"));   // null 가능
+            p.put("srcCatalogId",   srcId);
+            int n = sqlSessionTemplate.insert("qualRule.forkCatalog", p);
+            if (n != 1) throw new IllegalStateException("fork 실패");
+            res.setContents(newId);
+            res.setResultInfo(RestResult.CODE_200);
+        } catch (Exception e) {
+            res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+        }
+        return res;
     }
 
     @PostMapping("/importFromCatalog")
@@ -293,11 +405,7 @@ public class QualRuleController {
             String attrNm    = (String) body.get("attrNm");
             if (dmId == null || catalogId == null) throw new IllegalArgumentException("dataModelId, catalogId 필수");
 
-            // selectCatalogById 매퍼 없음 — list 에서 필터
-            List<QualRuleCatalogVo> all = sqlSessionTemplate.selectList("qualRule.selectCatalog");
-            QualRuleCatalogVo cat = all.stream()
-                    .filter(c -> catalogId.equals(c.getCatalogId()))
-                    .findFirst().orElse(null);
+            QualRuleCatalogVo cat = sqlSessionTemplate.selectOne("qualRule.selectCatalogById", catalogId);
             if (cat == null) throw new IllegalArgumentException("카탈로그 없음");
 
             QualRuleVo vo = new QualRuleVo();

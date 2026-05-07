@@ -94,19 +94,106 @@
          WHERE RULE_ID = #{ruleId}
     </update>
 
-    <!-- 카탈로그 -->
-    <select id="selectCatalog" resultType="com.ndata.quality.model.std.QualRuleCatalogVo">
-        SELECT CATALOG_ID    AS catalogId,
-               CATALOG_NM    AS catalogNm,
-               RULE_TYPE     AS ruleType,
-               RULE_PARAMS   AS ruleParams,
-               CATEGORY      AS category,
-               DESCR         AS descr,
-               USE_YN        AS useYn
+    <!--
+      카탈로그 — 83번 §2-1 + §5-2 재설계.
+      isBuiltIn / domainClsfNm 필드 추가.
+      시스템 기본 (Y) / 사용자 정의 (N) 분리. 검색 필터 (분류명, 룰타입) 옵션.
+    -->
+    <select id="selectCatalog" parameterType="map"
+            resultType="com.ndata.quality.model.std.QualRuleCatalogVo">
+        SELECT CATALOG_ID     AS catalogId,
+               CATALOG_NM     AS catalogNm,
+               RULE_TYPE      AS ruleType,
+               RULE_PARAMS    AS ruleParams,
+               CATEGORY       AS category,
+               DESCR          AS descr,
+               USE_YN         AS useYn,
+               IS_BUILT_IN    AS isBuiltIn,
+               DOMAIN_CLSF_NM AS domainClsfNm
           FROM TB_QUAL_RULE_CATALOG
          WHERE USE_YN = 'Y'
-         ORDER BY CATEGORY, CATALOG_NM
+        <if test="isBuiltIn != null and isBuiltIn != ''">
+           AND IS_BUILT_IN = #{isBuiltIn}
+        </if>
+        <if test="domainClsfNm != null and domainClsfNm != ''">
+           AND DOMAIN_CLSF_NM = #{domainClsfNm}
+        </if>
+        <if test="ruleType != null and ruleType != ''">
+           AND RULE_TYPE = #{ruleType}
+        </if>
+        <if test="schNm != null and schNm != ''">
+           AND CATALOG_NM ILIKE '%' || #{schNm} || '%'
+        </if>
+         ORDER BY IS_BUILT_IN DESC, CATEGORY, CATALOG_NM
     </select>
+
+    <!-- 단건 조회 -->
+    <select id="selectCatalogById" parameterType="String"
+            resultType="com.ndata.quality.model.std.QualRuleCatalogVo">
+        SELECT CATALOG_ID AS catalogId, CATALOG_NM AS catalogNm,
+               RULE_TYPE AS ruleType, RULE_PARAMS AS ruleParams,
+               CATEGORY AS category, DESCR AS descr, USE_YN AS useYn,
+               IS_BUILT_IN AS isBuiltIn, DOMAIN_CLSF_NM AS domainClsfNm
+          FROM TB_QUAL_RULE_CATALOG
+         WHERE CATALOG_ID = #{catalogId}
+    </select>
+
+    <!--
+      사용자 정의 INSERT.
+      IS_BUILT_IN 강제 'N' — 시스템 기본 신규 등록은 SQL 시드로만 가능 (UI 차단).
+    -->
+    <insert id="insertUserCatalog" parameterType="com.ndata.quality.model.std.QualRuleCatalogVo">
+        INSERT INTO TB_QUAL_RULE_CATALOG
+            (CATALOG_ID, CATALOG_NM, RULE_TYPE, RULE_PARAMS, CATEGORY, DESCR, USE_YN, IS_BUILT_IN, DOMAIN_CLSF_NM)
+        VALUES
+            (#{catalogId}, #{catalogNm}, #{ruleType},
+             #{ruleParams, jdbcType=VARCHAR},
+             #{category, jdbcType=VARCHAR},
+             #{descr, jdbcType=VARCHAR},
+             COALESCE(#{useYn, jdbcType=VARCHAR}, 'Y'),
+             'N',
+             #{domainClsfNm, jdbcType=VARCHAR})
+    </insert>
+
+    <!--
+      사용자 정의 UPDATE.
+      WHERE IS_BUILT_IN='N' 가드 — 시스템 기본은 절대 수정 안 됨.
+    -->
+    <update id="updateUserCatalog" parameterType="com.ndata.quality.model.std.QualRuleCatalogVo">
+        UPDATE TB_QUAL_RULE_CATALOG SET
+            CATALOG_NM     = #{catalogNm},
+            RULE_TYPE      = #{ruleType},
+            RULE_PARAMS    = #{ruleParams, jdbcType=VARCHAR},
+            CATEGORY       = #{category, jdbcType=VARCHAR},
+            DESCR          = #{descr, jdbcType=VARCHAR},
+            USE_YN         = COALESCE(#{useYn, jdbcType=VARCHAR}, USE_YN),
+            DOMAIN_CLSF_NM = #{domainClsfNm, jdbcType=VARCHAR}
+         WHERE CATALOG_ID = #{catalogId}
+           AND IS_BUILT_IN = 'N'
+    </update>
+
+    <!-- 사용자 정의 DELETE — IS_BUILT_IN='N' 가드 -->
+    <delete id="deleteUserCatalog" parameterType="String">
+        DELETE FROM TB_QUAL_RULE_CATALOG
+         WHERE CATALOG_ID = #{catalogId}
+           AND IS_BUILT_IN = 'N'
+    </delete>
+
+    <!--
+      [복사] (fork) — 시스템 기본 또는 사용자 정의 row 를 사용자 정의 신규 row 로 복제.
+      신규 catalog_id 는 호출 측이 생성 (UUID 기반), 이름은 '<원본명> (복사본)'.
+    -->
+    <insert id="forkCatalog" parameterType="map">
+        INSERT INTO TB_QUAL_RULE_CATALOG
+            (CATALOG_ID, CATALOG_NM, RULE_TYPE, RULE_PARAMS, CATEGORY, DESCR, USE_YN, IS_BUILT_IN, DOMAIN_CLSF_NM)
+        SELECT #{newCatalogId},
+               COALESCE(#{newCatalogNm}, CATALOG_NM || ' (복사본)'),
+               RULE_TYPE, RULE_PARAMS, CATEGORY, DESCR, 'Y',
+               'N',                                  -- 항상 사용자 정의로 복제
+               DOMAIN_CLSF_NM
+          FROM TB_QUAL_RULE_CATALOG
+         WHERE CATALOG_ID = #{srcCatalogId}
+    </insert>
 
     <!-- 도메인 묶음 룰 → 컬럼별 전개 (RULE_TYPE/RULE_PARAMS 그대로 재사용) -->
     <select id="expandDomainRuleToColumns" parameterType="map" resultType="map">
