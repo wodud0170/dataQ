@@ -38,4 +38,38 @@ public class QualStatsController {
         p.put("attrNm", attrNm);
         return sql.selectList("qualDiag.selectProfileTrend", p);
     }
+
+    /** 83번 Step7 — 모델 단위 적합률 시계열 (라인 차트용) */
+    @GetMapping("/modelTrend")
+    public List<Map<String, Object>> modelTrend(@RequestParam String dmId) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("dmId", dmId);
+        return sql.selectList("qualDiag.selectModelConformTrend", p);
+    }
+
+    /** 83번 Step7 — 컬럼 단위 룰별 적합률 시계열 (멀티 라인 차트용) */
+    @GetMapping("/columnRuleTrend")
+    public List<Map<String, Object>> columnRuleTrend(
+            @RequestParam String dmId,
+            @RequestParam String objNm,
+            @RequestParam String attrNm) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("dmId", dmId);
+        p.put("objNm", objNm);
+        p.put("attrNm", attrNm);
+        return sql.selectList("qualDiag.selectColumnRuleTrend", p);
+    }
+
+    /** 83번 Step7 — 컬럼 단위 값 프로파일 추이 (NULL%/DISTINCT%) */
+    @GetMapping("/columnProfileTrend")
+    public List<Map<String, Object>> columnProfileTrend(
+            @RequestParam String dmId,
+            @RequestParam String objNm,
+            @RequestParam String attrNm) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("dmId", dmId);
+        p.put("objNm", objNm);
+        p.put("attrNm", attrNm);
+        return sql.selectList("qualDiag.selectColumnProfileTrendChart", p);
+    }
 }

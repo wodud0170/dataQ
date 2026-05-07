@@ -215,7 +215,7 @@
                COUNT(*)                                       AS "ruleCnt",
                SUM(COALESCE(rr.TOTAL_CNT, 0))                 AS "totalCnt",
                SUM(COALESCE(rr.VIOLATION_CNT, 0))             AS "violationCnt",
-               CASE WHEN SUM(COALESCE(rr.TOTAL_CNT,0)) = 0 THEN NULL
+               CASE WHEN SUM(COALESCE(rr.TOTAL_CNT,0)) = 0 THEN NULL::numeric
                     ELSE 100.0 - SUM(COALESCE(rr.VIOLATION_CNT,0)) * 100.0
                                   / SUM(rr.TOTAL_CNT)
                END AS "conformRate"
@@ -278,7 +278,7 @@
                COUNT(DISTINCT rr.OBJ_NM || '.' || rr.ATTR_NM) AS "colCnt",
                SUM(COALESCE(rr.TOTAL_CNT, 0))     AS "totalCnt",
                SUM(COALESCE(rr.VIOLATION_CNT, 0)) AS "violationCnt",
-               CASE WHEN SUM(COALESCE(rr.TOTAL_CNT,0)) = 0 THEN NULL
+               CASE WHEN SUM(COALESCE(rr.TOTAL_CNT,0)) = 0 THEN NULL::numeric
                     ELSE 100.0 - SUM(COALESCE(rr.VIOLATION_CNT,0)) * 100.0
                                   / SUM(rr.TOTAL_CNT)
                END AS "conformRate"
@@ -356,6 +356,78 @@
         <if test="attrNm != null"> AND ATTR_NM = #{attrNm} </if>
          ORDER BY DIAG_DT DESC
          LIMIT 100
+    </select>
+
+    <!--
+      83번 Step 7 — 모델 단위 적합률 시계열 (룰 진단 이력 N건 평균).
+      DONE 만 집계, 최근 30개로 제한 (라인 차트 가독성).
+    -->
+    <select id="selectModelConformTrend" parameterType="map" resultType="map">
+        SELECT dh.DIAG_ID  AS "diagId",
+               dh.DIAG_DT  AS "diagDt",
+               dh.END_DT   AS "endDt",
+               COUNT(rr.*) AS "ruleCnt",
+               SUM(COALESCE(rr.TOTAL_CNT, 0))     AS "totalCnt",
+               SUM(COALESCE(rr.VIOLATION_CNT, 0)) AS "violationCnt",
+               100.0 - SUM(COALESCE(rr.VIOLATION_CNT,0)) * 100.0
+                       / NULLIF(SUM(rr.TOTAL_CNT), 0) AS "conformRate"
+          FROM TB_QUAL_DIAG_HISTORY dh
+          LEFT JOIN TB_QUAL_RULE_RESULT rr ON rr.DIAG_ID = dh.DIAG_ID
+         WHERE dh.DM_ID = #{dmId}
+           AND dh.DIAG_TYPE = 'RULE'
+           AND dh.STATUS = 'DONE'
+         GROUP BY dh.DIAG_ID, dh.DIAG_DT, dh.END_DT
+        HAVING SUM(COALESCE(rr.TOTAL_CNT, 0)) > 0
+         ORDER BY dh.DIAG_DT
+         LIMIT 30
+    </select>
+
+    <!--
+      83번 Step 7 — 컬럼 단위 룰별 적합률 추이 (멀티 라인 차트용).
+      objNm + attrNm 필수. 컬럼이 받은 모든 룰의 진단별 적합률.
+    -->
+    <select id="selectColumnRuleTrend" parameterType="map" resultType="map">
+        SELECT dh.DIAG_ID         AS "diagId",
+               dh.DIAG_DT         AS "diagDt",
+               rr.RULE_ID         AS "ruleId",
+               COALESCE(r.RULE_NM, '(deleted)') AS "ruleNm",
+               r.RULE_TYPE        AS "ruleType",
+               rr.TOTAL_CNT       AS "totalCnt",
+               rr.VIOLATION_CNT   AS "violationCnt",
+               rr.VIOLATION_RATE  AS "violationRate",
+               (CASE WHEN rr.VIOLATION_RATE IS NULL THEN NULL
+                     ELSE 100.0 - rr.VIOLATION_RATE END) AS "conformRate"
+          FROM TB_QUAL_RULE_RESULT rr
+          JOIN TB_QUAL_DIAG_HISTORY dh ON dh.DIAG_ID = rr.DIAG_ID
+          LEFT JOIN TB_QUAL_RULE r ON r.RULE_ID = rr.RULE_ID
+         WHERE dh.DM_ID = #{dmId}
+           AND rr.OBJ_NM = #{objNm}
+           AND rr.ATTR_NM = #{attrNm}
+           AND dh.STATUS = 'DONE'
+         ORDER BY dh.DIAG_DT, rr.RULE_ID
+         LIMIT 200
+    </select>
+
+    <!--
+      83번 Step 7 — 컬럼 단위 값 프로파일 추이 (NULL%/DISTINCT% 추이).
+      직전 selectProfileTrend 와 같은 테이블이지만 % 계산 + ASC 정렬.
+    -->
+    <select id="selectColumnProfileTrendChart" parameterType="map" resultType="map">
+        SELECT DIAG_ID      AS "diagId",
+               DIAG_DT      AS "diagDt",
+               TOTAL_CNT    AS "totalCnt",
+               NULL_CNT     AS "nullCnt",
+               DISTINCT_CNT AS "distinctCnt",
+               CASE WHEN COALESCE(TOTAL_CNT, 0) = 0 THEN NULL
+                    ELSE NULL_CNT * 100.0 / TOTAL_CNT END     AS "nullPct",
+               CASE WHEN COALESCE(TOTAL_CNT, 0) = 0 THEN NULL
+                    ELSE DISTINCT_CNT * 100.0 / TOTAL_CNT END AS "distinctPct"
+          FROM TB_QUAL_PROFILE_HISTORY
+         WHERE DM_ID = #{dmId}
+           AND OBJ_NM = #{objNm}
+           AND ATTR_NM = #{attrNm}
+         ORDER BY DIAG_DT
+         LIMIT 30
     </select>
 
 </mapper>

@@ -90,12 +90,14 @@ GROUPS = [
     ("진단 제외 관리 (79번)", [
         "test_diag_target_imsi.py",
     ]),
-    ("데이터 품질 진단 재설계 (83번 Step 1~5)", [
+    ("데이터 품질 진단 재설계 (83번 Step 1~7)", [
         "test_qual_lock.py",            # Step 1 — Lock + Throttle + stale (13 phase)
         "test_qual_catalog.py",         # Step 2 — 시드 + CRUD + fork + 권한 (16 phase)
         "test_qual_domain_rule.py",     # Step 3 — 트리 + 타입별 룰 + UI (13 phase)
         "test_qual_col_rule.py",        # Step 4 — 검증 대상 + 분류 필터 + drawer (16 phase)
         "test_qual_diag_progress.py",   # Step 5 — 진단 실행 + 진행률 폴링 (21 phase)
+        "test_qual_rule_result.py",     # Step 6 — 분류 단위 집계 + drill (13 phase)
+        "test_qual_stats_trend.py",     # Step 7 — 시계열 추이 + 차트 (13 phase)
     ]),
 ]
 
