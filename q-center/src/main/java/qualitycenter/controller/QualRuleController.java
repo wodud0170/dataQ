@@ -282,6 +282,44 @@ public class QualRuleController {
         return sqlSessionTemplate.selectOne("qualDiag.selectHistoryById", diagId);
     }
 
+    /** 83번 Step6 — 진단 결과 도메인 분류 단위 집계 (적합률 막대용) */
+    @GetMapping("/resultByClsf")
+    public List<Map<String, Object>> resultByClsf(@RequestParam String diagId) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("diagId", diagId);
+        return sqlSessionTemplate.selectList("qualDiag.selectRuleResultByClsf", p);
+    }
+
+    /** 83번 Step6 — 분류 클릭 drill-down: 그 분류 컬럼별 룰 결과 */
+    @GetMapping("/resultByClsfDrill")
+    public List<Map<String, Object>> resultByClsfDrill(
+            @RequestParam String diagId,
+            @RequestParam String domainClsfNm) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("diagId", diagId);
+        p.put("domainClsfNm", domainClsfNm);
+        return sqlSessionTemplate.selectList("qualDiag.selectRuleResultByClsfDrill", p);
+    }
+
+    /** 83번 Step6 — 룰 단위 집계 */
+    @GetMapping("/resultByRule")
+    public List<Map<String, Object>> resultByRule(@RequestParam String diagId) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("diagId", diagId);
+        return sqlSessionTemplate.selectList("qualDiag.selectRuleResultByRule", p);
+    }
+
+    /** 83번 Step6 — 진단 이력 리스트 (모델 + 진단 단위 탭에서 history 선택용) */
+    @GetMapping("/historyList")
+    public List<Map<String, Object>> historyList(
+            @RequestParam(required = false) String dmId,
+            @RequestParam(required = false) String diagType) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("dmId", dmId);
+        p.put("diagType", diagType);
+        return sqlSessionTemplate.selectList("qualDiag.selectHistoryList", p);
+    }
+
     // ==================== 카탈로그 (83번 §5-2 재설계) ====================
 
     /**

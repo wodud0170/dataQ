@@ -82,6 +82,31 @@
            AND h.STATUS IN ('READY','RUNNING')
     </select>
 
+    <!-- 83번 Step6 — 진단 이력 리스트 (모델/진단타입 필터, 최근 50) -->
+    <select id="selectHistoryList" parameterType="map" resultType="map">
+        SELECT h.DIAG_ID         AS "diagId",
+               h.DM_ID           AS "dmId",
+               dm.DM_NM          AS "dataModelNm",
+               h.DIAG_TYPE       AS "diagType",
+               h.DIAG_DT         AS "diagDt",
+               h.END_DT          AS "endDt",
+               h.STATUS          AS "status",
+               COALESCE(h.TOTAL_RULES, 0)      AS "totalRules",
+               COALESCE(h.TOTAL_COLS, 0)       AS "totalCols",
+               COALESCE(h.TOTAL_VIOLATIONS, 0) AS "totalViolations",
+               COALESCE(h.PROGRESS_DONE, 0)    AS "progressDone",
+               COALESCE(h.PROGRESS_TOTAL, 0)   AS "progressTotal",
+               COALESCE(h.EXEC_USER_ID, '')    AS "execUserId"
+          FROM TB_QUAL_DIAG_HISTORY h
+          LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DM_ID
+        <where>
+            <if test="dmId != null and dmId != ''">     AND h.DM_ID     = #{dmId}     </if>
+            <if test="diagType != null and diagType != ''"> AND h.DIAG_TYPE = #{diagType} </if>
+        </where>
+         ORDER BY h.DIAG_DT DESC
+         LIMIT 50
+    </select>
+
     <!-- ========================================================== -->
     <!-- 값 프로파일링 결과 (UPSERT)                                   -->
     <!-- ========================================================== -->
@@ -170,6 +195,98 @@
           LEFT JOIN TB_QUAL_RULE r ON r.RULE_ID = rr.RULE_ID
          WHERE rr.DIAG_ID = #{diagId}
          ORDER BY rr.OBJ_NM, rr.ATTR_NM, r.RULE_NM
+    </select>
+
+    <!--
+      83번 Step 6 — 진단 결과 도메인 분류 단위 집계.
+      DIAG_ID 의 RULE_RESULT 를 컬럼 메타(ATTR → TERMS → DOMAIN)로 join 해서 분류별 sum.
+      미분류(domain 없는) 컬럼은 '미분류' bucket.
+    -->
+    <select id="selectRuleResultByClsf" parameterType="map" resultType="map">
+        WITH col_clsf AS (
+          SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM,
+                 COALESCE(d.DOMAIN_CLSF_NM, '미분류') AS DOMAIN_CLSF_NM
+            FROM TB_DATA_MODEL_ATTR a
+            LEFT JOIN TB_TERMS t  ON t.TERMS_NM  = a.ATTR_NM_KR
+            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM = t.DOMAIN_NM
+        )
+        SELECT COALESCE(cc.DOMAIN_CLSF_NM, '미분류') AS "domainClsfNm",
+               COUNT(DISTINCT rr.OBJ_NM || '.' || rr.ATTR_NM) AS "colCnt",
+               COUNT(*)                                       AS "ruleCnt",
+               SUM(COALESCE(rr.TOTAL_CNT, 0))                 AS "totalCnt",
+               SUM(COALESCE(rr.VIOLATION_CNT, 0))             AS "violationCnt",
+               CASE WHEN SUM(COALESCE(rr.TOTAL_CNT,0)) = 0 THEN NULL
+                    ELSE 100.0 - SUM(COALESCE(rr.VIOLATION_CNT,0)) * 100.0
+                                  / SUM(rr.TOTAL_CNT)
+               END AS "conformRate"
+          FROM TB_QUAL_RULE_RESULT rr
+          JOIN TB_QUAL_DIAG_HISTORY dh ON dh.DIAG_ID = rr.DIAG_ID
+          LEFT JOIN col_clsf cc
+            ON cc.DM_ID = dh.DM_ID
+           AND cc.OBJ_NM = rr.OBJ_NM
+           AND cc.ATTR_NM = rr.ATTR_NM
+         WHERE rr.DIAG_ID = #{diagId}
+         GROUP BY COALESCE(cc.DOMAIN_CLSF_NM, '미분류')
+         ORDER BY "conformRate" NULLS LAST, "domainClsfNm"
+    </select>
+
+    <!--
+      83번 Step 6 — 분류 drill-down: 특정 분류의 컬럼별 결과.
+    -->
+    <select id="selectRuleResultByClsfDrill" parameterType="map" resultType="map">
+        WITH col_clsf AS (
+          SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM,
+                 COALESCE(d.DOMAIN_CLSF_NM, '미분류') AS DOMAIN_CLSF_NM,
+                 d.DOMAIN_NM
+            FROM TB_DATA_MODEL_ATTR a
+            LEFT JOIN TB_TERMS t  ON t.TERMS_NM  = a.ATTR_NM_KR
+            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM = t.DOMAIN_NM
+        )
+        SELECT rr.OBJ_NM         AS "objNm",
+               rr.ATTR_NM        AS "attrNm",
+               COALESCE(cc.DOMAIN_NM, '') AS "domainNm",
+               r.RULE_NM         AS "ruleNm",
+               r.RULE_TYPE       AS "ruleType",
+               rr.TOTAL_CNT      AS "totalCnt",
+               rr.VIOLATION_CNT  AS "violationCnt",
+               rr.VIOLATION_RATE AS "violationRate",
+               (CASE WHEN rr.VIOLATION_RATE IS NULL THEN NULL
+                     ELSE 100.0 - rr.VIOLATION_RATE END) AS "conformRate",
+               rr.RULE_ID        AS "ruleId"
+          FROM TB_QUAL_RULE_RESULT rr
+          JOIN TB_QUAL_DIAG_HISTORY dh ON dh.DIAG_ID = rr.DIAG_ID
+          LEFT JOIN TB_QUAL_RULE r ON r.RULE_ID = rr.RULE_ID
+          LEFT JOIN col_clsf cc
+            ON cc.DM_ID = dh.DM_ID
+           AND cc.OBJ_NM = rr.OBJ_NM
+           AND cc.ATTR_NM = rr.ATTR_NM
+         WHERE rr.DIAG_ID = #{diagId}
+           AND COALESCE(cc.DOMAIN_CLSF_NM, '미분류') = #{domainClsfNm}
+         ORDER BY rr.VIOLATION_RATE DESC NULLS LAST,
+                  rr.OBJ_NM, rr.ATTR_NM
+    </select>
+
+    <!--
+      83번 Step 6 — 룰 단위 집계 (룰 기준 / 다중 컬럼 합산).
+    -->
+    <select id="selectRuleResultByRule" parameterType="map" resultType="map">
+        SELECT rr.RULE_ID                 AS "ruleId",
+               COALESCE(r.RULE_NM, '(deleted)') AS "ruleNm",
+               r.RULE_TYPE                AS "ruleType",
+               r.SEVERITY                 AS "severity",
+               COUNT(*)                   AS "applyCnt",
+               COUNT(DISTINCT rr.OBJ_NM || '.' || rr.ATTR_NM) AS "colCnt",
+               SUM(COALESCE(rr.TOTAL_CNT, 0))     AS "totalCnt",
+               SUM(COALESCE(rr.VIOLATION_CNT, 0)) AS "violationCnt",
+               CASE WHEN SUM(COALESCE(rr.TOTAL_CNT,0)) = 0 THEN NULL
+                    ELSE 100.0 - SUM(COALESCE(rr.VIOLATION_CNT,0)) * 100.0
+                                  / SUM(rr.TOTAL_CNT)
+               END AS "conformRate"
+          FROM TB_QUAL_RULE_RESULT rr
+          LEFT JOIN TB_QUAL_RULE r ON r.RULE_ID = rr.RULE_ID
+         WHERE rr.DIAG_ID = #{diagId}
+         GROUP BY rr.RULE_ID, r.RULE_NM, r.RULE_TYPE, r.SEVERITY
+         ORDER BY "conformRate" NULLS LAST, "ruleNm"
     </select>
 
     <!-- 위반 샘플 -->
