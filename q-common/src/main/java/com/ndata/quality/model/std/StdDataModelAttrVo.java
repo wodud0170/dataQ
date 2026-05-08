@@ -22,6 +22,9 @@ public class StdDataModelAttrVo {
 	private String[] wordStndLst;
 	private String pkYn;
 	private String fkYn;
+	// 85번 — XMI 2.1 관계 매핑용. FK 일 때 참조 부모 테이블/컬럼.
+	private String fkParentObjNm;
+	private String fkParentAttrNm;
 	private String defaultVal;
 	private short attrOrder;
 	private String useYn;

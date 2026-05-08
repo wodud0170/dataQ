@@ -150,20 +150,36 @@ public class XmiParser {
         col.put("attrNm", attrName);
         col.put("attrNmKr", attrName);
 
-        // 데이터타입 — 우선순위:
-        // 1) 자식 <type href="...#String"> PrimitiveType → href 의 # 뒤 텍스트
-        // 2) type 속성 (id 참조) → classIdToName 또는 raw
-        String dataType = resolveDataType(attrEl, classIdToName);
+        // 데이터타입 + FK parent 동시 결정
+        // - 자식 <type href="...#String"> PrimitiveType → 단순 타입
+        // - type 속성 (id 참조) → 다른 클래스 가리키면 FK 의미 → parent obj 추출
+        String typeAttr = attrEl.getAttribute("type");
+        String parentClassName = (typeAttr != null && !typeAttr.isEmpty())
+                ? classIdToName.get(typeAttr) : null;
+
+        String dataType;
+        boolean isFk = false;
+        if (parentClassName != null) {
+            // FK — 부모 클래스명. dataType 은 부모 PK 데이터타입을 따라야 하나
+            // 1차 POC: dataType 을 'FK->PARENT' 또는 그냥 부모명으로 표시 + FK 정보 별도 저장
+            dataType = parentClassName;
+            isFk = true;
+            col.put("fkParentObjNm",  parentClassName);
+            // 부모 PK 컬럼명은 추후 export/import 결합 시 결정. 1차는 비움
+            col.put("fkParentAttrNm", null);
+        } else {
+            // PrimitiveType href 또는 raw type 속성
+            dataType = resolveDataType(attrEl, classIdToName);
+        }
         col.put("dataType", dataType != null ? dataType : "VARCHAR");
         col.put("dataLen", 0L);     // XMI 에 길이 정보 없음 (tagged value 로 가능하나 1차 POC 미지원)
 
         // nullable: lowerValue 가 0이면 null 허용
-        // upperValue 가 *(또는 -1) 이면 multi — 무관
         col.put("nullableYn", parseNullable(attrEl) ? "Y" : "N");
 
-        // PK 여부: XMI 표준엔 직접 표현 X. tagged value 또는 stereotype 으로 가능.
-        // 1차 POC: stereotype 'PK' / 'PrimaryKey' 또는 isID 속성 체크
+        // PK 여부: isID 속성 (UML 2.5)
         col.put("pkYn", parsePk(attrEl) ? "Y" : "N");
+        col.put("fkYn", isFk ? "Y" : "N");
 
         col.put("attrOrder", (short) order);
         columns.add(col);

@@ -39,6 +39,8 @@
 		<result property="nullableYn" column="NULLABLE_YN"/>
 		<result property="pkYn" column="PK_YN"/>
 		<result property="fkYn" column="FK_YN"/>
+		<result property="fkParentObjNm"  column="FK_PARENT_OBJ_NM"/>
+		<result property="fkParentAttrNm" column="FK_PARENT_ATTR_NM"/>
 		<result property="defaultVal" column="DEFAULT_VAL"/>
 		<result property="attrOrder" column="ATTR_ORD"/>
 		<!-- 79번 진단 대상 제외 관리 -->
@@ -262,6 +264,8 @@
 				,A.NULLABLE_YN
 				,A.PK_YN
 				,A.FK_YN
+				,A.FK_PARENT_OBJ_NM
+				,A.FK_PARENT_ATTR_NM
 				,A.DEFAULT_VAL
 				,A.ATTR_ORD
 				,A.STND_DIAG_TARGET_YN
@@ -296,6 +300,8 @@
 				,A.NULLABLE_YN
 				,A.PK_YN
 				,A.FK_YN
+				,A.FK_PARENT_OBJ_NM
+				,A.FK_PARENT_ATTR_NM
 				,A.DEFAULT_VAL
 				,A.ATTR_ORD
 			from TB_DATA_MODEL_ATTR A
@@ -382,6 +388,8 @@
 			,A.NULLABLE_YN
 			,A.PK_YN
 			,A.FK_YN
+			,A.FK_PARENT_OBJ_NM
+			,A.FK_PARENT_ATTR_NM
 			,A.DEFAULT_VAL
 			,A.ATTR_ORD
 		from TB_DATA_MODEL_ATTR A
@@ -410,6 +418,8 @@
 			,A.NULLABLE_YN
 			,A.PK_YN
 			,A.FK_YN
+			,A.FK_PARENT_OBJ_NM
+			,A.FK_PARENT_ATTR_NM
 			,A.DEFAULT_VAL
 			,A.ATTR_ORD
 		from TB_DATA_MODEL_ATTR A
@@ -426,11 +436,16 @@
 	<select id="selectDataModelAttrListByClctIdRaw" parameterType="String" resultType="java.util.HashMap">
 		SELECT O.OBJ_OWNER AS "owner", A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm",
 			A.DATA_TYPE AS "dataType", A.DATA_LEN AS "dataLen",
-			A.NULLABLE_YN AS "nullableYn"
+			A.NULLABLE_YN AS "nullableYn",
+			A.PK_YN AS "pkYn",
+			A.FK_YN AS "fkYn",
+			A.FK_PARENT_OBJ_NM  AS "fkParentObjNm",
+			A.FK_PARENT_ATTR_NM AS "fkParentAttrNm",
+			A.ATTR_ORD AS "attrOrder"
 		FROM TB_DATA_MODEL_ATTR A
 		INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID = O.DM_ID AND A.OBJ_NM = O.OBJ_NM
 		WHERE A.DM_ID = #{clctId} AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
-		ORDER BY O.OBJ_OWNER, A.OBJ_NM, A.ATTR_NM
+		ORDER BY O.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD, A.ATTR_NM
 	</select>
 
 	<!-- DM_ID 기반 인덱스 조회 (CLCT 폐기 이후 표준 조회 경로) -->
@@ -487,6 +502,8 @@
 				,A.NULLABLE_YN
 				,A.PK_YN
 				,A.FK_YN
+				,A.FK_PARENT_OBJ_NM
+				,A.FK_PARENT_ATTR_NM
 				,A.DEFAULT_VAL
 				,A.ATTR_ORD
 			from TB_DATA_MODEL_ATTR	A
@@ -622,6 +639,8 @@
 			,NULLABLE_YN
 			,PK_YN
 			,FK_YN
+			,FK_PARENT_OBJ_NM
+			,FK_PARENT_ATTR_NM
 			,DEFAULT_VAL
 			,ATTR_ORD
 			,TERMS_STND_YN
@@ -642,6 +661,8 @@
 			,#{nullableYn, jdbcType=VARCHAR}
 			,#{pkYn, jdbcType=VARCHAR}
 			,#{fkYn, jdbcType=VARCHAR}
+			,#{fkParentObjNm, jdbcType=VARCHAR}
+			,#{fkParentAttrNm, jdbcType=VARCHAR}
 			,#{defaultVal, jdbcType=VARCHAR}
 			,#{attrOrder, jdbcType=SMALLINT}
 			,COALESCE(#{termsStndYn, jdbcType=VARCHAR}, 'N')
@@ -657,6 +678,8 @@
 			NULLABLE_YN = EXCLUDED.NULLABLE_YN,
 			PK_YN = EXCLUDED.PK_YN,
 			FK_YN = EXCLUDED.FK_YN,
+			FK_PARENT_OBJ_NM = EXCLUDED.FK_PARENT_OBJ_NM,
+			FK_PARENT_ATTR_NM = EXCLUDED.FK_PARENT_ATTR_NM,
 			DEFAULT_VAL = EXCLUDED.DEFAULT_VAL,
 			ATTR_ORD = EXCLUDED.ATTR_ORD,
 			USE_YN = 'Y',

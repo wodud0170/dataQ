@@ -44,9 +44,14 @@
         <v-icon small left>mdi-eye</v-icon>
         미리보기
       </v-btn>
-      <v-btn small color="success" :disabled="!canImport" :loading="importing" @click="doImport">
+      <v-btn small color="success" :disabled="!canImport" :loading="importing" @click="doImport" class="mr-2">
         <v-icon small left>mdi-database-import</v-icon>
         임포트 실행
+      </v-btn>
+      <v-btn small outlined color="indigo" :disabled="!selectedModelId" @click="doExport"
+        id="btn-export-xmi" title="현재 선택된 데이터 모델을 XMI 2.1 로 내려받기">
+        <v-icon small left>mdi-file-export</v-icon>
+        XMI 2.1 추출
       </v-btn>
     </v-sheet>
 
@@ -257,6 +262,22 @@ export default {
         this.showSnackbar('임포트 중 오류가 발생했습니다.', 'error');
       } finally {
         this.importing = false;
+      }
+    },
+    async doExport() {
+      if (!this.selectedModelId) return;
+      try {
+        // GET 으로 직접 다운로드 (브라우저 native)
+        const url = '/api/dm/exportXmi?dataModelId=' + encodeURIComponent(this.selectedModelId);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '';  // Content-Disposition 의 filename 우선
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        this.showSnackbar('XMI 2.1 추출 요청 완료 (브라우저 다운로드 확인)', 'success');
+      } catch (e) {
+        this.showSnackbar('XMI 추출 중 오류: ' + (e.message || e), 'error');
       }
     },
     onTableClick(item) {

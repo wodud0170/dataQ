@@ -64,6 +64,7 @@ import qualitycenter.util.ErwinXmlParser;
 import qualitycenter.util.ErwinXmlParser.ErwinParseResult;
 import qualitycenter.util.XmiParser;
 import qualitycenter.util.XmiParser.XmiParseResult;
+import qualitycenter.util.XmiExporter;
 import reactor.core.publisher.Mono;
 
 /**
@@ -686,7 +687,11 @@ public class DataModelController {
 				attrVo.setDataLen(dataLenObj instanceof Number ? ((Number) dataLenObj).longValue() : 0L);
 				attrVo.setNullableYn((String) col.get("nullableYn"));
 				attrVo.setPkYn((String) col.get("pkYn"));
-				attrVo.setFkYn("N");
+				// 85번 — XMI 관계 매핑: FK + 부모
+				String fk = (String) col.get("fkYn");
+				attrVo.setFkYn(fk != null ? fk : "N");
+				attrVo.setFkParentObjNm((String) col.get("fkParentObjNm"));
+				attrVo.setFkParentAttrNm((String) col.get("fkParentAttrNm"));
 				attrVo.setTermsStndYn("N");
 				attrVo.setDomainStndYn("N");
 				Object ordObj = col.get("attrOrder");
@@ -715,6 +720,59 @@ public class DataModelController {
 			session.close();
 		}
 		return result;
+	}
+
+	/**
+	 * 85번 — DataQ 모델 → XMI 2.1 export.
+	 * RFP SFR-22 항목 C "표준 포맷 추출".
+	 */
+	@org.springframework.web.bind.annotation.GetMapping(value = "/exportXmi",
+			produces = "application/xml; charset=UTF-8")
+	public org.springframework.http.ResponseEntity<String> exportXmi(
+			@RequestParam("dataModelId") String dataModelId) {
+		try {
+			// 모델명 조회
+			Map<String, Object> dm = sqlSessionTemplate.selectOne(
+					"datamodel.selectDataModelById", dataModelId);
+			String modelName = dm != null && dm.get("dataModelNm") != null
+					? dm.get("dataModelNm").toString() : ("model-" + dataModelId);
+
+			// ATTR raw list 조회 → OBJ list 는 distinct 로 도출
+			List<Map<String, Object>> columns = sqlSessionTemplate.selectList(
+					"datamodel.selectDataModelAttrListByClctIdRaw", dataModelId);
+			java.util.Map<String, Map<String, Object>> objMap = new java.util.LinkedHashMap<>();
+			for (Map<String, Object> c : columns) {
+				Object oN = c.get("tableNm") != null ? c.get("tableNm") : c.get("objNm");
+				if (oN == null) continue;
+				String objNm = oN.toString();
+				if (!objMap.containsKey(objNm)) {
+					Map<String, Object> t = new HashMap<>();
+					t.put("objNm", objNm);
+					t.put("objNmKr", objNm);
+					objMap.put(objNm, t);
+				}
+			}
+			List<Map<String, Object>> tables = new java.util.ArrayList<>(objMap.values());
+			// columns 의 키를 objNm/attrNm 기준으로 정규화 (alias 가 tableNm/columnNm 인 경우 보정)
+			for (Map<String, Object> c : columns) {
+				if (c.get("objNm") == null && c.get("tableNm") != null)
+					c.put("objNm", c.get("tableNm"));
+				if (c.get("attrNm") == null && c.get("columnNm") != null)
+					c.put("attrNm", c.get("columnNm"));
+			}
+
+			String xml = XmiExporter.export(modelName, tables, columns);
+			String safeName = modelName.replaceAll("[^A-Za-z0-9_-]", "_");
+			return org.springframework.http.ResponseEntity.ok()
+					.header("Content-Disposition",
+							"attachment; filename=\"" + safeName + ".xmi\"")
+					.header("Content-Type", "application/xml; charset=UTF-8")
+					.body(xml);
+		} catch (Exception e) {
+			log.error(">> exportXmi failed", e);
+			return org.springframework.http.ResponseEntity.status(500)
+					.body("<error>" + e.getMessage() + "</error>");
+		}
 	}
 
 	// ======== 데이터모델 재설계 1단계: 최신 스냅샷 편집 API (설계문서 40/41) ========

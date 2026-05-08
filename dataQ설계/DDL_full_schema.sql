@@ -298,7 +298,9 @@ CREATE TABLE quality.tb_data_model_attr (
     qual_diag_target_yn character varying(1) DEFAULT 'Y'::character varying,
     qual_diag_target_reason character varying(200),
     diag_target_updt_user_id character varying(50),
-    diag_target_updt_dt character varying(14)
+    diag_target_updt_dt character varying(14),
+    fk_parent_obj_nm character varying(255),
+    fk_parent_attr_nm character varying(255)
 );
 
 
@@ -384,6 +386,20 @@ COMMENT ON COLUMN quality.tb_data_model_attr.diag_target_updt_user_id IS '진단
 --
 
 COMMENT ON COLUMN quality.tb_data_model_attr.diag_target_updt_dt IS '진단 대상 마지막 변경일시';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.fk_parent_obj_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.fk_parent_obj_nm IS '85번 — FK 일 때 참조 부모 테이블 (XMI 2.1 type id 참조 해석)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.fk_parent_attr_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.fk_parent_attr_nm IS '85번 — FK 일 때 참조 부모 컬럼 (없으면 부모 PK 추정)';
 
 
 --
