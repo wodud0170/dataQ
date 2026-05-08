@@ -86,8 +86,8 @@ def main():
     # 테스트용 데이터 모델 INSERT
     dm_id = "TEST_XEXP_" + uuid.uuid4().hex[:6]
     docker_psql(
-        f"INSERT INTO TB_DATA_MODEL (DM_ID, DM_NM, MODEL_TYPE, USE_YN, CREATE_USER_ID) "
-        f"VALUES ('{dm_id}', 'XmiExportTest', 'PHYSICAL', 'Y', 'space');"
+        f"INSERT INTO TB_DATA_MODEL (DM_ID, DM_NM, MODEL_TYPE, USE_YN, CRET_USER_ID, VER) "
+        f"VALUES ('{dm_id}', 'XmiExportTest', 'PHYSICAL', 'Y', 'space', '1.0');"
     )
     # OBJ 2건 (PARENT_TBL, CHILD_TBL)
     for obj in ["PARENT_TBL", "CHILD_TBL"]:
