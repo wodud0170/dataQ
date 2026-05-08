@@ -12,8 +12,9 @@
       </v-row>
     </v-sheet>
 
-    <!-- 검색과 버튼 영역 -->
+    <!-- 검색과 버튼 영역 — 우측 padding 확보로 [일괄 반려] 잘림 방지 -->
     <v-sheet class="splitTopWrapper pt-4 pb-4" id="approvalWrap"
+      style="padding-right:24px !important;"
       v-bind:style="[isMobile ? { 'flex-direction': 'column' } : { 'flex-direction': 'row' }]">
       <!-- 검색 -->
       <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]" class="searchWrapper">
@@ -23,8 +24,9 @@
         <v-btn class="gradient ml-3" title="검색" v-on:click="getApprovalData"
           :style="{ width: '40px', padding: '0 5px', minWidth: '45px' }"><v-icon>search</v-icon></v-btn>
       </v-sheet>
-      <!-- 일괄 버튼 -->
-      <v-sheet class="pr-4 pl-4" v-if="isAdmin"
+      <!-- 일괄 버튼 (화면 우측 padding 확보) -->
+      <v-sheet class="pl-4" v-if="isAdmin"
+        style="padding-right:32px !important; flex-shrink:0;"
         v-bind:style="[isMobile ? { width: '100%', display: 'flex', justifyContent: 'space-between' } : {}]">
         <v-btn class="gradient mr-2" @click="batchApprove" title="일괄 승인"
           :disabled="selectedItem.length === 0">
@@ -68,14 +70,16 @@
           </div>
         </template>
         <template v-else>
-          <v-btn x-small color="success" class="mr-1" :disabled="item.aprvStatRaw === 2"
-            @click.stop="approveItem(item)" title="승인">
-            <v-icon x-small left>mdi-check</v-icon>승인
-          </v-btn>
-          <v-btn x-small color="red" dark :disabled="item.aprvStatRaw === 3"
-            @click.stop="startRowReject(item)" title="반려">
-            <v-icon x-small left>mdi-close</v-icon>반려
-          </v-btn>
+          <div class="d-flex align-center justify-center" style="gap:4px; white-space:nowrap;">
+            <v-btn x-small color="success" :disabled="item.aprvStatRaw === 2"
+              @click.stop="approveItem(item)" title="승인">
+              <v-icon x-small left>mdi-check</v-icon>승인
+            </v-btn>
+            <v-btn x-small color="red" dark :disabled="item.aprvStatRaw === 3"
+              @click.stop="startRowReject(item)" title="반려">
+              <v-icon x-small left>mdi-close</v-icon>반려
+            </v-btn>
+          </div>
         </template>
       </template>
       <template v-slot:no-data>
@@ -259,7 +263,7 @@ export default {
       { text: '요청일', align: 'center', sortable: false, value: 'reqCretDt' },
       { text: '처리일', align: 'center', sortable: false, value: 'aprvStatUpdtDt' },
       { text: '사유', align: 'center', sortable: false, value: 'aprvStatUpdtRsn' },
-      { text: '처리', align: 'center', sortable: false, value: 'rowActions', width: '170px' },
+      { text: '처리', align: 'center', sortable: false, value: 'rowActions', width: '180px' },
     ],
     rowRejectId: null,        // 인라인 반려 사유 입력 중인 행 key
     rowRejectReason: '',      // 인라인 반려 사유 텍스트

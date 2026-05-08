@@ -4,7 +4,7 @@
       <!-- 헤더 -->
       <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:8px;">
         <span style="font-size:1.05rem; font-weight:600; color:#1A237E;">검증 대상</span>
-        <span style="font-size:.8rem; color:#9E9E9E;">— 컬럼 ↔ 룰 매핑 + effective rule + 직전 진단 적합률</span>
+        <span style="font-size:.8rem; color:#9E9E9E;">— 컬럼 ↔ 규칙 매핑 + 유효 규칙 + 직전 진단 적합률</span>
       </v-sheet>
 
       <!-- 검색 필터 -->
@@ -17,10 +17,10 @@
           @change="loadCols"></v-text-field>
         <v-text-field v-model="filterAttr" label="컬럼 검색" dense hide-details clearable style="max-width:160px"
           @change="loadCols"></v-text-field>
-        <v-text-field v-model.number="rateMin" label="적합률 ≥" type="number" dense hide-details clearable
-          style="max-width:110px" @change="loadCols"></v-text-field>
-        <v-text-field v-model.number="rateMax" label="적합률 ≤" type="number" dense hide-details clearable
-          style="max-width:110px" @change="loadCols"></v-text-field>
+        <v-text-field v-model.number="rateMin" label="적합률 최소" type="number" dense hide-details clearable
+          style="max-width:120px" @change="loadCols"></v-text-field>
+        <v-text-field v-model.number="rateMax" label="적합률 최대" type="number" dense hide-details clearable
+          style="max-width:120px" @change="loadCols"></v-text-field>
         <v-btn small @click="loadCols" :disabled="!dmId" id="btn-colrule-reload">
           <v-icon small left>mdi-refresh</v-icon>새로고침
         </v-btn>

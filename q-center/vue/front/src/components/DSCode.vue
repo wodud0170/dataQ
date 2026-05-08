@@ -33,8 +33,9 @@
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
             </v-row>
           </v-sheet>
-          <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
-          <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
+          <!-- 등록 / 일괄 등록 / 삭제 버튼 — 한 줄 가로 배치 (flex nowrap) -->
+          <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
+            class="d-flex flex-nowrap" style="gap: 6px;">
             <v-btn :style="{ width: '150px' }" class="gradient" v-on:click="showModal('managingCodeval')"
               title="코드 항목 관리">코드 항목 관리</v-btn>
             <v-btn class="gradient" v-on:click="showModal('codeAdd')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>

@@ -38,8 +38,9 @@
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
             </v-row>
           </v-sheet>
-          <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
-          <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
+          <!-- 등록 / 일괄 등록 / 삭제 버튼 — 한 줄 가로 배치 -->
+          <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
+            class="d-flex flex-nowrap" style="gap: 6px;">
             <v-btn class="gradient" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
             <v-btn v-if="isAdmin" class="gradient" v-on:click="domainExcelFileUpload()" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="domainListDownload()" title="다운로드">다운로드</v-btn>

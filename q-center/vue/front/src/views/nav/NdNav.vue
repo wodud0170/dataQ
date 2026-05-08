@@ -1,6 +1,6 @@
 <template>
     <v-navigation-drawer app left clipped :permanent="!isMobile" :mini-variant.sync=this.navSize v-bind="$attrs"
-        :class="isMobile ? 'mobileNav' : ''">
+        :class="isMobile ? 'mobileNav' : ''" :width="240">
         <v-list-item-group v-model="selectedList" active-class="ndColor--text" focusable :mandatory="selectedList !== null">
             <v-list nav dense>
                 <!-- 대시보드 -->
@@ -382,10 +382,10 @@
                     </v-list-item>
 
                     <v-list-item link id="nav_boardQna" href="#tab_boardQna" active-class="ndColor--text"
-                        title="QNA"
-                        v-on:click.stop="addTabItem('QNA', 'boardQna');">
+                        title="Q&amp;A"
+                        v-on:click.stop="addTabItem('Q&amp;A', 'boardQna');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>QNA</v-list-item-title>
+                        <v-list-item-title>Q&amp;A</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
 

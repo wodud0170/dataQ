@@ -106,7 +106,7 @@ export default {
         { text: '대상', value: 'objNm' },
         { text: '컬럼', value: 'attrNm' },
         { text: '유형', value: 'ruleType' },
-        { text: '비용', value: 'estCost' },
+        { text: '예상 비용', value: 'estCost' },
         { text: '심각도', value: 'severity' },
         { text: '사용', value: 'useYn' },
         { text: '', value: 'actions', sortable: false }

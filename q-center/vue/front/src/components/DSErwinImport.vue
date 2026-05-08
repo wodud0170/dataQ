@@ -14,8 +14,9 @@
       </span>
     </v-sheet>
 
-    <!-- 필터 바 -->
-    <v-sheet class="d-flex align-center flex-wrap pa-2 mb-2" style="gap:8px; border:1px solid #E8EAF6; border-radius:4px;">
+    <!-- 필터 바 — 우측 padding 추가로 [XMI 추출] 버튼 잘림 방지 -->
+    <v-sheet class="d-flex align-center flex-wrap pa-2 mb-2"
+      style="gap:8px; border:1px solid #E8EAF6; border-radius:4px; padding-right:32px !important;">
       <span class="filterLabel">{{ formatLabel }} 파일</span>
       <v-file-input
         v-model="selectedFile"

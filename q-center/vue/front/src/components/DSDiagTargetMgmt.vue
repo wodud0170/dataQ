@@ -35,16 +35,16 @@
               color="ndColor" prepend-inner-icon="search" :style="{ maxWidth: '240px' }"></v-text-field>
             <v-spacer></v-spacer>
             <span class="text-caption grey--text mr-1">표준</span>
-            <v-btn small class="gradient" @click="bulkObjToggle('STND','N')">OFF</v-btn>
-            <v-btn small outlined @click="bulkObjToggle('STND','Y')">ON</v-btn>
+            <v-btn small outlined color="red" @click="bulkObjToggle('STND','N')" title="선택 행 표준진단 OFF">제외</v-btn>
+            <v-btn small outlined color="green" @click="bulkObjToggle('STND','Y')" title="선택 행 표준진단 ON">대상</v-btn>
             <v-divider vertical class="mx-1" />
             <span class="text-caption grey--text mr-1">구조</span>
-            <v-btn small class="gradient" @click="bulkObjToggle('STRUCT','N')">OFF</v-btn>
-            <v-btn small outlined @click="bulkObjToggle('STRUCT','Y')">ON</v-btn>
+            <v-btn small outlined color="red" @click="bulkObjToggle('STRUCT','N')" title="선택 행 구조진단 OFF">제외</v-btn>
+            <v-btn small outlined color="green" @click="bulkObjToggle('STRUCT','Y')" title="선택 행 구조진단 ON">대상</v-btn>
             <v-divider vertical class="mx-1" />
             <span class="text-caption grey--text mr-1">품질</span>
-            <v-btn small class="gradient" @click="bulkObjToggle('QUAL','N')">OFF</v-btn>
-            <v-btn small outlined @click="bulkObjToggle('QUAL','Y')">ON</v-btn>
+            <v-btn small outlined color="red" @click="bulkObjToggle('QUAL','N')" title="선택 행 품질진단 OFF">제외</v-btn>
+            <v-btn small outlined color="green" @click="bulkObjToggle('QUAL','Y')" title="선택 행 품질진단 ON">대상</v-btn>
           </v-sheet>
           <v-data-table class="px-3 pb-3" :headers="objHeaders" :items="filteredObjs" item-key="objNm"
             v-model="selectedObjs" show-select dense hide-default-footer :items-per-page="-1">
@@ -82,16 +82,16 @@
               color="ndColor" prepend-inner-icon="search" :style="{ maxWidth: '240px' }"></v-text-field>
             <v-spacer></v-spacer>
             <span class="text-caption grey--text mr-1">표준</span>
-            <v-btn small class="gradient" @click="bulkAttrToggle('STND','N')" :disabled="!selObj">OFF</v-btn>
-            <v-btn small outlined @click="bulkAttrToggle('STND','Y')" :disabled="!selObj">ON</v-btn>
+            <v-btn small outlined color="red" @click="bulkAttrToggle('STND','N')" :disabled="!selObj">제외</v-btn>
+            <v-btn small outlined color="green" @click="bulkAttrToggle('STND','Y')" :disabled="!selObj">대상</v-btn>
             <v-divider vertical class="mx-1" />
             <span class="text-caption grey--text mr-1">구조</span>
-            <v-btn small class="gradient" @click="bulkAttrToggle('STRUCT','N')" :disabled="!selObj">OFF</v-btn>
-            <v-btn small outlined @click="bulkAttrToggle('STRUCT','Y')" :disabled="!selObj">ON</v-btn>
+            <v-btn small outlined color="red" @click="bulkAttrToggle('STRUCT','N')" :disabled="!selObj">제외</v-btn>
+            <v-btn small outlined color="green" @click="bulkAttrToggle('STRUCT','Y')" :disabled="!selObj">대상</v-btn>
             <v-divider vertical class="mx-1" />
             <span class="text-caption grey--text mr-1">품질</span>
-            <v-btn small class="gradient" @click="bulkAttrToggle('QUAL','N')" :disabled="!selObj">OFF</v-btn>
-            <v-btn small outlined @click="bulkAttrToggle('QUAL','Y')" :disabled="!selObj">ON</v-btn>
+            <v-btn small outlined color="red" @click="bulkAttrToggle('QUAL','N')" :disabled="!selObj">제외</v-btn>
+            <v-btn small outlined color="green" @click="bulkAttrToggle('QUAL','Y')" :disabled="!selObj">대상</v-btn>
           </v-sheet>
           <v-data-table class="px-3 pb-3" :headers="attrHeaders" :items="filteredAttrs" item-key="attrNm"
             v-model="selectedAttrs" show-select dense hide-default-footer :items-per-page="-1">

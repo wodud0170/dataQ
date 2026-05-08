@@ -2,16 +2,17 @@
   <v-main>
     <v-sheet class="pa-3" style="display:flex; flex-direction:column; height:100%;">
 
-      <!-- 상단: 모델 + 샘플링 + 시작 -->
-      <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:8px;">
+      <!-- 상단: 모델 + 샘플링 + 시작 (오른쪽 끝 padding 추가로 버튼 잘림 방지) -->
+      <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:8px; padding-right:32px !important;">
         <v-autocomplete v-model="dmId" :items="dataModels" item-text="dataModelNm" item-value="dataModelId"
-          label="모델" dense hide-details style="max-width:280px" @change="loadCols" id="cmb-model"></v-autocomplete>
+          label="모델 선택" dense hide-details style="max-width:280px" @change="loadCols" id="cmb-model"></v-autocomplete>
         <v-select v-model="sampleRate" :items="sampleOpts" item-text="text" item-value="value"
           label="샘플링" dense hide-details style="max-width:130px" id="cmb-sample"></v-select>
         <v-spacer></v-spacer>
-        <span style="font-size:.8rem; color:#546E7A;">선택 {{ selected.length }}건 / 표시 {{ filtered.length }}건</span>
+        <span style="font-size:.8rem; color:#546E7A; white-space:nowrap;">선택 {{ selected.length }}건 / 표시 {{ filtered.length }}건</span>
         <v-btn small class="ml-2 gradient" @click="runSelected"
-          :disabled="!dmId || selected.length===0 || running" id="btn-run-selected">
+          :disabled="!dmId || selected.length===0 || running" id="btn-run-selected"
+          style="flex-shrink:0; min-width:140px;">
           <v-icon small left>mdi-play</v-icon>선택 컬럼 진단
         </v-btn>
       </v-sheet>
@@ -24,8 +25,8 @@
           dense hide-details multiple chips small-chips clearable
           style="min-width:280px; max-width:480px;" id="cmb-clsf"></v-autocomplete>
         <v-spacer></v-spacer>
-        <v-btn x-small text @click="selectAll" id="btn-select-all">전체선택</v-btn>
-        <v-btn x-small text @click="selectNone" id="btn-select-none">선택해제</v-btn>
+        <v-btn small outlined color="indigo" @click="selectAll" id="btn-select-all">전체 선택</v-btn>
+        <v-btn small outlined color="grey darken-1" @click="selectNone" id="btn-select-none">선택 해제</v-btn>
       </v-sheet>
 
       <!-- 진행률 표시 -->
@@ -171,7 +172,7 @@ export default {
         { text: '테이블',     value: 'objNm', width: 140 },
         { text: '컬럼',       value: 'attrNm', width: 140 },
         { text: '한글명',     value: 'attrNmKr', width: 140 },
-        { text: '도메인분류', value: 'domainClsfNm', width: 120 },
+        { text: '도메인 분류', value: 'domainClsfNm', width: 120 },
         { text: '적용 규칙',  value: 'effectiveRuleNm' },
         { text: '소스',       value: 'effectiveSource', width: 90 },
         { text: 'NULL%',      value: 'profNullPct', width: 80 },

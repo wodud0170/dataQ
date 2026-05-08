@@ -15,7 +15,7 @@
           <v-icon small left>mdi-chart-line</v-icon>조회
         </v-btn>
         <v-spacer></v-spacer>
-        <span style="font-size:.75rem; color:#90A4AE;">DONE 진단 최근 30회 기준</span>
+        <span style="font-size:.75rem; color:#90A4AE;">완료된 진단 최근 30회 기준</span>
       </v-sheet>
 
       <!-- 모델 단위 적합률 추이 -->
@@ -29,7 +29,7 @@
         </div>
         <div v-else-if="modelSeries[0] && modelSeries[0].data.length === 0"
           style="padding:24px; text-align:center; color:#9E9E9E;" id="empty-model-trend">
-          DONE 진단 이력 없음
+          완료된 진단 이력 없음
         </div>
         <apexchart v-else type="line" height="220" :options="modelChartOpts"
           :series="modelSeries" :key="modelChartKey"></apexchart>

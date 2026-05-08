@@ -1001,4 +1001,6 @@ pre { font-family: 'Roboto'; }
 #clTable_table >>> th.hdr-table    { background-color: #ECEFF1 !important; color: #455A64 !important; }
 #clTable_table >>> th.hdr-logical  { background-color: #E8F5E9 !important; color: #2E7D32 !important; font-weight: 600 !important; }
 #clTable_table >>> th.hdr-physical { background-color: #E3F2FD !important; color: #1565C0 !important; }
+/* 헤더 한 글자씩 줄바꿈 방지 (디 폴 트, 데 이 터 타 입 등) */
+#clTable_table >>> th { white-space: nowrap !important; }
 </style>
