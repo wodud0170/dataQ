@@ -162,6 +162,16 @@
                         <v-list-item-title>데이터 모델 현황</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 85번 — 모델링 도구 임포트 (ERwin native XML / XMI 2.1) -->
+                    <v-list-item link id="nav_erwinImport" href="#tab_erwinImport"
+                        active-class="ndColor--text" title="모델링 도구 임포트"
+                        v-on:click.stop="addTabItem('모델링 도구 임포트', 'erwinImport');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>모델링 도구 임포트</v-list-item-title>
+                    </v-list-item>
+
                     <v-list-item link id="nav_diagTargetMgmt" href="#tab_diagTargetMgmt"
                         active-class="ndColor--text" title="진단 제외 관리"
                         v-on:click.stop="addTabItem('진단 제외 관리', 'diagTargetMgmt');">

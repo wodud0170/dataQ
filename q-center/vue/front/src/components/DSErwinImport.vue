@@ -1,13 +1,27 @@
 <template>
   <v-container fluid class="pa-2" style="height:100%; display:flex; flex-direction:column;">
+    <!-- 85번 — 포맷 선택: ERwin native XML / XMI 2.1 (OMG 표준) -->
+    <v-sheet class="d-flex align-center flex-wrap pa-2 mb-2" style="gap:12px; border:1px solid #E8EAF6; border-radius:4px; background:#FAFBFC;">
+      <span class="filterLabel">파일 포맷</span>
+      <v-radio-group v-model="format" row dense hide-details mandatory id="rg-import-format" @change="onFormatChange">
+        <v-radio label="ERwin native XML" value="erwin" id="rb-format-erwin"></v-radio>
+        <v-radio label="XMI 2.1 (OMG 표준)" value="xmi" id="rb-format-xmi"></v-radio>
+      </v-radio-group>
+      <v-spacer />
+      <span style="font-size:.75rem; color:#90A4AE;">
+        <v-icon x-small>mdi-information-outline</v-icon>
+        XMI 2.1 = ERwin 9.x+ / EA / VP / Modelio 호환 표준 포맷
+      </span>
+    </v-sheet>
+
     <!-- 필터 바 -->
     <v-sheet class="d-flex align-center flex-wrap pa-2 mb-2" style="gap:8px; border:1px solid #E8EAF6; border-radius:4px;">
-      <span class="filterLabel">ERwin XML 파일</span>
+      <span class="filterLabel">{{ formatLabel }} 파일</span>
       <v-file-input
         v-model="selectedFile"
-        accept=".xml"
+        :accept="fileAccept"
         dense outlined hide-details clearable
-        placeholder="ERwin XML 파일 선택"
+        :placeholder="formatLabel + ' 파일 선택'"
         prepend-icon="mdi-file-xml-box"
         style="width:300px; flex-grow:0;"
         @change="onFileChange"
@@ -39,7 +53,7 @@
     <!-- 진행 표시 -->
     <v-sheet v-if="parsing || importing" class="pa-4 mb-2 text-center" style="border:1px solid #E8EAF6; border-radius:4px;">
       <v-progress-circular indeterminate color="primary" size="32" class="mr-3" />
-      <span v-if="parsing">ERwin XML 파일을 분석하고 있습니다...</span>
+      <span v-if="parsing">{{ formatLabel }} 파일을 분석하고 있습니다...</span>
       <span v-if="importing">데이터를 임포트하고 있습니다...</span>
     </v-sheet>
 
@@ -132,6 +146,7 @@ export default {
   name: 'DSErwinImport',
   data() {
     return {
+      format: 'xmi',           // 'erwin' (기존 native XML) | 'xmi' (OMG 표준 XMI 2.1)
       selectedFile: null,
       selectedModelId: null,
       dataModelList: [],
@@ -166,6 +181,18 @@ export default {
       if (!this.previewResult) return [];
       if (!this.selectedTable) return this.previewResult.columns;
       return this.previewResult.columns.filter(c => c.objNm === this.selectedTable);
+    },
+    formatLabel() {
+      return this.format === 'xmi' ? 'XMI 2.1' : 'ERwin XML';
+    },
+    fileAccept() {
+      return this.format === 'xmi' ? '.xmi,.xml' : '.xml';
+    },
+    parseEndpoint() {
+      return this.format === 'xmi' ? '/api/dm/parseXmi' : '/api/dm/parseErwinXml';
+    },
+    importEndpoint() {
+      return this.format === 'xmi' ? '/api/dm/importXmiModel' : '/api/dm/importErwinModel';
     }
   },
   created() {
@@ -184,6 +211,12 @@ export default {
       this.previewResult = null;
       this.selectedTable = null;
     },
+    onFormatChange() {
+      // 포맷 바꾸면 미리보기/파일 초기화 (혼동 방지)
+      this.previewResult = null;
+      this.selectedTable = null;
+      this.selectedFile = null;
+    },
     async previewXml() {
       if (!this.selectedFile) return;
       this.parsing = true;
@@ -192,7 +225,7 @@ export default {
       try {
         const formData = new FormData();
         formData.append('file', this.selectedFile);
-        const res = await axios.post('/api/dm/parseErwinXml', formData, {
+        const res = await axios.post(this.parseEndpoint, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         if (res.data.success) {
@@ -201,7 +234,7 @@ export default {
           this.showSnackbar(res.data.message || '파싱 실패', 'error');
         }
       } catch (e) {
-        this.showSnackbar('ERwin XML 파싱 중 오류가 발생했습니다.', 'error');
+        this.showSnackbar(this.formatLabel + ' 파싱 중 오류가 발생했습니다.', 'error');
       } finally {
         this.parsing = false;
       }
@@ -210,7 +243,7 @@ export default {
       if (!this.canImport) return;
       this.importing = true;
       try {
-        const res = await axios.post('/api/dm/importErwinModel', {
+        const res = await axios.post(this.importEndpoint, {
           dataModelId: this.selectedModelId,
           tables: this.previewResult.tables,
           columns: this.previewResult.columns

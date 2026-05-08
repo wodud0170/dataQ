@@ -62,6 +62,8 @@ import qualitycenter.service.ddl.DdlGenerator;
 import qualitycenter.service.ws.WebSocketService;
 import qualitycenter.util.ErwinXmlParser;
 import qualitycenter.util.ErwinXmlParser.ErwinParseResult;
+import qualitycenter.util.XmiParser;
+import qualitycenter.util.XmiParser.XmiParseResult;
 import reactor.core.publisher.Mono;
 
 /**
@@ -596,6 +598,117 @@ public class DataModelController {
 		} catch (Exception e) {
 			session.rollback();
 			log.error(">> importErwinModel failed : {}", e.getMessage(), e);
+			result.put("success", false);
+			result.put("message", "임포트 실패: " + e.getMessage());
+		} finally {
+			session.close();
+		}
+		return result;
+	}
+
+	// ======== 85번 — XMI 2.1 임포트 (OMG 표준, ERwin 9.x+ / EA / VP 등 호환) ========
+
+	/**
+	 * XMI 2.1 (UML 2.x) 파일을 파싱하여 미리보기 결과를 반환한다.
+	 * RFP SFR-22 항목 C "표준 포맷" 의 표준 포맷 = XMI.
+	 */
+	@PostMapping(value = "/parseXmi", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public Map<String, Object> parseXmi(@RequestParam("file") MultipartFile file) {
+		Map<String, Object> result = new HashMap<>();
+		try {
+			XmiParseResult parsed = XmiParser.parse(file.getInputStream());
+			result.put("success", true);
+			result.put("tables", parsed.getTables());
+			result.put("columns", parsed.getColumns());
+			result.put("tableCount", parsed.getTableCount());
+			result.put("columnCount", parsed.getColumnCount());
+			result.put("format", "XMI 2.1");
+		} catch (Exception e) {
+			log.error(">> parseXmi failed : {}", e.getMessage());
+			result.put("success", false);
+			result.put("message", "XMI 파싱 실패: " + e.getMessage());
+		}
+		return result;
+	}
+
+	/**
+	 * XMI 모델을 데이터모델에 임포트한다.
+	 * importErwinModel 과 동일한 적재 로직 사용. CLCT_TYPE 만 'XMI' 로 표기.
+	 */
+	@SuppressWarnings("unchecked")
+	@PostMapping("/importXmiModel")
+	public Map<String, Object> importXmiModel(@RequestBody Map<String, Object> body) {
+		Map<String, Object> result = new HashMap<>();
+		String dataModelId = (String) body.get("dataModelId");
+		List<Map<String, Object>> tables = (List<Map<String, Object>>) body.get("tables");
+		List<Map<String, Object>> columns = (List<Map<String, Object>>) body.get("columns");
+
+		if (dataModelId == null || tables == null || columns == null) {
+			result.put("success", false);
+			result.put("message", "필수 파라미터(dataModelId, tables, columns)가 누락되었습니다.");
+			return result;
+		}
+
+		String clctId = StringUtils.getUUID();
+		String userId = sessionService.getUserId();
+		String now = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			StdDataModelCollectVo clctVo = new StdDataModelCollectVo();
+			clctVo.setClctId(clctId);
+			clctVo.setDataModelId(dataModelId);
+			clctVo.setClctType("XMI");
+			clctVo.setCretUserId(userId);
+			session.insert("datamodel.updateDataModelCollect", clctVo);
+
+			for (Map<String, Object> tbl : tables) {
+				StdDataModelObjVo objVo = new StdDataModelObjVo();
+				objVo.setClctId(clctId);
+				objVo.setDataModelId(dataModelId);
+				objVo.setObjNm((String) tbl.get("objNm"));
+				objVo.setObjNmKr((String) tbl.get("objNmKr"));
+				objVo.setObjOwner("XMI");
+				Object attrCntObj = tbl.get("objAttrCnt");
+				objVo.setObjAttrCnt(attrCntObj instanceof Number ? ((Number) attrCntObj).shortValue() : 0);
+				session.insert("datamodel.insertDataModelObj", objVo);
+			}
+
+			for (Map<String, Object> col : columns) {
+				StdDataModelAttrVo attrVo = new StdDataModelAttrVo();
+				attrVo.setClctId(clctId);
+				attrVo.setDataModelId(dataModelId);
+				attrVo.setObjNm((String) col.get("objNm"));
+				attrVo.setAttrNm((String) col.get("attrNm"));
+				attrVo.setAttrNmKr((String) col.get("attrNmKr"));
+				attrVo.setDataType((String) col.get("dataType"));
+				Object dataLenObj = col.get("dataLen");
+				attrVo.setDataLen(dataLenObj instanceof Number ? ((Number) dataLenObj).longValue() : 0L);
+				attrVo.setNullableYn((String) col.get("nullableYn"));
+				attrVo.setPkYn((String) col.get("pkYn"));
+				attrVo.setFkYn("N");
+				attrVo.setTermsStndYn("N");
+				attrVo.setDomainStndYn("N");
+				Object ordObj = col.get("attrOrder");
+				attrVo.setAttrOrder(ordObj instanceof Number ? ((Number) ordObj).shortValue() : 0);
+				session.insert("datamodel.insertDataModelAttr", attrVo);
+			}
+
+			clctVo.setClctEndDt(now);
+			clctVo.setClctCmptnYn("Y");
+			session.insert("datamodel.updateDataModelCollect", clctVo);
+
+			session.commit();
+
+			result.put("success", true);
+			result.put("clctId", clctId);
+			result.put("tableCount", tables.size());
+			result.put("columnCount", columns.size());
+			result.put("format", "XMI 2.1");
+			result.put("message", "XMI 모델 임포트 완료: 테이블 " + tables.size() + "건, 컬럼 " + columns.size() + "건");
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> importXmiModel failed : {}", e.getMessage(), e);
 			result.put("success", false);
 			result.put("message", "임포트 실패: " + e.getMessage());
 		} finally {
