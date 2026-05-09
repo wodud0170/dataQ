@@ -389,11 +389,13 @@ public class DataModelController {
 		Map<String, Object> result = new HashMap<>();
 		List<String> schemaList = new ArrayList<>();
 		String currentUser = "";
+		String dbmsType = "";
 		DBHandler dbHandler = null;
 		try {
 			DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dataVo.getDataModelDsId());
 			dbHandler = dataSourceUtils.getDBHandler(dataSource);
 			currentUser = dataSource.getUserId();
+			dbmsType = dataSource.getDbmsTp();
 
 			String sql = sqlSessionTemplate.selectOne("datamodel.selectSchemaListSql", dataSource.getDbmsTp());
 			if (sql == null) sql = "SELECT schema_name AS schemaNm FROM information_schema.schemata ORDER BY schema_name";
@@ -412,9 +414,60 @@ public class DataModelController {
 				try { dbHandler.close(); } catch (Exception e) {}
 			}
 		}
+		// 86번 #8 — DBMS 시스템 스키마 자동 필터 (수집 대상 아님 — 사용자 노출 X)
+		schemaList = filterSystemSchemas(schemaList, dbmsType);
 		result.put("schemas", schemaList);
 		result.put("currentUser", currentUser);
 		return result;
+	}
+
+	/** 86번 #8 — 시스템 스키마 일괄 필터. DBMS 별 명시 set + prefix 룰. */
+	private static final java.util.Set<String> ORACLE_SYS = new java.util.HashSet<>(java.util.Arrays.asList(
+		"SYS","SYSTEM","OUTLN","MGMT_VIEW","OLAPSYS","MDSYS","ORDDATA","ORDPLUGINS",
+		"EXFSYS","DBSNMP","WMSYS","XDB","CTXSYS","DVSYS","GSMADMIN_INTERNAL",
+		"AUDSYS","GSMCATUSER","GSMUSER","REMOTE_SCHEDULER_AGENT","ANONYMOUS",
+		"SI_INFORMTN_SCHEMA","ORDS_METADATA","ORDS_PUBLIC_USER","APPQOSSYS","DIP",
+		"ORACLE_OCM","XS$NULL","GGSYS","LBACSYS","MDDATA","DBSFWUSER",
+		"PUBLIC","ROLE_DBA","ROLE_RESOURCE","ROLE_CONNECT"
+	));
+	private static final java.util.Set<String> PG_SYS = new java.util.HashSet<>(java.util.Arrays.asList(
+		"information_schema","pg_catalog","pg_toast"
+	));
+	private static final java.util.Set<String> MYSQL_SYS = new java.util.HashSet<>(java.util.Arrays.asList(
+		"mysql","information_schema","performance_schema","sys"
+	));
+	private static final java.util.Set<String> MSSQL_SYS = new java.util.HashSet<>(java.util.Arrays.asList(
+		"master","tempdb","model","msdb","INFORMATION_SCHEMA","sys","guest"
+	));
+	private static final java.util.Set<String> CUBRID_SYS = new java.util.HashSet<>(java.util.Arrays.asList(
+		"DBA","PUBLIC"
+	));
+
+	private List<String> filterSystemSchemas(List<String> all, String dbmsType) {
+		if (all == null) return new ArrayList<>();
+		String t = dbmsType == null ? "" : dbmsType.toUpperCase();
+		java.util.Set<String> sys;
+		if (t.contains("ORACLE") || t.contains("TIBERO")) sys = ORACLE_SYS;
+		else if (t.contains("POSTGRE")) sys = PG_SYS;
+		else if (t.contains("MYSQL") || t.contains("MARIADB")) sys = MYSQL_SYS;
+		else if (t.contains("MSSQL") || t.contains("SQLSERVER")) sys = MSSQL_SYS;
+		else if (t.contains("CUBRID")) sys = CUBRID_SYS;
+		else sys = java.util.Collections.emptySet();
+
+		List<String> out = new ArrayList<>();
+		for (String s : all) {
+			if (s == null || s.isEmpty()) continue;
+			String upper = s.toUpperCase();
+			// 명시 set 매칭
+			if (sys.contains(s) || sys.contains(upper)) continue;
+			// prefix 룰
+			if ((t.contains("ORACLE") || t.contains("TIBERO"))
+					&& (upper.startsWith("APEX_") || upper.startsWith("FLOWS_"))) continue;
+			if (t.contains("POSTGRE") && s.startsWith("pg_")) continue;
+			if ((t.contains("MSSQL") || t.contains("SQLSERVER")) && upper.startsWith("DB_")) continue;
+			out.add(s);
+		}
+		return out;
 	}
 
 	/**
@@ -789,6 +842,16 @@ public class DataModelController {
 				&& (objVo.getObjNmKr() == null || objVo.getObjNmKr().trim().isEmpty()))
 				throw new IllegalArgumentException("테이블명(물리명) 또는 한글명(논리명) 중 하나는 필수입니다.");
 
+			// 86번 #11 — 영문명(물리) 정규식 검증. 영문/숫자/언더바만 허용 + 영문/언더바로 시작.
+			if (objVo.getObjNm() != null && !objVo.getObjNm().trim().isEmpty()) {
+				String en = objVo.getObjNm().trim();
+				if (!en.matches("^[A-Za-z_][A-Za-z0-9_]*$"))
+					throw new IllegalArgumentException("테이블 영문명은 영문(A-Z,a-z)/숫자(0-9)/언더바(_)만 허용되며 영문 또는 언더바로 시작해야 합니다. (입력값: " + en + ")");
+				if (en.length() > 128)
+					throw new IllegalArgumentException("테이블 영문명이 너무 깁니다 (최대 128자, 입력 길이: " + en.length() + ")");
+				objVo.setObjNm(en);
+			}
+
 			// 물리명이 비어있으면 TMP_TBL_N 자동 생성 (한글명만 입력된 논리 모델 케이스)
 			if (objVo.getObjNm() == null || objVo.getObjNm().trim().isEmpty()) {
 				Integer cnt = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDm", objVo.getDataModelId());
@@ -796,10 +859,14 @@ public class DataModelController {
 				objVo.setObjNm("TMP_TBL_" + seq);
 			}
 
-			// 물리명 중복 체크
+			// 86번 #11 — OBJ_OWNER 정규화 (PK 일부, NULL 비허용)
+			if (objVo.getObjOwner() == null) objVo.setObjOwner("");
+
+			// 물리명 중복 체크 — (DM_ID, OBJ_OWNER, OBJ_NM) 조합 기준
 			Map<String, Object> dupParam = new HashMap<>();
 			dupParam.put("dataModelId", objVo.getDataModelId());
-			dupParam.put("objNm", objVo.getObjNm());
+			dupParam.put("objOwner",    objVo.getObjOwner());
+			dupParam.put("objNm",       objVo.getObjNm());
 			Integer dup = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDmId", dupParam);
 			if (dup != null && dup > 0) throw new IllegalStateException("이미 존재하는 테이블입니다: " + objVo.getObjNm());
 
@@ -861,25 +928,50 @@ public class DataModelController {
 			String newObjNm    = (String) body.get("objNm");
 			String objNmKr     = (String) body.get("objNmKr");
 			String objOwner    = (String) body.get("objOwner");
+			// 86번 #11 — origOwner 미전달 케이스 호환. 변경 전 OWNER 가 없으면 새 OWNER 와 동일하다고 간주.
+			String origOwner   = body.get("origObjOwner") != null ? (String) body.get("origObjOwner") : objOwner;
 			String objDesc     = (String) body.get("objDesc");
+			// PK 의 OWNER 정규화 (NULL → '')
+			objOwner  = objOwner  == null ? "" : objOwner;
+			origOwner = origOwner == null ? "" : origOwner;
 
-			boolean rename = origObjNm != null && newObjNm != null && !origObjNm.equals(newObjNm);
+			boolean rename     = origObjNm != null && newObjNm != null && !origObjNm.equals(newObjNm);
+			boolean ownerChange = !origOwner.equals(objOwner);
+
+			// 86번 #11 — 영문명(물리) 정규식 검증. 영문/숫자/언더바만 + 영문/언더바로 시작.
+			if (newObjNm != null && !newObjNm.trim().isEmpty()) {
+				String en = newObjNm.trim();
+				if (!en.matches("^[A-Za-z_][A-Za-z0-9_]*$")) {
+					result.setResultInfo(RestResult.CODE_500.getCode(),
+						"테이블 영문명은 영문(A-Z,a-z)/숫자(0-9)/언더바(_)만 허용되며 영문 또는 언더바로 시작해야 합니다. (입력값: " + en + ")");
+					return Mono.just(result);
+				}
+				if (en.length() > 128) {
+					result.setResultInfo(RestResult.CODE_500.getCode(),
+						"테이블 영문명이 너무 깁니다 (최대 128자, 입력 길이: " + en.length() + ")");
+					return Mono.just(result);
+				}
+				newObjNm = en;
+			}
 
 			if (rename) {
 				// 충돌 재확인 (프론트 preview 후 다른 세션이 같은 이름 만들 수 있음)
 				Map<String, Object> chk = new HashMap<>();
 				chk.put("dataModelId", dataModelId);
-				chk.put("objNm", newObjNm);
+				chk.put("objNm",       newObjNm);
+				chk.put("objOwner",    objOwner);
 				Integer exists = sqlSessionTemplate.selectOne("datamodel.existsObjNmInModel", chk);
 				if (exists != null && exists > 0) {
 					result.setResultInfo(RestResult.CODE_500.getCode(), "이미 같은 이름의 테이블이 존재합니다: " + newObjNm);
 					return Mono.just(result);
 				}
 
+				// 86번 #11 — rename cascade. WHERE 매칭은 origOwner 기준 (rename 이 owner 변경을 동반하지 않으므로 origOwner = objOwner)
 				Map<String, Object> rn = new HashMap<>();
 				rn.put("dataModelId", dataModelId);
 				rn.put("origObjNm",   origObjNm);
 				rn.put("newObjNm",    newObjNm);
+				rn.put("objOwner",    origOwner);
 
 				sqlSessionTemplate.update("datamodel.renameObjAttrCascade",          rn);
 				sqlSessionTemplate.update("datamodel.renameObjIndexCascade",         rn);
@@ -888,14 +980,38 @@ public class DataModelController {
 				sqlSessionTemplate.update("datamodel.renameObjPhysical",             rn);
 			}
 
-			// 한글명/오너/설명 update (PK 가 새 이름이거나 기존 이름이거나 동일 로직)
+			// 86번 #11 — OBJ_OWNER 변경 cascade (OBJ 본체 update 보다 먼저 — sub rows 의 OLD owner 매칭이 살아있을 때 갱신).
+			if (ownerChange) {
+				Map<String, Object> ownParam = new HashMap<>();
+				ownParam.put("dataModelId", dataModelId);
+				ownParam.put("objNm",       newObjNm);
+				ownParam.put("objOwner",    origOwner);  // OLD — WHERE 매칭
+				ownParam.put("newOwner",    objOwner);   // NEW — SET 적용
+				sqlSessionTemplate.update("datamodel.cascadeAttrOwner",          ownParam);
+				sqlSessionTemplate.update("datamodel.cascadeIndexOwner",         ownParam);
+				sqlSessionTemplate.update("datamodel.cascadeConstraintOwner",    ownParam);
+				sqlSessionTemplate.update("datamodel.cascadeConstraintRefOwner", ownParam);
+			}
+
+			// 한글명/오너/설명 update — PK 가 OWNER 포함이라 OWNER 변경 시 row 자체 ID 가 바뀜
+			// → ownerChange 이면 OLD PK row 를 직접 update 못 함. 이 경우 OBJ row 도 OWNER 만 update 하는 별도 매퍼 필요.
+			// 임시: ownerChange 이면 일단 cascade 호출 후 OBJ.OWNER 도 갱신 — updateDataModelObj 매퍼는 PK 로 매칭하므로 OLD 키로 호출.
 			StdDataModelObjVo objVo = new StdDataModelObjVo();
 			objVo.setDataModelId(dataModelId);
 			objVo.setObjNm(newObjNm);
 			objVo.setObjNmKr(objNmKr);
-			objVo.setObjOwner(objOwner);
+			objVo.setObjOwner(ownerChange ? origOwner : objOwner);  // 일단 OLD owner 로 매칭
 			objVo.setObjDesc(objDesc);
 			sqlSessionTemplate.update("datamodel.updateDataModelObj", objVo);
+			if (ownerChange) {
+				// OBJ 의 OWNER 자체를 OLD → NEW 로 변경 (PK 일부)
+				Map<String, Object> ownerUpd = new HashMap<>();
+				ownerUpd.put("dataModelId", dataModelId);
+				ownerUpd.put("objNm",       newObjNm);
+				ownerUpd.put("objOwner",    origOwner);  // WHERE 매칭
+				ownerUpd.put("newOwner",    objOwner);
+				sqlSessionTemplate.update("datamodel.updateObjOwnerKey", ownerUpd);
+			}
 
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -915,7 +1031,8 @@ public class DataModelController {
 		try {
 			Map<String, Object> param = new HashMap<>();
 			param.put("dataModelId", objVo.getDataModelId());
-			param.put("objNm", objVo.getObjNm());
+			param.put("objOwner",    objVo.getObjOwner() == null ? "" : objVo.getObjOwner());  // 86번 #11
+			param.put("objNm",       objVo.getObjNm());
 			session.delete("datamodel.deleteDataModelAttrsByObj", param);
 			session.delete("datamodel.deleteDataModelObj", param);
 			session.commit();
@@ -1009,12 +1126,25 @@ public class DataModelController {
 			if (attrVo.getAttrNmKr() == null || attrVo.getAttrNmKr().trim().isEmpty())
 				throw new IllegalArgumentException("컬럼 한글명은 필수입니다.");
 
+			// 86번 #11 — OBJ_OWNER 미지정 시 부모 OBJ 에서 lookup
+			if (attrVo.getObjOwner() == null || attrVo.getObjOwner().isEmpty()) {
+				List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByDmId", attrVo.getDataModelId());
+				for (StdDataModelObjVo o : objs) {
+					if (attrVo.getObjNm().equals(o.getObjNm())) {
+						attrVo.setObjOwner(o.getObjOwner() == null ? "" : o.getObjOwner());
+						break;
+					}
+				}
+				if (attrVo.getObjOwner() == null) attrVo.setObjOwner("");
+			}
+
 			boolean isStandard = !"N".equals(attrVo.getTermsStndYn());
 			// 표준 컬럼: 물리명/타입 필수 + 표준 검증
 			// 비표준 컬럼: 물리명 자동 생성(TMP_COL_{순번}) + 타입 기본값(VARCHAR(255))
 			Map<String, Object> ordParam = new HashMap<>();
 			ordParam.put("dataModelId", attrVo.getDataModelId());
-			ordParam.put("objNm", attrVo.getObjNm());
+			ordParam.put("objOwner",    attrVo.getObjOwner());
+			ordParam.put("objNm",       attrVo.getObjNm());
 			Short maxOrd = sqlSessionTemplate.selectOne("datamodel.selectMaxAttrOrd", ordParam);
 			short nextOrd = (short) ((maxOrd == null ? 0 : maxOrd) + 1);
 			attrVo.setAttrOrder(nextOrd);
@@ -1039,8 +1169,9 @@ public class DataModelController {
 
 			Map<String, Object> dupParam = new HashMap<>();
 			dupParam.put("dataModelId", attrVo.getDataModelId());
-			dupParam.put("objNm", attrVo.getObjNm());
-			dupParam.put("attrNm", attrVo.getAttrNm());
+			dupParam.put("objOwner",    attrVo.getObjOwner());  // 86번 #11
+			dupParam.put("objNm",       attrVo.getObjNm());
+			dupParam.put("attrNm",      attrVo.getAttrNm());
 			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelAttr", dupParam);
 			if (dup > 0) throw new IllegalStateException("이미 존재하는 컬럼입니다: " + attrVo.getAttrNm());
 
@@ -1092,8 +1223,9 @@ public class DataModelController {
 		try {
 			Map<String, Object> param = new HashMap<>();
 			param.put("dataModelId", attrVo.getDataModelId());
-			param.put("objNm", attrVo.getObjNm());
-			param.put("attrNm", attrVo.getAttrNm());
+			param.put("objOwner",    attrVo.getObjOwner() == null ? "" : attrVo.getObjOwner());  // 86번 #11
+			param.put("objNm",       attrVo.getObjNm());
+			param.put("attrNm",      attrVo.getAttrNm());
 			session.delete("datamodel.deleteDataModelAttr", param);
 			session.update("datamodel.syncDataModelObjAttrCnt", param);
 			session.commit();
@@ -1123,6 +1255,8 @@ public class DataModelController {
 		try {
 			String dataModelId = (String) body.get("dataModelId");
 			String objNm = (String) body.get("objNm");
+			// 86번 #11 — saveAttrs 는 frontend 가 objOwner 명시 안 하면 null. 부모 OBJ 에서 lookup 필요.
+			String objOwner = (String) body.get("objOwner");
 			Object rawAttrs = body.get("attrs");
 
 			if (dataModelId == null || dataModelId.trim().isEmpty())
@@ -1135,10 +1269,23 @@ public class DataModelController {
 			@SuppressWarnings("unchecked")
 			List<Map<String, Object>> attrs = (List<Map<String, Object>>) rawAttrs;
 
+			// 86번 #11 — objOwner 미전달 시 부모 OBJ 에서 lookup. PK (DM_ID, OBJ_OWNER, OBJ_NM) 일관 매칭 위해 명시화.
+			if (objOwner == null || objOwner.isEmpty()) {
+				List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByDmId", dataModelId);
+				for (StdDataModelObjVo o : objs) {
+					if (objNm.equals(o.getObjNm())) {
+						objOwner = o.getObjOwner() == null ? "" : o.getObjOwner();
+						break;
+					}
+				}
+				if (objOwner == null) objOwner = "";
+			}
+
 			// 현재 최대 ATTR_ORD 조회 (ADD 시 nextOrd 증분 기준)
 			Map<String, Object> ordParam = new HashMap<>();
 			ordParam.put("dataModelId", dataModelId);
-			ordParam.put("objNm", objNm);
+			ordParam.put("objOwner",    objOwner);
+			ordParam.put("objNm",       objNm);
 			Short maxOrdObj = sqlSessionTemplate.selectOne("datamodel.selectMaxAttrOrd", ordParam);
 			short nextOrd = (short) (maxOrdObj == null ? 0 : maxOrdObj);
 
@@ -1151,17 +1298,25 @@ public class DataModelController {
 				try {
 					if ("ADD".equalsIgnoreCase(mode)) {
 						String attrNmKr = str(row.get("attrNmKr"));
-						if (attrNmKr == null || attrNmKr.trim().isEmpty())
-							throw new IllegalArgumentException("컬럼 한글명 누락");
+						String attrNmInput = str(row.get("attrNm"));
+						if ((attrNmKr == null || attrNmKr.trim().isEmpty())
+								&& (attrNmInput == null || attrNmInput.trim().isEmpty()))
+							throw new IllegalArgumentException("컬럼 영문명 또는 한글명 중 하나는 필수");
 						nextOrd++;
 						StdDataModelAttrVo vo = new StdDataModelAttrVo();
 						vo.setDataModelId(dataModelId);
+						vo.setObjOwner(objOwner);  // 86번 #11 — 부모 OBJ 에서 상속한 OWNER 명시
 						vo.setObjNm(objNm);
-						vo.setAttrNm("TMP_COL_" + nextOrd);
+						vo.setAttrNm((attrNmInput != null && !attrNmInput.trim().isEmpty())
+								? attrNmInput.trim() : ("TMP_COL_" + nextOrd));
 						vo.setAttrNmKr(attrNmKr);
 						vo.setAttrOrder(nextOrd);
-						vo.setDataType("VARCHAR");
-						vo.setDataLen(255);
+						String dataTypeIn = str(row.get("dataType"));
+						vo.setDataType((dataTypeIn != null && !dataTypeIn.trim().isEmpty()) ? dataTypeIn.trim() : "VARCHAR");
+						Integer dataLenIn = parseIntSafe(row.get("dataLen"));
+						vo.setDataLen(dataLenIn != null ? dataLenIn.longValue() : 255L);
+						Integer decLenIn = parseIntSafe(row.get("dataDecimalLen"));
+						if (decLenIn != null) vo.setDataDecimalLen(decLenIn.shortValue());
 						vo.setPkYn("Y".equalsIgnoreCase(str(row.get("pkYn"))) ? "Y" : "N");
 						vo.setFkYn("Y".equalsIgnoreCase(str(row.get("fkYn"))) ? "Y" : "N");
 						String nullableYn = str(row.get("nullableYn"));
@@ -1177,15 +1332,18 @@ public class DataModelController {
 						if (attrNm == null || attrNm.trim().isEmpty())
 							throw new IllegalArgumentException("attrNm 누락");
 						// 기존 ATTR 조회 — dataType/dataLen/word_lst 등은 보존, 표준 플래그는 한글명 변경 여부에 따라 분기
+						// 86번 #11 — PK 매칭에 OBJ_OWNER 포함
 						Map<String, Object> sel = new HashMap<>();
 						sel.put("dataModelId", dataModelId);
-						sel.put("objNm", objNm);
-						sel.put("attrNm", attrNm);
+						sel.put("objOwner",    objOwner);
+						sel.put("objNm",       objNm);
+						sel.put("attrNm",      attrNm);
 						StdDataModelAttrVo existing = session.selectOne("datamodel.selectDataModelAttrOne", sel);
 						if (existing == null) throw new IllegalArgumentException("수정 대상 ATTR 없음: " + objNm + "." + attrNm);
 
 						StdDataModelAttrVo vo = new StdDataModelAttrVo();
 						vo.setDataModelId(dataModelId);
+						vo.setObjOwner(objOwner);
 						vo.setObjNm(objNm);
 						vo.setAttrNm(attrNm);
 						String newKr = str(row.get("attrNmKr"));
@@ -1219,8 +1377,9 @@ public class DataModelController {
 							throw new IllegalArgumentException("attrNm 누락");
 						Map<String, Object> p = new HashMap<>();
 						p.put("dataModelId", dataModelId);
-						p.put("objNm", objNm);
-						p.put("attrNm", attrNm);
+						p.put("objOwner",    objOwner);  // 86번 #11
+						p.put("objNm",       objNm);
+						p.put("attrNm",      attrNm);
 						session.delete("datamodel.deleteDataModelAttr", p);
 						deleted++;
 					} else {
@@ -1236,10 +1395,11 @@ public class DataModelController {
 				}
 			}
 
-			// 컬럼 개수 동기화
+			// 컬럼 개수 동기화 — 86번 #11 OBJ_OWNER 매칭 추가
 			Map<String, Object> syncParam = new HashMap<>();
 			syncParam.put("dataModelId", dataModelId);
-			syncParam.put("objNm", objNm);
+			syncParam.put("objOwner",    objOwner);
+			syncParam.put("objNm",       objNm);
 			session.update("datamodel.syncDataModelObjAttrCnt", syncParam);
 			session.commit();
 
@@ -1263,6 +1423,15 @@ public class DataModelController {
 
 	private static String str(Object o) {
 		return o == null ? null : o.toString();
+	}
+
+	/** 86번 #11 — 컬럼 직접 입력 시 dataLen 등 숫자 필드 안전 변환. 빈 문자열/잘못된 값은 null 로. */
+	private static Integer parseIntSafe(Object o) {
+		if (o == null) return null;
+		if (o instanceof Number) return ((Number) o).intValue();
+		String s = o.toString().trim();
+		if (s.isEmpty()) return null;
+		try { return Integer.parseInt(s); } catch (NumberFormatException e) { return null; }
 	}
 
 	// ---------- 내부 헬퍼 ----------
@@ -1439,10 +1608,13 @@ public class DataModelController {
 	// 53번 Phase 5: 엑셀 업로드 (테이블·컬럼)
 	// ===================================================================
 
-	private static final String[] TABLE_HEADERS = { "소유자", "테이블명(한글)", "설명" };
+	private static final String[] TABLE_HEADERS = { "소유자", "테이블명(영문)", "테이블명(한글)", "설명" };
+	// 86번 #11 — 업로드/다운로드 양식 통일. 다운로드한 파일 그대로 백업·재업로드 가능.
 	private static final String[] ATTR_HEADERS = {
-		"소유자", "테이블명(한글)", "컬럼명(한글)", "컬럼 순서",
-		"PK여부", "FK여부", "참조 테이블(한글)", "참조 컬럼(한글)", "삭제 규칙"
+		"소유자", "테이블명(영문)", "테이블명(한글)", "컬럼명(영문)", "컬럼명(한글)",
+		"데이터타입", "길이", "소수점자리", "컬럼 순서",
+		"NULL여부", "PK여부", "FK여부", "디폴트값",
+		"참조 테이블(한글)", "참조 컬럼(한글)", "삭제 규칙"
 	};
 
 	/**
@@ -1481,16 +1653,21 @@ public class DataModelController {
 					int seq = cnt == null ? 0 : cnt;
 					for (Map<String, Object> r : rows) {
 						if (!"INSERT".equals(r.get("_action"))) continue;
-						seq++;
 						StdDataModelObjVo vo = new StdDataModelObjVo();
 						vo.setDataModelId(dataModelId);
 						vo.setObjOwner(str(r.get("objOwner")));
 						vo.setObjNmKr(str(r.get("objNmKr")));
 						vo.setObjDesc(str(r.get("objDesc")));
-						vo.setObjNm("TMP_TBL_" + seq);
+						// 86번 #9 — 영문명 입력했으면 그대로, 비어있으면 TMP_TBL_N 자동
+						String enNm = str(r.get("objNm"));
+						if (isBlank(enNm)) {
+							seq++;
+							enNm = "TMP_TBL_" + seq;
+						}
+						vo.setObjNm(enNm);
 						vo.setObjAttrCnt((short) 0);
 						session.insert("datamodel.insertDataModelObj", vo);
-						r.put("objNm", vo.getObjNm());
+						r.put("objNm", enNm);
 					}
 					session.commit();
 				} catch (Exception e) {
@@ -1577,16 +1754,25 @@ public class DataModelController {
 						vo.setDataModelId(dataModelId);
 						vo.setObjOwner(str(r.get("objOwner")));
 						vo.setObjNm(objNm);
-						vo.setAttrNm("TMP_COL_" + cur);
+						String enIn = str(r.get("attrNm"));
+						vo.setAttrNm((enIn != null && !enIn.trim().isEmpty()) ? enIn.trim() : ("TMP_COL_" + cur));
 						vo.setAttrNmKr(str(r.get("attrNmKr")));
 						vo.setAttrOrder(cur);
-						vo.setDataType("VARCHAR");
-						vo.setDataLen(255);
+						String typeIn = str(r.get("dataType"));
+						vo.setDataType((typeIn != null && !typeIn.trim().isEmpty()) ? typeIn.trim() : "VARCHAR");
+						Integer lenIn = parseIntSafe(r.get("dataLen"));
+						vo.setDataLen(lenIn != null ? lenIn.longValue() : 255L);
+						Integer decIn = parseIntSafe(r.get("dataDecimalLen"));
+						if (decIn != null) vo.setDataDecimalLen(decIn.shortValue());
 						String pk = str(r.get("pkYn"));
 						String fk = str(r.get("fkYn"));
 						vo.setPkYn("Y".equals(pk) ? "Y" : "N");
 						vo.setFkYn("Y".equals(fk) ? "Y" : "N");
-						vo.setNullableYn("Y".equals(vo.getPkYn()) ? "N" : "Y");
+						// 86번 #11 — NULL여부/디폴트값을 업로드 row 에서 그대로 보존 (PK 면 N 강제)
+						String nullableIn = str(r.get("nullableYn"));
+						vo.setNullableYn("Y".equals(vo.getPkYn()) ? "N"
+								: (nullableIn == null || nullableIn.isEmpty() ? "Y" : nullableIn));
+						vo.setDefaultVal(str(r.get("defaultVal")));
 						vo.setTermsStndYn("N");
 						vo.setDomainStndYn("N");
 						session.insert("datamodel.insertDataModelAttr", vo);
@@ -1652,19 +1838,35 @@ public class DataModelController {
 	@RequestMapping(value = "/uploadTemplate", method = RequestMethod.GET)
 	public void uploadTemplate(@RequestParam(value = "scope", defaultValue = "tables") String scope,
 	                            HttpServletResponse res) throws Exception {
-		String resource;
-		String fileName;
-		if ("attrs".equalsIgnoreCase(scope)) {
-			resource = "templates/attrs_template.xlsx";
-			fileName = "dataq_attrs_template.xlsx";
-		} else {
-			resource = "templates/tables_template.xlsx";
-			fileName = "dataq_tables_template.xlsx";
-		}
+		// 86번 #9 — 양식 동적 생성 (TABLE_HEADERS / ATTR_HEADERS 변경 시 자동 반영)
+		boolean isAttrs = "attrs".equalsIgnoreCase(scope);
+		String[] headers = isAttrs ? ATTR_HEADERS : TABLE_HEADERS;
+		String fileName = isAttrs ? "dataq_attrs_template.xlsx" : "dataq_tables_template.xlsx";
+
 		res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 		res.setHeader("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
-		try (java.io.InputStream in = new org.springframework.core.io.ClassPathResource(resource).getInputStream()) {
-			org.springframework.util.StreamUtils.copy(in, res.getOutputStream());
+		try (org.apache.poi.xssf.usermodel.XSSFWorkbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+			org.apache.poi.ss.usermodel.Sheet sh = wb.createSheet(isAttrs ? "컬럼 양식" : "테이블 양식");
+			// 헤더 스타일
+			org.apache.poi.ss.usermodel.CellStyle hdrStyle = wb.createCellStyle();
+			org.apache.poi.ss.usermodel.Font hdrFont = wb.createFont();
+			hdrFont.setBold(true);
+			hdrStyle.setFont(hdrFont);
+			hdrStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+			hdrStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+			hdrStyle.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+			hdrStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+			hdrStyle.setBorderLeft(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+			hdrStyle.setBorderRight(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+
+			org.apache.poi.ss.usermodel.Row hRow = sh.createRow(0);
+			for (int i = 0; i < headers.length; i++) {
+				org.apache.poi.ss.usermodel.Cell c = hRow.createCell(i);
+				c.setCellValue(headers[i]);
+				c.setCellStyle(hdrStyle);
+				sh.setColumnWidth(i, 18 * 256);
+			}
+			wb.write(res.getOutputStream());
 			res.getOutputStream().flush();
 		}
 	}
@@ -1685,24 +1887,30 @@ public class DataModelController {
 			if (header == null) throw new IllegalArgumentException("시트가 비어있습니다.");
 			Map<String, Integer> hIdx = mapHeaders(header, TABLE_HEADERS);
 			for (String h : TABLE_HEADERS) {
-				if (!h.equals("설명") && !hIdx.containsKey(h))
+				// 영문명/설명은 옵션, 소유자/한글명은 필수
+				if (h.equals("설명") || h.equals("테이블명(영문)")) continue;
+				if (!hIdx.containsKey(h))
 					throw new IllegalArgumentException("필수 헤더 누락: " + h);
 			}
 
-			Set<String> seen = new HashSet<>();
-			// DB 에 이미 존재하는 (owner, objNmKr) 조합 조회
-			Set<String> existing = loadExistingObjKrs(dataModelId);
+			Set<String> seenKr = new HashSet<>();
+			Set<String> seenEn = new HashSet<>();
+			// DB 에 이미 존재하는 (owner, objNmKr) / (owner, objNm) 조합 조회
+			Set<String> existingKr = loadExistingObjKrs(dataModelId);
+			Set<String> existingEn = loadExistingObjEns(dataModelId);
 
 			int last = sh.getLastRowNum();
 			for (int r = 1; r <= last; r++) {
 				Row row = sh.getRow(r);
 				if (row == null || isRowEmpty(row)) continue;
 				String owner = getStr(row, hIdx.get("소유자"));
+				String enNm = hIdx.containsKey("테이블명(영문)") ? getStr(row, hIdx.get("테이블명(영문)")) : null;
 				String krNm = getStr(row, hIdx.get("테이블명(한글)"));
 				String desc = hIdx.containsKey("설명") ? getStr(row, hIdx.get("설명")) : null;
 				Map<String, Object> m = new HashMap<>();
 				m.put("row", r + 1);
 				m.put("objOwner", owner);
+				m.put("objNm", enNm);     // 영문명 — 비어있으면 commit 시 TMP_TBL_N 자동
 				m.put("objNmKr", krNm);
 				m.put("objDesc", desc);
 				if (isBlank(owner) || isBlank(krNm)) {
@@ -1710,18 +1918,28 @@ public class DataModelController {
 					m.put("_msg", "소유자·테이블명(한글) 필수");
 					errors.add(errRow(r + 1, "소유자·테이블명(한글) 필수"));
 				} else {
-					String key = owner + "|" + krNm;
-					if (seen.contains(key)) {
+					String keyKr = owner + "|" + krNm;
+					String keyEn = isBlank(enNm) ? null : (owner + "|" + enNm);
+					if (seenKr.contains(keyKr)) {
 						m.put("_action", "ERROR");
-						m.put("_msg", "파일 내 중복 (" + owner + ", " + krNm + ")");
-						errors.add(errRow(r + 1, "파일 내 중복"));
-					} else if (existing.contains(key)) {
+						m.put("_msg", "파일 내 한글명 중복 (" + owner + ", " + krNm + ")");
+						errors.add(errRow(r + 1, "파일 내 한글명 중복"));
+					} else if (keyEn != null && seenEn.contains(keyEn)) {
+						m.put("_action", "ERROR");
+						m.put("_msg", "파일 내 영문명 중복 (" + owner + ", " + enNm + ")");
+						errors.add(errRow(r + 1, "파일 내 영문명 중복"));
+					} else if (existingKr.contains(keyKr)) {
 						m.put("_action", "SKIP");
-						m.put("_msg", "이미 존재 — 스킵");
-						warnings.add(warnRow(r + 1, "이미 존재하는 (" + owner + ", " + krNm + ") — 스킵"));
+						m.put("_msg", "이미 존재 (한글명) — 스킵");
+						warnings.add(warnRow(r + 1, "이미 존재하는 한글명 (" + owner + ", " + krNm + ") — 스킵"));
+					} else if (keyEn != null && existingEn.contains(keyEn)) {
+						m.put("_action", "SKIP");
+						m.put("_msg", "이미 존재 (영문명) — 스킵");
+						warnings.add(warnRow(r + 1, "이미 존재하는 영문명 (" + owner + ", " + enNm + ") — 스킵"));
 					} else {
 						m.put("_action", "INSERT");
-						seen.add(key);
+						seenKr.add(keyKr);
+						if (keyEn != null) seenEn.add(keyEn);
 					}
 				}
 				rows.add(m);
@@ -1740,9 +1958,13 @@ public class DataModelController {
 		List<Map<String, Object>> errors = new ArrayList<>();
 		List<Map<String, Object>> warnings = new ArrayList<>();
 
-		// DB 의 (owner, objNmKr) → objNm 매핑
+		// 86번 #11 — 테이블 매핑 양방향 (KR↔EN). 한·영 둘 중 하나만 있어도 objNm 해석 가능하게.
 		Map<String, String> objKrToNm = loadObjKrToNm(dataModelId);
-		// 같은 파일 내 (owner, tableKr, colKr) 중복 체크
+		Map<String, String> objEnToKr = loadObjEnToKr(dataModelId);
+		// DB 에 이미 등록된 (owner|objNm|attrKr) / (owner|objNm|attrEn) — 중복 SKIP 용
+		Set<String> existingAttrKr = loadExistingAttrKrs(dataModelId);
+		Set<String> existingAttrEn = loadExistingAttrEns(dataModelId);
+		// 같은 파일 내 중복 체크 (owner|tbl|col 한글 또는 영문 어느 쪽이든)
 		Set<String> seenAttrs = new HashSet<>();
 		Set<String> groups = new HashSet<>();
 
@@ -1754,19 +1976,25 @@ public class DataModelController {
 			Row header = sh.getRow(0);
 			if (header == null) throw new IllegalArgumentException("시트가 비어있습니다.");
 			Map<String, Integer> hIdx = mapHeaders(header, ATTR_HEADERS);
-			for (String h : new String[] { "소유자", "테이블명(한글)", "컬럼명(한글)" }) {
-				if (!hIdx.containsKey(h)) throw new IllegalArgumentException("필수 헤더 누락: " + h);
-			}
+			if (!hIdx.containsKey("소유자"))
+				throw new IllegalArgumentException("필수 헤더 누락: 소유자");
 
 			int last = sh.getLastRowNum();
 			for (int r = 1; r <= last; r++) {
 				Row row = sh.getRow(r);
 				if (row == null || isRowEmpty(row)) continue;
 				String owner = getStr(row, hIdx.get("소유자"));
+				String tblEn = getStr(row, hIdx.get("테이블명(영문)"));
 				String tblKr = getStr(row, hIdx.get("테이블명(한글)"));
+				String colEn = getStr(row, hIdx.get("컬럼명(영문)"));
 				String colKr = getStr(row, hIdx.get("컬럼명(한글)"));
+				String dataType = getStr(row, hIdx.get("데이터타입"));
+				String dataLenStr = getStr(row, hIdx.get("길이"));
+				String dataDecStr = getStr(row, hIdx.get("소수점자리"));
+				String nullable = getStr(row, hIdx.get("NULL여부"));
 				String pk = getStr(row, hIdx.get("PK여부"));
 				String fk = getStr(row, hIdx.get("FK여부"));
+				String defaultVal = getStr(row, hIdx.get("디폴트값"));
 				String refTbl = getStr(row, hIdx.get("참조 테이블(한글)"));
 				String refCol = getStr(row, hIdx.get("참조 컬럼(한글)"));
 				String delRule = getStr(row, hIdx.get("삭제 규칙"));
@@ -1775,42 +2003,87 @@ public class DataModelController {
 				m.put("row", r + 1);
 				m.put("objOwner", owner);
 				m.put("objNmKr", tblKr);
+				m.put("attrNm", colEn);
 				m.put("attrNmKr", colKr);
+				m.put("dataType", dataType);
+				m.put("dataLen", parseIntSafe(dataLenStr));
+				m.put("dataDecimalLen", parseIntSafe(dataDecStr));
+				m.put("nullableYn", "N".equalsIgnoreCase(nullable) ? "N" : "Y");
 				m.put("pkYn", "Y".equalsIgnoreCase(pk) ? "Y" : "N");
 				m.put("fkYn", "Y".equalsIgnoreCase(fk) ? "Y" : "N");
-				m.put("refObjOwner", owner); // 같은 오너 내 참조로 가정
+				m.put("defaultVal", defaultVal);
+				m.put("refObjOwner", owner);
 				m.put("refObjNmKr", refTbl);
 				m.put("refAttrNmKr", refCol);
 				m.put("deleteRule", normalizeDeleteRule(delRule, r + 1, warnings));
 
-				if (isBlank(owner) || isBlank(tblKr) || isBlank(colKr)) {
+				if (isBlank(owner)) {
 					m.put("_action", "ERROR");
-					m.put("_msg", "소유자·테이블명·컬럼명 필수");
-					errors.add(errRow(r + 1, "소유자·테이블명·컬럼명 필수"));
+					m.put("_msg", "소유자 필수");
+					errors.add(errRow(r + 1, "소유자 필수"));
 					rows.add(m);
 					continue;
 				}
-				String groupKey = owner + "|" + tblKr;
-				groups.add(groupKey);
-				String objNm = objKrToNm.get(groupKey);
-				if (objNm == null) {
+				// 86번 #11 — (테이블 영문 + 컬럼 영문) 또는 (테이블 한글 + 컬럼 한글) 중 한 쌍은 필수
+				boolean enPairOk = !isBlank(tblEn) && !isBlank(colEn);
+				boolean krPairOk = !isBlank(tblKr) && !isBlank(colKr);
+				if (!enPairOk && !krPairOk) {
 					m.put("_action", "ERROR");
-					m.put("_msg", "테이블 먼저 등록 필요: (" + owner + ", " + tblKr + ")");
-					errors.add(errRow(r + 1, "테이블 먼저 등록 필요"));
+					m.put("_msg", "(테이블+컬럼) 영문 또는 한글 한 쌍은 필수");
+					errors.add(errRow(r + 1, "(테이블+컬럼) 영문 또는 한글 한 쌍은 필수"));
 					rows.add(m);
 					continue;
+				}
+				// objNm 결정: 영문이 있으면 영문 우선, 없으면 한글 → DB 매핑
+				String objNm = null;
+				if (!isBlank(tblEn)) {
+					String knownKr = objEnToKr.get(owner + "|" + tblEn);
+					if (knownKr == null) {
+						m.put("_action", "ERROR");
+						m.put("_msg", "테이블 먼저 등록 필요(영문): (" + owner + ", " + tblEn + ")");
+						errors.add(errRow(r + 1, "테이블 먼저 등록 필요(영문)"));
+						rows.add(m);
+						continue;
+					}
+					objNm = tblEn;
+					if (m.get("objNmKr") == null) m.put("objNmKr", knownKr);
+				} else {
+					objNm = objKrToNm.get(owner + "|" + tblKr);
+					if (objNm == null) {
+						m.put("_action", "ERROR");
+						m.put("_msg", "테이블 먼저 등록 필요(한글): (" + owner + ", " + tblKr + ")");
+						errors.add(errRow(r + 1, "테이블 먼저 등록 필요(한글)"));
+						rows.add(m);
+						continue;
+					}
 				}
 				m.put("objNm", objNm);
+				groups.add(owner + "|" + objNm);
 
-				String dupKey = owner + "|" + tblKr + "|" + colKr;
-				if (seenAttrs.contains(dupKey)) {
+				// 파일 내 중복 (영문 또는 한글 키 어느 쪽이든)
+				String dupKeyEn = !isBlank(colEn) ? (owner + "|" + objNm + "|EN|" + colEn) : null;
+				String dupKeyKr = !isBlank(colKr) ? (owner + "|" + objNm + "|KR|" + colKr) : null;
+				if ((dupKeyEn != null && seenAttrs.contains(dupKeyEn))
+						|| (dupKeyKr != null && seenAttrs.contains(dupKeyKr))) {
 					m.put("_action", "ERROR");
-					m.put("_msg", "파일 내 중복 (" + owner + ", " + tblKr + ", " + colKr + ")");
+					m.put("_msg", "파일 내 중복 컬럼");
 					errors.add(errRow(r + 1, "파일 내 중복 컬럼"));
 					rows.add(m);
 					continue;
 				}
-				seenAttrs.add(dupKey);
+				if (dupKeyEn != null) seenAttrs.add(dupKeyEn);
+				if (dupKeyKr != null) seenAttrs.add(dupKeyKr);
+
+				// DB 에 이미 등록된 컬럼 → silent SKIP
+				boolean dbDup = (dupKeyEn != null && existingAttrEn.contains(owner + "|" + objNm + "|" + colEn))
+						|| (dupKeyKr != null && existingAttrKr.contains(owner + "|" + objNm + "|" + colKr));
+				if (dbDup) {
+					m.put("_action", "SKIP");
+					m.put("_msg", "이미 등록된 컬럼");
+					warnings.add(warnRow(r + 1, "이미 등록된 컬럼 — 스킵"));
+					rows.add(m);
+					continue;
+				}
 
 				if ("Y".equals(m.get("fkYn")) && (isBlank(refTbl) || isBlank(refCol))) {
 					m.put("_action", "ERROR");
@@ -1913,6 +2186,58 @@ public class DataModelController {
 			if (o.getObjNmKr() == null) continue;
 			String owner = o.getObjOwner() == null ? "" : o.getObjOwner();
 			out.add(owner + "|" + o.getObjNmKr());
+		}
+		return out;
+	}
+
+	/** 86번 #9 — 컬럼 업로드 시 DB 기존 컬럼 한글명 dup 체크 (owner|objNm|attrKr) */
+	private Set<String> loadExistingAttrKrs(String dataModelId) {
+		Set<String> out = new HashSet<>();
+		List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", dataModelId);
+		if (attrs == null) return out;
+		for (StdDataModelAttrVo a : attrs) {
+			if (a.getAttrNmKr() == null || a.getObjNm() == null) continue;
+			String owner = a.getObjOwner() == null ? "" : a.getObjOwner();
+			out.add(owner + "|" + a.getObjNm() + "|" + a.getAttrNmKr());
+		}
+		return out;
+	}
+
+	/** 86번 #11 — 컬럼 업로드 시 DB 기존 컬럼 영문명 dup 체크 (owner|objNm|attrNm) */
+	private Set<String> loadExistingAttrEns(String dataModelId) {
+		Set<String> out = new HashSet<>();
+		List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", dataModelId);
+		if (attrs == null) return out;
+		for (StdDataModelAttrVo a : attrs) {
+			if (a.getAttrNm() == null || a.getObjNm() == null) continue;
+			String owner = a.getObjOwner() == null ? "" : a.getObjOwner();
+			out.add(owner + "|" + a.getObjNm() + "|" + a.getAttrNm());
+		}
+		return out;
+	}
+
+	/** 86번 #11 — 테이블 영문(objNm) → 한글(objNmKr) 매핑 (영문 입력만으로 테이블 검증할 때) */
+	private Map<String, String> loadObjEnToKr(String dataModelId) {
+		Map<String, String> out = new HashMap<>();
+		List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", dataModelId);
+		if (objs == null) return out;
+		for (StdDataModelObjVo o : objs) {
+			if (o.getObjNm() == null) continue;
+			String owner = o.getObjOwner() == null ? "" : o.getObjOwner();
+			out.put(owner + "|" + o.getObjNm(), o.getObjNmKr() == null ? "" : o.getObjNmKr());
+		}
+		return out;
+	}
+
+	/** 86번 #9 — 영문명(물리) 중복 체크용 */
+	private Set<String> loadExistingObjEns(String dataModelId) {
+		Set<String> out = new HashSet<>();
+		List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", dataModelId);
+		if (objs == null) return out;
+		for (StdDataModelObjVo o : objs) {
+			if (o.getObjNm() == null) continue;
+			String owner = o.getObjOwner() == null ? "" : o.getObjOwner();
+			out.add(owner + "|" + o.getObjNm());
 		}
 		return out;
 	}

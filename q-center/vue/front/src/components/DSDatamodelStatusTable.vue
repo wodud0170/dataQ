@@ -9,21 +9,52 @@
           @change="onModelChange" clearable dense outlined hide-details
           class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
         </v-autocomplete>
+        <!-- 86번 #11 — 소유자 (테이블명 앞) -->
+        <span class="filterLabel">소유자</span>
+        <v-select v-model="searchOwnerMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
+        <v-text-field v-model="searchOwner" clearable clear-icon="mdi-close-circle" color="ndColor"
+          single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }"
+          placeholder="소유자(스키마)" />
         <span class="filterLabel">테이블 영문명 (물리)</span>
+        <v-select v-model="searchTableMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
         <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
         </v-text-field>
         <span class="filterLabel">테이블 한글명 (논리)</span>
+        <v-select v-model="searchTableKrMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
         <v-text-field v-model="searchTableKr" @click:clear="searchTableKr=''" clearable
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
         </v-text-field>
         <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
-        <v-btn class="gradient" v-on:click="tableDataDownload" :disabled="dmTableAllItems.length === 0">다운로드</v-btn>
         <v-btn color="primary" :disabled="!selectedModelId" v-on:click="openAddObjDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">테이블 추가</v-btn>
-        <v-btn id="btn-upload-tables" color="deep-purple" outlined :disabled="!selectedModelId" v-on:click="triggerUploadTables" :style="{ padding: '0 12px' }">엑셀 업로드</v-btn>
-        <v-btn id="btn-download-tables-template" color="deep-purple" text v-on:click="downloadTablesTemplate" :style="{ padding: '0 8px' }">양식 다운로드</v-btn>
+        <!-- 86번 #11 — 엑셀 드롭다운 (업로드/양식/다운로드) -->
+        <v-menu offset-y>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn class="gradient" v-bind="attrs" v-on="on" :disabled="!selectedModelId">
+              <v-icon small left>mdi-file-excel</v-icon>엑셀
+              <v-icon small right>mdi-menu-down</v-icon>
+            </v-btn>
+          </template>
+          <v-list dense>
+            <v-list-item id="btn-upload-tables" @click="triggerUploadTables">
+              <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
+              <v-list-item-title>엑셀 업로드</v-list-item-title>
+            </v-list-item>
+            <v-list-item id="btn-download-tables-template" @click="downloadTablesTemplate">
+              <v-list-item-icon><v-icon small>mdi-file-download-outline</v-icon></v-list-item-icon>
+              <v-list-item-title>양식 다운로드</v-list-item-title>
+            </v-list-item>
+            <v-list-item :disabled="dmTableAllItems.length === 0" @click="tableDataDownload">
+              <v-list-item-icon><v-icon small>mdi-download</v-icon></v-list-item-icon>
+              <v-list-item-title>데이터 다운로드</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
         <input ref="uploadTablesInput" type="file" accept=".xlsx" style="display:none" @change="onTableFileSelected" />
       </v-row>
     </v-sheet>
@@ -110,9 +141,11 @@
     </v-sheet>
 
     <!-- 테이블 목록 -->
+    <!-- 86번 #11 — 같은 OBJ_NM 다른 OWNER 가능 → item-key 에 OWNER 포함, 기본 정렬도 OWNER 우선 -->
     <v-data-table id="dmTable_table" :headers="dmTabledetaileHeaders" :items="dmTableItems"
       :page.sync="page" :items-per-page="itemsPerPage" hide-default-footer
-      item-key="objNm" class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요.">
+      item-key="_rowKey" class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요."
+      multi-sort :sort-by="['objOwner', 'objNm']" :sort-desc="[false, false]">
       <template #[`item.objNm`]="{ item }">
         <a class="ndColor--text" style="cursor:pointer; text-decoration:underline;" @click="goToColumn(item)">{{ item.objNm }}</a>
       </template>
@@ -161,18 +194,29 @@ export default {
     modelList: [],
     dmTableAllItems: [],
     selectedModelId: null,
+    // 86번 #11 — 검색 필드 (소유자 추가, 한·영 모두 모드 셀렉트)
+    searchOwner: '',
+    searchOwnerMode: 'contains',
     searchTable: '',
+    searchTableMode: 'contains',
     searchTableKr: '',
+    searchTableKrMode: 'contains',
+    searchModeOptions: [
+      { value: 'contains', label: '포함' },
+      { value: 'exact',    label: '완전 일치' },
+      { value: 'start',    label: '앞' },
+      { value: 'end',      label: '뒤' },
+    ],
     loadTable: false,
     page: 1,
     pageCount: null,
     itemsPerPage: 10,
     tableViewLengthList: [10, 20, 30, 40, 50],
     dmTabledetaileHeaders: [
-      { text: '테이블 영문명 (물리)', align: 'center', sortable: false, value: 'objNm' },
-      { text: '테이블 한글명 (논리)', sortable: false, align: 'center', value: 'objNmKr' },
-      { text: '소유자', sortable: false, align: 'center', value: 'objOwner' },
-      { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
+      { text: '소유자', sortable: true, align: 'center', value: 'objOwner', width: '110px' },
+      { text: '테이블 영문명 (물리)', align: 'center', sortable: true, value: 'objNm' },
+      { text: '테이블 한글명 (논리)', sortable: true, align: 'center', value: 'objNmKr' },
+      { text: '컬럼개수', sortable: true, align: 'center', value: 'objAttrCnt' },
       { text: '테이블 설명', sortable: false, align: 'center', value: 'objDesc' },
       { text: '편집', align: 'center', sortable: false, value: 'actions', width: '100px' },
     ],
@@ -191,6 +235,7 @@ export default {
       { text: '행', value: 'row', align: 'center', sortable: false, width: '60px' },
       { text: '상태', value: '_action', align: 'center', sortable: false, width: '70px' },
       { text: '소유자', value: 'objOwner', align: 'center', sortable: false, width: '110px' },
+      { text: '테이블명(영문)', value: 'objNm', align: 'center', sortable: false, width: '180px' },
       { text: '테이블명(한글)', value: 'objNmKr', align: 'center', sortable: false },
       { text: '설명', value: 'objDesc', sortable: false },
       { text: '메시지', value: '_msg', sortable: false },
@@ -198,14 +243,42 @@ export default {
   }),
   computed: {
     dmTableItems() {
-      return this.dmTableAllItems.filter(item => {
-        const nm = !this.searchTable || (item.objNm || '').includes(this.searchTable);
-        const nmKr = !this.searchTableKr || (item.objNmKr || '').includes(this.searchTableKr);
-        return nm && nmKr;
-      });
+      // 86번 #11 — 소유자/영문/한글 매칭 + _rowKey (owner||objNm) 부여 (같은 obj_nm 다른 owner 동시 표시 가능)
+      return this.dmTableAllItems
+        .filter(item =>
+          this._matchName(item.objOwner, this.searchOwner,   this.searchOwnerMode)
+          && this._matchName(item.objNm,    this.searchTable,   this.searchTableMode)
+          && this._matchName(item.objNmKr,  this.searchTableKr, this.searchTableKrMode)
+        )
+        .map(item => ({ ...item, _rowKey: (item.objOwner || '') + '' + item.objNm }));
     },
   },
   methods: {
+    /** 86번 #11 — 검색 모드 매칭: contains/exact/start/end */
+    _matchName(value, keyword, mode) {
+      if (!keyword) return true;
+      const v = (value || '').toLowerCase();
+      const k = keyword.toLowerCase();
+      if (mode === 'exact') return v === k;
+      if (mode === 'start') return v.startsWith(k);
+      if (mode === 'end')   return v.endsWith(k);
+      return v.includes(k);
+    },
+    /** 86번 #11 — 백엔드 raw exception 차단, 친화적 메세지 변환 */
+    _friendlyErrText(err, fallback) {
+      const status = (err && err.response && err.response.status) || 0;
+      const data   = (err && err.response && err.response.data) || {};
+      const our    = data.resultMessage;
+      const raw    = data.message;
+      const rawIsTechnical = raw && /JSON|deserialize|parse|MismatchedInput|HttpMessageNotReadable|Exception|NullPointer|invalid|cannot/i.test(raw);
+      if (our) return our;
+      if (raw && !rawIsTechnical) return raw;
+      if (status >= 500) return (fallback || '서버 처리 중 오류가 발생했습니다.') + ' (관리자에게 문의해 주세요)';
+      if (status === 400) return (fallback || '입력값이 올바르지 않습니다.');
+      if (status === 401 || status === 403) return '권한이 없습니다.';
+      if (status === 404) return '요청한 자원을 찾을 수 없습니다.';
+      return fallback || (err && err.message) || '알 수 없는 오류가 발생했습니다.';
+    },
     getModelList() {
       axios.post(this.$APIURL.base + "api/dm/getDataModelStatsList", {
         'schNm': null, 'schSysNm': null
@@ -259,16 +332,20 @@ export default {
       }
     },
     goToColumn(item) {
+      // 86번 #11 — 같은 OBJ_NM 다른 OWNER 가능 → tableOwner 도 같이 전달
       eventBus.pendingColumnView = {
         modelId: this.selectedModelId,
         clctId: this.selectedClctId,
+        tableOwner: item.objOwner || '',
         tableNm: item.objNm,
       };
       eventBus.$emit('openColumnView');
     },
     tableDataDownload() {
+      // 86번 #11 — `selectedClctId` 가 이 컴포넌트에 없어서 항상 undefined 였던 버그.
+      // CLCT 폐기 이후 매퍼는 DM_ID 기준이라 `selectedModelId` 로 변경.
       axios.get(this.$APIURL.base + "api/dm/downloadDataModelObjs", {
-        params: { 'clctId': this.selectedClctId },
+        params: { 'clctId': this.selectedModelId },
         responseType: 'blob',
         headers: { "Accept": "application/vnd.ms-excel" }
       }).then(response => {
@@ -302,6 +379,28 @@ export default {
       if ((!this.objForm.objNm || !this.objForm.objNm.trim()) && (!this.objForm.objNmKr || !this.objForm.objNmKr.trim())) {
         this.$swal.fire({ title: '테이블명(물리명) 또는 한글명(논리명) 중 하나는 입력해야 합니다.', confirmButtonText: '확인', icon: 'warning' });
         return;
+      }
+      // 86번 #11 — 영문명(물리) 정규식 검증. 영문/숫자/언더바만 허용 + 영문/언더바로 시작.
+      // (예전엔 백틱·공백·특수문자 통과 → DDL 생성 시 깨짐. SQL 예약어와 충돌도 잠재.)
+      if (this.objForm.objNm && this.objForm.objNm.trim()) {
+        const en = this.objForm.objNm.trim();
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(en)) {
+          this.$swal.fire({
+            title: '테이블 영문명(물리) 형식 오류',
+            html: `<div style="text-align:left">
+              영문(A-Z,a-z) / 숫자(0-9) / 언더바(_) 만 허용됩니다.<br>
+              첫 글자는 영문 또는 언더바여야 합니다.<br><br>
+              <span style="color:#D32F2F">입력값: <code>${en}</code></span>
+            </div>`,
+            icon: 'error',
+            confirmButtonText: '확인',
+          });
+          return;
+        }
+        if (en.length > 128) {
+          this.$swal.fire({ title: '테이블 영문명이 너무 깁니다 (최대 128자).', icon: 'error', confirmButtonText: '확인' });
+          return;
+        }
       }
       // 편집 모드 + 물리명 변경됨 → 영향 범위 사전 알림
       if (this.objDialogMode === 'edit' &&
@@ -342,7 +441,7 @@ export default {
           });
           if (!confirm.isConfirmed) return;
         } catch (err) {
-          this.$swal.fire({ title: '영향 범위 조회 실패', text: err.message, icon: 'error', confirmButtonText: '확인' });
+          this.$swal.fire({ title: '영향 범위 조회 실패', text: this._friendlyErrText(err, '영향 범위 조회 중 오류가 발생했습니다.'), icon: 'error', confirmButtonText: '확인' });
           return;
         }
       }
@@ -411,8 +510,16 @@ export default {
         if (mode === 'commit') {
           this.uploadCommitting = false;
           this.uploadDialog = false;
-          const inserted = (this.uploadSummary && this.uploadSummary.toInsert) || 0;
-          this.$swal.fire({ title: inserted + '건 등록 완료', icon: 'success', timer: 1500, showConfirmButton: false });
+          const s = this.uploadSummary || {};
+          const inserted = s.toInsert || 0;
+          const skipped = s.skipped || 0;
+          const errs = (this.uploadErrors || []).length;
+          const html = `<div style="text-align:left">
+            등록: <b style="color:#2E7D32">${inserted}건</b><br>
+            중복 스킵: <b style="color:#F57C00">${skipped}건</b><br>
+            오류: <b style="color:#D32F2F">${errs}건</b>
+          </div>`;
+          this.$swal.fire({ title: '엑셀 업로드 완료', html: html, icon: 'success' });
           this.load();
         } else {
           this.uploadDialog = true;

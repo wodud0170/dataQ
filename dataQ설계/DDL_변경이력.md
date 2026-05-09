@@ -23,6 +23,7 @@
 - 2026-05-07 | PC2 | 83번 Step 2 시드 | TB_QUAL_RULE_CATALOG 에 행안부 도메인 분류 시스템 기본 룰 43건 시드 (`CATALOG_ID LIKE 'SEED_%'`) | 33개 분류 자동 추천 + 공통 NOT_NULL. 시드 SQL: `dataQ설계/sync/qual_rule_catalog_seed_2026-05-07.sql` | PC2 (PC1 도 같은 시드 SQL 실행 필요) |
 - 2026-05-07 | PC2 | 83번 Step 5 | `TB_QUAL_DIAG_HISTORY` 에 `PROGRESS_DONE INTEGER DEFAULT 0` + `PROGRESS_TOTAL INTEGER DEFAULT 0` 추가 | 진단 실행 시 컬럼 단위 진행률 추적 (실시간 폴링용). 30s setTimeout 대신 정확한 % 표시 | PC2 (PC1 도 sync 필요 — `dataQ설계/sync/qual_diag_progress_2026-05-07.sql`) |
 - 2026-05-08 | PC2 | 85번 SFR-22 | `TB_DATA_MODEL_ATTR` 에 `FK_PARENT_OBJ_NM VARCHAR(255)` + `FK_PARENT_ATTR_NM VARCHAR(255)` 추가 | XMI 2.1 import/export 의 관계(type id 참조) 매핑용. FK 컬럼이 가리키는 부모 테이블/컬럼 보존 | PC2 (PC1 도 sync 필요 — `dataQ설계/sync/dm_attr_fk_parent_2026-05-08.sql`) |
+- 2026-05-09 | PC2 | 86번 #11 OWNER PK 정합성 | `TB_DATA_MODEL_OBJ.OBJ_OWNER` / `TB_DATA_MODEL_ATTR.OBJ_OWNER` SET DEFAULT '' + SET NOT NULL, PK 재정의 — OBJ: (DM_ID, OBJ_OWNER, OBJ_NM), ATTR: (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) | 같은 OBJ_NM 다른 OWNER (스키마) 케이스 (예: SCHEMA_A.TB_USER vs SCHEMA_B.TB_USER) 동시 등록 가능. 매퍼 INSERT ON CONFLICT 컬럼셋 + 모든 WHERE/JOIN 도 OBJ_OWNER 매칭 추가 | PC2 (PC1 도 sync 필요 — DROP OLD PK + ADD NEW PK 동일 ALTER) |
 
 ---
 

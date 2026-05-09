@@ -48,59 +48,104 @@
             </v-data-table>
         </v-card>
 
-        <!-- 상세 표시 영역 -->
-        <v-card v-if="selectedHistory" outlined class="mt-4">
-            <v-card-title class="subtitle-1 font-weight-bold py-2">
-                변경 상세
-                <v-spacer />
-                <v-btn icon small @click="selectedHistory = null"><v-icon>close</v-icon></v-btn>
-            </v-card-title>
-            <v-card-text>
-                <v-row dense>
-                    <v-col cols="3"><strong>변경유형:</strong> {{ getChangeTypeLabel(selectedHistory.changeType) }}</v-col>
-                    <v-col cols="3"><strong>대상:</strong> {{ getTargetTypeLabel(selectedHistory.targetType) }}</v-col>
-                    <v-col cols="3"><strong>대상명:</strong> {{ selectedHistory.targetNm }}</v-col>
-                    <v-col cols="3"><strong>변경일시:</strong> {{ selectedHistory.changeDt }}</v-col>
-                </v-row>
-                <v-row dense>
-                    <v-col cols="6"><strong>변경자:</strong> {{ selectedHistory.changeUserId }}</v-col>
-                    <v-col cols="6"><strong>요약:</strong> {{ selectedHistory.summary }}</v-col>
-                </v-row>
+        <!-- 상세 표시 모달 — 86번 #34: VO toString 파싱 + INSERT/UPDATE/DELETE 분기 + 모달 크기 확장 -->
+        <v-dialog v-model="detailDialog" max-width="1300" scrollable>
+            <v-card v-if="selectedHistory">
+                <v-card-title class="subtitle-1 font-weight-bold py-2">
+                    변경 상세
+                    <v-spacer />
+                    <v-btn icon small @click="closeDetail"><v-icon>close</v-icon></v-btn>
+                </v-card-title>
+                <v-divider />
+                <v-card-text style="max-height: 75vh;">
+                    <v-row dense class="mt-2">
+                        <v-col cols="3"><strong>변경유형:</strong> {{ getChangeTypeLabel(selectedHistory.changeType) }}</v-col>
+                        <v-col cols="3"><strong>대상:</strong> {{ getTargetTypeLabel(selectedHistory.targetType) }}</v-col>
+                        <v-col cols="3"><strong>대상명:</strong> {{ selectedHistory.targetNm }}</v-col>
+                        <v-col cols="3"><strong>변경일시:</strong> {{ selectedHistory.changeDt }}</v-col>
+                    </v-row>
+                    <v-row dense>
+                        <v-col cols="6"><strong>변경자:</strong> {{ selectedHistory.changeUserId }}</v-col>
+                        <v-col cols="6"><strong>요약:</strong> {{ selectedHistory.summary }}</v-col>
+                    </v-row>
 
-                <!-- 개별 변경: 이전값/변경값 비교 -->
-                <div v-if="selectedHistory.changeType !== 'BULK_INSERT'" class="mt-4">
-                    <v-simple-table dense v-if="selectedHistory.prevValue || selectedHistory.currValue">
-                        <thead>
-                            <tr>
-                                <th width="50%">이전값</th>
-                                <th width="50%">변경값</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="text-pre-wrap">{{ selectedHistory.prevValue || '(없음)' }}</td>
-                                <td class="text-pre-wrap">{{ selectedHistory.currValue || '(없음)' }}</td>
-                            </tr>
-                        </tbody>
-                    </v-simple-table>
-                    <div v-else class="grey--text">상세 변경 내역이 없습니다.</div>
-                </div>
+                    <!-- INSERT (등록) — 등록된 정보만 보여줌 -->
+                    <div v-if="selectedHistory.changeType === 'INSERT'" class="mt-4">
+                        <div class="subtitle-2 mb-2">등록된 정보</div>
+                        <v-simple-table dense v-if="parsedCurr.length > 0">
+                            <thead>
+                                <tr><th width="30%">항목</th><th width="70%">값</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in parsedCurr" :key="row.key">
+                                    <td>{{ getFieldLabel(row.key) }}</td>
+                                    <td class="text-pre-wrap">{{ row.value || '(없음)' }}</td>
+                                </tr>
+                            </tbody>
+                        </v-simple-table>
+                        <div v-else class="grey--text">상세 정보가 없습니다.</div>
+                    </div>
 
-                <!-- 일괄 등록: 상세 건 목록 -->
-                <div v-else class="mt-4">
-                    <v-data-table v-if="detailList.length > 0" :headers="detailHeaders" :items="detailList"
-                        dense :items-per-page="10" no-data-text="상세 내역이 없습니다.">
-                        <template v-slot:item.detailType="{ item }">
-                            <v-chip :color="item.detailType === 'SUCCESS' ? 'success' : item.detailType === 'SKIPPED' ? 'warning' : 'error'"
-                                small dark>
-                                {{ item.detailType }}
-                            </v-chip>
-                        </template>
-                    </v-data-table>
-                    <div v-else class="grey--text">상세 건 목록이 없습니다.</div>
-                </div>
-            </v-card-text>
-        </v-card>
+                    <!-- DELETE (삭제) — 삭제된 정보 -->
+                    <div v-else-if="selectedHistory.changeType === 'DELETE'" class="mt-4">
+                        <div class="subtitle-2 mb-2">삭제된 정보</div>
+                        <v-simple-table dense v-if="parsedPrev.length > 0">
+                            <thead>
+                                <tr><th width="30%">항목</th><th width="70%">값</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in parsedPrev" :key="row.key">
+                                    <td>{{ getFieldLabel(row.key) }}</td>
+                                    <td class="text-pre-wrap">{{ row.value || '(없음)' }}</td>
+                                </tr>
+                            </tbody>
+                        </v-simple-table>
+                        <div v-else class="grey--text">상세 정보가 없습니다.</div>
+                    </div>
+
+                    <!-- UPDATE (수정) — 변경 항목만 비교 (변경 안 된 필드 숨김) -->
+                    <div v-else-if="selectedHistory.changeType === 'UPDATE'" class="mt-4">
+                        <div class="subtitle-2 mb-2">변경된 항목</div>
+                        <v-simple-table dense v-if="diffRows.length > 0">
+                            <thead>
+                                <tr>
+                                    <th width="20%">항목</th>
+                                    <th width="40%">이전값</th>
+                                    <th width="40%">변경값</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in diffRows" :key="row.key">
+                                    <td>{{ getFieldLabel(row.key) }}</td>
+                                    <td class="text-pre-wrap"><span class="red--text">{{ row.prev || '(없음)' }}</span></td>
+                                    <td class="text-pre-wrap"><span class="green--text">{{ row.curr || '(없음)' }}</span></td>
+                                </tr>
+                            </tbody>
+                        </v-simple-table>
+                        <div v-else class="grey--text">변경된 항목이 없습니다.</div>
+                    </div>
+
+                    <!-- 일괄 등록: 상세 건 목록 -->
+                    <div v-else class="mt-4">
+                        <v-data-table v-if="detailList.length > 0" :headers="detailHeaders" :items="detailList"
+                            dense :items-per-page="10" no-data-text="상세 내역이 없습니다.">
+                            <template v-slot:item.detailType="{ item }">
+                                <v-chip :color="item.detailType === 'SUCCESS' ? 'success' : item.detailType === 'SKIPPED' ? 'warning' : 'error'"
+                                    small dark>
+                                    {{ item.detailType }}
+                                </v-chip>
+                            </template>
+                        </v-data-table>
+                        <div v-else class="grey--text">상세 건 목록이 없습니다.</div>
+                    </div>
+                </v-card-text>
+                <v-divider />
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn text @click="closeDetail">닫기</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
 
@@ -162,15 +207,78 @@ export default {
             ],
             historyList: [],
             selectedHistory: null,
-            detailList: []
+            detailList: [],
+            detailDialog: false
         };
     },
     mounted() {
         this.search();
     },
+    computed: {
+        parsedPrev() {
+            return this._parseVoString(this.selectedHistory && this.selectedHistory.prevValue);
+        },
+        parsedCurr() {
+            return this._parseVoString(this.selectedHistory && this.selectedHistory.currValue);
+        },
+        diffRows() {
+            // UPDATE: 이전/변경값 모두 같은 키 기준 비교 → 다른 것만 노출
+            const prev = {}; this.parsedPrev.forEach(r => { prev[r.key] = r.value; });
+            const curr = {}; this.parsedCurr.forEach(r => { curr[r.key] = r.value; });
+            const keys = new Set([...Object.keys(prev), ...Object.keys(curr)]);
+            const diffs = [];
+            for (const k of keys) {
+                const a = prev[k] || ''; const b = curr[k] || '';
+                if (a !== b) diffs.push({ key: k, prev: a, curr: b });
+            }
+            return diffs;
+        }
+    },
     methods: {
+        // 86번 #34 — VO toString 파싱 ("ClassName(field1=val1, field2=val2)")
+        _parseVoString(s) {
+            if (!s || typeof s !== 'string') return [];
+            // ClassName( ... ) 형식 추출 — `s` flag 대신 [\s\S] 로 줄바꿈 포함 매칭 (구 babel 호환)
+            const m = s.match(/^[A-Za-z0-9_]+\(([\s\S]*)\)$/);
+            const inner = m ? m[1] : s;
+            // field=value 분리 — 단순 ", " split (값에 comma 가 들어가면 부정확하지만 대부분 안전)
+            const out = [];
+            // 토큰화: lookahead 로 '단어=' 직전 ', ' 만 split
+            const tokens = inner.split(/, (?=[A-Za-z_][A-Za-z0-9_]*=)/);
+            for (const t of tokens) {
+                const eq = t.indexOf('=');
+                if (eq < 0) continue;
+                const key = t.substring(0, eq).trim();
+                const val = t.substring(eq + 1).trim();
+                // null / 빈배열 정리
+                let display = val;
+                if (display === 'null') display = '';
+                if (display === '[]') display = '';
+                // 시스템 필드는 제외
+                if (['id','aprvUserId','aprvStatUpdtDt','updtUserId','cretUserId','cretDt','updtDt'].includes(key)) continue;
+                out.push({ key: key, value: display });
+            }
+            return out;
+        },
+        getFieldLabel(key) {
+            const map = {
+                wordNm: '단어명', wordEngAbrvNm: '영문약어', wordEngNm: '영문명', wordDesc: '단어설명',
+                wordClsfYn: '형식단어', domainClsfNm: '도메인분류', commStndYn: '공통표준',
+                magntdOrd: '제정차수', allophSynmLst: '이음동의어', forbdnWordLst: '금칙어',
+                aprvYn: '승인상태', useYn: '사용여부', reqSysCd: '요청시스템',
+                termsNm: '용어명', termsEngAbrvNm: '영문약어', termsDesc: '용어설명',
+                domainNm: '도메인명', codeGrp: '코드그룹', chrgOrg: '담당기관',
+                domainGrpNm: '도메인그룹', dataType: '데이터타입', dataLen: '데이터길이',
+                dataDecimalLen: '소수점길이', dataUnit: '단위', storFmt: '저장형식',
+                exprFmtLst: '표현형식', allowValLst: '허용값',
+                codeNm: '코드명', codeEngNm: '코드영문명', codeDesc: '코드설명',
+                codeDataNm: '코드값명', codeDataNmEng: '코드값영문명', codeDataDesc: '코드값설명',
+            };
+            return map[key] || key;
+        },
         search() {
             this.loading = true;
+            this.detailDialog = false;
             this.selectedHistory = null;
             this.detailList = [];
             axios
@@ -204,11 +312,18 @@ export default {
                 .then(res => {
                     this.selectedHistory = res.data.history || item;
                     this.detailList = res.data.details || [];
+                    this.detailDialog = true;
                 })
                 .catch(err => {
                     console.error("이력 상세 조회 실패:", err);
                     this.selectedHistory = item;
+                    this.detailDialog = true;
                 });
+        },
+        closeDetail() {
+            this.detailDialog = false;
+            this.selectedHistory = null;
+            this.detailList = [];
         },
         getChangeTypeLabel(type) {
             const map = { INSERT: "등록", UPDATE: "수정", DELETE: "삭제", BULK_INSERT: "일괄등록" };
@@ -237,7 +352,8 @@ export default {
     white-space: pre-wrap;
     word-break: break-all;
     font-size: 0.85rem;
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
+    display: block;
 }
 </style>

@@ -1,9 +1,7 @@
 <template>
   <v-main>
-    <v-sheet class="pa-2 d-flex align-center" style="background:#F5F7FA; border-bottom:1px solid #E8EAF6;">
-      <v-icon small color="#3F51B5" class="mr-2">mdi-information-outline</v-icon>
-      <span style="font-size:.8rem; color:#546E7A;">수집 시 시스템 테이블은 제외됩니다.</span>
-    </v-sheet>
+    <!-- 86번 #11 — 위쪽 안내 시트가 별도 행으로 있으면 첫 진입 시 NdNav 탭 layout 계산이 어긋나서 위 탭이 잘려 보이는 현상 발생.
+         안내를 검색 라인 옆으로 흡수해서 Split 윗단의 추가 높이 차감 제거. -->
     <Split direction="vertical" :style="{ overflow: 'hidden' }">
       <SplitArea :size="50" :style="{ overflow: 'hidden', position: 'relative' }">
         <!-- 검색과 버튼 영역 -->
@@ -23,6 +21,9 @@
               <!-- 초기화 버튼 -->
               <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
+              <!-- 안내 (검색 라인에 같이 노출) -->
+              <v-icon small color="#3F51B5" class="mr-1" :style="{ marginLeft: '8px' }">mdi-information-outline</v-icon>
+              <span :style="{ fontSize: '.78rem', color: '#546E7A' }">수집 시 시스템 테이블 제외</span>
             </v-row>
           </v-sheet>
           <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
@@ -43,7 +44,8 @@
           </v-sheet>
         </v-sheet>
         <v-divider></v-divider>
-        <!-- 데이터모델 목록 -->
+        <!-- 데이터모델 목록 — wrapper div 로 강제 스크롤 -->
+        <div style="overflow-y: auto; max-height: calc(50vh - 200px);">
         <v-data-table id="dataModel_table" :headers="dataModelHeaders" :items="dataModelItems" :page.sync="page"
           :items-per-page="itemsPerPage" hide-default-footer item-key="dataModelId" show-select class="px-4 pb-3"
           v-model="removeItems" :loading="loadTable" loading-text="잠시만 기다려주세요.">
@@ -64,6 +66,7 @@
             <span v-show="loadTable">잠시만 기다려주세요.</span>
           </template>
         </v-data-table>
+        </div>
         <!-- 페이지네이션 -->
         <v-sheet class="split_bottom_wrap">
           <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="pageCount > 1">
@@ -322,6 +325,12 @@ export default {
     hasDataSource() {
       return this.selectedItem.length > 0 && !!this.selectedItem[0].dataModelDsId;
     },
+    // 페이지 수 자동 계산 — dataModelItems 또는 itemsPerPage 변경 시 반응
+    pageCount() {
+      const per = Number(this.itemsPerPage) || 10;
+      const total = (this.dataModelItems || []).length;
+      return Math.max(1, Math.ceil(total / per));
+    }
   },
   data: () => ({
     // 데이터 모델 정보
@@ -349,7 +358,7 @@ export default {
     // 페이지네이션 시작 지정
     page: 1,
     // 총 페이지 수
-    pageCount: null,
+    // pageCount 는 computed 에서 자동 계산 — data 에 두면 computed 가 무효
     // 한 페이지에 보여지는 도메인의 수
     itemsPerPage: 10,
     // 테이블 로딩
@@ -554,6 +563,31 @@ export default {
         return;
       }
 
+      // 86번 #11 — MERGE 정책 안내. 수집은 물리명 일치 행을 덮어쓰며, 누락 행은 자동 삭제하지 않음.
+      const schemaNames = selectedSchemas.map(s => s.schemaNm).join(', ');
+      this.$swal.fire({
+        title: '데이터 모델 수집을 진행합니다',
+        html: `<div style="text-align:left">
+          <div style="margin-bottom:8px;color:#455A64;">수집 대상 스키마: <b>${schemaNames}</b></div>
+          <hr style="margin:8px 0;">
+          <div style="color:#D32F2F;font-weight:600;margin-bottom:6px;">⚠ 다음 사항을 확인해 주세요</div>
+          <ul style="padding-left:18px;margin:0;color:#37474F;font-size:.9rem;line-height:1.6;">
+            <li>이미 등록된 테이블/컬럼 중 <b>물리명이 동일</b>한 행은 DB 메타데이터로 <b>덮어쓰기</b> 됩니다 (한글명/타입/길이/PK/FK 등)</li>
+            <li>사용자가 직접 입력한 한글명도 DB 코멘트로 <b>대체될 수 있습니다</b></li>
+            <li>이번 수집에 포함되지 않은 기존 행은 <b>그대로 보존</b>됩니다 (자동 삭제 없음)</li>
+          </ul>
+        </div>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '수집 진행',
+        cancelButtonText: '취소',
+        confirmButtonColor: '#1976D2',
+      }).then(result => {
+        if (!result.isConfirmed) return;
+        this._doCollect();
+      });
+    },
+    _doCollect() {
       try {
         let _params = {
           "dataModelId": this.selectedItem[0].dataModelId,
@@ -1075,6 +1109,13 @@ export default {
   bottom: 0px;
   border-top: 1px solid #E8EAF6;
   background: #FAFBFF;
+  /* 86번 #7 — 페이지네이션이 그리드 아래에 가려지지 않도록 z-index */
+  z-index: 5;
+}
+
+/* 86번 #7 — fixed-header + height 가 v-data-table 에 적용됐으나 강제로 wrapper overflow 보장 */
+#dataModel_table .v-data-table__wrapper {
+  overflow-y: auto !important;
 }
 
 .pagination_wrap {

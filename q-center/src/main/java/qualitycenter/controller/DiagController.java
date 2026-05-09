@@ -88,8 +88,9 @@ public class DiagController {
     public Mono<Response> startDiag(HttpServletRequest request, @RequestBody StdDiagJobVo jobVo) {
         Response result = new Response();
         try {
-            // 중복 Job 체크: 동일 수집건에 READY/RUNNING 상태 Job이 있으면 거부
-            int activeCount = sqlSessionTemplate.selectOne("diag.selectActiveDiagJobCount", jobVo.getClctId());
+            // 중복 Job 체크: 동일 데이터모델에 READY/RUNNING 상태 Job이 있으면 거부
+            // 86번 #11 — CLCT 폐기로 dataModelId 기준으로 변경 (frontend 가 clctId 안 보냄)
+            int activeCount = sqlSessionTemplate.selectOne("diag.selectActiveDiagJobCount", jobVo.getDataModelId());
             if (activeCount > 0) {
                 result.setResultInfo(409, "이미 진행 중인 진단이 있습니다.");
                 return Mono.just(result);

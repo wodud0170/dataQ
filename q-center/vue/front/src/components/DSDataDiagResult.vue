@@ -27,6 +27,15 @@
 
     <!-- 필터 바 2행: 명칭 검색 (각각 모드 셀렉트 + 입력) -->
     <v-sheet class="d-flex align-center flex-wrap pa-2 mb-2" style="gap:8px; border:1px solid #e0e0e0; border-radius:4px;">
+      <!-- 86번 #11 — 소유자 (테이블명보다 앞에 배치) -->
+      <span class="filterLabel">소유자</span>
+      <v-select v-model="searchOwnerMode" :items="searchModeOptions" item-text="label" item-value="value"
+        dense outlined hide-details style="width:100px; flex-grow:0;" />
+      <v-text-field v-model="searchOwner" dense outlined hide-details clearable
+        placeholder="소유자(스키마)" style="width:160px; flex-grow:0;" />
+
+      <v-divider vertical class="mx-1" />
+
       <!-- 테이블명 -->
       <span class="filterLabel">테이블명</span>
       <v-select v-model="searchTableMode" :items="searchModeOptions" item-text="label" item-value="value"
@@ -374,13 +383,31 @@
                 </template>
                 <span>{{ diagTypeDesc(dt) }}</span>
               </v-tooltip>
+              <!-- 86번 #11 Phase 1 — 한글명이 표준 용어와 매칭되면 별도 칩으로 표시.
+                   TERM_NOT_EXIST 이슈가 있고 매칭이 있으면 사용자에게 "기존 표준에 맞추기" 액션 안내. -->
+              <v-tooltip v-if="item.matchedTermsNm" bottom>
+                <template v-slot:activator="{ on }">
+                  <v-chip v-on="on" x-small color="blue darken-1" text-color="white" class="mr-1"
+                    style="cursor:pointer;" @click="openAlterModal(item)">
+                    → {{ item.matchedTermsNm }}({{ item.matchedTermsEng }})
+                  </v-chip>
+                </template>
+                <span>{{ item.matchType === 'EXACT' ? '한글명 정확 일치' : '동의어 일치' }} — 컬럼을 표준에 맞추기</span>
+              </v-tooltip>
             </template>
             <span v-else class="text-caption green--text">OK</span>
           </template>
           <!-- 액션: 이슈 유형별 버튼 -->
           <template v-slot:item.actions="{ item }">
             <div class="d-flex flex-column align-center" style="gap:2px;">
-              <v-btn v-if="item.diagTypeList && item.diagTypeList.includes('TERM_NOT_EXIST')"
+              <!-- 86번 #11 Phase 1 — TERM_NOT_EXIST 이슈일 때:
+                   매칭 있으면 [표준화] 만 노출 (용어 등록은 한글명 중복으로 어차피 백엔드 거부)
+                   매칭 없으면 [용어 등록] 노출 (기존 흐름) -->
+              <v-btn v-if="item.diagTypeList && item.diagTypeList.includes('TERM_NOT_EXIST') && item.matchedTermsNm"
+                x-small color="blue darken-1" outlined @click="openAlterModal(item)">
+                표준화
+              </v-btn>
+              <v-btn v-else-if="item.diagTypeList && item.diagTypeList.includes('TERM_NOT_EXIST')"
                 x-small color="primary" outlined @click="openTermRegDialog(item)">
                 용어 등록
               </v-btn>
@@ -593,6 +620,53 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <!-- ===== 86번 #11 Phase 2 — 컬럼 표준화 (RENAME + MODIFY + COMMENT) 스크립트 모달 ===== -->
+    <v-dialog v-model="alterDialog" max-width="720">
+      <v-card>
+        <v-card-title class="subtitle-1 font-weight-bold pb-1">
+          컬럼 표준화 스크립트
+          <v-spacer />
+          <v-btn icon small @click="alterDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pt-3" v-if="alterTarget">
+          <v-sheet outlined rounded class="pa-3 mb-3" style="background:#FAFAFA;">
+            <div class="caption grey--text mb-1">매칭된 표준 용어
+              <v-chip x-small color="blue darken-1" text-color="white" class="ml-1">
+                {{ alterTarget.matchType === 'EXACT' ? '한글명 정확 일치' : '동의어 일치' }}
+              </v-chip>
+            </div>
+            <div class="d-flex" style="gap:24px; flex-wrap:wrap;">
+              <div><span class="caption grey--text">테이블</span><br/><b>{{ alterTarget.objNm }}</b></div>
+              <div><span class="caption grey--text">현재 컬럼</span><br/><b>{{ alterTarget.attrNm }}</b> / {{ alterTarget.actualDataType }}({{ alterTarget.actualDataLen }})</div>
+              <div><span class="caption grey--text">→ 표준</span><br/><b style="color:#1976D2;">{{ alterTarget.matchedTermsEng }}</b> / {{ alterTarget.matchedDataType }}({{ alterTarget.matchedDataLen }}) <span class="caption grey--text">[{{ alterTarget.matchedTermsNm }}]</span></div>
+            </div>
+          </v-sheet>
+          <div class="caption grey--text mb-1">변경 항목</div>
+          <div class="mb-2">
+            <v-chip v-if="alterChanges.rename" x-small color="purple darken-1" text-color="white" class="mr-1">RENAME 컬럼명</v-chip>
+            <v-chip v-if="alterChanges.modify" x-small color="orange darken-2" text-color="white" class="mr-1">MODIFY 타입/길이</v-chip>
+            <v-chip x-small color="teal" text-color="white">COMMENT 정식 한글명</v-chip>
+          </div>
+          <pre style="background:#263238; color:#EEFFFF; padding:16px; border-radius:4px; font-size:.85rem; overflow-x:auto; white-space:pre-wrap;">{{ alterScript }}</pre>
+          <div class="caption red--text mt-2">⚠ 운영 DB 직접 실행 전 반드시 백업·점검 필요. 락 발생 가능.</div>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions>
+          <v-spacer />
+          <v-chip v-if="alterCopied" small color="green" text-color="white" class="mr-2">
+            <v-icon small left>mdi-check</v-icon>복사되었습니다
+          </v-chip>
+          <v-btn color="primary" @click="copyAlter()">
+            <v-icon left small>mdi-content-copy</v-icon>복사
+          </v-btn>
+          <v-btn outlined color="primary" @click="downloadAlter()">
+            <v-icon left small>mdi-download</v-icon>다운로드
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- ===== 일괄 코멘트 스크립트 모달 ===== -->
     <v-dialog v-model="bulkCommentDialog" max-width="700">
       <v-card>
@@ -646,12 +720,16 @@ export default {
         { value: 'issue',   label: '이슈 있음' },
         { value: 'noIssue', label: '이슈 없음' },
       ],
-      // 검색 모드 옵션 (포함/앞/뒤)
+      // 86번 #11 — 검색 모드 옵션 (포함/완전일치/앞/뒤)
       searchModeOptions: [
         { value: 'contains', label: '포함' },
+        { value: 'exact',   label: '완전 일치' },
         { value: 'start',   label: '앞' },
         { value: 'end',     label: '뒤' },
       ],
+      // 86번 #11 — 소유자 검색 (테이블명보다 앞)
+      searchOwner: '',
+      searchOwnerMode: 'contains',
       // 테이블명 검색
       searchTable: '',
       searchTableMode: 'contains',
@@ -679,6 +757,7 @@ export default {
         { value: 'DATA_LEN_MISMATCH',    label: '길이 불일치' },
       ],
       summaryHeaders: [
+        { text: '소유자',       value: 'objOwner',             width: '110px', align: 'center' },
         { text: '테이블명',     value: 'objNm',                width: '180px' },
         { text: '테이블 한글명', value: 'objNmKr',             width: '180px' },
         { text: '이슈 컬럼',    value: 'issueColCnt',          width: '80px',  align: 'end' },
@@ -689,6 +768,7 @@ export default {
         { text: '길이 불일치',  value: 'dataLenMismatchCnt',   width: '100px', align: 'end' },
       ],
       detailHeaders: [
+        { text: '소유자',         value: 'objOwner',      width: '100px', align: 'center' },
         { text: '테이블명',       value: 'objNm',         width: '110px', align: 'center' },
         { text: '테이블 한글명',  value: 'objNmKr',       width: '120px' },
         { text: '컬럼 영문명',    value: 'attrNm',        width: '100px' },
@@ -729,6 +809,12 @@ export default {
       bulkCommentDialog: false,
       bulkCommentScript: '',
       bulkCommentCopied: false,
+      // 86번 #11 Phase 2 — 컬럼 표준화 모달
+      alterDialog: false,
+      alterTarget: null,        // 모달이 보고 있는 row (item)
+      alterScript: '',
+      alterChanges: { rename: false, modify: false },
+      alterCopied: false,
     };
   },
   computed: {
@@ -818,6 +904,8 @@ export default {
       if (this.issueFilter === 'noIssue') return [];
 
       return this.summaryList.filter(item => {
+        // 86번 #11 — 소유자 검색
+        if (!this.matchName(item.objOwner, this.searchOwner, this.searchOwnerMode)) return false;
         // 테이블명 검색
         if (!this.matchName(item.objNm, this.searchTable, this.searchTableMode)) return false;
         // 진단유형 필터: 선택된 유형의 건수가 1 이상인 테이블만
@@ -842,6 +930,7 @@ export default {
         if (this.issueFilter === 'noIssue' && hasIssue) return false;
 
         // 명칭 검색 (모드별)
+        if (!this.matchName(item.objOwner, this.searchOwner,   this.searchOwnerMode))   return false;
         if (!this.matchName(item.objNm,    this.searchTable,   this.searchTableMode))   return false;
         if (!this.matchName(item.objNmKr,  this.searchTableKr, this.searchTableKrMode)) return false;
         if (!this.matchName(item.attrNm,   this.searchAttr,    this.searchAttrMode))    return false;
@@ -883,15 +972,36 @@ export default {
   },
   methods: {
     /**
+     * 86번 #11 — 백엔드 에러 응답을 사용자 친화적 메세지로 정리
+     * - JSON parse / Jackson 류 stack trace 차단
+     * - resultMessage(우리 표준) > 짧은 message > fallback 순으로 사용
+     */
+    _friendlyErrText(err, fallback) {
+      const status = (err && err.response && err.response.status) || 0;
+      const data   = (err && err.response && err.response.data) || {};
+      const our    = data.resultMessage;       // 우리 Response 객체 메세지 (친화적)
+      const raw    = data.message;             // Spring 기본 (raw exception)
+      // raw 가 라이브러리 에러 표시면 차단
+      const rawIsTechnical = raw && /JSON|deserialize|parse|MismatchedInput|HttpMessageNotReadable|Exception|NullPointer|invalid|cannot/i.test(raw);
+      if (our) return our;
+      if (raw && !rawIsTechnical) return raw;
+      if (status >= 500) return (fallback || '서버 처리 중 오류가 발생했습니다.') + ' (관리자에게 문의해 주세요)';
+      if (status === 400) return (fallback || '입력값이 올바르지 않습니다.');
+      if (status === 401 || status === 403) return '권한이 없습니다.';
+      if (status === 404) return '요청한 자원을 찾을 수 없습니다.';
+      return fallback || (err && err.message) || '알 수 없는 오류가 발생했습니다.';
+    },
+    /**
      * 명칭 검색 매칭 (포함/앞/뒤 모드)
      * @param {String} value  - 실제 값
      * @param {String} keyword - 검색어
-     * @param {String} mode   - 'contains' | 'start' | 'end'
+     * @param {String} mode   - 'contains' | 'exact' | 'start' | 'end'
      */
     matchName(value, keyword, mode) {
       if (!keyword) return true;
       const v = (value || '').toLowerCase();
       const k = keyword.toLowerCase();
+      if (mode === 'exact') return v === k;
       if (mode === 'start') return v.startsWith(k);
       if (mode === 'end')   return v.endsWith(k);
       return v.includes(k);  // contains (default)
@@ -1037,6 +1147,91 @@ export default {
       this.modifyCopied = false;
       this.modifyDialog = true;
     },
+    /**
+     * 86번 #11 Phase 2 — 컬럼 표준화 (RENAME + MODIFY + COMMENT) 스크립트 모달 열기
+     *  - 한글명 매칭으로 표준 용어가 잡힌 row 에서 호출
+     *  - 변경 필요 항목별로 분기:
+     *    * 영문명 다르면 RENAME
+     *    * 타입/길이 다르면 MODIFY (or ALTER COLUMN TYPE)
+     *    * 항상 COMMENT 정식 한글명으로 갱신
+     *  - DBMS 별 분기 (Oracle/MySQL·MariaDB/MSSQL/PostgreSQL/Tibero/Cubrid)
+     */
+    openAlterModal(item) {
+      var dbmsTp = ((this.selectedJobInfo && this.selectedJobInfo.dbmsTp) || '').toLowerCase();
+      var schema = item.objSchema || item.objOwner || '';
+      var table  = item.objNm;
+      var oldCol = item.attrNm;
+      var newCol = item.matchedTermsEng;
+      var stdType = item.matchedDataType || item.actualDataType || 'VARCHAR';
+      var stdLen  = item.matchedDataLen;
+      var stdDec  = item.matchedDataDecimalLen;
+      var krNm    = item.matchedTermsNm || '';
+
+      var renameNeeded = !!(newCol && newCol !== oldCol);
+      var modifyNeeded = !!(stdType && (
+            (stdType.toUpperCase() !== (item.actualDataType || '').toUpperCase())
+         || (stdLen != null && stdLen !== item.actualDataLen)
+      ));
+      this.alterChanges = { rename: renameNeeded, modify: modifyNeeded };
+
+      var typeSpec = stdType + (
+        stdLen != null
+          ? '(' + stdLen + (stdDec ? ',' + stdDec : '') + ')'
+          : ''
+      );
+      var qualifiedTbl = schema ? (schema + '.' + table) : table;
+      var lines = ['-- [주의] 운영 DB 실행 전 반드시 백업 권장. 락·온라인 트랜잭션 고려 필요.'];
+      var finalCol = renameNeeded ? newCol : oldCol;
+
+      if (dbmsTp.indexOf('oracle') >= 0 || dbmsTp.indexOf('tibero') >= 0) {
+        if (renameNeeded) lines.push('ALTER TABLE ' + qualifiedTbl + ' RENAME COLUMN ' + oldCol + ' TO ' + newCol + ';');
+        if (modifyNeeded) lines.push('ALTER TABLE ' + qualifiedTbl + ' MODIFY (' + finalCol + ' ' + typeSpec + ');');
+        lines.push("COMMENT ON COLUMN " + qualifiedTbl + '.' + finalCol + " IS '" + krNm + "';");
+      } else if (dbmsTp.indexOf('mysql') >= 0 || dbmsTp.indexOf('maria') >= 0) {
+        // MySQL: CHANGE 한 번에 RENAME + 타입 + COMMENT 가능
+        lines.push('ALTER TABLE ' + qualifiedTbl + ' CHANGE COLUMN ' + oldCol + ' ' + finalCol + ' ' + typeSpec + " COMMENT '" + krNm + "';");
+      } else if (dbmsTp.indexOf('mssql') >= 0 || dbmsTp.indexOf('sqlserver') >= 0) {
+        if (renameNeeded) lines.push("EXEC sp_rename '" + qualifiedTbl + '.' + oldCol + "', '" + newCol + "', 'COLUMN';");
+        if (modifyNeeded) lines.push('ALTER TABLE ' + qualifiedTbl + ' ALTER COLUMN ' + finalCol + ' ' + typeSpec + ';');
+        lines.push("EXEC sp_addextendedproperty\n  @name = N'MS_Description', @value = N'" + krNm + "',\n  @level0type = N'SCHEMA', @level0name = N'" + (schema || 'dbo') + "',\n  @level1type = N'TABLE',  @level1name = N'" + table + "',\n  @level2type = N'COLUMN', @level2name = N'" + finalCol + "';");
+      } else if (dbmsTp.indexOf('cubrid') >= 0) {
+        if (renameNeeded) lines.push('ALTER TABLE ' + qualifiedTbl + ' RENAME COLUMN ' + oldCol + ' AS ' + newCol + ';');
+        if (modifyNeeded) lines.push('ALTER TABLE ' + qualifiedTbl + ' MODIFY ' + finalCol + ' ' + typeSpec + ';');
+        // CUBRID 는 COMMENT 별도 구문 없음 → 주석으로 표시
+        lines.push('-- CUBRID: COMMENT 는 ALTER 문에 직접 지원하지 않음. 카탈로그 별도 갱신 필요.');
+      } else {
+        // PostgreSQL (기본)
+        if (renameNeeded) lines.push('ALTER TABLE ' + qualifiedTbl + ' RENAME COLUMN ' + oldCol + ' TO ' + newCol + ';');
+        if (modifyNeeded) lines.push('ALTER TABLE ' + qualifiedTbl + ' ALTER COLUMN ' + finalCol + ' TYPE ' + typeSpec + ';');
+        lines.push("COMMENT ON COLUMN " + qualifiedTbl + '.' + finalCol + " IS '" + krNm + "';");
+      }
+
+      this.alterTarget = item;
+      this.alterScript = lines.join('\n');
+      this.alterCopied = false;
+      this.alterDialog = true;
+    },
+    /** 컬럼 표준화 스크립트 복사 */
+    copyAlter() {
+      var self = this;
+      this.copyToClipboard(this.alterScript, function() {
+        self.alterCopied = true;
+        setTimeout(function() { self.alterCopied = false; }, 2000);
+      });
+    },
+    /** 컬럼 표준화 스크립트 다운로드 */
+    downloadAlter() {
+      var fileName = 'alter_' + (this.alterTarget && this.alterTarget.attrNm ? this.alterTarget.attrNm : 'column') + '.sql';
+      var blob = new Blob([this.alterScript], { type: 'text/plain;charset=utf-8' });
+      var url = window.URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      link.remove();
+    },
     /** 컬럼 변경 스크립트 클립보드 복사 */
     copyModify() {
       var self = this;
@@ -1110,7 +1305,7 @@ export default {
           const found = wordMap[tw.abrv];
           if (found) {
             tw.exists = true;
-            tw.wordId = found.wordId;
+            tw.wordId = found.id;
             tw.wordNm = found.wordNm;
             tw.wordEngNm = found.wordEngNm || '';
             tw.domainClsfNm = found.domainClsfNm || '';
@@ -1183,22 +1378,33 @@ export default {
         magntdOrd: '',
         reqSysCd: '',
       }).then(res => {
-        // 등록 성공 → 단어 ID 받아서 상태 갱신
+        // 86번 #11 — 백엔드는 비즈니스 실패도 HTTP 200 + Response{resultCode:500,...} 로 내려옴.
+        // .then() 에서 resultCode 검사 누락하면 가짜 success → 화면 거짓말. 반드시 체크.
+        var rc = res && res.data && res.data.resultCode;
+        if (rc !== 200) {
+          w.saving = false;
+          this.$set(this.termRegWords, idx, { ...w });
+          var failMsg = (res && res.data && (res.data.resultMessage || res.data.message)) || '단어 등록에 실패했습니다.';
+          this.$swal.fire({ icon: 'error', title: '단어 등록 실패', text: failMsg, confirmButtonText: '확인' });
+          return;
+        }
+        // 진짜 성공 → 단어 ID 받아서 상태 갱신
         w.exists = true;
         w.saving = false;
-        w.wordId = res.data.wordId || res.data;
+        // createWord 응답은 Response{contents,...} 형태. 직접 ID 복원이 어려우니 아래 재조회로 확정
+        w.wordId = null;
         this.$set(this.termRegWords, idx, { ...w });
-        // wordId를 다시 조회 (createWord 응답에 ID가 없을 수 있으므로)
+        // 영문약어로 단어를 다시 조회해서 정확한 ID 확보 (StdWordVo.id 필드)
         axios.get(this.$APIURL.base + 'api/std/getWordByEngAbrvNm', { params: { wordEngAbrvNm: w.abrv } }).then(r2 => {
           if (r2.data) {
-            w.wordId = r2.data.wordId;
+            w.wordId = r2.data.id;
             this.$set(this.termRegWords, idx, { ...w });
           }
         });
       }).catch(err => {
         w.saving = false;
         this.$set(this.termRegWords, idx, { ...w });
-        this.$swal.fire({ icon: 'error', title: '단어 등록 실패', text: (err.response && err.response.data && err.response.data.message) || err.message, confirmButtonText: '확인' });
+        this.$swal.fire({ icon: 'error', title: '단어 등록 실패', text: this._friendlyErrText(err, '단어 등록 중 오류가 발생했습니다.'), confirmButtonText: '확인' });
       });
     },
     /** 용어 등록 */
@@ -1234,25 +1440,37 @@ export default {
         reqSysCd: '',
         wordList: wordList,
         allophSynmLst: [],
-      }).then(function() {
+      }).then(function(res) {
         self.termRegLoading = false;
+        // 86번 #11 — 가짜 success 차단. 백엔드 Response.resultCode 가 500 이면 실패로 처리.
+        var rc = res && res.data && res.data.resultCode;
+        if (rc !== 200) {
+          var failMsg = (res && res.data && (res.data.resultMessage || res.data.message)) || '용어 등록에 실패했습니다.';
+          self.$swal.fire({
+            icon: 'error',
+            title: '용어 등록 실패',
+            text: failMsg,
+            confirmButtonText: '확인',
+          });
+          return;
+        }
+        // 진짜 success — 백엔드가 일반 사용자에 "관리자 승인 후 조회 가능합니다." 메세지 보낼 수 있어 그대로 노출
         self.termRegDialog = false;
+        var okMsg = (res.data.resultMessage || '용어가 등록되었습니다. 재진단 시 반영됩니다.');
         self.$swal.fire({
           icon: 'success',
           title: '용어 등록 완료',
-          text: '용어가 등록되었습니다. 재진단 시 반영됩니다.',
+          text: okMsg,
           confirmButtonText: '확인',
         });
         // 진단 결과 데이터 새로고침
         self.loadResults(self.selectedJobId);
       }).catch(function(err) {
         self.termRegLoading = false;
-        var detail = (err.response && err.response.data && err.response.data.message) || '';
-        var errMsg = detail || err.message || '알 수 없는 오류가 발생했습니다.';
         self.$swal.fire({
           icon: 'error',
           title: '용어 등록 실패',
-          text: errMsg,
+          text: self._friendlyErrText(err, '용어 등록 중 오류가 발생했습니다.'),
           confirmButtonText: '확인',
         });
       });
@@ -1286,6 +1504,8 @@ export default {
     },
     /** 검색 조건 초기화 + 데이터 새로고침 */
     resetSearch() {
+      this.searchOwner = '';
+      this.searchOwnerMode = 'contains';
       this.searchTable = '';
       this.searchTableMode = 'contains';
       this.searchTableKr = '';

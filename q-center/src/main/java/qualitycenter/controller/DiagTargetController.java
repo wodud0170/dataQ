@@ -1,5 +1,6 @@
 package qualitycenter.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,7 @@ public class DiagTargetController {
 		}
 	}
 
-	/** OBJ 단건 토글 */
+	/** OBJ 단건 토글 — 86번 #11 OBJ_OWNER 명시 (같은 OBJ_NM 다른 OWNER 분리) */
 	@PostMapping("/setObjDiagTarget")
 	public Map<String, Object> setObjDiagTarget(@RequestBody Map<String, Object> body) {
 		requireAdmin();
@@ -52,6 +53,7 @@ public class DiagTargetController {
 
 		Map<String, Object> p = new HashMap<>();
 		p.put("dmId",     body.get("dmId"));
+		p.put("objOwner", nullable((String) body.get("objOwner")));
 		p.put("objNm",    body.get("objNm"));
 		p.put("diagType", diagType);
 		p.put("targetYn", targetYn);
@@ -65,7 +67,7 @@ public class DiagTargetController {
 		return res;
 	}
 
-	/** OBJ 일괄 토글 */
+	/** OBJ 일괄 토글 — 86번 #11 (objOwner, objNm) tuple 배열 받음 */
 	@PostMapping("/setObjDiagTargetBatch")
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> setObjDiagTargetBatch(@RequestBody Map<String, Object> body) {
@@ -73,12 +75,24 @@ public class DiagTargetController {
 		String diagType = strOrThrow(body.get("diagType"), "diagType");
 		String targetYn = strOrThrow(body.get("targetYn"), "targetYn");
 		validate(diagType, targetYn);
-		List<String> objNms = (List<String>) body.get("objNms");
-		if (objNms == null || objNms.isEmpty()) throw new RuntimeException("objNms 누락");
+		// 신규 형식: targets = [{objOwner, objNm}, ...]. 옛 형식 (objNms array) 호환도 지원.
+		List<Map<String, Object>> targets = (List<Map<String, Object>>) body.get("targets");
+		if (targets == null || targets.isEmpty()) {
+			List<String> objNms = (List<String>) body.get("objNms");
+			if (objNms == null || objNms.isEmpty()) throw new RuntimeException("targets/objNms 누락");
+			String legacyOwner = nullable((String) body.get("objOwner"));
+			targets = new ArrayList<>();
+			for (String n : objNms) {
+				Map<String, Object> t = new HashMap<>();
+				t.put("objOwner", legacyOwner);
+				t.put("objNm", n);
+				targets.add(t);
+			}
+		}
 
 		Map<String, Object> p = new HashMap<>();
 		p.put("dmId",     body.get("dmId"));
-		p.put("objNms",   objNms);
+		p.put("targets",  targets);
 		p.put("diagType", diagType);
 		p.put("targetYn", targetYn);
 		p.put("reason",   "Y".equals(targetYn) ? null : nullable((String) body.get("reason")));
@@ -91,7 +105,7 @@ public class DiagTargetController {
 		return res;
 	}
 
-	/** ATTR 단건 토글 */
+	/** ATTR 단건 토글 — 86번 #11 OBJ_OWNER */
 	@PostMapping("/setAttrDiagTarget")
 	public Map<String, Object> setAttrDiagTarget(@RequestBody Map<String, Object> body) {
 		requireAdmin();
@@ -101,6 +115,7 @@ public class DiagTargetController {
 
 		Map<String, Object> p = new HashMap<>();
 		p.put("dmId",     body.get("dmId"));
+		p.put("objOwner", nullable((String) body.get("objOwner")));
 		p.put("objNm",    body.get("objNm"));
 		p.put("attrNm",   body.get("attrNm"));
 		p.put("diagType", diagType);
@@ -128,6 +143,7 @@ public class DiagTargetController {
 
 		Map<String, Object> p = new HashMap<>();
 		p.put("dmId",     body.get("dmId"));
+		p.put("objOwner", nullable((String) body.get("objOwner")));
 		p.put("objNm",    body.get("objNm"));
 		p.put("attrNms",  attrNms);
 		p.put("diagType", diagType);
@@ -145,9 +161,11 @@ public class DiagTargetController {
 	/** OBJ 단건 상세 조회 (모달용) */
 	@GetMapping("/objDiagTargetDetail")
 	public Map<String, Object> objDiagTargetDetail(@RequestParam("dmId") String dmId,
+	                                                @RequestParam(value = "objOwner", required = false) String objOwner,
 	                                                @RequestParam("objNm") String objNm) {
 		Map<String, Object> p = new HashMap<>();
 		p.put("dmId", dmId);
+		p.put("objOwner", nullable(objOwner));
 		p.put("objNm", objNm);
 		Map<String, Object> result = sqlSessionTemplate.selectOne("diagTarget.selectObjDiagTargetDetail", p);
 		return result == null ? new HashMap<>() : result;

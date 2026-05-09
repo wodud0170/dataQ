@@ -1,64 +1,139 @@
 <template>
   <v-main>
-    <!-- 조회 조건 -->
+    <!-- 조회 조건 — 86번 #11 3행 명확 분리 (Header / Filter / Edit) -->
     <v-sheet class="filterWrapper px-4 pt-3 pb-2">
-      <!-- Row 1: 모델 선택 -->
-      <v-row :style="{ alignItems: 'center', margin: '0 0 6px 0', flexWrap: 'wrap', gap: '6px' }">
+      <!-- ============ Row 1: Header (모델 + 비표준 토글 + 엑셀 + 조회) ============ -->
+      <v-row :style="{ alignItems: 'center', margin: '0 0 8px 0', flexWrap: 'wrap', gap: '8px' }">
         <span class="filterLabel">데이터모델명</span>
         <v-autocomplete v-model="selectedModelId" :items="modelList"
           item-text="dataModelNm" item-value="dataModelId"
           @change="onModelChange" clearable dense outlined hide-details
-          class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
-        </v-autocomplete>
-      </v-row>
-      <!-- Row 2: 상세 검색 조건 -->
-      <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '6px' }">
-        <span class="filterLabel">테이블 영문명 (물리)</span>
-        <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
-          prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
-          single-line dense outlined hide-details class="filterInput" :style="{ width: '100px' }">
-        </v-text-field>
-        <span class="filterLabel">컬럼 영문명 (물리)</span>
-        <v-text-field v-model="searchColumn" @click:clear="searchColumn=''" clearable
-          prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
-          single-line dense outlined hide-details class="filterInput" :style="{ width: '100px' }">
-        </v-text-field>
-        <span class="filterLabel">컬럼 한글명 (논리)</span>
-        <v-text-field v-model="searchColumnKr" @click:clear="searchColumnKr=''" clearable
-          prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
-          single-line dense outlined hide-details class="filterInput" :style="{ width: '100px' }">
-        </v-text-field>
-        <v-checkbox class="checkboxStyle" hide-details v-model="showNonStandardOnly" label="비표준만 보기" color="error" dense></v-checkbox>
-        <v-btn class="gradient btn-action" v-on:click="load">조회</v-btn>
-        <v-btn class="gradient btn-action" v-on:click="columnDataDownload" :disabled="dmColumnAllItems.length === 0">다운로드</v-btn>
-        <v-btn class="btn-action" id="btn-upload-attrs" color="deep-purple" outlined :disabled="!selectedModelId" v-on:click="triggerUploadAttrs">엑셀 업로드</v-btn>
-        <v-btn class="btn-action" id="btn-download-attrs-template" color="deep-purple" text v-on:click="downloadAttrsTemplate">양식 다운로드</v-btn>
+          class="filterInput" :style="{ width: '220px' }" color="ndColor" placeholder="모델 선택" />
+        <v-checkbox class="checkboxStyle ma-0 pa-0" hide-details v-model="showNonStandardOnly"
+          label="비표준만 보기" color="error" dense />
+        <v-spacer />
+        <!-- 엑셀 드롭다운 -->
+        <v-menu offset-y>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn class="tb-btn" depressed color="deep-purple lighten-5" v-bind="attrs" v-on="on" :disabled="!selectedModelId">
+              <v-icon small left color="deep-purple darken-2">mdi-file-excel</v-icon>
+              <span style="color:#4527A0;font-weight:600;">엑셀</span>
+              <v-icon small right color="deep-purple darken-2">mdi-menu-down</v-icon>
+            </v-btn>
+          </template>
+          <v-list dense>
+            <v-list-item id="btn-upload-attrs" @click="triggerUploadAttrs">
+              <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
+              <v-list-item-title>엑셀 업로드</v-list-item-title>
+            </v-list-item>
+            <v-list-item id="btn-download-attrs-template" @click="downloadAttrsTemplate">
+              <v-list-item-icon><v-icon small>mdi-file-download-outline</v-icon></v-list-item-icon>
+              <v-list-item-title>양식 다운로드</v-list-item-title>
+            </v-list-item>
+            <v-list-item :disabled="dmColumnAllItems.length === 0" @click="columnDataDownload">
+              <v-list-item-icon><v-icon small>mdi-download</v-icon></v-list-item-icon>
+              <v-list-item-title>데이터 다운로드</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+        <v-btn class="tb-btn gradient" depressed v-on:click="load">
+          <v-icon small left>mdi-magnify</v-icon>조회
+        </v-btn>
         <input ref="uploadAttrsInput" type="file" accept=".xlsx" style="display:none" @change="onAttrFileSelected" />
       </v-row>
-      <!-- Row 3: 그리드 편집 툴바 -->
-      <v-row :style="{ alignItems: 'center', margin: '6px 0 0 0', flexWrap: 'wrap', gap: '6px' }">
-        <span class="filterLabel">추가 대상 테이블</span>
-        <v-autocomplete v-model="addTargetObjNm" :items="objOptions" item-text="label" item-value="objNm"
-          :disabled="!selectedModelId" dense outlined hide-details
-          class="filterInput" :style="{ width: '220px' }" color="ndColor" placeholder="테이블 선택">
-        </v-autocomplete>
-        <v-btn class="btn-action" id="btn-add-col-row" color="primary" :disabled="!selectedModelId || !addTargetObjNm || newRows.length >= 100"
-          v-on:click="addEmptyRow">+ 컬럼 추가</v-btn>
-        <v-btn class="btn-action" id="btn-add-col-rows-10" color="primary" outlined :disabled="!selectedModelId || !addTargetObjNm || newRows.length >= 100"
-          v-on:click="addEmptyRows(10)">+ 빈 행 10개</v-btn>
-        <v-btn class="btn-action" id="btn-save-attrs" color="success" :disabled="!selectedModelId || (newRows.length === 0 && pendingDeletes.length === 0 && dirtyCount === 0)"
-          v-on:click="saveAll">저장 ({{ newRows.length + pendingDeletes.length + dirtyCount }})</v-btn>
-        <v-btn class="btn-action btn-wide" id="btn-resolve-selected" color="indigo" outlined :disabled="selectedRows.length === 0"
-          v-on:click="resolveSelected" :loading="resolving">선택 컬럼 물리모델 변환</v-btn>
-        <v-btn class="btn-action" color="error" outlined :disabled="selectedRows.length === 0"
-          v-on:click="deleteSelected">선택 행 삭제</v-btn>
-        <span v-if="newRows.length >= 100" class="ml-2" style="color:#D32F2F;font-size:.8rem;">
-          100행 도달 — 대량 입력은 엑셀 업로드 사용
-        </span>
-        <span v-else-if="selectedModelId && addTargetObjNm" class="ml-2" style="color:#546E7A;font-size:.75rem;">
-          엑셀에서 Ctrl+C 후 여기서 Ctrl+V — 여러 행 한 번에 추가 (열 순서: 한글명·NULL·PK·FK·기본값)
-        </span>
+
+      <!-- ============ Row 2: Filter (검색 조건 — wrap) ============ -->
+      <v-row :style="{ alignItems: 'center', margin: '0 0 8px 0', flexWrap: 'wrap', gap: '8px' }">
+        <span class="filterLabel">소유자</span>
+        <v-select v-model="searchOwnerMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
+        <v-text-field v-model="searchOwner" clearable clear-icon="mdi-close-circle" color="ndColor"
+          single-line dense outlined hide-details :style="{ width: '110px' }" placeholder="스키마" />
+        <span class="filterLabel">테이블 영문</span>
+        <v-select v-model="searchTableMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
+        <v-text-field v-model="searchTable" clearable clear-icon="mdi-close-circle" color="ndColor"
+          single-line dense outlined hide-details :style="{ width: '110px' }" />
+        <span class="filterLabel">테이블 한글</span>
+        <v-select v-model="searchTableKrMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
+        <v-text-field v-model="searchTableKr" clearable clear-icon="mdi-close-circle" color="ndColor"
+          single-line dense outlined hide-details :style="{ width: '110px' }" />
+        <span class="filterLabel">컬럼 영문</span>
+        <v-select v-model="searchColumnMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
+        <v-text-field v-model="searchColumn" clearable clear-icon="mdi-close-circle" color="ndColor"
+          single-line dense outlined hide-details :style="{ width: '110px' }" />
+        <span class="filterLabel">컬럼 한글</span>
+        <v-select v-model="searchColumnKrMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
+        <v-text-field v-model="searchColumnKr" clearable clear-icon="mdi-close-circle" color="ndColor"
+          single-line dense outlined hide-details :style="{ width: '110px' }" />
       </v-row>
+
+      <v-divider class="mt-1 mb-2" />
+
+      <!-- ============ Row 3: Edit (그리드 편집 툴바) ============ -->
+      <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '8px' }">
+        <span class="filterLabel">추가 대상</span>
+        <v-autocomplete v-model="addTargetKey" :items="objOptions" item-text="label" item-value="key"
+          :disabled="!selectedModelId" dense outlined hide-details
+          :style="{ width: '300px' }" color="ndColor" placeholder="테이블 선택 (소유자.테이블)" />
+
+        <!-- 행 추가 -->
+        <v-btn id="btn-add-col-row" class="tb-btn" color="primary" depressed
+          :disabled="!selectedModelId || !addTargetKey || newRows.length >= 100"
+          v-on:click="addEmptyRow">
+          <v-icon small left>mdi-plus</v-icon>컬럼 추가
+        </v-btn>
+        <v-btn id="btn-add-col-rows-10" class="tb-btn" color="primary" outlined
+          :disabled="!selectedModelId || !addTargetKey || newRows.length >= 100"
+          v-on:click="addEmptyRows(10)">+10행</v-btn>
+
+        <v-divider vertical class="mx-1" />
+
+        <!-- 한글명 기준 표준화 — filled indigo gradient (강조) + ? tooltip -->
+        <v-btn id="btn-resolve-selected" class="tb-btn tb-btn-magic" depressed
+          :disabled="selectedRows.length === 0"
+          v-on:click="resolveSelected" :loading="resolving">
+          <v-icon small left color="white">mdi-magic-staff</v-icon>한글명 기준 표준화
+        </v-btn>
+        <v-tooltip bottom max-width="320">
+          <template v-slot:activator="{ on, attrs }">
+            <v-icon v-bind="attrs" v-on="on" small color="indigo lighten-1" class="ml-n1">mdi-help-circle-outline</v-icon>
+          </template>
+          <span style="font-size:.78rem; line-height:1.5;">
+            선택한 컬럼의 <b>한글명</b> 으로 표준 용어 사전을 조회해<br>
+            <b>영문명 / 데이터 타입 / 길이 / 소수점</b> 을 자동으로 채웁니다.<br>
+            <span style="color:#FFCDD2;">※ 매칭되는 표준 용어가 있어야 적용됨.</span>
+          </span>
+        </v-tooltip>
+
+        <v-divider vertical class="mx-1" />
+
+        <v-btn class="tb-btn" color="error" outlined :disabled="selectedRows.length === 0"
+          v-on:click="deleteSelected">
+          <v-icon small left>mdi-delete-outline</v-icon>선택 삭제
+        </v-btn>
+
+        <v-spacer />
+
+        <!-- 우측: 저장 (가장 중요한 액션은 우측 끝, 색상 강조) -->
+        <v-btn id="btn-save-attrs" class="tb-btn" color="success" depressed
+          :disabled="!selectedModelId || (newRows.length === 0 && pendingDeletes.length === 0 && dirtyCount === 0)"
+          v-on:click="saveAll">
+          <v-icon small left>mdi-content-save-outline</v-icon>
+          저장 <span v-if="newRows.length + pendingDeletes.length + dirtyCount > 0" class="ml-1">({{ newRows.length + pendingDeletes.length + dirtyCount }})</span>
+        </v-btn>
+      </v-row>
+
+      <!-- 안내 라인 (조건부) -->
+      <div v-if="newRows.length >= 100" class="mt-1 px-1" style="color:#D32F2F;font-size:.78rem;">
+        100행 도달 — 대량 입력은 엑셀 업로드 사용
+      </div>
+      <div v-else-if="selectedModelId && addTargetKey" class="mt-1 px-1" style="color:#546E7A;font-size:.72rem;">
+        💡 엑셀에서 Ctrl+C 후 그리드에서 Ctrl+V — 여러 행 한 번에 추가 (열 순서: 한글명·NULL·PK·FK·기본값)
+      </div>
     </v-sheet>
 
     <!-- 목록 카운트 -->
@@ -76,9 +151,11 @@
     </v-sheet>
 
     <!-- 컬럼 목록 (인라인 편집) -->
+    <!-- 86번 #11 — fixed-header + 동적 height. 가로/세로 스크롤 모두 그리드 내부에서 동작 -->
     <v-data-table id="clTable_table" :headers="dmColumnDetaileHeaders" :items="mergedItems"
       :page.sync="page" :items-per-page="itemsPerPage" hide-default-footer
       item-key="_rowKey" show-select v-model="selectedRows"
+      fixed-header :height="tableHeight"
       class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요.">
 
       <template #item.objNmKr="{ item }">
@@ -102,24 +179,28 @@
       </template>
 
       <template #item.attrNm="{ item }">
-        <span :style="{ margin: '0px 8px', color: (item._mode === 'add' || item.termsStndYn === 'N') ? '#9E9E9E' : 'inherit' }">
-          {{ formatAttrNm(item) }}
-        </span>
+        <v-text-field v-if="item._mode === 'add'" v-model="item.attrNm"
+          :class="'inline-edit ' + (item._error ? 'inline-error ' : '')"
+          dense hide-details outlined flat solo single-line placeholder="컬럼 영문명(물리)" />
+        <span v-else :style="{ margin: '0px 8px' }">{{ formatAttrNm(item) }}</span>
       </template>
       <template #item.dataType="{ item }">
-        <span :style="{ margin: '0px 8px', color: (item._mode === 'add' || item.termsStndYn === 'N') ? '#9E9E9E' : 'inherit' }">
-          {{ formatDataType(item) }}
-        </span>
+        <v-text-field v-if="item._mode === 'add'" v-model="item.dataType"
+          class="inline-edit"
+          dense hide-details outlined flat solo single-line placeholder="VARCHAR" />
+        <span v-else :style="{ margin: '0px 8px' }">{{ formatDataType(item) }}</span>
       </template>
       <template #item.dataLen="{ item }">
-        <span :style="{ margin: '0px 8px', color: (item._mode === 'add' || item.termsStndYn === 'N') ? '#9E9E9E' : 'inherit' }">
-          {{ formatDataLen(item) }}
-        </span>
+        <v-text-field v-if="item._mode === 'add'" v-model.number="item.dataLen"
+          type="number" class="inline-edit"
+          dense hide-details outlined flat solo single-line placeholder="255" />
+        <span v-else :style="{ margin: '0px 8px' }">{{ formatDataLen(item) }}</span>
       </template>
       <template #item.dataDecimalLen="{ item }">
-        <span :style="{ margin: '0px 8px', color: (item._mode === 'add' || item.termsStndYn === 'N') ? '#9E9E9E' : 'inherit' }">
-          {{ formatDataDecimalLen(item) }}
-        </span>
+        <v-text-field v-if="item._mode === 'add'" v-model.number="item.dataDecimalLen"
+          type="number" class="inline-edit"
+          dense hide-details outlined flat solo single-line placeholder="-" />
+        <span v-else :style="{ margin: '0px 8px' }">{{ formatDataDecimalLen(item) }}</span>
       </template>
 
       <template #item.nullableYn="{ item }">
@@ -183,7 +264,7 @@
           컬럼 엑셀 업로드 미리보기
           <v-spacer />
           <span v-if="uploadSummary" style="font-size:.85rem;color:#455A64;">
-            총 {{ uploadSummary.total }} / 등록 예정 {{ uploadSummary.toInsertAttrs }} (FK {{ uploadSummary.toInsertFks }}) / 오류 {{ (uploadErrors || []).length }}
+            총 {{ uploadSummary.total }} / 등록 예정 {{ uploadSummary.toInsertAttrs }} (FK {{ uploadSummary.toInsertFks }}) / 중복 스킵 {{ uploadSummary.skipped || 0 }} / 오류 {{ (uploadErrors || []).length }}
           </span>
         </v-card-title>
         <v-card-text>
@@ -277,11 +358,27 @@ export default {
     modelList: [],
     dmColumnAllItems: [],
     selectedModelId: null,
+    // 86번 #11 — 검색 필드 (소유자, 테이블 한글명 추가, 모든 모드 셀렉트)
+    searchOwner: '',
+    searchOwnerMode: 'contains',
     searchTable: '',
+    searchTableMode: 'contains',
+    searchTableKr: '',
+    searchTableKrMode: 'contains',
     searchColumn: '',
+    searchColumnMode: 'contains',
     searchColumnKr: '',
+    searchColumnKrMode: 'contains',
+    searchModeOptions: [
+      { value: 'contains', label: '포함' },
+      { value: 'exact',    label: '완전 일치' },
+      { value: 'start',    label: '앞' },
+      { value: 'end',      label: '뒤' },
+    ],
     showNonStandardOnly: false,
     loadTable: false,
+    // 86번 #11 — 그리드 동적 높이 (viewport 변경 / 데이터 로드 시 재계산)
+    tableHeight: 500,
     page: 1,
     pageCount: null,
     itemsPerPage: 20,
@@ -291,16 +388,16 @@ export default {
     termLoading: false,
     // 그리드 편집 상태
     objOptions: [],
-    addTargetObjNm: null,
+    addTargetKey: null,
     newRows: [],            // 미저장 ADD 행들
     pendingDeletes: [],     // 미저장 DELETE 행들
     selectedRows: [],       // show-select 체크된 행
     resolving: false,
     dmColumnDetaileHeaders: [
       // [그룹 1] 테이블 식별 — 회색-블루 (#ECEFF1)
-      { text: '소유자', align: 'center', sortable: false, value: 'objOwner', width: '80px', class: 'hdr-table' },
-      { text: '테이블 한글명 (논리)', sortable: false, align: 'center', value: 'objNmKr', class: 'hdr-table' },
-      { text: '테이블 영문명 (물리)', align: 'center', sortable: false, value: 'objNm', class: 'hdr-table' },
+      { text: '소유자', align: 'center', sortable: true, value: 'objOwner', width: '80px', class: 'hdr-table' },
+      { text: '테이블 한글명 (논리)', sortable: true, align: 'center', value: 'objNmKr', class: 'hdr-table' },
+      { text: '테이블 영문명 (물리)', align: 'center', sortable: true, value: 'objNm', class: 'hdr-table' },
       // [그룹 2] 논리 / 사용자 편집 — 연한 그린 (#E8F5E9)
       { text: '컬럼 한글명 (논리)', sortable: false, align: 'center', value: 'attrNmKr', class: 'hdr-logical' },
       { text: 'NULL', sortable: false, align: 'center', value: 'nullableYn', width: '60px', class: 'hdr-logical' },
@@ -329,8 +426,12 @@ export default {
       { text: '행', value: 'row', align: 'center', sortable: false, width: '60px' },
       { text: '상태', value: '_action', align: 'center', sortable: false, width: '70px' },
       { text: '소유자', value: 'objOwner', align: 'center', sortable: false, width: '100px' },
+      { text: '테이블(영문)', value: 'objNm', align: 'center', sortable: false, width: '140px' },
       { text: '테이블(한글)', value: 'objNmKr', align: 'center', sortable: false, width: '120px' },
+      { text: '컬럼(영문)', value: 'attrNm', align: 'center', sortable: false, width: '140px' },
       { text: '컬럼(한글)', value: 'attrNmKr', align: 'center', sortable: false },
+      { text: '타입', value: 'dataType', align: 'center', sortable: false, width: '90px' },
+      { text: '길이', value: 'dataLen', align: 'center', sortable: false, width: '60px' },
       { text: 'PK', value: 'pkYn', align: 'center', sortable: false, width: '50px' },
       { text: 'FK', value: 'fkYn', align: 'center', sortable: false, width: '50px' },
       { text: '참조 테이블', value: 'refObjNmKr', align: 'center', sortable: false, width: '120px' },
@@ -358,47 +459,71 @@ export default {
   }),
   computed: {
     dmColumnItems() {
+      // 86번 #11 — 소유자/테이블 한글·영문/컬럼 한글·영문 (모드: contains/exact/start/end)
       return this.dmColumnAllItems.filter(item => {
-        const t   = !this.searchTable    || (item.objNm     || '').includes(this.searchTable);
-        const c   = !this.searchColumn   || (item.attrNm    || '').includes(this.searchColumn);
-        const cKr = !this.searchColumnKr || (item.attrNmKr  || '').includes(this.searchColumnKr);
-        const nonStd = !this.showNonStandardOnly || item.termsStndYn === 'N';
-        return t && c && cKr && nonStd;
+        if (!this._matchName(item.objOwner, this.searchOwner,    this.searchOwnerMode))    return false;
+        if (!this._matchName(item.objNm,    this.searchTable,    this.searchTableMode))    return false;
+        if (!this._matchName(item.objNmKr,  this.searchTableKr,  this.searchTableKrMode))  return false;
+        if (!this._matchName(item.attrNm,   this.searchColumn,   this.searchColumnMode))   return false;
+        if (!this._matchName(item.attrNmKr, this.searchColumnKr, this.searchColumnKrMode)) return false;
+        if (this.showNonStandardOnly && item.termsStndYn !== 'N') return false;
+        return true;
       });
     },
     mergedItems() {
-      // 저장된 행 + 미저장 신규 행 (신규 행은 뒤에 붙임)
-      return [...this.dmColumnItems, ...this.newRows];
+      // 86번 #11 —
+      //  · 미저장 신규 행 (newRows): 가장 위. 최근 추가가 더 위 (reverse) — 페이징으로 밀려서 안 보이지 않게
+      //  · 저장된 행 (dmColumnItems): owner > obj_nm > attr_ord 기본 정렬
+      const sorted = [...this.dmColumnItems].sort((a, b) => {
+        const oa = a.objOwner || '', ob = b.objOwner || '';
+        if (oa !== ob) return oa.localeCompare(ob);
+        const na = a.objNm || '',    nb = b.objNm || '';
+        if (na !== nb) return na.localeCompare(nb);
+        return (a.attrOrd || 0) - (b.attrOrd || 0);
+      });
+      return [...this.newRows.slice().reverse(), ...sorted];
     },
     dirtyCount() {
       return (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it)).length;
     },
   },
   methods: {
+    /** 86번 #11 — 그리드 높이 동적 계산. 화면 viewport 에서 toolbar / 카운트 / 페이지네이션 영역 차감 */
+    _calcTableHeight() {
+      // viewport 높이 - (탭 ~48 + 필터 wrapper ~150 + 카운트 행 ~46 + 페이지네이션 ~60 + 여유 24)
+      const reserved = 48 + 150 + 46 + 60 + 24;
+      this.tableHeight = Math.max(300, window.innerHeight - reserved);
+    },
+    /** 86번 #11 — 검색 모드 매칭: contains/exact/start/end */
+    _matchName(value, keyword, mode) {
+      if (!keyword) return true;
+      const v = (value || '').toLowerCase();
+      const k = keyword.toLowerCase();
+      if (mode === 'exact') return v === k;
+      if (mode === 'start') return v.startsWith(k);
+      if (mode === 'end')   return v.endsWith(k);
+      return v.includes(k);
+    },
     /**
      * 물리명(attrNm) 표시 포맷.
-     *  - 미저장 신규 행 (_mode='add'): '(저장 후 자동)' placeholder
-     *  - 저장된 행 중 비표준 (termsStndYn='N', 즉 자동 생성된 TMP_COL_N): 빈값
-     *  - 그 외: attrNm 그대로
+     *  - 미저장 신규 행 (_mode='add') 이면서 물리명이 안 들어온 경우만 placeholder
+     *  - 저장된 행: 물리명 / 타입 / 길이 그대로 노출 (수집·엑셀로 들어온 물리값 가리지 않음)
+     *  - 비표준 (termsStndYn='N') 은 가리지 않고 별도 알림 아이콘으로 표기
      */
     formatAttrNm(item) {
-      if (item._mode === 'add') return '(저장 후 자동)';
-      if (item.termsStndYn === 'N') return '';
+      if (item._mode === 'add' && !item.attrNm) return '(저장 후 자동)';
       return item.attrNm || '';
     },
     formatDataType(item) {
-      if (item._mode === 'add') return '-';
-      if (item.termsStndYn === 'N') return '';
+      if (item._mode === 'add' && !item.dataType) return '-';
       return item.dataType || '';
     },
     formatDataLen(item) {
-      if (item._mode === 'add') return '-';
-      if (item.termsStndYn === 'N') return '';
+      if (item._mode === 'add' && (item.dataLen == null || item.dataLen === '')) return '-';
       return item.dataLen != null ? item.dataLen : '';
     },
     formatDataDecimalLen(item) {
-      if (item._mode === 'add') return '-';
-      if (item.termsStndYn === 'N') return '';
+      if (item._mode === 'add' && (item.dataDecimalLen == null || item.dataDecimalLen === '')) return '-';
       return item.dataDecimalLen != null ? item.dataDecimalLen : '';
     },
     getModelList() {
@@ -418,7 +543,7 @@ export default {
       this.newRows = [];
       this.pendingDeletes = [];
       this.selectedRows = [];
-      this.addTargetObjNm = null;
+      this.addTargetKey = null;
       if (!modelId) return;
       this.loadObjOptions();
       this.load();
@@ -441,25 +566,30 @@ export default {
       });
     },
     _mapColumnData(data) {
-      return data.map(item => ({
-        attrId: item.attrId,
-        objOwner: item.objOwner, objNm: item.objNm, objNmKr: item.objNmKr,
-        attrNm: item.attrNm, attrNmKr: item.attrNmKr,
-        dataType: item.dataType, dataLen: item.dataLen, dataDecimalLen: item.dataDecimalLen,
-        nullableYn: item.nullableYn, termsStndYn: item.termsStndYn, domainStndYn: item.domainStndYn,
-        pkYn: item.pkYn, fkYn: item.fkYn, defaultVal: item.defaultVal,
-        clctId: item.clctId, dataModelId: item.dataModelId,
-        _rowKey: 's_' + item.objNm + '_' + item.attrNm,
-        _mode: 'saved',
-        _resolveReason: null,
-        _orig: {
-          attrNmKr: item.attrNmKr || '',
-          nullableYn: item.nullableYn || 'Y',
-          pkYn: item.pkYn || 'N',
-          fkYn: item.fkYn || 'N',
-          defaultVal: item.defaultVal || '',
-        },
-      }));
+      return data.map(item => {
+        // 86번 #11 — PK/FK 는 제약 없는 컬럼에서 NULL 로 들어옴.
+        // 예전엔 _orig 만 default 채우고 item 본체는 raw 라
+        // (item.pkYn || '') !== (item._orig.pkYn || 'N') → 항상 dirty 로 잡힘.
+        // item·_orig 양쪽 동일 default 적용해서 baseline 일치.
+        const nullableYn = item.nullableYn || 'Y';
+        const pkYn       = item.pkYn       || 'N';
+        const fkYn       = item.fkYn       || 'N';
+        const defaultVal = item.defaultVal || '';
+        const attrNmKr   = item.attrNmKr   || '';
+        return {
+          attrId: item.attrId,
+          objOwner: item.objOwner, objNm: item.objNm, objNmKr: item.objNmKr,
+          attrNm: item.attrNm, attrNmKr,
+          dataType: item.dataType, dataLen: item.dataLen, dataDecimalLen: item.dataDecimalLen,
+          nullableYn, termsStndYn: item.termsStndYn, domainStndYn: item.domainStndYn,
+          pkYn, fkYn, defaultVal,
+          clctId: item.clctId, dataModelId: item.dataModelId,
+          _rowKey: 's_' + item.objNm + '_' + item.attrNm,
+          _mode: 'saved',
+          _resolveReason: null,
+          _orig: { attrNmKr, nullableYn, pkYn, fkYn, defaultVal },
+        };
+      });
     },
     isRowDirty(item) {
       if (!item || item._mode === 'add' || !item._orig) return false;
@@ -474,10 +604,20 @@ export default {
       axios.get(this.$APIURL.base + "api/dm/getDataModelObjListByClctId", {
         params: { 'clctId': this.selectedModelId }
       }).then((res) => {
-        this.objOptions = (res.data || []).map(o => ({
-          objNm: o.objNm,
-          label: (o.objNmKr ? o.objNmKr + ' (' + o.objNm + ')' : o.objNm),
-        }));
+        // 86번 #11 — 같은 obj_nm 다른 owner 분리 위해 unique key + 표시 형식 'OWNER.OBJ_NM (한글명)'
+        this.objOptions = (res.data || []).map(o => {
+          const owner  = o.objOwner || '';
+          const objNm  = o.objNm;
+          const qualified = (owner ? owner + '.' : '') + objNm;
+          const label  = o.objNmKr ? qualified + ' (' + o.objNmKr + ')' : qualified;
+          return {
+            key: owner + '' + objNm,   // unique 식별자 (v-model 값)
+            objNm,
+            objOwner: owner,
+            objNmKr: o.objNmKr || '',
+            label,
+          };
+        });
       }).catch(() => { this.objOptions = []; });
     },
     _makeBlankRow(targetObj, seq) {
@@ -487,7 +627,7 @@ export default {
         _mode: 'add',
         _error: false,
         _resolveReason: null,
-        objOwner: '',
+        objOwner: targetObj.objOwner || '',  // 86번 #11 — 부모 OBJ 의 OWNER 자동 상속
         objNm: targetObj.objNm,
         objNmKr: (targetObj.label || '').replace(/ \(.+\)$/, ''),
         attrNm: '',
@@ -503,25 +643,28 @@ export default {
       };
     },
     addEmptyRow() {
-      if (!this.addTargetObjNm) {
+      if (!this.addTargetKey) {
         this.$swal.fire({ title: '추가 대상 테이블을 선택하세요.', icon: 'warning' });
         return;
       }
       if (this.newRows.length >= 100) return;
-      const targetObj = this.objOptions.find(o => o.objNm === this.addTargetObjNm) || { objNm: this.addTargetObjNm, label: '' };
+      const targetObj = this.objOptions.find(o => o.key === this.addTargetKey) || { objNm: this.addTargetKey, objOwner: '', label: '' };
       this.newRows.push(this._makeBlankRow(targetObj, this.newRows.length));
+      // 86번 #11 — 신규 행이 mergedItems 에서 맨 위에 표시되므로 1페이지로 이동해 즉시 보이게
+      this.page = 1;
     },
     addEmptyRows(n) {
-      if (!this.addTargetObjNm) {
+      if (!this.addTargetKey) {
         this.$swal.fire({ title: '추가 대상 테이블을 선택하세요.', icon: 'warning' });
         return;
       }
-      const targetObj = this.objOptions.find(o => o.objNm === this.addTargetObjNm) || { objNm: this.addTargetObjNm, label: '' };
+      const targetObj = this.objOptions.find(o => o.key === this.addTargetKey) || { objNm: this.addTargetKey, objOwner: '', label: '' };
       const remain = 100 - this.newRows.length;
       const add = Math.min(n, remain);
       for (let i = 0; i < add; i++) {
         this.newRows.push(this._makeBlankRow(targetObj, this.newRows.length));
       }
+      this.page = 1;  // 86번 #11
     },
     _parseBool(v) {
       if (v === undefined || v === null) return null;
@@ -533,7 +676,7 @@ export default {
     },
     onPaste(e) {
       // 그리드 편집 컨텍스트가 아닐 때는 무시 (모델·타겟 테이블 없음)
-      if (!this.selectedModelId || !this.addTargetObjNm) return;
+      if (!this.selectedModelId || !this.addTargetKey) return;
       // 입력 중인 일반 input/textarea 포커스에선 기본 동작 유지
       const tag = (e.target && e.target.tagName) || '';
       const isInput = tag === 'INPUT' || tag === 'TEXTAREA';
@@ -546,7 +689,7 @@ export default {
       const rows = text.replace(/\r\n?/g, '\n').split('\n').filter(r => r.length > 0);
       if (rows.length === 0) return;
       e.preventDefault();
-      const targetObj = this.objOptions.find(o => o.objNm === this.addTargetObjNm) || { objNm: this.addTargetObjNm, label: '' };
+      const targetObj = this.objOptions.find(o => o.key === this.addTargetKey) || { objNm: this.addTargetKey, objOwner: '', label: '' };
       const remain = 100 - this.newRows.length;
       const toAdd = Math.min(rows.length, remain);
       let added = 0;
@@ -599,8 +742,8 @@ export default {
       const totalCap = 100;
       let appliedCnt = 0;
       let truncated = 0;
-      const targetObj = this.objOptions.find(o => o.objNm === this.addTargetObjNm)
-        || { objNm: this.addTargetObjNm, label: '' };
+      const targetObj = this.objOptions.find(o => o.key === this.addTargetKey)
+        || { objNm: this.addTargetKey, objOwner: '', label: '' };
       for (let i = 0; i < lines.length; i++) {
         const idx = startIdx + i;
         if (this.newRows.length >= totalCap && idx >= this.newRows.length) {
@@ -662,15 +805,19 @@ export default {
     _validateNewRows() {
       this._dupErrorList = [];
       let ok = true;
-      // 1) 빈값 검사 (newRows 한글명/objNm 필수)
+      // 1) 빈값 검사 — 86번 #11: 한글명 또는 영문명(물리) 둘 중 하나는 필수, objNm(테이블) 필수
       this.newRows.forEach(r => {
-        r._error = !r.attrNmKr || !r.attrNmKr.trim() || !r.objNm;
+        const krEmpty = !r.attrNmKr || !r.attrNmKr.trim();
+        const enEmpty = !r.attrNm || !r.attrNm.trim();
+        r._error = (krEmpty && enEmpty) || !r.objNm;
         if (r._error) ok = false;
       });
-      // dirty 수정 행도 한글명 빈값 안됨
+      // dirty 수정 행: 영문명 또는 한글명 둘 다 빈값이면 오류
       const dirtyItems = (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it));
       dirtyItems.forEach(r => {
-        r._error = !r.attrNmKr || !r.attrNmKr.trim();
+        const krEmpty = !r.attrNmKr || !r.attrNmKr.trim();
+        const enEmpty = !r.attrNm || !r.attrNm.trim();
+        r._error = krEmpty && enEmpty;
         if (r._error) ok = false;
       });
       // 2) 한글명 중복 검사 — 같은 테이블(objNm) 내에서
@@ -710,11 +857,13 @@ export default {
       return ok;
     },
     _groupByObj(rows) {
+      // 86번 #11 — PK 가 (DM_ID, OBJ_OWNER, OBJ_NM) 이라 같은 OBJ_NM 다른 OWNER 가능 → key 에 owner 포함
       const groups = {};
       rows.forEach(r => {
-        const k = r.objNm;
-        if (!groups[k]) groups[k] = [];
-        groups[k].push(r);
+        const owner = r.objOwner || '';
+        const k = owner + '' + r.objNm;
+        if (!groups[k]) groups[k] = { objOwner: owner, objNm: r.objNm, rows: [] };
+        groups[k].rows.push(r);
       });
       return groups;
     },
@@ -734,28 +883,34 @@ export default {
       const addGroups = this._groupByObj(this.newRows);
       const delGroups = this._groupByObj(this.pendingDeletes);
       const updGroups = this._groupByObj(dirtyItems);
-      const objNms = new Set([
+      // (owner, objNm) 조합 키 셋
+      const allKeys = new Set([
         ...Object.keys(addGroups), ...Object.keys(delGroups), ...Object.keys(updGroups),
       ]);
-      if (objNms.size === 0) return;
+      if (allKeys.size === 0) return;
 
       const requests = [];
-      objNms.forEach(objNm => {
+      allKeys.forEach(k => {
+        const meta = (addGroups[k] || delGroups[k] || updGroups[k]);
+        const objNm = meta.objNm;
+        const objOwner = meta.objOwner;
         const attrs = [];
-        (addGroups[objNm] || []).forEach(r => attrs.push({
-          mode: 'ADD', attrNmKr: r.attrNmKr, pkYn: r.pkYn, fkYn: r.fkYn,
+        ((addGroups[k] && addGroups[k].rows) || []).forEach(r => attrs.push({
+          mode: 'ADD', attrNmKr: r.attrNmKr,
+          attrNm: r.attrNm, dataType: r.dataType, dataLen: r.dataLen, dataDecimalLen: r.dataDecimalLen,
+          pkYn: r.pkYn, fkYn: r.fkYn,
           nullableYn: r.nullableYn, defaultVal: r.defaultVal,
         }));
-        (updGroups[objNm] || []).forEach(r => attrs.push({
+        ((updGroups[k] && updGroups[k].rows) || []).forEach(r => attrs.push({
           mode: 'UPDATE', attrNm: r.attrNm,
           attrNmKr: r.attrNmKr, pkYn: r.pkYn, fkYn: r.fkYn,
           nullableYn: r.nullableYn, defaultVal: r.defaultVal,
         }));
-        (delGroups[objNm] || []).forEach(r => attrs.push({
+        ((delGroups[k] && delGroups[k].rows) || []).forEach(r => attrs.push({
           mode: 'DELETE', attrNm: r.attrNm,
         }));
         requests.push(axios.post(this.$APIURL.base + 'api/dm/saveAttrs', {
-          dataModelId: this.selectedModelId, objNm, attrs,
+          dataModelId: this.selectedModelId, objNm, objOwner, attrs,
         }));
       });
 
@@ -909,8 +1064,16 @@ export default {
         if (mode === 'commit') {
           this.uploadCommitting = false;
           this.uploadDialog = false;
-          const inserted = (this.uploadSummary && this.uploadSummary.toInsertAttrs) || 0;
-          this.$swal.fire({ title: inserted + '컬럼 등록 완료', icon: 'success', timer: 1500, showConfirmButton: false });
+          const s = this.uploadSummary || {};
+          const inserted = s.toInsertAttrs || s.toInsert || 0;
+          const skipped = s.skippedAttrs || s.skipped || 0;
+          const errs = (this.uploadErrors || []).length;
+          const html = `<div style="text-align:left">
+            등록: <b style="color:#2E7D32">${inserted}건</b><br>
+            중복 스킵: <b style="color:#F57C00">${skipped}건</b><br>
+            오류: <b style="color:#D32F2F">${errs}건</b>
+          </div>`;
+          this.$swal.fire({ title: '엑셀 업로드 완료', html: html, icon: 'success' });
           this.load();
         } else {
           this.uploadDialog = true;
@@ -933,7 +1096,15 @@ export default {
     _applyPendingView(pending) {
       const apply = () => {
         this.selectedModelId = pending.modelId;
-        this.searchTable = pending.tableNm || '';
+        // 86번 #11 — 같은 OBJ_NM 다른 OWNER 가능 → 소유자도 정확 일치로 같이 세팅
+        this.searchOwner     = pending.tableOwner || '';
+        this.searchOwnerMode = pending.tableOwner ? 'exact' : 'contains';
+        this.searchTable     = pending.tableNm || '';
+        this.searchTableMode = pending.tableNm ? 'exact' : 'contains';
+        // 추가 대상 테이블도 자동 세팅 — owner.objNm key 형식
+        if (pending.tableNm) {
+          this.addTargetKey = (pending.tableOwner || '') + '' + pending.tableNm;
+        }
         this.$nextTick(() => {
           this.loadObjOptions();
           this.load();
@@ -961,9 +1132,14 @@ export default {
     this.$resizableGrid && this.$resizableGrid();
     this._pasteHandler = this.onPaste.bind(this);
     document.addEventListener('paste', this._pasteHandler);
+    // 86번 #11 — 그리드 높이 동적 계산 (toolbar/카운트/페이징 영역 차감)
+    this._calcTableHeight();
+    this._resizeHandler = this._calcTableHeight.bind(this);
+    window.addEventListener('resize', this._resizeHandler);
   },
   beforeDestroy() {
     if (this._pasteHandler) document.removeEventListener('paste', this._pasteHandler);
+    if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
   },
   activated() {
     if (eventBus.pendingColumnView) {
@@ -971,6 +1147,8 @@ export default {
       eventBus.pendingColumnView = null;
       this._applyPendingView(pending);
     }
+    // 탭 활성화 시 다시 계산 (다른 탭에서 viewport 가 바뀌었을 수 있음)
+    this.$nextTick(() => this._calcTableHeight());
   },
 }
 </script>
@@ -979,12 +1157,13 @@ export default {
 .filterWrapper { border-bottom: 1px solid #E8EAF6; background: #ffffff; }
 .filterLabel { font-size: .8rem; white-space: nowrap; color: #455A64; font-weight: 500; }
 .filterInput { flex-grow: 0 !important; flex-shrink: 0 !important; }
+/* 86번 #11 — .tb-btn / .tb-btn-magic / 데이터테이블 가로스크롤 은 styles.css 전역에 옮김 */
 .tableSpt { display: flex; justify-content: space-between; align-items: center; padding: 6px 20px; background: #FAFBFF; }
 .split_bottom_wrap { position: absolute; width: 100%; max-height: 60px; bottom: 0px; border-top: 1px solid #E8EAF6; background: #FAFBFF; }
 .pagination_wrap { position: relative; width: 100%; }
 pre { font-family: 'Roboto'; }
 .checkboxStyle { margin-top: 0; padding-top: 0; }
-#clTable_table { height: calc(100vh - 64px - 48px - 144px - 44px - 60px); overflow-y: overlay; overflow-x: hidden; }
+/* 86번 #11 — height/overflow 는 v-data-table fixed-header + :height prop 에서 처리. CSS 강제 height 제거. */
 .row-nonstandard > td { background-color: #FFEBEE !important; }
 .inline-edit { min-width: 100px; }
 .inline-edit >>> input { padding: 2px 6px; }

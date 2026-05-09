@@ -212,6 +212,21 @@ export default {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
   },
   methods: {
+    /** 86번 #11 — 백엔드 raw exception 차단, 친화적 메세지 변환 */
+    _friendlyErrText: function(err, fallback) {
+      var status = (err && err.response && err.response.status) || 0;
+      var data   = (err && err.response && err.response.data) || {};
+      var our    = data.resultMessage;
+      var raw    = data.message;
+      var rawIsTechnical = raw && /JSON|deserialize|parse|MismatchedInput|HttpMessageNotReadable|Exception|NullPointer|invalid|cannot/i.test(raw);
+      if (our) return our;
+      if (raw && !rawIsTechnical) return raw;
+      if (status >= 500) return (fallback || '서버 처리 중 오류가 발생했습니다.') + ' (관리자에게 문의해 주세요)';
+      if (status === 400) return (fallback || '입력값이 올바르지 않습니다.');
+      if (status === 401 || status === 403) return '권한이 없습니다.';
+      if (status === 404) return '요청한 자원을 찾을 수 없습니다.';
+      return fallback || (err && err.message) || '알 수 없는 오류가 발생했습니다.';
+    },
     loadCols() {
       if (!this.dmId) { this.rows = []; this.selected = []; return; }
       this.loading = true;
@@ -257,7 +272,7 @@ export default {
         self.startPoll();
       }).catch(function(err) {
         self.running = false;
-        self.$swal.fire({ icon: 'error', title: '진단 시작 실패', text: (err.message || '') });
+        self.$swal.fire({ icon: 'error', title: '진단 시작 실패', text: self._friendlyErrText(err, '진단 시작 중 오류가 발생했습니다.') });
       });
     },
     startPoll() {

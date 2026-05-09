@@ -423,27 +423,23 @@ public class ExcelDownloadService {
         List<StdDataModelObjVo> dmObjVoLst = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", searchKey);
         long listSize = dmObjVoLst.size();
 
-        // 헤더 {헤더명,너비,정렬기준} 설정
+        // 86번 #11 — 업로드 양식 (DataModelController.TABLE_HEADERS) 와 동일 순서·명칭. 다운로드 → 재업로드 가능.
         List<String[]> headers = Arrays.asList(
-        	new String[]{"테이블명","20","LEFT"},
-        	new String[]{"테이블한글명","30","LEFT"},
-        	new String[]{"소유자","20","LEFT"},
-        	new String[]{"컬럼개수","20","CENTER"}, 
-            new String[]{"테이블설명","30","CENTER"}
+            new String[]{"소유자","20","LEFT"},
+            new String[]{"테이블명(영문)","25","LEFT"},
+            new String[]{"테이블명(한글)","30","LEFT"},
+            new String[]{"설명","40","LEFT"}
         );
-        
+
         // 데이터 리스트
         List<Map<String, Object>> list = new ArrayList<>();
-
-        // 헤더 키에 1:1 매칭
         for (int i = 0; i < listSize ; i++) {
-        	StdDataModelObjVo dataVo = dmObjVoLst.get(i);
+            StdDataModelObjVo dataVo = dmObjVoLst.get(i);
             Map<String, Object> tempMap = new LinkedHashMap<>();
-            tempMap.put("HEADER1", dataVo.getObjNm());
-            tempMap.put("HEADER2", dataVo.getObjNmKr());
-            tempMap.put("HEADER3", dataVo.getObjOwner());
-            tempMap.put("HEADER4", dataVo.getObjAttrCnt());
-            tempMap.put("HEADER5", dataVo.getObjDesc());
+            tempMap.put("HEADER1", dataVo.getObjOwner());
+            tempMap.put("HEADER2", dataVo.getObjNm());
+            tempMap.put("HEADER3", dataVo.getObjNmKr());
+            tempMap.put("HEADER4", dataVo.getObjDesc());
             list.add(tempMap);
         }
         log.info(">> excel export size={}", list.size());
@@ -465,49 +461,48 @@ public class ExcelDownloadService {
         List<StdDataModelAttrVo> dmAttrVoLst = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", searchKey);
         long listSize = dmAttrVoLst.size();
 
-        // 헤더 {헤더명,너비,정렬기준} 설정
+        // 86번 #11 — 업로드 양식 (DataModelController.ATTR_HEADERS) 와 동일 순서·명칭 (다운로드 → 재업로드 가능).
+        // 표준여부/용어/도메인/단어 같은 derived 컬럼은 백업 대상 아님 (재업로드 시 표준화 단계에서 다시 생성).
         List<String[]> headers = Arrays.asList(
-        	new String[]{"테이블명","20","LEFT"},
-        	new String[]{"테이블한글명","20","LEFT"},
-        	new String[]{"컬럼명","20","LEFT"},
-        	new String[]{"컬럼한글명","20","CENTER"}, 
-            new String[]{"데이터타입","20","CENTER"}, 
-        	new String[]{"데이터길이","15","RIGHT"},
-        	new String[]{"데이터소수점길이","20","RIGHT"},
+            new String[]{"소유자","15","LEFT"},
+            new String[]{"테이블명(영문)","25","LEFT"},
+            new String[]{"테이블명(한글)","25","LEFT"},
+            new String[]{"컬럼명(영문)","25","LEFT"},
+            new String[]{"컬럼명(한글)","25","LEFT"},
+            new String[]{"데이터타입","15","CENTER"},
+            new String[]{"길이","10","RIGHT"},
+            new String[]{"소수점자리","12","RIGHT"},
+            new String[]{"컬럼 순서","10","RIGHT"},
             new String[]{"NULL여부","10","CENTER"},
-        	new String[]{"M:3:표준여부:용어","15","CENTER"},//병합헤더 - "병합여부(M):병합개수:병합컬럼명:분할컬럼명"
-        	new String[]{"도메인","15","CENTER"},
-        	new String[]{"단어","20","LEFT"},
-        	new String[]{"PK여부","10","CENTER"},
+            new String[]{"PK여부","10","CENTER"},
             new String[]{"FK여부","10","CENTER"},
-        	new String[]{"디폴트값","15","CENTER"}
+            new String[]{"디폴트값","20","LEFT"},
+            new String[]{"참조 테이블(한글)","25","LEFT"},
+            new String[]{"참조 컬럼(한글)","25","LEFT"},
+            new String[]{"삭제 규칙","12","CENTER"}
         );
-        
+
         // 데이터 리스트
         List<Map<String, Object>> list = new ArrayList<>();
-
-        // 헤더 키에 1:1 매칭
         for (int i = 0; i < listSize ; i++) {
-        	StdDataModelAttrVo dataVo = dmAttrVoLst.get(i);
+            StdDataModelAttrVo dataVo = dmAttrVoLst.get(i);
             Map<String, Object> tempMap = new LinkedHashMap<>();
-            tempMap.put("HEADER1", dataVo.getObjNm());
-            tempMap.put("HEADER2", dataVo.getObjNmKr());
-            tempMap.put("HEADER3", dataVo.getAttrNm());
-            tempMap.put("HEADER4", dataVo.getAttrNmKr());
-            tempMap.put("HEADER5", dataVo.getDataType());
-            tempMap.put("HEADER6", dataVo.getDataLen());
-            tempMap.put("HEADER7", dataVo.getDataDecimalLen());
-            tempMap.put("HEADER8", dataVo.getNullableYn());
-            tempMap.put("HEADER9", dataVo.getTermsStndYn());
-            tempMap.put("HEADER10", dataVo.getDomainStndYn());
-            StringBuilder sb = new StringBuilder();
-            for (int j=0; j < dataVo.getWordLst().length; j++) {
-                sb.append(dataVo.getWordLst()[j] + " : " + dataVo.getWordStndLst()[j] + (j < (dataVo.getWordLst().length - 1) ? System.lineSeparator() : ""));
-            } 
-            tempMap.put("HEADER11", sb.toString());  
-            tempMap.put("HEADER12", dataVo.getPkYn());
-            tempMap.put("HEADER13", dataVo.getFkYn());
-            tempMap.put("HEADER14", dataVo.getDefaultVal());
+            tempMap.put("HEADER1",  dataVo.getObjOwner());
+            tempMap.put("HEADER2",  dataVo.getObjNm());
+            tempMap.put("HEADER3",  dataVo.getObjNmKr());
+            tempMap.put("HEADER4",  dataVo.getAttrNm());
+            tempMap.put("HEADER5",  dataVo.getAttrNmKr());
+            tempMap.put("HEADER6",  dataVo.getDataType());
+            tempMap.put("HEADER7",  dataVo.getDataLen());
+            tempMap.put("HEADER8",  dataVo.getDataDecimalLen());
+            tempMap.put("HEADER9",  dataVo.getAttrOrder());
+            tempMap.put("HEADER10", dataVo.getNullableYn());
+            tempMap.put("HEADER11", dataVo.getPkYn());
+            tempMap.put("HEADER12", dataVo.getFkYn());
+            tempMap.put("HEADER13", dataVo.getDefaultVal());
+            tempMap.put("HEADER14", dataVo.getFkParentObjNm());
+            tempMap.put("HEADER15", dataVo.getFkParentAttrNm());
+            tempMap.put("HEADER16", "");  // 삭제 규칙 — VO 에 미보존 (CONSTRAINT 테이블 별도). 백업 시 공란
             list.add(tempMap);
         }
         log.info(">> excel export size={}", list.size());
@@ -664,7 +659,12 @@ public class ExcelDownloadService {
         excelMap.put("headers", headers.stream().map(d -> d[0]).collect(Collectors.toList()));
         excelMap.put("widths", headers.stream().map(d-> d[1]).collect(Collectors.toList()));
         excelMap.put("aligns", headers.stream().map(d-> d[2]).collect(Collectors.toList()));
-        excelMap.put("keys", new ArrayList<String>(dataList.stream().findFirst().get().keySet()));
+        // 86번 #33 — dataList 가 비어있으면 findFirst().get() 이 NoSuchElementException 던짐.
+        //   keys 가 비어있으면 헤더만 있는 빈 엑셀이 만들어지지만 안전.
+        List<String> keys = dataList.isEmpty()
+                ? headers.stream().map(d -> "HEADER" + (headers.indexOf(d) + 1)).collect(Collectors.toList())
+                : new ArrayList<String>(dataList.get(0).keySet());
+        excelMap.put("keys", keys);
         excelMap.put("list", dataList);
         excelMap.put("fileName", fileName);
         return excelMap;

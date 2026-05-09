@@ -141,10 +141,8 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
-			// 영문약어 규격 체크: 대문자 영문(A-Z) + 숫자(0-9)만 허용
-			if (dataVo.getWordEngAbrvNm() != null && !dataVo.getWordEngAbrvNm().matches("^[A-Z0-9]+$")) {
-				throw new Exception("단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다. (입력값: " + dataVo.getWordEngAbrvNm() + ")");
-			}
+			// 86번 #29 — 입력 검증 강화 (createWord/updateWord 공통)
+			validateWordInput(dataVo);
 			// 형식단어인데 도메인 분류명이 없으면 등록 차단
 			if ("Y".equals(dataVo.getWordClsfYn()) && (dataVo.getDomainClsfNm() == null || dataVo.getDomainClsfNm().isEmpty())) {
 				result.setResultInfo(RestResult.CODE_500.getCode(), "형식 단어는 도메인 분류명이 필수입니다.");
@@ -187,7 +185,12 @@ public class DataStandardController {
 		} catch (Exception e) {
 			log.error(">> createWord failed : {}", e.getMessage());
 			String dupMsg = translateDuplicateError(e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg != null ? dupMsg : e.getMessage());
+			String userMsg = dupMsg != null ? dupMsg : e.getMessage();
+			// 86번 #29 — raw DB/MyBatis stacktrace 노출 차단 (사용자 친화적 fallback)
+			if (userMsg != null && (userMsg.startsWith("\r\n### Error") || userMsg.contains("PSQLException") || userMsg.contains("org.postgresql"))) {
+				userMsg = "단어 등록 중 오류가 발생했습니다. 입력값을 확인해주세요.";
+			}
+			result.setResultInfo(RestResult.CODE_500.getCode(), userMsg);
 		}
 
 		return Mono.just(result);
@@ -212,6 +215,8 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
+			// 86번 #29 — updateWord 도 createWord 와 동일 검증
+			validateWordInput(dataVo);
 			// 변경 전 값 조회
 			List<StdWordVo> prevList = sqlSessionTemplate.selectList("word.selectWordInfoById", dataVo.getId());
 			String prevValue = prevList != null && !prevList.isEmpty() ? prevList.get(0).toString() : null;
@@ -222,7 +227,11 @@ public class DataStandardController {
 					prevValue, dataVo.toString(), "단어 수정: " + dataVo.getWordNm());
 		} catch (Exception e) {
 			log.error(">> updateWord failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			String userMsg = e.getMessage();
+			if (userMsg != null && (userMsg.startsWith("\r\n### Error") || userMsg.contains("PSQLException") || userMsg.contains("org.postgresql"))) {
+				userMsg = "단어 수정 중 오류가 발생했습니다. 입력값을 확인해주세요.";
+			}
+			result.setResultInfo(RestResult.CODE_500.getCode(), userMsg);
 		}
 
 		return Mono.just(result);
@@ -1088,6 +1097,8 @@ public class DataStandardController {
 
 		Response result = new Response();
 		try {
+			// 86번 #30 — 입력 검증 강화 (raw DB 에러 노출 방지 + 빈값/이상치 차단)
+			validateDomainInput(dataVo);
 			// 중복 체크: 동일 도메인명이 이미 존재하면 승인 상태에 따라 메시지 분기
 			StdDomainVo existingDomain = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dataVo.getDomainNm());
 			if (existingDomain != null) {
@@ -1110,10 +1121,111 @@ public class DataStandardController {
 		} catch (Exception e) {
 			log.error(">> createDomain failed : {}", e.getMessage());
 			String dupMsg = translateDuplicateError(e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg != null ? dupMsg : translateDomainInsertError(e, dataVo));
+			String userMsg = dupMsg != null ? dupMsg : translateDomainInsertError(e, dataVo);
+			// 86번 #30 — raw DB stacktrace 차단
+			if (userMsg != null && (userMsg.startsWith("\r\n### Error") || userMsg.contains("PSQLException") || userMsg.contains("org.postgresql"))) {
+				userMsg = "도메인 등록 중 오류가 발생했습니다. 입력값을 확인해주세요.";
+			}
+			result.setResultInfo(RestResult.CODE_500.getCode(), userMsg);
 		}
 
 		return Mono.just(result);
+	}
+
+	/** 86번 #29 — 단어 입력 공통 검증 (createWord / updateWord 재사용) */
+	private void validateWordInput(StdWordVo vo) throws Exception {
+		String wnm = vo.getWordNm();
+		if (wnm == null || wnm.trim().isEmpty()) {
+			throw new Exception("단어 한글명은 필수입니다.");
+		}
+		if (wnm.length() > 100) {
+			throw new Exception("단어 한글명이 너무 깁니다 (최대 100자, 입력 길이: " + wnm.length() + ")");
+		}
+		String abrv = vo.getWordEngAbrvNm();
+		if (abrv == null || abrv.trim().isEmpty()) {
+			throw new Exception("단어 영문약어는 필수입니다.");
+		}
+		if (abrv.length() > 100) {
+			throw new Exception("단어 영문약어가 너무 깁니다 (최대 100자, 입력 길이: " + abrv.length() + ")");
+		}
+		if (!abrv.matches("^[A-Z][A-Z0-9_]*$")) {
+			throw new Exception("단어 영문약어는 대문자 영문(A-Z)으로 시작하고 영문/숫자(0-9)/언더바(_)만 사용할 수 있습니다. (입력값: " + abrv + ")");
+		}
+		String eng = vo.getWordEngNm();
+		if (eng == null || eng.trim().isEmpty()) {
+			throw new Exception("단어 영문명은 필수입니다.");
+		}
+		if (eng.length() > 100) {
+			throw new Exception("단어 영문명이 너무 깁니다 (최대 100자, 입력 길이: " + eng.length() + ")");
+		}
+		if (!eng.matches("^[A-Za-z][A-Za-z0-9 _]*$")) {
+			throw new Exception("단어 영문명은 영문(A-Z,a-z)으로 시작하고 영문/숫자/공백/언더바만 사용할 수 있습니다. (입력값: " + eng + ")");
+		}
+	}
+
+	/** 86번 #30 — 도메인 입력 공통 검증 (createDomain / updateDomain 재사용) */
+	private void validateDomainInput(StdDomainVo vo) throws Exception {
+		// domainNm: 필수 + 100자
+		String dnm = vo.getDomainNm();
+		if (dnm == null || dnm.trim().isEmpty()) {
+			throw new Exception("도메인명은 필수입니다.");
+		}
+		if (dnm.length() > 100) {
+			throw new Exception("도메인명이 너무 깁니다 (최대 100자, 입력 길이: " + dnm.length() + ")");
+		}
+		// domainGrpNm: 필수 + 100자
+		String grp = vo.getDomainGrpNm();
+		if (grp == null || grp.trim().isEmpty()) {
+			throw new Exception("도메인 그룹명은 필수입니다.");
+		}
+		if (grp.length() > 100) {
+			throw new Exception("도메인 그룹명이 너무 깁니다 (최대 100자)");
+		}
+		// domainClsfNm: 필수 + 100자
+		String clsf = vo.getDomainClsfNm();
+		if (clsf == null || clsf.trim().isEmpty()) {
+			throw new Exception("도메인 분류명은 필수입니다.");
+		}
+		if (clsf.length() > 100) {
+			throw new Exception("도메인 분류명이 너무 깁니다 (최대 100자)");
+		}
+		// domainDesc: 필수 + 500자
+		String desc = vo.getDomainDesc();
+		if (desc == null || desc.trim().isEmpty()) {
+			throw new Exception("도메인 설명은 필수입니다.");
+		}
+		if (desc.length() > 500) {
+			throw new Exception("도메인 설명이 너무 깁니다 (최대 500자, 입력 길이: " + desc.length() + ")");
+		}
+		// dataType: 필수 + 50자 + 허용 타입 화이트리스트 (대소문자 무시)
+		String dt = vo.getDataType();
+		if (dt == null || dt.trim().isEmpty()) {
+			throw new Exception("데이터 타입은 필수입니다.");
+		}
+		if (dt.length() > 50) {
+			throw new Exception("데이터 타입이 너무 깁니다 (최대 50자)");
+		}
+		String dtUp = dt.trim().toUpperCase();
+		java.util.Set<String> ALLOWED_TYPES = new java.util.HashSet<>(java.util.Arrays.asList(
+				"VARCHAR","VARCHAR2","CHAR","NVARCHAR","NVARCHAR2","NCHAR","TEXT","CLOB","NCLOB",
+				"NUMBER","NUMERIC","DECIMAL","INT","INTEGER","BIGINT","SMALLINT","TINYINT",
+				"FLOAT","DOUBLE","REAL",
+				"DATE","TIME","TIMESTAMP","DATETIME",
+				"BLOB","BYTEA","BINARY","VARBINARY",
+				"BOOLEAN","BOOL","BIT"));
+		if (!ALLOWED_TYPES.contains(dtUp)) {
+			throw new Exception("지원하지 않는 데이터 타입입니다: " + dt + " (허용: VARCHAR/CHAR/NUMBER/DATE/TIMESTAMP/INT/DECIMAL 등)");
+		}
+		// dataLen: 음수 차단 (smallint 범위 초과는 JSON 역직렬화에서 미리 잡힘). 0 허용 (DATE 등 길이 없는 타입)
+		short len = vo.getDataLen();
+		if (len < 0) {
+			throw new Exception("데이터 길이는 0 이상이어야 합니다 (입력값: " + len + ")");
+		}
+		// dataDecimalLen: 음수 차단
+		short dec = vo.getDataDecimalLen();
+		if (dec < 0) {
+			throw new Exception("데이터 소수점 길이는 0 이상이어야 합니다 (입력값: " + dec + ")");
+		}
 	}
 
 	// 도메인 INSERT/UPDATE 실패 메시지를 사용자가 알기 쉬운 형태로 변환.
@@ -1150,6 +1262,8 @@ public class DataStandardController {
 
 		Response result = new Response();
 		try {
+			// 86번 #30 — updateDomain 도 동일 검증
+			validateDomainInput(dataVo);
 			// 변경 전 값 조회
 			List<StdDomainVo> prevList = sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dataVo.getDomainNm());
 			String prevValue = prevList != null && !prevList.isEmpty() ? prevList.get(0).toString() : null;
@@ -1160,7 +1274,11 @@ public class DataStandardController {
 					prevValue, dataVo.toString(), "도메인 수정: " + dataVo.getDomainNm());
 		} catch (Exception e) {
 			log.error(">> updateDomain failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), translateDomainInsertError(e, dataVo));
+			String userMsg = translateDomainInsertError(e, dataVo);
+			if (userMsg != null && (userMsg.startsWith("\r\n### Error") || userMsg.contains("PSQLException") || userMsg.contains("org.postgresql"))) {
+				userMsg = "도메인 수정 중 오류가 발생했습니다. 입력값을 확인해주세요.";
+			}
+			result.setResultInfo(RestResult.CODE_500.getCode(), userMsg);
 		}
 
 		return Mono.just(result);
@@ -2403,6 +2521,65 @@ public class DataStandardController {
 		}
 	}
 
+	// 86번 #11 — 도메인 / 도메인그룹 / 도메인분류 업로드 양식 (헤더만 있는 빈 xlsx, POI 동적 생성).
+	// 다운로드 헤더와 정확히 동일하게 맞춰서 다운로드 → 재업로드 백업 가능.
+	private static final String[] DOMAIN_HEADERS = {
+		"No", "제정차수", "도메인그룹명", "도메인분류명", "도메인명", "도메인설명",
+		"데이터타입", "데이터길이", "데이터소수점길이", "저장형식", "표현형식", "단위",
+		"허용값", "요청시스템", "표준여부"
+	};
+	private static final String[] DOMAIN_GROUP_HEADERS = {
+		"No", "도메인그룹명", "표준여부"
+	};
+	private static final String[] DOMAIN_CLSF_HEADERS = {
+		"No", "도메인그룹명", "도메인분류명", "표준여부"
+	};
+
+	@GetMapping(value = "/downloadDomainTemplate")
+	public void downloadDomainTemplate(HttpServletResponse res) throws Exception {
+		writeHeaderOnlyTemplate(res, DOMAIN_HEADERS, "도메인_일괄등록_템플릿.xlsx", "도메인 양식");
+	}
+
+	@GetMapping(value = "/downloadDomainGroupTemplate")
+	public void downloadDomainGroupTemplate(HttpServletResponse res) throws Exception {
+		writeHeaderOnlyTemplate(res, DOMAIN_GROUP_HEADERS, "도메인그룹_일괄등록_템플릿.xlsx", "도메인그룹 양식");
+	}
+
+	@GetMapping(value = "/downloadDomainClsfTemplate")
+	public void downloadDomainClsfTemplate(HttpServletResponse res) throws Exception {
+		writeHeaderOnlyTemplate(res, DOMAIN_CLSF_HEADERS, "도메인분류_일괄등록_템플릿.xlsx", "도메인분류 양식");
+	}
+
+	/** 헤더만 있는 빈 양식 xlsx 동적 생성 (POI). 단순/일관/유지보수 쉬움. */
+	private void writeHeaderOnlyTemplate(HttpServletResponse res, String[] headers, String fileName, String sheetName) throws Exception {
+		res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+		res.setHeader("Content-Disposition", "attachment; filename=\""
+				+ java.net.URLEncoder.encode(fileName, "UTF-8").replace("+", "%20") + "\"");
+		try (org.apache.poi.xssf.usermodel.XSSFWorkbook wb = new org.apache.poi.xssf.usermodel.XSSFWorkbook()) {
+			org.apache.poi.ss.usermodel.Sheet sh = wb.createSheet(sheetName);
+			org.apache.poi.ss.usermodel.CellStyle hdrStyle = wb.createCellStyle();
+			org.apache.poi.ss.usermodel.Font hdrFont = wb.createFont();
+			hdrFont.setBold(true);
+			hdrStyle.setFont(hdrFont);
+			hdrStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+			hdrStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+			hdrStyle.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+			hdrStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+			hdrStyle.setBorderLeft(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+			hdrStyle.setBorderRight(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+
+			org.apache.poi.ss.usermodel.Row hRow = sh.createRow(0);
+			for (int i = 0; i < headers.length; i++) {
+				org.apache.poi.ss.usermodel.Cell c = hRow.createCell(i);
+				c.setCellValue(headers[i]);
+				c.setCellStyle(hdrStyle);
+				sh.setColumnWidth(i, 18 * 256);
+			}
+			wb.write(res.getOutputStream());
+			res.getOutputStream().flush();
+		}
+	}
+
 	/**
 	 * DP 기반 최적 단어 분리
 	 *
@@ -2980,10 +3157,34 @@ public class DataStandardController {
 
 	private String translateDuplicateError(String msg) {
 		if (msg == null) return null;
-		if (msg.contains("uix_word_nm")) return "이미 등록된 단어명입니다.";
-		if (msg.contains("uix_word_eng_abrv_nm")) return "이미 등록된 단어 영문약어입니다.";
-		if (msg.contains("uix_terms_nm")) return "이미 등록된 용어명입니다.";
-		if (msg.contains("uix_domain_nm")) return "이미 등록된 도메인명입니다.";
+		// 86번 #31 — DDL 에 동일 컬럼에 두 인덱스 (uix_*, tb_*_ux_*) 가 존재 — 양쪽 모두 매칭.
+		//   "Detail: Key (col)=(val)" 패턴도 감지 → 어떤 컬럼이 충돌했는지 친화적 메시지.
+		// word: uix_word_nm / tb_word_ux_1 = word_nm. uix_word_eng_abrv_nm / tb_word_ux_2 = word_eng_abrv_nm.
+		// terms: uix_terms_nm / tb_terms_ux_1 = terms_nm. tb_terms_ux_2 = terms_eng_abrv_nm.
+		// domain: uix_domain_nm / tb_domain_ux_1 = domain_nm.
+		if (msg.contains("(word_eng_abrv_nm)") || msg.contains("uix_word_eng_abrv_nm") || msg.contains("tb_word_ux_2")) {
+			java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\(word_eng_abrv_nm\\)=\\(([^)]+)\\)").matcher(msg);
+			String dup = m.find() ? m.group(1) : null;
+			return dup != null
+					? "이미 등록된 단어 영문약어입니다: '" + dup + "'"
+					: "이미 등록된 단어 영문약어입니다.";
+		}
+		if (msg.contains("(word_nm)") || msg.contains("uix_word_nm") || msg.contains("tb_word_ux_1")) {
+			java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\(word_nm[^)]*\\)=\\(([^)]+)\\)").matcher(msg);
+			String dup = m.find() ? m.group(1) : null;
+			return dup != null
+					? "이미 등록된 단어명입니다: '" + dup + "'"
+					: "이미 등록된 단어명입니다.";
+		}
+		if (msg.contains("(terms_eng_abrv_nm)") || msg.contains("tb_terms_ux_2")) {
+			return "이미 등록된 용어 영문약어입니다.";
+		}
+		if (msg.contains("(terms_nm)") || msg.contains("uix_terms_nm") || msg.contains("tb_terms_ux_1")) {
+			return "이미 등록된 용어명입니다.";
+		}
+		if (msg.contains("(domain_nm)") || msg.contains("uix_domain_nm") || msg.contains("tb_domain_ux_1")) {
+			return "이미 등록된 도메인명입니다.";
+		}
 		return null;
 	}
 }

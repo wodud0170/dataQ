@@ -192,33 +192,35 @@ public class DataModelService implements Runnable {
 					stdDataModelAttrVo.setFkYn(rs.getString("fkYn"));
 					stdDataModelAttrVo.setDefaultVal(rs.getString("defaultVal"));
 					stdDataModelAttrVo.setAttrOrder(rs.getShort("attrOrder"));
-					// [주석처리] 수집 시 표준여부 검사 제거 — 표준 검사는 진단(DiagService)에서 수행
-					// 원복 시 아래 주석을 해제하면 됩니다.
-					// //표준여부 체크 - 용어,도메인
-					// StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByEngNm", stdDataModelAttrVo.getAttrNm().toUpperCase());
-					// if (stdTermsVo != null) {
-					// 	stdDataModelAttrVo.setTermsStndYn("Y");
-					// 	stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");
-					// } else {
-					// 	stdDataModelAttrVo.setTermsStndYn("N");
-					// 	stdDataModelAttrVo.setDomainStndYn("N");
-					// }
-					// //표준여부 체크 - 단어
-					// String[] words = stdDataModelAttrVo.getAttrNm().toUpperCase().split("_");
-					// List<String> wordLst = new ArrayList<String>();
-					// List<String> wordStndLst = new ArrayList<String>();
-					// for (String word : words) {
-					// 	StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", word);
-					// 	if (stdWordVo != null) {
-					// 		wordLst.add(word + "(" + stdWordVo.getWordNm() + ")");
-					// 		wordStndLst.add("Y");
-					// 	} else {
-					// 		wordLst.add(word);
-					// 		wordStndLst.add("N");
-					// 	}
-					// }
-					// stdDataModelAttrVo.setWordLst(wordLst.toArray(new String[0]));
-					// stdDataModelAttrVo.setWordStndLst(wordStndLst.toArray(new String[0]));
+					// 86번 #11 — 수집 단계 표준여부 검사. 진단(Diag) 에서도 다시 하지만, 수집 직후 화면에 표준 여부가 보이도록 일치화.
+					// 표준여부 체크 - 용어,도메인
+					String attrNmUp = stdDataModelAttrVo.getAttrNm() == null ? "" : stdDataModelAttrVo.getAttrNm().toUpperCase();
+					StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByEngNm", attrNmUp);
+					if (stdTermsVo != null) {
+						stdDataModelAttrVo.setTermsStndYn("Y");
+						stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");
+					} else {
+						stdDataModelAttrVo.setTermsStndYn("N");
+						stdDataModelAttrVo.setDomainStndYn("N");
+					}
+					// 표준여부 체크 - 단어 (영문 약어 기준 매칭, 단어/표준여부 배열 보존)
+					List<String> wordLst = new ArrayList<String>();
+					List<String> wordStndLst = new ArrayList<String>();
+					if (!attrNmUp.isEmpty()) {
+						for (String word : attrNmUp.split("_")) {
+							if (word.isEmpty()) continue;
+							StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", word);
+							if (stdWordVo != null) {
+								wordLst.add(word + "(" + stdWordVo.getWordNm() + ")");
+								wordStndLst.add("Y");
+							} else {
+								wordLst.add(word);
+								wordStndLst.add("N");
+							}
+						}
+					}
+					stdDataModelAttrVo.setWordLst(wordLst.toArray(new String[0]));
+					stdDataModelAttrVo.setWordStndLst(wordStndLst.toArray(new String[0]));
 					session.insert("datamodel.insertDataModelAttr", stdDataModelAttrVo);
 					collectedAttrNames.add(stdDataModelAttrVo.getObjNm() + "." + stdDataModelAttrVo.getAttrNm());
 					totalAttrCnt++;
@@ -228,24 +230,10 @@ public class DataModelService implements Runnable {
 			}
 			session.commit();
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "컬럼 정보 수집 완료 (" + totalAttrCnt + "개)");
-			// 3-0. 소프트 삭제: 이번 수집에 없는 OBJ/ATTR
-			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "삭제된 객체 정리 중...");
+			// 86번 #11 — 소프트 삭제 비활성화. 수집은 MERGE 만 수행 (물리명 일치 시 덮어쓰기).
+			// 기존 모델 행은 유지. 삭제는 사용자가 명시적으로 수행해야 함.
+			// (예전엔 OWNER 누락된 softDeleteMissingObjs/Attrs 가 다른 스키마 행을 통째 soft-delete 시키는 버그.)
 			String nowDt = com.ndata.module.DateUtils.dateToStr(new Date(), "yyyyMMddHHmmss");
-			if (!collectedObjNames.isEmpty()) {
-				java.util.Map<String, Object> softDelObjParam = new java.util.HashMap<>();
-				softDelObjParam.put("dataModelId", dataModelId);
-				softDelObjParam.put("deletedDt", nowDt);
-				softDelObjParam.put("collectedNames", collectedObjNames);
-				session.update("datamodel.softDeleteMissingObjs", softDelObjParam);
-			}
-			if (!collectedAttrNames.isEmpty()) {
-				java.util.Map<String, Object> softDelAttrParam = new java.util.HashMap<>();
-				softDelAttrParam.put("dataModelId", dataModelId);
-				softDelAttrParam.put("deletedDt", nowDt);
-				softDelAttrParam.put("collectedNames", collectedAttrNames);
-				session.update("datamodel.softDeleteMissingAttrs", softDelAttrParam);
-			}
-			session.commit();
 			// 3-1. INDEX (인덱스) 수집 — UPSERT + soft-delete
 			int totalIndexCnt = 0;
 			try {
@@ -276,13 +264,7 @@ public class DataModelService implements Runnable {
 						pstmt.close();
 						rs.close();
 					}
-					if (!collectedIndexKeys.isEmpty()) {
-						java.util.Map<String, Object> softDelParam = new java.util.HashMap<>();
-						softDelParam.put("dataModelId", dataModelId);
-						softDelParam.put("deletedDt", nowDt);
-						softDelParam.put("collectedKeys", collectedIndexKeys);
-						session.update("datamodel.softDeleteMissingIndexes", softDelParam);
-					}
+					// 86번 #11 — soft-delete 제거 (수집은 MERGE 전용)
 					session.commit();
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "인덱스 정보 수집 완료 (" + totalIndexCnt + "개)");
 				}
@@ -322,13 +304,7 @@ public class DataModelService implements Runnable {
 						pstmt.close();
 						rs.close();
 					}
-					if (!collectedConstraintKeys.isEmpty()) {
-						java.util.Map<String, Object> softDelParam = new java.util.HashMap<>();
-						softDelParam.put("dataModelId", dataModelId);
-						softDelParam.put("deletedDt", nowDt);
-						softDelParam.put("collectedKeys", collectedConstraintKeys);
-						session.update("datamodel.softDeleteMissingConstraints", softDelParam);
-					}
+					// 86번 #11 — soft-delete 제거 (수집은 MERGE 전용)
 					session.commit();
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 완료 (" + totalConstraintCnt + "개)");
 				}

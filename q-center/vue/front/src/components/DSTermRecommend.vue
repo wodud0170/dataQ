@@ -500,6 +500,21 @@ export default {
     },
   },
   methods: {
+    /** 86번 #11 — 백엔드 raw exception 차단, 친화적 메세지 변환 */
+    _friendlyErrText: function(err, fallback) {
+      var status = (err && err.response && err.response.status) || 0;
+      var data   = (err && err.response && err.response.data) || {};
+      var our    = data.resultMessage;
+      var raw    = data.message;
+      var rawIsTechnical = raw && /JSON|deserialize|parse|MismatchedInput|HttpMessageNotReadable|Exception|NullPointer|invalid|cannot/i.test(raw);
+      if (our) return our;
+      if (raw && !rawIsTechnical) return raw;
+      if (status >= 500) return (fallback || '서버 처리 중 오류가 발생했습니다.') + ' (관리자에게 문의해 주세요)';
+      if (status === 400) return (fallback || '입력값이 올바르지 않습니다.');
+      if (status === 401 || status === 403) return '권한이 없습니다.';
+      if (status === 404) return '요청한 자원을 찾을 수 없습니다.';
+      return fallback || (err && err.message) || '알 수 없는 오류가 발생했습니다.';
+    },
     downloadTemplate: function() {
       var self = this;
       axios.get(self.$APIURL.base + 'api/std/downloadTermRecommendTemplate', {
@@ -585,8 +600,7 @@ export default {
         }
         self.currentStep = 3;
       }).catch(function(err) {
-        var msg = (err.response && err.response.data && err.response.data.message) || '분석 중 오류가 발생했습니다.';
-        self.$swal.fire({ title: '분석 실패', text: msg, icon: 'error', confirmButtonText: '확인' });
+        self.$swal.fire({ title: '분석 실패', text: self._friendlyErrText(err, '분석 중 오류가 발생했습니다.'), icon: 'error', confirmButtonText: '확인' });
         self.currentStep = 1;
       }).finally(function() {
         self.isAnalyzing = false;
@@ -1194,8 +1208,7 @@ export default {
               confirmButtonText: '확인'
             });
           }).catch(function(err) {
-            var msg = (err.response && err.response.data && err.response.data.message) || '등록 중 오류가 발생했습니다.';
-            self.$swal.fire({ title: '등록 실패', text: msg, icon: 'error', confirmButtonText: '확인' });
+            self.$swal.fire({ title: '등록 실패', text: self._friendlyErrText(err, '등록 중 오류가 발생했습니다.'), icon: 'error', confirmButtonText: '확인' });
           }).finally(function() {
             self.isRegistering = false;
           });
@@ -1227,8 +1240,7 @@ export default {
             self.$swal.fire({ title: '등록 실패', text: d.message || '오류', icon: 'error', confirmButtonText: '확인' });
           }
         }).catch(function(err) {
-          var msg = (err.response && err.response.data && err.response.data.message) || '등록 중 오류가 발생했습니다.';
-          self.$swal.fire({ title: '등록 실패', text: msg, icon: 'error', confirmButtonText: '확인' });
+          self.$swal.fire({ title: '등록 실패', text: self._friendlyErrText(err, '등록 중 오류가 발생했습니다.'), icon: 'error', confirmButtonText: '확인' });
         }).finally(function() {
           self.$set(item, '_registering', false);
         });

@@ -110,8 +110,10 @@ public class DiagService implements Runnable {
             //    하다는 정의로 회귀)
             // 79번 진단 제외: DIAG_TARGET_YN='Y' 인 OBJ/ATTR 만 진단 대상으로 가져옴.
             // OBJ 단위 OFF 시 그 OBJ 의 ATTR 도 cascade 로 빠짐 (매퍼 INNER JOIN + 두 컬럼 동시 'Y' 조건).
+            // 86번 #11 — CLCT 폐기 이후 SQL 은 DM_ID 로 필터. 프론트에서 clctId 를 안 보내니
+            // 항상 null 이 들어가서 0건 매칭되던 버그. dataModelId 로 교체.
             List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList(
-                "datamodel.selectAttrListForStndDiag", clctId);
+                "datamodel.selectAttrListForStndDiag", dataModelId);
             int total = attrs.size();
             int processCnt = 0;
             int resultCnt  = 0;

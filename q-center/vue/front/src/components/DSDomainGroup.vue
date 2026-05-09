@@ -12,10 +12,31 @@
         <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
         <v-btn class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
         <v-btn class="gradient" v-on:click="domainGroupRemoveItem()" title="삭제">삭제</v-btn>
-        <v-btn class="gradient" v-on:click="domainGroupExcelFileUpload()" title="일괄등록">일괄등록</v-btn>
+        <!-- 86번 #11 — 엑셀 드롭다운 (업로드/양식/다운로드) -->
+        <v-menu offset-y>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn class="gradient" v-bind="attrs" v-on="on">
+              <v-icon small left>mdi-file-excel</v-icon>엑셀
+              <v-icon small right>mdi-menu-down</v-icon>
+            </v-btn>
+          </template>
+          <v-list dense>
+            <v-list-item @click="domainGroupExcelFileUpload()">
+              <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
+              <v-list-item-title>엑셀 업로드</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="domainGroupTemplateDownload()">
+              <v-list-item-icon><v-icon small>mdi-file-download-outline</v-icon></v-list-item-icon>
+              <v-list-item-title>양식 다운로드</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="domainGroupListDownload()">
+              <v-list-item-icon><v-icon small>mdi-download</v-icon></v-list-item-icon>
+              <v-list-item-title>데이터 다운로드</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
         <input type="file" id="inputDomainGroupUpload" ref="file" accept=".xlsx,.xls"
           @change="readExcelFile($event)" :style="{ display: 'none' }" />
-        <v-btn class="gradient" v-on:click="domainGroupListDownload()" title="다운로드">다운로드</v-btn>
       </v-row>
     </v-sheet>
 
@@ -601,6 +622,16 @@ export default {
         const box = this.$refs.uploadLogBox;
         if (box) box.scrollTop = box.scrollHeight;
       });
+    },
+    /** 86번 #11 — 도메인 그룹 업로드 양식 다운로드 (헤더만 있는 빈 xlsx) */
+    domainGroupTemplateDownload() {
+      const url = this.$APIURL.base + 'api/std/downloadDomainGroupTemplate';
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', '도메인그룹_일괄등록_템플릿.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     },
     domainGroupListDownload() {
       let _keyWord = this.searchGrpNm && this.searchGrpNm.length !== 0 ? this.searchGrpNm : null;

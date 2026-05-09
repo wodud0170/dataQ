@@ -243,48 +243,85 @@
             <!-- ② 구성 단어 (자동 분석 결과 — 매칭 단어 + 사용자가 입력한 용어명에 해당하는 신규 단어만 표시.
                  API 가 모든 부분문자열을 분류로 주지만 매칭된 것만 사용자에게 노출) -->
             <div v-if="addTerm_wordListArr.length > 0">
-              <v-subheader class="px-0">구성 단어</v-subheader>
-              <v-row v-for="(item, index) in addTerm_wordListArr" :key="'add-word-' + index"
-                v-if="item.wordLst && item.wordLst.length > 0 && item.wordLst[0] && item.wordLst[0].wordEngAbrvNm"
+              <div class="d-flex align-center px-0">
+                <v-subheader class="px-0 flex-grow-1">구성 단어</v-subheader>
+                <!-- 86번 #23 — 추천 1순위 / 2순위 토글 (alternativeWords 가 있을 때만) -->
+                <v-btn-toggle v-if="addTerm_lastAnalysis && addTerm_lastAnalysis.alternativeWords && addTerm_lastAnalysis.alternativeWords.length > 0"
+                  :value="addTerm_splitMode" @change="applySplitMode" mandatory dense color="primary">
+                  <v-btn x-small :value="0">추천 1</v-btn>
+                  <v-btn x-small :value="1">추천 2</v-btn>
+                </v-btn-toggle>
+              </div>
+              <!-- 86번 #31 — 단일 v-for + 내부 v-if/v-else 로 매칭/미매칭 분기.
+                   기존: 두 개 v-for + 각자 v-if 였는데 Vue 2 의 v-for+v-if 조합에서
+                   item.wordLst 변경 시 DOM 이 안 바뀌는 문제 발견 (state 는 업데이트되는데 화면 미반영). -->
+              <v-row v-for="(item, index) in addTerm_wordListArr" :key="'add-word-row-' + index"
                 :style="{ margin: '0 0 12px 0' }">
                 <v-col cols="12" :style="{ padding: '0' }">
-                  <h4 :style="{ margin: '6px 0' }">{{ item.wordNm }}
-                    <v-chip x-small color="green" text-color="white" class="ml-2">등록됨</v-chip>
-                  </h4>
-                  <v-data-table class="px-2 pb-2" :headers="wordListHeader"
-                    :items="item.wordLst" item-key="index" v-model="addTerm_selected_word_list[index]"
-                    :value="addTerm_selected_word_list[index]" hide-default-footer show-select dense>
-                  </v-data-table>
+                  <template v-if="item.wordLst && item.wordLst.length > 0 && item.wordLst[0] && item.wordLst[0].wordEngAbrvNm">
+                    <!-- 매칭됨: 등록됨 칩 + 단어 정보 테이블 -->
+                    <div class="d-flex align-center" :style="{ margin: '6px 0' }">
+                      <h4 class="flex-grow-1">{{ item.wordNm }}
+                        <v-chip x-small color="green" text-color="white" class="ml-2">등록됨</v-chip>
+                      </h4>
+                      <v-btn icon x-small color="red" @click="removeWordAt(index)" title="단어 삭제">
+                        <v-icon x-small>mdi-close</v-icon>
+                      </v-btn>
+                    </div>
+                    <v-data-table class="px-2 pb-2" :headers="wordListHeader"
+                      :items="item.wordLst" item-key="index" v-model="addTerm_selected_word_list[index]"
+                      :value="addTerm_selected_word_list[index]" hide-default-footer show-select dense>
+                    </v-data-table>
+                  </template>
+                  <template v-else>
+                    <!-- 미매칭: 인라인 등록 폼 -->
+                    <div class="d-flex align-center" :style="{ margin: '6px 0' }">
+                      <h4 class="flex-grow-1">{{ item.wordNm }}
+                        <v-chip x-small color="orange" text-color="white" class="ml-2">미등록 — 인라인 등록 가능</v-chip>
+                      </h4>
+                      <v-btn icon x-small color="red" @click="removeWordAt(index)" title="단어 삭제">
+                        <v-icon x-small>mdi-close</v-icon>
+                      </v-btn>
+                    </div>
+                    <v-sheet outlined rounded class="pa-3">
+                      <v-row dense>
+                        <v-col cols="3">
+                          <v-text-field v-model="item.inlineWordNm" dense outlined hide-details
+                            label="단어 한글명" :placeholder="item.wordNm"
+                            @input="onInlineWordNmInput(index)"
+                            @change="onInlineWordNmInput(index)"
+                            @compositionend="onInlineWordNmInput(index)" />
+                        </v-col>
+                        <v-col cols="3">
+                          <v-text-field v-model="item.inlineWordEngAbrvNm" dense outlined hide-details
+                            label="영문약어" @input="item.inlineWordEngAbrvNm = (item.inlineWordEngAbrvNm || '').toUpperCase()" />
+                        </v-col>
+                        <v-col cols="3">
+                          <v-text-field v-model="item.inlineWordEngNm" dense outlined hide-details
+                            label="영문명" @input="item.inlineWordEngNm = (item.inlineWordEngNm || '').toUpperCase()" />
+                        </v-col>
+                        <v-col cols="3" class="d-flex align-center">
+                          <v-btn small color="primary" :loading="item.inlineSaving"
+                            @click="inlineRegisterWord(index)">단어 등록</v-btn>
+                        </v-col>
+                      </v-row>
+                    </v-sheet>
+                  </template>
                 </v-col>
               </v-row>
-              <!-- 미등록 단어 인라인 등록 폼 (82번 v2: analyzeTermsBatch 의 NEW/UNRECOGNIZED 토큰 모두 표시) -->
-              <v-row v-for="(item, index) in addTerm_wordListArr" :key="'add-word-new-' + index"
-                v-if="!(item.wordLst && item.wordLst.length > 0 && item.wordLst[0] && item.wordLst[0].wordEngAbrvNm)"
-                :style="{ margin: '0 0 12px 0' }">
-                <v-col cols="12" :style="{ padding: '0' }">
-                  <h4 :style="{ margin: '6px 0' }">{{ item.wordNm }}
-                    <v-chip x-small color="orange" text-color="white" class="ml-2">미등록 — 인라인 등록 가능</v-chip>
-                  </h4>
-                  <v-sheet outlined rounded class="pa-3">
-                    <v-row dense>
-                      <v-col cols="3">
-                        <v-text-field v-model="item.inlineWordNm" dense outlined hide-details
-                          label="단어 한글명" :placeholder="item.wordNm" />
-                      </v-col>
-                      <v-col cols="3">
-                        <v-text-field v-model="item.inlineWordEngAbrvNm" dense outlined hide-details
-                          label="영문약어" @input="item.inlineWordEngAbrvNm = (item.inlineWordEngAbrvNm || '').toUpperCase()" />
-                      </v-col>
-                      <v-col cols="3">
-                        <v-text-field v-model="item.inlineWordEngNm" dense outlined hide-details
-                          label="영문명" @input="item.inlineWordEngNm = (item.inlineWordEngNm || '').toUpperCase()" />
-                      </v-col>
-                      <v-col cols="3" class="d-flex align-center">
-                        <v-btn small color="primary" :loading="item.inlineSaving"
-                          @click="inlineRegisterWord(index)">단어 등록</v-btn>
-                      </v-col>
-                    </v-row>
-                  </v-sheet>
+
+              <!-- 86번 #23 — 사용자 수동 단어 추가 -->
+              <v-row :style="{ margin: '8px 0 0 0' }" align="center">
+                <v-col cols="9">
+                  <v-text-field v-model="addTerm_manualWordInput" dense outlined hide-details
+                    label="단어 직접 추가" placeholder="자동 분석이 잘못 쪼갠 경우 — 한글 단어명 입력 후 추가"
+                    @keyup.enter="addManualWord" />
+                </v-col>
+                <v-col cols="3">
+                  <v-btn small color="primary" outlined :disabled="!addTerm_manualWordInput || !addTerm_manualWordInput.trim()"
+                    @click="addManualWord">
+                    <v-icon small left>mdi-plus</v-icon>단어 추가
+                  </v-btn>
                 </v-col>
               </v-row>
 
@@ -312,8 +349,8 @@
 
             <v-divider class="my-3" v-if="addTerm_wordList.length > 0"></v-divider>
 
-            <!-- ③ 도메인 (마지막 단어가 'CD' 면 토글 자동 활성화) -->
-            <v-row v-if="addTerm_lastWordIsCode" align="center">
+            <!-- ③ 도메인 (분석 결과 + 단어 선택이 있을 때만 노출 — 86번 #25 progressive disclosure) -->
+            <v-row v-if="addTerm_lastWordIsCode && addTerm_wordList.length > 0" align="center">
               <v-col cols="4"><v-subheader class="reqText">도메인 유형</v-subheader></v-col>
               <v-col cols="8">
                 <v-radio-group v-model="addTerm_domainType" row dense hide-details class="mt-0"
@@ -324,7 +361,7 @@
               </v-col>
             </v-row>
 
-            <v-row v-if="addTerm_domainType === 'domain'" align="center">
+            <v-row v-if="addTerm_domainType === 'domain' && addTerm_wordList.length > 0" align="center">
               <v-col cols="4"><v-subheader class="reqText">도메인명</v-subheader></v-col>
               <v-col cols="8">
                 <v-autocomplete dense required color="ndColor" v-model="addTerm_domainNm" ref="addTerm_domainNm"
@@ -335,7 +372,7 @@
               </v-col>
             </v-row>
 
-            <v-row v-if="addTerm_domainType === 'code'" align="center">
+            <v-row v-if="addTerm_domainType === 'code' && addTerm_lastWordIsCode && addTerm_wordList.length > 0" align="center">
               <v-col cols="4"><v-subheader class="reqText">코드 선택</v-subheader></v-col>
               <v-col cols="8">
                 <div class="d-flex align-center" :style="{ gap: '8px' }">
@@ -349,7 +386,7 @@
               </v-col>
             </v-row>
 
-            <v-row align="center">
+            <v-row v-if="addTerm_wordList.length > 0" align="center">
               <v-col cols="4"><v-subheader class="reqText">용어 설명</v-subheader></v-col>
               <v-col cols="8">
                 <v-textarea clearable dense color="ndColor" rows="1" v-model="addTerm_termDesc" ref="addTerm_termDesc"
@@ -358,8 +395,8 @@
               </v-col>
             </v-row>
 
-            <!-- ④ 메타 (접기 가능, default 접힘) -->
-            <v-expansion-panels flat class="mt-2">
+            <!-- ④ 메타 (접기 가능, default 접힘) — 86번 #25 분석 결과 있을 때만 -->
+            <v-expansion-panels v-if="addTerm_wordList.length > 0" flat class="mt-2">
               <v-expansion-panel>
                 <v-expansion-panel-header class="px-2 py-1 grey--text text--darken-1">
                   추가 메타 (이음동의어 / 코드그룹 / 담당기관 / 공통표준여부 / 제정차수 / 시스템CD)
@@ -599,7 +636,7 @@
                     </v-col>
                   </v-row>
 
-                  <v-row v-if="updateTerm_domainType === 'code'">
+                  <v-row v-if="updateTerm_domainType === 'code' && updateTerm_lastWordIsCode">
                     <v-col cols="4">
                       <v-subheader class="reqText">코드 선택</v-subheader>
                     </v-col>
@@ -785,49 +822,33 @@ export default {
     },
     addTerm_selected_word_list: {
       handler(val) {
-        // console.log(val);
-
-        // 빈 배열 삭제
-        const validWords = val.filter(word => word.length !== 0);
-
-        // 단어 체크
-        for (let i = 0; i < validWords.length; i++) {
-          let _partOfSpeech = validWords[i][0].partOfSpeech;
-          let _word = validWords[i][0].wordNm;
-          let _id = validWords[i][0].id;
-
-          this.checkSelectedWordStatus(_partOfSpeech, _word, _id)
-        }
-
-        // console.log(val);
+        // 86번 #27 — checkSelectedWordStatus 호출 제거.
+        //   옛 stepper UX 잔재로 partOfSpeech 누락 시 "명사가 아닙니다" false positive.
+        //   새 UX 는 _applyAnalyzedWords / _postValidateNewTokens / inlineRegisterWord 가
+        //   addTerm_wordList 를 collectSelectedItems 로 동기화 — selected 변경 시 그것만 호출.
+        this.collectSelectedItems();
       },
       deep: true
     },
     updateTerm_selected_word_list: {
       handler(val) {
-        // console.log(val);
-
-        // 빈 배열 삭제
-        const validWords = val.filter(word => word.length !== 0);
-
-        // 단어 체크
-        for (let i = 0; i < validWords.length; i++) {
-          let _partOfSpeech = validWords[i][0].partOfSpeech;
-          let _word = validWords[i][0].wordNm;
-          let _id = validWords[i][0].id;
-
-          this.checkSelectedWordStatus(_partOfSpeech, _word, _id)
-        }
-
-        // console.log(val);
+        // 86번 #27 — addTerm_selected_word_list 와 동일 처리 (옛 NN 검사 제거)
+        this.collectSelectedItems();
       },
       deep: true
     },
     addTerm_wordList() {
-      // console.log(this.addTerm_wordList);
       // 용어 등록 title 옆에 사용자가 선택한 단어 보여주기
       this.createWordToTerm(this.addTerm_wordList)
       this.createTermEngAbrvNm(this.addTerm_wordList)
+      // 86번 #32 — 마지막 단어가 코드가 아니게 되면 (순서 변경 등) 코드 도메인 상태 클리어
+      //   "도메인 유형" 라디오는 사라지지만 domainType='code' 가 유지돼서 코드 선택 영역이 잔존하던 버그.
+      if (!this.addTerm_lastWordIsCode && this.addTerm_domainType === 'code') {
+        this.addTerm_domainType = 'domain';
+        this.addTerm_selectedCode = null;
+        this.addTerm_selectedCodeLabel = '';
+        this.addTerm_codeGrp = null;
+      }
     },
     /** 81번 — 한글 용어명 입력 1초 디바운스 후 자동 분석 (단어 분리 + 매칭 결과) */
     addTerm_termNm(val) {
@@ -850,10 +871,16 @@ export default {
       }, 1000);
     },
     updateTerm_wordList() {
-      // console.log(this.updateTerm_wordList);
       // 용어 수정 title 옆에 사용자가 선택한 단어 보여주기
       this.createWordToTerm(this.updateTerm_wordList)
       this.createTermEngAbrvNm(this.updateTerm_wordList)
+      // 86번 #32 — 수정 모달도 동일 처리
+      if (!this.updateTerm_lastWordIsCode && this.updateTerm_domainType === 'code') {
+        this.updateTerm_domainType = 'domain';
+        this.updateTerm_selectedCode = null;
+        this.updateTerm_selectedCodeLabel = '';
+        this.updateTerm_codeGrp = null;
+      }
     }
   },
   data: () => ({
@@ -862,9 +889,10 @@ export default {
 
     // 검색 조건 시작
 
-    // 검색 모드 옵션 (포함/앞/뒤)
+    // 86번 #11 — 검색 모드 옵션 (포함/완전일치/앞/뒤)
     searchModeOptions: [
       { value: 'contains', label: '포함' },
+      { value: 'exact',   label: '완전 일치' },
       { value: 'start',   label: '앞' },
       { value: 'end',     label: '뒤' },
     ],
@@ -946,6 +974,10 @@ export default {
     addTerm_wordList: [],
     addTerm_user_selected_word: '',
     addTerm_lastCheckedNm: null,
+    // 86번 #23 — 자동 분석 결과 1순위/2순위 토글 + 수동 단어 추가
+    addTerm_lastAnalysis: null,        // 마지막 analyzeTermsBatch 응답 원본 (alternativeWords 포함)
+    addTerm_splitMode: 0,              // 0=추천1, 1=추천2
+    addTerm_manualWordInput: '',       // 수동 추가 입력
     // 수정 관련
     updateModalStep: 1, // 용어 수정 스테퍼 카운트
     updateTerm_id: null,
@@ -1064,6 +1096,21 @@ export default {
     },
   },
   methods: {
+    /** 86번 #11 — 백엔드 raw exception 차단, 친화적 메세지로 정리 */
+    _friendlyErrText(err, fallback) {
+      const status = (err && err.response && err.response.status) || 0;
+      const data   = (err && err.response && err.response.data) || {};
+      const our    = data.resultMessage;
+      const raw    = data.message;
+      const rawIsTechnical = raw && /JSON|deserialize|parse|MismatchedInput|HttpMessageNotReadable|Exception|NullPointer|invalid|cannot/i.test(raw);
+      if (our) return our;
+      if (raw && !rawIsTechnical) return raw;
+      if (status >= 500) return (fallback || '서버 처리 중 오류가 발생했습니다.') + ' (관리자에게 문의해 주세요)';
+      if (status === 400) return (fallback || '입력값이 올바르지 않습니다.');
+      if (status === 401 || status === 403) return '권한이 없습니다.';
+      if (status === 404) return '요청한 자원을 찾을 수 없습니다.';
+      return fallback || (err && err.message) || '알 수 없는 오류가 발생했습니다.';
+    },
     resetSearch() {
       this.searchTerm = '';
       this.searchTermMode = 'contains';
@@ -1462,6 +1509,10 @@ export default {
       this.addTerm_selected_word_list = [];
       this.addTerm_wordList = [];
       this.addTerm_lastCheckedNm = null;
+      // 86번 #23 — 분석 응답 / 분리 모드 / 수동 추가 입력 초기화
+      this.addTerm_lastAnalysis = null;
+      this.addTerm_splitMode = 0;
+      this.addTerm_manualWordInput = '';
       // 81번 — 자동 분석 + 코드 picker 상태 초기화
       this.addTerm_analyzing = false;
       this.addTerm_selectedCodeLabel = '';
@@ -1899,95 +1950,11 @@ export default {
 
       }
     },
-    checkSelectedWordStatus(partOfSpeech, word, id) {
-      if ("NN" !== partOfSpeech &&
-        "SL" !== partOfSpeech &&
-        "SN" !== partOfSpeech &&
-        "NF" !== partOfSpeech
-      ) {
-        // 명사가 아닐 때
-        // console.log(_wordName, " 단어 아님")
-
-        if (this.addTermModalShow) {
-          this.addTerm_wordListArr = [];
-        } else if (this.updateTermModalShow) {
-          this.updateTerm_wordListArr = [];
-        }
-
-        this.$swal.fire({
-          title: word,
-          html: '명사가 아닙니다.<br />명사로 등록된 단어를 이용하여<br />용어를 구성해야 합니다.',
-          confirmButtonText: '확인',
-          icon: 'error',
-        }).then((result) => {
-          if (result.isConfirmed) {
-            // 확인 클릭 시 용어명 입력 스텝으로 이동
-            if (this.addTermModalShow) {
-              // 기존에 선택한 단어 목록 초기화
-              this.addTerm_selected_word_list = [];
-              this.addModalStep = 1;
-            } else if (this.updateTermModalShow) {
-              // 기존에 선택한 단어 목록 초기화
-              this.updateTerm_selected_word_list = []
-              this.updateModalStep = 1;
-            }
-          }
-        })
-
-        return;
-      } else if (("NN" === partOfSpeech || "SL" === partOfSpeech || "SN" === partOfSpeech || "NF" === partOfSpeech) && id === null) {
-        // console.log(_wordName, " 단어 등록 해야 함")
-        // 단어이지만 단어목록에 등록되지 않은 단어일 때
-        if (this.addTermModalShow) {
-          this.addTerm_wordListArr = [];
-        } else if (this.updateTermModalShow) {
-          this.updateTerm_wordListArr = [];
-        }
-
-        this.$swal.fire({
-          title: word,
-          html: '등록되지 않은 단어입니다.<br />등록을 위해 단어 페이지로 이동할까요?',
-          confirmButtonText: '이동',
-          showCancelButton: true,
-          cancelButtonText: '취소',
-          icon: 'error',
-        }).then((result) => {
-          if (result.isConfirmed) {
-
-            if (this.addTermModalShow) {
-              // 용어 등록 모달 초기화
-              this.addFormReset();
-              // 확인 버튼 클릭 시 단어 페이지로 이동
-              document.getElementById('nav_word').click();
-              setTimeout(() => {
-                document.getElementById('addWordBtn').click();
-              }, 500);
-            } else if (this.updateTermModalShow) {
-              // 확인 버튼 클릭 시 단어 페이지로 이동
-              document.getElementById('nav_word').click();
-              setTimeout(() => {
-                document.getElementById('addWordBtn').click();
-              }, 500);
-            }
-          } else {
-            // 취소 버튼 클릭 시 이전 스텝으로 이동
-            if (this.addTermModalShow) {
-              // 기존에 선택한 단어 목록 초기화
-              this.addTerm_selected_word_list = [];
-              this.addModalStep = 1;
-            } else if (this.updateTermModalShow) {
-              // 기존에 선택한 단어 목록 초기화
-              this.updateTerm_selected_word_list = []
-              this.updateModalStep = 1;
-            }
-          }
-        })
-        return;
-      } else {
-        // 단어목록에 등록된 단어이며 명사일 때 단어
-        this.collectSelectedItems();
-      }
-    },
+    // 86번 #27 — checkSelectedWordStatus 제거.
+    //   옛 stepper UX (사용자가 OKT raw 토큰 체크박스 선택) 의 검증 로직.
+    //   새 UX 는 analyzeTermsBatch 가 NN 만 반환 + _applyAnalyzedWords 가 partOfSpeech='NN' 강제 +
+    //   인라인 단어 등록 폼이 미등록 단어 처리. 비명사가 selected_word_list 에 들어올 경로 자체 없음.
+    //   잔존 시 partOfSpeech 누락(getWordInfoByNm 응답)으로 false positive "명사가 아닙니다" swal 발생.
     createAddWordList(arr) {
       // 새로운 용어 생성 시 필요한 this.addTerm_wordList의 배열을 생성한다.
       // 필요 데이터 termsId=null, wordId, wordNm, wordOrd(index)
@@ -2029,11 +1996,18 @@ export default {
           _createEngAbrvNm += sortedArr[i].wordEngAbrvNm;
 
           // 마지막 단어의 도메인 분류명 확인하여 null이면 모든 도메인을 보여주고 아니면 해당 도메인만 보여준다.
+          // 86번 #22 — 마지막 단어가 코드(CD) + 사용자가 '일반 도메인' 모드 선택했으면 코드분류 제한 풀고 전체 노출.
+          //   (이름만 코드, 실제 free-text 케이스 대응)
           let _domainClsfNm = sortedArr[i].domainClsfNm;
+          let _isCodeWord   = (sortedArr[i].wordEngAbrvNm || '').toUpperCase() === 'CD';
 
-          if (_domainClsfNm !== null) {
+          if (_isCodeWord && this.addTermModalShow && this.addTerm_domainType === 'domain') {
+            this.getDomainData();
+          } else if (_isCodeWord && this.updateTermModalShow && this.updateTerm_domainType === 'domain') {
+            this.getDomainData();
+          } else if (_domainClsfNm !== null) {
             this.getDomainInfoByClsfNm(_domainClsfNm);
-          } else if (_domainClsfNm === null) {
+          } else {
             this.getDomainData();
           }
 
@@ -2127,6 +2101,7 @@ export default {
           var result = arr[0];
           if (!result) {
             self.addTerm_wordListArr = [];
+            self.addTerm_lastAnalysis = null;
             return;
           }
           // 기등록 용어: 알림 + 분석 결과는 그대로 표시
@@ -2137,64 +2112,184 @@ export default {
               confirmButtonText: '확인', icon: 'warning'
             });
           }
-
-          var words = result.words || [];
-          var wordListArr = [];
-          var newSelectedList = [];
-          for (var i = 0; i < words.length; i++) {
-            var w = words[i];
-            if (w.status === 'MATCHED' && w.selected) {
-              // MATCHED: 단일 후보 (selected 사용 — score 가장 높은 것 백엔드가 선택)
-              var s = w.selected;
-              var item = {
-                id: s.wordId,
-                wordNm: s.wordNm,
-                wordEngAbrvNm: s.wordEngAbrvNm,
-                wordEngNm: s.wordEngNm,
-                domainClsfNm: s.domainClsfNm,
-                partOfSpeech: 'NN',
-                index: i
-              };
-              wordListArr.push({
-                wordNm: w.wordNm,
-                wordLst: [item],
-                inlineWordNm: '',
-                inlineWordEngAbrvNm: '',
-                inlineWordEngNm: '',
-                inlineSaving: false
-              });
-              // 자동 선택 — 사용자 클릭 1번 줄임
-              newSelectedList[i] = [item];
-            } else {
-              // NEW / UNRECOGNIZED: 인라인 등록 폼 노출
-              var nw = w.newWord || {};
-              wordListArr.push({
-                wordNm: w.wordNm,
-                wordLst: [],
-                inlineWordNm: w.wordNm || '',
-                inlineWordEngAbrvNm: nw.wordEngAbrvNm || '',
-                inlineWordEngNm: nw.wordEngNm || '',
-                inlineSaving: false
-              });
-              newSelectedList[i] = [];
-            }
-          }
-          self.addTerm_wordListArr = wordListArr;
-          // selected_word_list 갱신 → watcher 가 addTerm_wordList 재구성 + checkSelectedWordStatus 검증
-          self.addTerm_selected_word_list = newSelectedList;
-
-          // 추천 도메인 자동 채움 (사용자 미선택 시만, 코드 타입이 아닐 때만)
-          if (result.recommendedDomainNm && !self.addTerm_domainNm && self.addTerm_domainType !== 'code') {
-            self.addTerm_domainNm = result.recommendedDomainNm;
-          }
+          // 분석 응답 저장 → 추천1/2 토글에서 재사용
+          self.addTerm_lastAnalysis = result;
+          self.addTerm_splitMode = 0;
+          self._applyAnalyzedWords(result.words || [], result.recommendedDomainNm);
         })
         .catch(function(err) {
           console.error('analyzeTermsBatch 실패', err);
           self.addTerm_wordListArr = [];
+          self.addTerm_lastAnalysis = null;
         })
         .finally(function() {
           self.addTerm_analyzing = false;
         });
+    },
+    /**
+     * 86번 #23 — 분석 응답을 wordListArr / selected_word_list 에 적용 (1순위 또는 2순위)
+     * runAutoAnalyze + applySplitMode 둘 다에서 재사용.
+     * 86번 #24 — 적용 후 post-validation: NEW/UNRECOGNIZED 토큰을 lookupWord 로 재검증.
+     *   알고리즘이 1글자 단어 ('명' 등) 미스해도 TB_WORD 직접 조회로 MATCHED 승격.
+     *   자동표준화 (DSTermRecommend.onWordNmInput) 패턴 답습.
+     */
+    _applyAnalyzedWords(words, recommendedDomainNm) {
+      var wordListArr = [];
+      var newSelectedList = [];
+      for (var i = 0; i < words.length; i++) {
+        var w = words[i];
+        if (w.status === 'MATCHED' && w.selected) {
+          var s = w.selected;
+          var item = {
+            id: s.wordId, wordNm: s.wordNm,
+            wordEngAbrvNm: s.wordEngAbrvNm, wordEngNm: s.wordEngNm,
+            domainClsfNm: s.domainClsfNm, partOfSpeech: 'NN', index: i
+          };
+          wordListArr.push({
+            wordNm: w.wordNm, wordLst: [item],
+            inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
+            inlineSaving: false
+          });
+          newSelectedList[i] = [item];
+        } else {
+          var nw = w.newWord || {};
+          wordListArr.push({
+            wordNm: w.wordNm, wordLst: [],
+            inlineWordNm: w.wordNm || '',
+            inlineWordEngAbrvNm: nw.wordEngAbrvNm || '',
+            inlineWordEngNm: nw.wordEngNm || '',
+            inlineSaving: false
+          });
+          newSelectedList[i] = [];
+        }
+      }
+      this.addTerm_wordListArr = wordListArr;
+      this.addTerm_selected_word_list = newSelectedList;
+      if (recommendedDomainNm && !this.addTerm_domainNm && this.addTerm_domainType !== 'code') {
+        this.addTerm_domainNm = recommendedDomainNm;
+      }
+      // post-validation — NEW/UNRECOGNIZED 행을 lookupWord 로 재검증
+      this._postValidateNewTokens();
+    },
+    /**
+     * 86번 #24 — wordListArr 의 미등록 행에 대해 lookupWord 호출 → TB_WORD 발견 시 MATCHED 로 승격.
+     * 자동표준화의 onWordNmInput 패턴.
+     */
+    _postValidateNewTokens() {
+      var self = this;
+      var arr = this.addTerm_wordListArr;
+      for (var i = 0; i < arr.length; i++) {
+        var item = arr[i];
+        // 이미 MATCHED 행 (wordLst 채워짐) 은 건너뜀
+        if (item.wordLst && item.wordLst.length > 0) continue;
+        var nm = (item.inlineWordNm || item.wordNm || '').trim();
+        if (!nm) continue;
+        (function(idx, wordNm) {
+          axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: wordNm } })
+            .then(function(res) {
+              var data = res.data;
+              if (!data || !data.found) return;
+              var cur = self.addTerm_wordListArr[idx];
+              if (!cur || (cur.wordLst && cur.wordLst.length > 0)) return;  // 그새 변경됐으면 skip
+              if (data.source === 'WORD') {
+                // TB_WORD 발견 → MATCHED 승격
+                var matched = {
+                  id: data.wordId, wordNm: data.wordNm,
+                  wordEngAbrvNm: data.wordEngAbrvNm, wordEngNm: data.wordEngNm,
+                  domainClsfNm: data.domainClsfNm || '', partOfSpeech: 'NN', index: idx
+                };
+                self.$set(self.addTerm_wordListArr, idx, {
+                  wordNm: data.wordNm, wordLst: [matched],
+                  inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
+                  inlineSaving: false
+                });
+                self.$set(self.addTerm_selected_word_list, idx, [matched]);
+              } else if (data.source === 'DICT') {
+                // DICT 추천 → 영문약어/영문명 자동 채움
+                var c = self.addTerm_wordListArr[idx];
+                if (!c) return;
+                if (!c.inlineWordEngAbrvNm) c.inlineWordEngAbrvNm = data.wordEngAbrvNm || '';
+                if (!c.inlineWordEngNm)     c.inlineWordEngNm     = data.wordEngNm || '';
+                self.$set(self.addTerm_wordListArr, idx, Object.assign({}, c));
+              }
+            })
+            .catch(function() { /* lookup 실패는 무시 — UI 그대로 */ });
+        })(i, nm);
+      }
+    },
+    /**
+     * 86번 #24 — 인라인 한글명 input 디바운스 핸들러.
+     * 사용자가 미등록 행의 한글명을 바꾸면 lookupWord 로 재검증.
+     */
+    onInlineWordNmInput(index) {
+      var self = this;
+      if (!this._inlineLookupTimers) this._inlineLookupTimers = {};
+      if (this._inlineLookupTimers[index]) clearTimeout(this._inlineLookupTimers[index]);
+      this._inlineLookupTimers[index] = setTimeout(function() {
+        var item = self.addTerm_wordListArr[index];
+        if (!item) return;
+        if (item.wordLst && item.wordLst.length > 0) return;
+        var nm = (item.inlineWordNm || '').trim();
+        if (!nm) return;
+        if (item._lastLookup === nm) return;
+        item._lastLookup = nm;
+        axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: nm } })
+          .then(function(res) {
+            var data = res.data;
+            var cur = self.addTerm_wordListArr[index];
+            if (!cur || (cur.wordLst && cur.wordLst.length > 0)) return;
+            if (data && data.found) {
+              if (data.source === 'WORD') {
+                var matched = {
+                  id: data.wordId, wordNm: data.wordNm,
+                  wordEngAbrvNm: data.wordEngAbrvNm, wordEngNm: data.wordEngNm,
+                  domainClsfNm: data.domainClsfNm || '', partOfSpeech: 'NN', index: index
+                };
+                self.$set(self.addTerm_wordListArr, index, {
+                  wordNm: data.wordNm, wordLst: [matched],
+                  inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
+                  inlineSaving: false
+                });
+                self.$set(self.addTerm_selected_word_list, index, [matched]);
+              } else if (data.source === 'DICT') {
+                if (!cur.inlineWordEngAbrvNm) cur.inlineWordEngAbrvNm = data.wordEngAbrvNm || '';
+                if (!cur.inlineWordEngNm)     cur.inlineWordEngNm     = data.wordEngNm || '';
+                self.$set(self.addTerm_wordListArr, index, Object.assign({}, cur));
+              }
+            }
+          })
+          .catch(function() {});
+      }, 400);
+    },
+    /** 86번 #23 — 추천 1순위/2순위 토글 */
+    applySplitMode(mode) {
+      this.addTerm_splitMode = mode;
+      var src = this.addTerm_lastAnalysis;
+      if (!src) return;
+      var words = mode === 1 ? (src.alternativeWords || []) : (src.words || []);
+      this._applyAnalyzedWords(words, src.recommendedDomainNm);
+    },
+    /**
+     * 86번 #23 — 사용자가 수동으로 단어 한 개 추가.
+     * 86번 #24 — _postValidateNewTokens 가 lookupWord 로 검증해서 MATCHED 승격 / DICT 영문 자동입력.
+     */
+    addManualWord() {
+      var nm = (this.addTerm_manualWordInput || '').trim();
+      if (!nm) return;
+      // NEW placeholder 로 push → _postValidateNewTokens 가 lookup 후 처리
+      this.addTerm_wordListArr.push({
+        wordNm: nm, wordLst: [],
+        inlineWordNm: nm, inlineWordEngAbrvNm: '', inlineWordEngNm: '',
+        inlineSaving: false
+      });
+      this.addTerm_selected_word_list.push([]);
+      this.addTerm_manualWordInput = '';
+      this._postValidateNewTokens();
+    },
+    /** 86번 #23 — 단어 행 삭제 */
+    removeWordAt(index) {
+      this.addTerm_wordListArr.splice(index, 1);
+      this.addTerm_selected_word_list.splice(index, 1);
     },
     /** 81번 — 코드 picker 열기. 코드 목록이 비어있으면 onAddDomainTypeChange 가 채워줌 */
     openCodePicker() {
@@ -2390,7 +2485,9 @@ export default {
     /** Step 2: 미등록 단어 인라인 등록 */
     inlineRegisterWord(index) {
       var arr = this.addTermModalShow ? this.addTerm_wordListArr : this.updateTerm_wordListArr;
+      var selList = this.addTermModalShow ? this.addTerm_selected_word_list : this.updateTerm_selected_word_list;
       var item = arr[index];
+      if (!item) return;
       if (!item.inlineWordNm) {
         this.$swal.fire({ title: '단어 한글명을 입력해주세요.', confirmButtonText: '확인', icon: 'warning' });
         return;
@@ -2399,9 +2496,15 @@ export default {
         this.$swal.fire({ title: '영문약어를 입력해주세요.', confirmButtonText: '확인', icon: 'warning' });
         return;
       }
-      item.inlineSaving = true;
-      this.$set(arr, index, Object.assign({}, item));
       var self = this;
+      // 86번 #31 — arr[index] 를 사본으로 교체하지 않고 item 의 reactive prop 만 직접 set.
+      //   이전 fix(#26) 가 시작 시 arr[index]=copy(item) 으로 교체해서 'item' 변수가 detached 됐고,
+      //   성공 콜백에서 item.wordLst=words 가 화면 안 들어가서 행이 안 사라지는 버그.
+      this.$set(item, 'inlineSaving', true);
+      var setLoading = function(val) {
+        var cur = arr[index];
+        if (cur) self.$set(cur, 'inlineSaving', val);
+      };
       axios.post(this.$APIURL.base + 'api/std/createWord', {
         wordNm: item.inlineWordNm,
         wordEngAbrvNm: item.inlineWordEngAbrvNm,
@@ -2414,31 +2517,73 @@ export default {
         commStndYn: 'N',
         magntdOrd: '',
         reqSysCd: '',
-      }).then(function() {
-        // 등록 성공 → 단어 목록 다시 조회하여 갱신
+      }).then(function(res) {
+        // resultCode 검사
+        var rc = res && res.data && res.data.resultCode;
+        if (rc != null && rc !== 200) {
+          setLoading(false);
+          self.$swal.fire({
+            title: '단어 등록 실패',
+            text: (res.data && res.data.resultMessage) || '단어 등록 중 오류가 발생했습니다.',
+            confirmButtonText: '확인', icon: 'error'
+          });
+          return;
+        }
+        // 등록 완료 toast (admin/일반 모두)
+        var msg = res.data && res.data.resultMessage;
+        var isPending = msg && /승인/.test(msg);
+        self.$swal.fire({
+          title: isPending ? '단어 등록 — 승인 대기' : '단어 등록 완료',
+          text: isPending ? msg : (item.inlineWordNm || ''),
+          icon: isPending ? 'info' : 'success',
+          toast: true, position: 'top-end',
+          showConfirmButton: false, timer: 1800
+        });
+        // 등록 성공 → 단어 목록 조회하여 갱신 (current arr[index] 에 직접 set, item 변수 의존 X)
         axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', {
           params: { wordNm: item.inlineWordNm }
         }).then(function(res2) {
           var words = res2.data || [];
+          var cur = arr[index];
+          if (!cur) return;
           if (words.length > 0) {
             for (var w = 0; w < words.length; w++) {
               words[w].index = index;
+              if (!words[w].partOfSpeech) words[w].partOfSpeech = 'NN';
             }
-            item.wordLst = words;
-            item.inlineSaving = false;
-            self.$set(arr, index, Object.assign({}, item));
+            self.$set(cur, 'wordLst', words);              // ← 핵심: 현재 arr[index] 에 set
+            self.$set(cur, 'inlineWordNm', '');
+            self.$set(cur, 'inlineWordEngAbrvNm', '');
+            self.$set(cur, 'inlineWordEngNm', '');
+            self.$set(selList, index, [words[0]]);
           }
+          self.$set(cur, 'inlineSaving', false);
+        }).catch(function() {
+          setLoading(false);
         });
       }).catch(function(err) {
-        item.inlineSaving = false;
-        self.$set(arr, index, Object.assign({}, item));
-        self.$swal.fire({ title: '단어 등록 실패', text: (err.response && err.response.data && err.response.data.message) || err.message, confirmButtonText: '확인', icon: 'error' });
+        setLoading(false);
+        self.$swal.fire({ title: '단어 등록 실패', text: self._friendlyErrText(err, '단어 등록 중 오류가 발생했습니다.'), confirmButtonText: '확인', icon: 'error' });
       });
     },
     /** 도메인 유형 변경 시 (등록) */
     onAddDomainTypeChange(val) {
       if (val === 'code' && this.addTerm_codeInfoList.length === 0) {
         this.loadCodeInfoList();
+      }
+      // 86번 #22 — 마지막 단어가 코드인데 '일반 도메인' 으로 토글 시 전체 도메인 다시 로드
+      if (val === 'domain' && this.addTerm_lastWordIsCode) {
+        this.addTerm_domainNm = null;
+        this.getDomainData();
+      } else if (val === 'domain' && !this.addTerm_lastWordIsCode) {
+        // 일반 도메인으로 돌아왔을 때 — 마지막 단어 분류 기반 다시 필터
+        var list = this.addTerm_wordList;
+        if (list && list.length > 0) {
+          var last = list[list.length - 1];
+          var _clsf = last && last.domainClsfNm;
+          if (_clsf) this.getDomainInfoByClsfNm(_clsf);
+          else this.getDomainData();
+        }
       }
     },
     /** 코드 목록 로드 (등록) */
@@ -2456,6 +2601,19 @@ export default {
     onUpdateDomainTypeChange(val) {
       if (val === 'code' && this.updateTerm_codeInfoList.length === 0) {
         this.loadUpdateCodeInfoList();
+      }
+      // 86번 #22 — 마지막 단어가 코드인데 '일반 도메인' 으로 토글 시 전체 도메인 다시 로드
+      if (val === 'domain' && this.updateTerm_lastWordIsCode) {
+        this.updateTerm_domainNm = null;
+        this.getDomainData();
+      } else if (val === 'domain' && !this.updateTerm_lastWordIsCode) {
+        var list = this.updateTerm_wordList;
+        if (list && list.length > 0) {
+          var last = list[list.length - 1];
+          var _clsf = last && last.domainClsfNm;
+          if (_clsf) this.getDomainInfoByClsfNm(_clsf);
+          else this.getDomainData();
+        }
       }
     },
     /** 코드 목록 로드 (수정) - codeGrp가 있으면 기존 코드 자동 선택 */

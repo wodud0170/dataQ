@@ -72,6 +72,9 @@
 				where 1=1
 				<if test="schNm != null">
 					<choose>
+						<when test="schNmMode == 'exact'">
+							AND (A.TERMS_NM = #{schNm} OR A.ALLOPH_SYNM = #{schNm})
+						</when>
 						<when test="schNmMode == 'start'">
 							AND (A.TERMS_NM ILIKE #{schNm} || '%' OR A.ALLOPH_SYNM ILIKE #{schNm} || '%')
 						</when>
@@ -88,6 +91,9 @@
 				</if>
 				<if test="searchEngTerm != null">
 					<choose>
+						<when test="searchEngTermMode == 'exact'">
+							AND (A.TERMS_ENG_ABRV_NM = #{searchEngTerm})
+						</when>
 						<when test="searchEngTermMode == 'start'">
 							AND (A.TERMS_ENG_ABRV_NM ILIKE #{searchEngTerm} || '%')
 						</when>

@@ -58,28 +58,36 @@ public class ExcelExportHandler {
 		String userAgent = request.getHeader("User-Agent");
 		log.info(">>User-Agent={}", userAgent);
 
-		if (userAgent.contains("Trident") || (userAgent.indexOf("MSIE") > -1)) {
-			fileName = URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
-		} else if (userAgent.contains("Chrome") || userAgent.contains("Opera") || userAgent.contains("Firefox")) {
-			fileName = new String(fileName.getBytes("UTF-8"), "ISO-8859-1");
-		}
+		// 86번 #33 — Content-Disposition 의 한글 파일명 인코딩.
+		//   기존: Trident/MSIE/Chrome/Opera/Firefox 조건만 처리 → python-requests/curl/기타 클라이언트는
+		//         raw 한글 → Tomcat IllegalArgumentException (header 가 0-255 범위 초과). 다운로드 500.
+		//   수정: RFC 5987 표준 — 항상 ASCII fallback (filename=) + UTF-8 인코딩 (filename*=) 둘 다 보냄.
+		//         모든 클라이언트 호환.
+		String encodedName = URLEncoder.encode(fileName, "UTF-8").replaceAll("\\+", "%20");
+		String asciiFallback = fileName.replaceAll("[^A-Za-z0-9._-]", "_");
 
 		ByteArrayOutputStream output = new ByteArrayOutputStream();
 
 		try {
 			response.setContentType("application/octet-stream");//"application/vnd.ms-excel");
-			response.setHeader("Content-Disposition", "attachment;filename=" + fileName + ".xlsx");
+			response.setHeader("Content-Disposition",
+					"attachment; filename=\"" + asciiFallback + ".xlsx\"; "
+					+ "filename*=UTF-8''" + encodedName + ".xlsx");
 
+			// 86번 #33 — 페이지 루프 안에서 매번 write+close 하면 두 번째 이후 close 된 workbook 재사용 시
+			// "Stream closed" 발생. write/close 는 마지막에 1번만.
 			SXSSFWorkbook sxssfWorkbook = null;
 			List<Map<String, Object>> excelData = null;
-			
+
 			for (int start = 0; start < listSize; start += PAGING_SIZE) {
 				excelData = getExcelList(list, start, PAGING_SIZE);
 				sxssfWorkbook = getWorkbook(fileName, headers, keys, widths, aligns, excelData, start, sxssfWorkbook);
+				excelData.clear(); // 리스트 페이징 처리 및 메모리
+			}
+			if (sxssfWorkbook != null) {
 				sxssfWorkbook.write(output);
 				output.flush();
 				sxssfWorkbook.close();
-				excelData.clear(); // 리스트 페이징 처리 및 메모리
 			}
 
 			return new ByteArrayInputStream(output.toByteArray());

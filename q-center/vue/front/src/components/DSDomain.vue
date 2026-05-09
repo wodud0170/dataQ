@@ -39,13 +39,35 @@
             </v-row>
           </v-sheet>
           <!-- 등록 / 일괄 등록 / 삭제 버튼 — 한 줄 가로 배치 -->
+          <!-- 86번 #11 — 한 줄 유지, 엑셀 관련은 드롭다운으로 묶음 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
-            class="d-flex flex-nowrap" style="gap: 6px;">
+            class="d-flex flex-nowrap align-center" style="gap: 6px;">
             <v-btn class="gradient" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
-            <v-btn v-if="isAdmin" class="gradient" v-on:click="domainExcelFileUpload()" title="일괄 등록">일괄 등록</v-btn>
-            <v-btn class="gradient" v-on:click="domainListDownload()" title="다운로드">다운로드</v-btn>
             <v-btn v-if="isAdmin" class="gradient" v-on:click="domainRemoveItem()" title="삭제">삭제</v-btn>
             <v-btn v-if="isAdmin" class="gradient" color="red lighten-4" v-on:click="domainBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
+            <!-- 엑셀 드롭다운 (업로드 / 양식 / 다운로드) -->
+            <v-menu offset-y>
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn class="gradient" v-bind="attrs" v-on="on">
+                  <v-icon small left>mdi-file-excel</v-icon>엑셀
+                  <v-icon small right>mdi-menu-down</v-icon>
+                </v-btn>
+              </template>
+              <v-list dense>
+                <v-list-item v-if="isAdmin" @click="domainExcelFileUpload()">
+                  <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
+                  <v-list-item-title>엑셀 업로드</v-list-item-title>
+                </v-list-item>
+                <v-list-item v-if="isAdmin" @click="domainTemplateDownload()">
+                  <v-list-item-icon><v-icon small>mdi-file-download-outline</v-icon></v-list-item-icon>
+                  <v-list-item-title>양식 다운로드</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="domainListDownload()">
+                  <v-list-item-icon><v-icon small>mdi-download</v-icon></v-list-item-icon>
+                  <v-list-item-title>데이터 다운로드</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
             <input type="file" @change="readExcelFile" ref="file" id="inputDomainUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
@@ -1502,6 +1524,16 @@ export default {
       });
     },
 
+    /** 86번 #11 — 도메인 업로드 양식 다운로드 (헤더만 있는 빈 xlsx) */
+    domainTemplateDownload() {
+      const url = this.$APIURL.base + 'api/std/downloadDomainTemplate';
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', '도메인_일괄등록_템플릿.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    },
     domainListDownload() {
       let _keyWord = this.searchDomain.length !== 0 ? this.searchDomain : null;
 

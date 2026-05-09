@@ -287,7 +287,7 @@ CREATE TABLE quality.tb_data_model_attr (
     fk_yn character(1),
     default_val character varying(255),
     attr_ord smallint,
-    obj_owner character varying(100) DEFAULT ''::character varying,
+    obj_owner character varying(100) DEFAULT ''::character varying NOT NULL,
     attr_comment character varying(500),
     use_yn character varying(1) DEFAULT 'Y'::character varying,
     deleted_dt character varying(14),
@@ -559,7 +559,7 @@ CREATE TABLE quality.tb_data_model_obj (
     dm_id character varying(22) NOT NULL,
     obj_nm character varying(255) NOT NULL,
     obj_nm_kr character varying(255),
-    obj_owner character varying(50),
+    obj_owner character varying(50) DEFAULT ''::character varying NOT NULL,
     obj_desc character varying(500),
     obj_attr_cnt numeric(6,0),
     obj_comment character varying(500),
@@ -679,7 +679,7 @@ CREATE TABLE quality.tb_data_model_schema (
 
 CREATE TABLE quality.tb_diag_job (
     diag_job_id character varying(50) NOT NULL,
-    dm_clct_id character varying(50) NOT NULL,
+    dm_clct_id character varying(50),
     dm_id character varying(50) NOT NULL,
     status character varying(20) DEFAULT 'READY'::character varying NOT NULL,
     total_cnt integer DEFAULT 0,
@@ -1945,7 +1945,7 @@ ALTER TABLE ONLY quality.tb_code_data
 --
 
 ALTER TABLE ONLY quality.tb_data_model_attr
-    ADD CONSTRAINT tb_data_model_attr_pkey PRIMARY KEY (dm_id, obj_nm, attr_nm);
+    ADD CONSTRAINT tb_data_model_attr_pkey PRIMARY KEY (dm_id, obj_owner, obj_nm, attr_nm);
 
 
 --
@@ -1969,7 +1969,7 @@ ALTER TABLE ONLY quality.tb_data_model_map
 --
 
 ALTER TABLE ONLY quality.tb_data_model_obj
-    ADD CONSTRAINT tb_data_model_obj_pkey PRIMARY KEY (dm_id, obj_nm);
+    ADD CONSTRAINT tb_data_model_obj_pkey PRIMARY KEY (dm_id, obj_owner, obj_nm);
 
 
 --

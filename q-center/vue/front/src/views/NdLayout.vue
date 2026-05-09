@@ -105,6 +105,15 @@ export default {
         // F5/새로고침/탭 닫기 시 경고
         window.addEventListener('beforeunload', this.onBeforeUnload)
 
+        // 86번 — 다운로드/API anchor 클릭 시 beforeunload 경고 자동 skip
+        // (download 속성 또는 /api/ href 는 페이지 이동 의도 X)
+        document.addEventListener('click', (e) => {
+            const a = e.target.closest && e.target.closest('a[href]');
+            if (a && (a.hasAttribute('download') || /\/api\//.test(a.href))) {
+                window._skipBeforeUnload = true;
+            }
+        }, true)
+
         if (this.isMobile) {
             this.drawer = false;
         }

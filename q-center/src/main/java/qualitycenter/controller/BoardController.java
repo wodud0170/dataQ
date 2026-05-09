@@ -184,14 +184,17 @@ public class BoardController {
 
 	private void saveFiles(String boardId, List<MultipartFile> files) throws IOException {
 		if (files == null || files.isEmpty()) return;
-		File dir = new File(UPLOAD_DIR + boardId);
+		// 86번 #21 — boardId 자체에 '*' 가 들어갈 수 있어 폴더 경로도 sanitize 필요
+		File dir = new File(UPLOAD_DIR + sanitizeForFile(boardId));
 		if (!dir.exists()) dir.mkdirs();
 
 		for (MultipartFile file : files) {
 			if (file.isEmpty()) continue;
 			String fileId = StringUtils.getUUID();
 			String origName = file.getOriginalFilename();
-			Path savePath = Paths.get(dir.getAbsolutePath(), fileId + "_" + origName);
+			// 디스크 저장명만 sanitize — DB 의 fileId / fileNm 는 그대로 보관 (다운로드 시 원본명 노출 유지)
+			String diskName = sanitizeForFile(fileId) + "_" + sanitizeForFile(origName);
+			Path savePath = Paths.get(dir.getAbsolutePath(), diskName);
 			Files.copy(file.getInputStream(), savePath);
 
 			Map<String, Object> fileParams = new HashMap<>();
@@ -203,6 +206,39 @@ public class BoardController {
 			fileParams.put("cretUserId", sessionService.getUserId());
 			sqlSessionTemplate.insert("board.insertBoardFile", fileParams);
 		}
+	}
+
+	/**
+	 * 파일명 sanitize — Windows/Linux/macOS 공통 안전 문자만 남김.
+	 * - Windows reserved: < > : " / \ | ? *
+	 * - 제어문자 (0x00-0x1F)
+	 * - 끝의 . / 공백 (Windows 가 자동 제거)
+	 * - 빈 문자열은 "_" 로 대체
+	 *
+	 * 86번 #21: StringUtils.getUUID() 는 1.56% 확률로 '*' 포함 → Windows 저장 실패.
+	 * 사용자가 업로드한 origName 도 OS 마다 허용 문자가 달라 함께 필터.
+	 */
+	private static String sanitizeForFile(String s) {
+		if (s == null || s.isEmpty()) return "_";
+		StringBuilder sb = new StringBuilder(s.length());
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c < 0x20 || c == '<' || c == '>' || c == ':' || c == '"'
+			    || c == '/' || c == '\\' || c == '|' || c == '?' || c == '*') {
+				sb.append('_');
+			} else {
+				sb.append(c);
+			}
+		}
+		// trailing . / 공백 제거 (Windows 호환)
+		int end = sb.length();
+		while (end > 0) {
+			char c = sb.charAt(end - 1);
+			if (c == '.' || c == ' ') end--;
+			else break;
+		}
+		if (end == 0) return "_";
+		return end == sb.length() ? sb.toString() : sb.substring(0, end);
 	}
 
 	// === 댓글 ===

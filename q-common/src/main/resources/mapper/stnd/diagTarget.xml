@@ -7,6 +7,8 @@
 -->
 <mapper namespace="diagTarget">
 
+  <!-- 86번 #11 — 모든 update WHERE 에 OBJ_OWNER 추가. 같은 OBJ_NM 다른 OWNER 같이 변경되던 버그 수정. -->
+
   <!-- OBJ 단건 토글 -->
   <update id="updateObjTarget" parameterType="java.util.Map">
     UPDATE TB_DATA_MODEL_OBJ
@@ -27,11 +29,12 @@
        </choose>
        , DIAG_TARGET_UPDT_USER_ID = #{userId}
        , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
-     WHERE DM_ID  = #{dmId}
-       AND OBJ_NM = #{objNm}
+     WHERE DM_ID     = #{dmId}
+       AND OBJ_OWNER = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+       AND OBJ_NM    = #{objNm}
   </update>
 
-  <!-- OBJ 일괄 토글 -->
+  <!-- OBJ 일괄 토글 — 같은 OWNER 안의 여러 OBJ_NM 만 매칭 -->
   <update id="updateObjTargetBatch" parameterType="java.util.Map">
     UPDATE TB_DATA_MODEL_OBJ
        SET
@@ -51,10 +54,10 @@
        </choose>
        , DIAG_TARGET_UPDT_USER_ID = #{userId}
        , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
-     WHERE DM_ID  = #{dmId}
-       AND OBJ_NM IN
-       <foreach item="nm" collection="objNms" open="(" separator="," close=")">
-         #{nm}
+     WHERE DM_ID = #{dmId}
+       AND (OBJ_OWNER, OBJ_NM) IN
+       <foreach item="k" collection="targets" open="(" separator="," close=")">
+         (COALESCE(NULLIF(#{k.objOwner, jdbcType=VARCHAR}, ''), ''), #{k.objNm})
        </foreach>
   </update>
 
@@ -78,12 +81,13 @@
        </choose>
        , DIAG_TARGET_UPDT_USER_ID = #{userId}
        , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
-     WHERE DM_ID   = #{dmId}
-       AND OBJ_NM  = #{objNm}
-       AND ATTR_NM = #{attrNm}
+     WHERE DM_ID     = #{dmId}
+       AND OBJ_OWNER = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+       AND OBJ_NM    = #{objNm}
+       AND ATTR_NM   = #{attrNm}
   </update>
 
-  <!-- ATTR 일괄 토글 -->
+  <!-- ATTR 일괄 토글 — 같은 (OWNER, OBJ_NM) 안의 여러 ATTR_NM -->
   <update id="updateAttrTargetBatch" parameterType="java.util.Map">
     UPDATE TB_DATA_MODEL_ATTR
        SET
@@ -103,8 +107,9 @@
        </choose>
        , DIAG_TARGET_UPDT_USER_ID = #{userId}
        , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
-     WHERE DM_ID  = #{dmId}
-       AND OBJ_NM = #{objNm}
+     WHERE DM_ID     = #{dmId}
+       AND OBJ_OWNER = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+       AND OBJ_NM    = #{objNm}
        AND ATTR_NM IN
        <foreach item="nm" collection="attrNms" open="(" separator="," close=")">
          #{nm}
@@ -133,7 +138,8 @@
   <!-- OBJ 단건 상세 -->
   <select id="selectObjDiagTargetDetail" parameterType="java.util.Map" resultType="java.util.HashMap">
     SELECT
-       OBJ_NM        AS "objNm"
+       OBJ_OWNER     AS "objOwner"
+      ,OBJ_NM        AS "objNm"
       ,OBJ_NM_KR     AS "objNmKr"
       ,OBJ_ATTR_CNT  AS "attrCnt"
       ,COALESCE(STND_DIAG_TARGET_YN,'Y')   AS "stndDiagTargetYn"
@@ -145,7 +151,9 @@
       ,DIAG_TARGET_UPDT_USER_ID             AS "diagTargetUpdtUserId"
       ,to_char(to_timestamp(DIAG_TARGET_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') AS "diagTargetUpdtDt"
     FROM TB_DATA_MODEL_OBJ
-    WHERE DM_ID = #{dmId} AND OBJ_NM = #{objNm}
+    WHERE DM_ID     = #{dmId}
+      AND OBJ_OWNER = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+      AND OBJ_NM    = #{objNm}
   </select>
 
 </mapper>

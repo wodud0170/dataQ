@@ -46,7 +46,7 @@
             <v-btn small outlined color="red" @click="bulkObjToggle('QUAL','N')" title="선택 행 품질진단 OFF">제외</v-btn>
             <v-btn small outlined color="green" @click="bulkObjToggle('QUAL','Y')" title="선택 행 품질진단 ON">대상</v-btn>
           </v-sheet>
-          <v-data-table class="px-3 pb-3" :headers="objHeaders" :items="filteredObjs" item-key="objNm"
+          <v-data-table class="px-3 pb-3" :headers="objHeaders" :items="filteredObjs" item-key="_rowKey"
             v-model="selectedObjs" show-select dense hide-default-footer :items-per-page="-1">
             <template v-slot:[`item.stndDiagTargetYn`]="{ item }">
               <v-icon small :color="item.stndDiagTargetYn==='Y' ? 'green' : 'red'"
@@ -93,7 +93,7 @@
             <v-btn small outlined color="red" @click="bulkAttrToggle('QUAL','N')" :disabled="!selObj">제외</v-btn>
             <v-btn small outlined color="green" @click="bulkAttrToggle('QUAL','Y')" :disabled="!selObj">대상</v-btn>
           </v-sheet>
-          <v-data-table class="px-3 pb-3" :headers="attrHeaders" :items="filteredAttrs" item-key="attrNm"
+          <v-data-table class="px-3 pb-3" :headers="attrHeaders" :items="filteredAttrs" item-key="_rowKey"
             v-model="selectedAttrs" show-select dense hide-default-footer :items-per-page="-1">
             <template v-slot:[`item.stndDiagTargetYn`]="{ item }">
               <v-icon small :color="item.stndDiagTargetYn==='Y' ? 'green' : 'red'"
@@ -183,7 +183,9 @@ export default {
     objs: [], selectedObjs: [], objSearch: '',
     selObj: null, attrs: [], selectedAttrs: [], attrSearch: '',
     objHeaders: [
-      { text: '테이블명', value: 'objNm', width: '20%' },
+      // 86번 #11 — 소유자 추가 (같은 OBJ_NM 다른 OWNER 분리 표시)
+      { text: '소유자', value: 'objOwner', width: '12%' },
+      { text: '테이블명', value: 'objNm', width: '18%' },
       { text: '한글명', value: 'objNmKr', width: '15%' },
       { text: '컬럼수', value: 'objAttrCnt', width: '8%' },
       { text: '표준대상', value: 'stndDiagTargetYn', width: '10%', sortable: false, align: 'center' },
@@ -192,28 +194,35 @@ export default {
       { text: '상세', value: 'detail', width: '7%', sortable: false, align: 'center' },
     ],
     attrHeaders: [
-      { text: '컬럼명', value: 'attrNm', width: '20%' },
-      { text: '한글명', value: 'attrNmKr', width: '20%' },
-      { text: '타입', value: 'dataType', width: '12%' },
-      { text: '표준대상', value: 'stndDiagTargetYn', width: '12%', sortable: false, align: 'center' },
-      { text: '구조대상', value: 'structDiagTargetYn', width: '12%', sortable: false, align: 'center' },
-      { text: '품질대상', value: 'qualDiagTargetYn', width: '12%', sortable: false, align: 'center' },
+      { text: '소유자', value: 'objOwner', width: '10%' },
+      { text: '테이블', value: 'objNm', width: '14%' },
+      { text: '컬럼명', value: 'attrNm', width: '16%' },
+      { text: '한글명', value: 'attrNmKr', width: '16%' },
+      { text: '타입', value: 'dataType', width: '10%' },
+      { text: '표준대상', value: 'stndDiagTargetYn', width: '10%', sortable: false, align: 'center' },
+      { text: '구조대상', value: 'structDiagTargetYn', width: '10%', sortable: false, align: 'center' },
+      { text: '품질대상', value: 'qualDiagTargetYn', width: '10%', sortable: false, align: 'center' },
     ],
     reasonDialog: false, reasonTitle: '', reasonText: '', _pendingApply: null,
     detailDialog: false, detailData: null,
   }),
   computed: {
     filteredObjs() {
+      // 86번 #11 — 같은 OBJ_NM 다른 OWNER 가능 → unique _rowKey 부여
       const q = (this.objSearch || '').toLowerCase();
-      if (!q) return this.objs;
-      return this.objs.filter(o => (o.objNm || '').toLowerCase().includes(q)
-                                || (o.objNmKr || '').toLowerCase().includes(q));
+      const list = q
+        ? this.objs.filter(o => (o.objNm || '').toLowerCase().includes(q)
+                             || (o.objNmKr || '').toLowerCase().includes(q))
+        : this.objs;
+      return list.map(o => ({ ...o, _rowKey: (o.objOwner || '') + '' + o.objNm }));
     },
     filteredAttrs() {
       const q = (this.attrSearch || '').toLowerCase();
-      if (!q) return this.attrs;
-      return this.attrs.filter(a => (a.attrNm || '').toLowerCase().includes(q)
-                                || (a.attrNmKr || '').toLowerCase().includes(q));
+      const list = q
+        ? this.attrs.filter(a => (a.attrNm || '').toLowerCase().includes(q)
+                             || (a.attrNmKr || '').toLowerCase().includes(q))
+        : this.attrs;
+      return list.map(a => ({ ...a, _rowKey: (a.objOwner || '') + '' + a.objNm + '' + a.attrNm }));
     }
   },
   mounted() {
@@ -227,7 +236,8 @@ export default {
       if (!this.dmId) return;
       this.loadStats();
       this.loadObjs();
-      this.selObj = null; this.attrs = [];
+      this.selObj = null;
+      this.loadAttrs();  // 86번 #11 — 컬럼 탭 자동 전체 로드 (사용자 검색 안 해도 보이게)
     },
     loadStats() {
       axios.get(this.$APIURL.base + 'api/dm/diagTargetStats', { params: { dmId: this.dmId } })
@@ -238,63 +248,123 @@ export default {
         .then(r => { this.objs = r.data || []; });
     },
     loadAttrs() {
-      if (!this.selObj) { this.attrs = []; return; }
+      // 86번 #11 — selObj 없으면 모델 전체 컬럼, 있으면 선택 테이블 컬럼만
+      if (!this.dmId) { this.attrs = []; return; }
       axios.get(this.$APIURL.base + 'api/dm/getDataModelAttrListByClctId', { params: { clctId: this.dmId } })
-        .then(r => { this.attrs = (r.data || []).filter(a => a.objNm === this.selObj); });
+        .then(r => {
+          const all = r.data || [];
+          this.attrs = this.selObj ? all.filter(a => a.objNm === this.selObj) : all;
+        });
     },
     toggleObj(item, diagType) {
+      // 86번 #11 — item 단위로 owner 명시 ((owner, objNm) tuple)
       const cur = this._getYn(item, diagType);
       const newYn = cur === 'Y' ? 'N' : 'Y';
+      const target = { objOwner: item.objOwner || '', objNm: item.objNm };
       if (newYn === 'N') {
         this._openReason(`${item.objNm} 의 ${this._typeLabel(diagType)} 진단 OFF`,
-          (reason) => this._applyObj([item.objNm], diagType, 'N', reason));
+          (reason) => this._applyObj([target], diagType, 'N', reason));
       } else {
-        this._applyObj([item.objNm], diagType, 'Y', null);
+        this._applyObj([target], diagType, 'Y', null);
       }
     },
     toggleAttr(item, diagType) {
       const cur = this._getYn(item, diagType);
       const newYn = cur === 'Y' ? 'N' : 'Y';
+      // ATTR 은 selObj 가 항상 있을 때만 (UI 가 보장). owner 도 item 에서 가져옴.
+      const target = { objOwner: item.objOwner || '', objNm: item.objNm, attrNm: item.attrNm };
       if (newYn === 'N') {
         this._openReason(`${item.attrNm} 의 ${this._typeLabel(diagType)} 진단 OFF`,
-          (reason) => this._applyAttr([item.attrNm], diagType, 'N', reason));
+          (reason) => this._applyAttrTargets([target], diagType, 'N', reason));
       } else {
-        this._applyAttr([item.attrNm], diagType, 'Y', null);
+        this._applyAttrTargets([target], diagType, 'Y', null);
       }
     },
     bulkObjToggle(diagType, targetYn) {
-      const objNms = (this.selectedObjs || []).map(o => o.objNm);
-      if (!objNms.length) { this.$swal.fire({ title: '행을 선택해주세요.', icon: 'info' }); return; }
+      // 86번 #11 — selectedObjs 의 행에서 (owner, objNm) 추출
+      const targets = (this.selectedObjs || []).map(o => ({ objOwner: o.objOwner || '', objNm: o.objNm }));
+      if (!targets.length) { this.$swal.fire({ title: '행을 선택해주세요.', icon: 'info' }); return; }
       if (targetYn === 'N') {
-        this._openReason(`${objNms.length} 개 행의 ${this._typeLabel(diagType)} 진단 OFF`,
-          (reason) => this._applyObj(objNms, diagType, 'N', reason));
+        this._openReason(`${targets.length} 개 행의 ${this._typeLabel(diagType)} 진단 OFF`,
+          (reason) => this._applyObj(targets, diagType, 'N', reason));
       } else {
-        this._applyObj(objNms, diagType, 'Y', null);
+        this._applyObj(targets, diagType, 'Y', null);
       }
     },
     bulkAttrToggle(diagType, targetYn) {
-      const attrNms = (this.selectedAttrs || []).map(a => a.attrNm);
-      if (!attrNms.length) { this.$swal.fire({ title: '행을 선택해주세요.', icon: 'info' }); return; }
+      // ATTR 일괄: 같은 (owner, objNm) 안의 attrNm 들만 묶음 처리. 다른 owner/obj 면 따로 호출.
+      const sel = this.selectedAttrs || [];
+      if (!sel.length) { this.$swal.fire({ title: '행을 선택해주세요.', icon: 'info' }); return; }
+      const targets = sel.map(a => ({ objOwner: a.objOwner || '', objNm: a.objNm, attrNm: a.attrNm }));
       if (targetYn === 'N') {
-        this._openReason(`${attrNms.length} 개 컬럼의 ${this._typeLabel(diagType)} 진단 OFF`,
-          (reason) => this._applyAttr(attrNms, diagType, 'N', reason));
+        this._openReason(`${targets.length} 개 컬럼의 ${this._typeLabel(diagType)} 진단 OFF`,
+          (reason) => this._applyAttrTargets(targets, diagType, 'N', reason));
       } else {
-        this._applyAttr(attrNms, diagType, 'Y', null);
+        this._applyAttrTargets(targets, diagType, 'Y', null);
       }
     },
-    _applyObj(objNms, diagType, targetYn, reason) {
-      const url = this.$APIURL.base + (objNms.length === 1 ? 'api/dm/setObjDiagTarget' : 'api/dm/setObjDiagTargetBatch');
-      const body = objNms.length === 1
-        ? { dmId: this.dmId, objNm: objNms[0], diagType, targetYn, reason }
-        : { dmId: this.dmId, objNms, diagType, targetYn, reason };
-      axios.post(url, body).then(() => { this.loadAll(); this.selectedObjs = []; });
+    /** 86번 #11 — OBJ 단/일괄. targets = [{objOwner, objNm}, ...] */
+    _applyObj(targets, diagType, targetYn, reason) {
+      const url = this.$APIURL.base + (targets.length === 1 ? 'api/dm/setObjDiagTarget' : 'api/dm/setObjDiagTargetBatch');
+      const body = targets.length === 1
+        ? { dmId: this.dmId, objOwner: targets[0].objOwner, objNm: targets[0].objNm, diagType, targetYn, reason }
+        : { dmId: this.dmId, targets, diagType, targetYn, reason };
+      // 86번 #11 — 응답 검사 + 에러 노출 (이전엔 .then 만 — 백엔드 throw 면 silent fail → 사용자는 "안 바뀐다" 만 봄)
+      axios.post(url, body).then(res => {
+        const ok = res && res.data && (res.data.success === true || res.data.count > 0);
+        if (!ok) {
+          this.$swal.fire({ icon: 'warning', title: '변경 반영 0건',
+            text: '서버 응답: ' + JSON.stringify(res.data), confirmButtonText: '확인' });
+          return;
+        }
+        this.loadAll(); this.selectedObjs = [];
+      }).catch(err => {
+        const status = err.response && err.response.status;
+        const data = err.response && err.response.data;
+        const msg = (data && (data.message || data.resultMessage)) || err.message || '서버 오류';
+        this.$swal.fire({
+          icon: 'error',
+          title: '진단 대상 변경 실패' + (status ? ` (${status})` : ''),
+          text: msg,
+          confirmButtonText: '확인'
+        });
+      });
     },
-    _applyAttr(attrNms, diagType, targetYn, reason) {
-      const url = this.$APIURL.base + (attrNms.length === 1 ? 'api/dm/setAttrDiagTarget' : 'api/dm/setAttrDiagTargetBatch');
-      const body = attrNms.length === 1
-        ? { dmId: this.dmId, objNm: this.selObj, attrNm: attrNms[0], diagType, targetYn, reason }
-        : { dmId: this.dmId, objNm: this.selObj, attrNms, diagType, targetYn, reason };
-      axios.post(url, body).then(() => { this.loadStats(); this.loadAttrs(); this.selectedAttrs = []; });
+    /** 86번 #11 — ATTR 단/일괄. targets = [{objOwner, objNm, attrNm}, ...]. 같은 (owner, objNm) 끼리 그룹핑해서 batch 호출. */
+    _applyAttrTargets(targets, diagType, targetYn, reason) {
+      // (owner|objNm) 별로 그룹
+      const groups = {};
+      targets.forEach(t => {
+        const k = (t.objOwner || '') + '' + t.objNm;
+        if (!groups[k]) groups[k] = { objOwner: t.objOwner || '', objNm: t.objNm, attrNms: [] };
+        groups[k].attrNms.push(t.attrNm);
+      });
+      const reqs = Object.values(groups).map(g => {
+        const isSingle = g.attrNms.length === 1;
+        const url = this.$APIURL.base + (isSingle ? 'api/dm/setAttrDiagTarget' : 'api/dm/setAttrDiagTargetBatch');
+        const body = isSingle
+          ? { dmId: this.dmId, objOwner: g.objOwner, objNm: g.objNm, attrNm: g.attrNms[0], diagType, targetYn, reason }
+          : { dmId: this.dmId, objOwner: g.objOwner, objNm: g.objNm, attrNms: g.attrNms, diagType, targetYn, reason };
+        return axios.post(url, body);
+      });
+      Promise.all(reqs).then(responses => {
+        const allOk = responses.every(r => r && r.data && (r.data.success === true || r.data.count > 0));
+        if (!allOk) {
+          this.$swal.fire({ icon: 'warning', title: '일부 변경 반영 안 됨',
+            text: '응답: ' + JSON.stringify(responses.map(r => r.data)), confirmButtonText: '확인' });
+        }
+        this.loadStats(); this.loadAttrs(); this.selectedAttrs = [];
+      }).catch(err => {
+        const status = err.response && err.response.status;
+        const data = err.response && err.response.data;
+        const msg = (data && (data.message || data.resultMessage)) || err.message || '서버 오류';
+        this.$swal.fire({
+          icon: 'error',
+          title: '진단 대상 변경 실패' + (status ? ` (${status})` : ''),
+          text: msg,
+          confirmButtonText: '확인'
+        });
+      });
     },
     _openReason(title, callback) {
       this.reasonTitle = title;
@@ -312,7 +382,7 @@ export default {
     },
     openDetail(item) {
       axios.get(this.$APIURL.base + 'api/dm/objDiagTargetDetail',
-        { params: { dmId: this.dmId, objNm: item.objNm } })
+        { params: { dmId: this.dmId, objOwner: item.objOwner || '', objNm: item.objNm } })
         .then(r => { this.detailData = r.data || {}; this.detailDialog = true; });
     },
     _getYn(item, diagType) {

@@ -112,7 +112,7 @@
             ,(SELECT DS.DBMS_TP FROM ndata.TB_DATA_SOURCE DS WHERE DS.DS_ID = M.DM_DS_ID) as DBMS_TP
         FROM TB_DIAG_JOB J
         JOIN TB_DATA_MODEL M ON J.DM_ID = M.DM_ID
-        JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
+        LEFT JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
         LEFT JOIN (
             SELECT DIAG_JOB_ID, COUNT(DISTINCT OBJ_NM || '.' || ATTR_NM) as ISSUE_COL_CNT
             FROM TB_DIAG_RESULT
@@ -125,10 +125,11 @@
         ORDER BY J.CRET_DT DESC
     </select>
 
-    <!-- 동일 수집건에 대해 READY/RUNNING 상태인 Job 수 조회 (중복 방지용) -->
+    <!-- 동일 데이터 모델에 READY/RUNNING 상태인 Job 수 조회 (중복 방지용)
+         86번 #11 — CLCT 폐기 이후 DM_CLCT_ID → DM_ID 로 교체 (예전엔 NULL=NULL 매칭 안 돼 항상 0 반환) -->
     <select id="selectActiveDiagJobCount" parameterType="String" resultType="int">
         SELECT COUNT(*) FROM TB_DIAG_JOB
-        WHERE DM_CLCT_ID = #{clctId}
+        WHERE DM_ID = #{dataModelId}
         AND STATUS IN ('READY', 'RUNNING')
     </select>
 
@@ -149,7 +150,7 @@
             ,to_char(to_timestamp(J.END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as END_DT
         FROM TB_DIAG_JOB J
         JOIN TB_DATA_MODEL M ON J.DM_ID = M.DM_ID
-        JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
+        LEFT JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
         WHERE J.DIAG_JOB_ID = #{diagJobId}
     </select>
 
@@ -181,9 +182,13 @@
         SELECT
              R.OBJ_NM as "objNm"
             ,(SELECT O.OBJ_NM_KR FROM TB_DATA_MODEL_OBJ O
-              WHERE O.DM_CLCT_ID = (SELECT DM_CLCT_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
+              WHERE O.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
               AND O.OBJ_NM = R.OBJ_NM
               LIMIT 1) as "objNmKr"
+            ,(SELECT COALESCE(O.OBJ_OWNER,'') FROM TB_DATA_MODEL_OBJ O
+              WHERE O.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
+              AND O.OBJ_NM = R.OBJ_NM
+              LIMIT 1) as "objOwner"
             ,COUNT(DISTINCT R.ATTR_NM) as "issueColCnt"
             ,COUNT(*) as "issueCnt"
             ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'TERM_NOT_EXIST')      as "termNotExistCnt"
@@ -206,8 +211,9 @@
     <select id="selectDiagResultDetail" parameterType="String" resultType="map">
         SELECT
              A.OBJ_NM                                       as "objNm"
+            ,COALESCE(A.OBJ_OWNER, '')                      as "objOwner"
             ,(SELECT O.OBJ_NM_KR FROM TB_DATA_MODEL_OBJ O
-              WHERE O.DM_CLCT_ID = A.DM_CLCT_ID AND O.OBJ_NM = A.OBJ_NM
+              WHERE O.DM_ID = A.DM_ID AND O.OBJ_NM = A.OBJ_NM
               LIMIT 1)                                      as "objNmKr"
             ,A.ATTR_NM                                      as "attrNm"
             ,A.ATTR_NM_KR                                   as "attrNmKr"
@@ -219,6 +225,18 @@
             ,D.DATA_LEN                                     as "stdDataLen"
             ,D.DATA_DECIMAL_LEN                             as "stdDataDecimalLen"
             ,STRING_AGG(DISTINCT R.DIAG_TYPE, ',' ORDER BY R.DIAG_TYPE) as "diagTypes"
+            <!-- 86번 #11 Phase 1 — 한글명 매칭 (정확 또는 동의어). 매칭 시 컬럼 표준화 액션 추천에 사용. -->
+            ,MT.TERMS_NM                                    as "matchedTermsNm"
+            ,MT.TERMS_ENG_ABRV_NM                           as "matchedTermsEng"
+            ,MT.DOMAIN_NM                                   as "matchedDomainNm"
+            ,MD.DATA_TYPE                                   as "matchedDataType"
+            ,MD.DATA_LEN                                    as "matchedDataLen"
+            ,MD.DATA_DECIMAL_LEN                            as "matchedDataDecimalLen"
+            ,CASE
+                WHEN MT.TERMS_NM IS NULL THEN NULL
+                WHEN MT.TERMS_NM = A.ATTR_NM_KR THEN 'EXACT'
+                ELSE 'SYNONYM'
+             END                                            as "matchType"
         FROM TB_DATA_MODEL_ATTR A
         LEFT JOIN TB_DIAG_RESULT R
             ON R.DIAG_JOB_ID = #{diagJobId}
@@ -228,11 +246,26 @@
             ON T.TERMS_ENG_ABRV_NM = A.ATTR_NM
         LEFT JOIN TB_DOMAIN D
             ON D.DOMAIN_NM = T.DOMAIN_NM
-        WHERE A.DM_CLCT_ID = (SELECT DM_CLCT_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
-        GROUP BY A.OBJ_NM, A.DM_CLCT_ID, A.ATTR_NM, A.ATTR_NM_KR,
+        LEFT JOIN LATERAL (
+            SELECT TT.TERMS_NM, TT.TERMS_ENG_ABRV_NM, TT.DOMAIN_NM
+            FROM TB_TERMS TT
+            WHERE TT.APRV_YN = 'Y'
+              AND A.ATTR_NM_KR IS NOT NULL
+              AND ( TT.TERMS_NM = A.ATTR_NM_KR
+                 OR A.ATTR_NM_KR = ANY(TT.ALLOPH_SYNM_LST) )
+            ORDER BY CASE WHEN TT.TERMS_NM = A.ATTR_NM_KR THEN 0 ELSE 1 END
+            LIMIT 1
+        ) MT ON TRUE
+        LEFT JOIN TB_DOMAIN MD
+            ON MD.DOMAIN_NM = MT.DOMAIN_NM
+        WHERE A.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
+          AND A.USE_YN = 'Y'
+        GROUP BY A.OBJ_NM, A.OBJ_OWNER, A.DM_ID, A.ATTR_NM, A.ATTR_NM_KR,
                  A.DATA_TYPE, A.DATA_LEN, A.DATA_DECIMAL_LEN,
-                 T.TERMS_NM, D.DATA_TYPE, D.DATA_LEN, D.DATA_DECIMAL_LEN
-        ORDER BY A.OBJ_NM, A.ATTR_NM
+                 T.TERMS_NM, D.DATA_TYPE, D.DATA_LEN, D.DATA_DECIMAL_LEN,
+                 MT.TERMS_NM, MT.TERMS_ENG_ABRV_NM, MT.DOMAIN_NM,
+                 MD.DATA_TYPE, MD.DATA_LEN, MD.DATA_DECIMAL_LEN
+        ORDER BY A.OBJ_OWNER, A.OBJ_NM, A.ATTR_NM
     </select>
 
 </mapper>
