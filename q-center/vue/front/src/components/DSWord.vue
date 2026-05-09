@@ -46,14 +46,34 @@
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
             </v-row>
           </v-sheet>
-          <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
-          <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
+          <!-- 86번 #35 — DSDomain 패턴 따라 엑셀 관련은 드롭다운으로 묶음 -->
+          <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
+            class="d-flex flex-nowrap align-center" style="gap: 6px;">
             <v-btn class="gradient" id="addWordBtn" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
-            <v-btn v-if="isAdmin" class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
-            <v-btn class="gradient" v-on:click="downloadWordTemplate()" title="템플릿 다운로드">템플릿 다운로드</v-btn>
-            <v-btn class="gradient" v-on:click="wordListDownload()" title="다운로드">다운로드</v-btn>
             <v-btn v-if="isAdmin" class="gradient" v-on:click="wordRemoveItem()" title="삭제">삭제</v-btn>
             <v-btn v-if="isAdmin" class="gradient" color="red lighten-4" v-on:click="wordBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
+            <v-menu offset-y>
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn class="gradient" v-bind="attrs" v-on="on">
+                  <v-icon small left>mdi-file-excel</v-icon>엑셀
+                  <v-icon small right>mdi-menu-down</v-icon>
+                </v-btn>
+              </template>
+              <v-list dense>
+                <v-list-item v-if="isAdmin" @click="excelFileUpload">
+                  <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
+                  <v-list-item-title>엑셀 업로드</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="downloadWordTemplate()">
+                  <v-list-item-icon><v-icon small>mdi-file-download-outline</v-icon></v-list-item-icon>
+                  <v-list-item-title>양식 다운로드</v-list-item-title>
+                </v-list-item>
+                <v-list-item @click="wordListDownload()">
+                  <v-list-item-icon><v-icon small>mdi-download</v-icon></v-list-item-icon>
+                  <v-list-item-title>데이터 다운로드</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
             <input type="file" @change="readExcelFile" ref="file" id="inputUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
