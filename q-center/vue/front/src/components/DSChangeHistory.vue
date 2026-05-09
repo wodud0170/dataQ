@@ -5,6 +5,7 @@
                 변경 이력 조회
             </v-card-title>
             <v-card-text>
+                <!-- 86번 #38 — 등록경로 필터 제거 (DB 가 항상 NULL). 다른 col 폭 확보 -->
                 <v-row dense align="center">
                     <v-col cols="2">
                         <v-select v-model="filter.targetType" :items="targetTypes" item-text="text" item-value="value"
@@ -14,14 +15,10 @@
                         <v-select v-model="filter.changeType" :items="changeTypes" item-text="text" item-value="value"
                             label="유형" dense outlined hide-details />
                     </v-col>
-                    <v-col cols="2">
-                        <v-select v-model="filter.changeSource" :items="changeSources" item-text="text" item-value="value"
-                            label="등록 경로" dense outlined hide-details />
-                    </v-col>
-                    <v-col cols="2">
+                    <v-col cols="3">
                         <v-text-field v-model="filter.fromDt" label="시작일" type="date" dense outlined hide-details />
                     </v-col>
-                    <v-col cols="2">
+                    <v-col cols="3">
                         <v-text-field v-model="filter.toDt" label="종료일" type="date" dense outlined hide-details />
                     </v-col>
                     <v-col cols="2">
@@ -189,15 +186,16 @@ export default {
                 { text: "일괄등록", value: "BULK_UPLOAD" },
                 { text: "자동 추천", value: "AUTO_RECOMMEND" }
             ],
+            // 86번 #38 — 변경일시 오른쪽 끝으로 + 너비 확장 (두줄 방지) + 등록경로 컬럼 제거
+            //   (saveChangeHistory 가 changeSource 안 넘겨서 항상 NULL → '-' 표시. 정상화는 호출처 10곳+ 변경 필요)
             headers: [
-                { text: "변경일시", value: "changeDt", width: "160px" },
-                { text: "유형", value: "changeType", width: "100px" },
-                { text: "대상", value: "targetType", width: "100px" },
+                { text: "유형", value: "changeType", width: "90px" },
+                { text: "대상", value: "targetType", width: "90px" },
                 { text: "대상명", value: "targetNm", width: "200px" },
                 { text: "요약", value: "summary" },
-                { text: "건수", value: "changeCnt", width: "80px", align: "center" },
-                { text: "등록 경로", value: "changeSourceLabel", width: "110px" },
-                { text: "변경자", value: "changeUserId", width: "120px" }
+                { text: "건수", value: "changeCnt", width: "70px", align: "center" },
+                { text: "변경자", value: "changeUserId", width: "100px" },
+                { text: "변경일시", value: "changeDt", width: "180px" }
             ],
             detailHeaders: [
                 { text: "순번", value: "seq", width: "80px" },
@@ -254,8 +252,10 @@ export default {
                 let display = val;
                 if (display === 'null') display = '';
                 if (display === '[]') display = '';
-                // 시스템 필드는 제외
-                if (['id','aprvUserId','aprvStatUpdtDt','updtUserId','cretUserId','cretDt','updtDt'].includes(key)) continue;
+                // 시스템 필드 + 미사용/안전장치 컬럼 제외
+                // 86번 #37 — partOfSpeech / reqSysCd / reqSysNm / useYn 등은 사실상 안쓰는 컬럼이라 노출 안 함
+                if (['id','aprvUserId','aprvStatUpdtDt','updtUserId','cretUserId','cretDt','updtDt',
+                     'partOfSpeech','reqSysCd','reqSysNm','useYn'].includes(key)) continue;
                 out.push({ key: key, value: display });
             }
             return out;
@@ -348,12 +348,15 @@ export default {
 .history-table >>> tbody tr:hover {
     background-color: #E8EAF6 !important;
 }
+/* 86번 #34 fix — 이전엔 display: block 이 td 에 적용돼서 셀이 가로로 안 펼쳐지고 세로로 쌓이는 버그.
+   text-pre-wrap 은 td 자체가 아니라 td 안의 span 에 적용해야 함. 현재는 td.text-pre-wrap 로 사용 중이라
+   display 만 빼고 vertical-align 조정. */
 .text-pre-wrap {
     white-space: pre-wrap;
     word-break: break-all;
     font-size: 0.85rem;
     max-height: 400px;
     overflow-y: auto;
-    display: block;
+    vertical-align: top !important;
 }
 </style>

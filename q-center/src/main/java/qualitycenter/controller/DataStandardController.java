@@ -1148,8 +1148,9 @@ public class DataStandardController {
 		if (abrv.length() > 100) {
 			throw new Exception("단어 영문약어가 너무 깁니다 (최대 100자, 입력 길이: " + abrv.length() + ")");
 		}
-		if (!abrv.matches("^[A-Z][A-Z0-9_]*$")) {
-			throw new Exception("단어 영문약어는 대문자 영문(A-Z)으로 시작하고 영문/숫자(0-9)/언더바(_)만 사용할 수 있습니다. (입력값: " + abrv + ")");
+		// 86번 #42 — 단어는 원자(atomic). 언더바는 용어(단어 조합)의 구분자라 단어 영문약어에 허용 안 함
+		if (!abrv.matches("^[A-Z][A-Z0-9]*$")) {
+			throw new Exception("단어 영문약어는 대문자 영문(A-Z)으로 시작하고 영문/숫자(0-9)만 사용할 수 있습니다. (입력값: " + abrv + ")");
 		}
 		String eng = vo.getWordEngNm();
 		if (eng == null || eng.trim().isEmpty()) {
@@ -1158,8 +1159,9 @@ public class DataStandardController {
 		if (eng.length() > 100) {
 			throw new Exception("단어 영문명이 너무 깁니다 (최대 100자, 입력 길이: " + eng.length() + ")");
 		}
-		if (!eng.matches("^[A-Za-z][A-Za-z0-9 _]*$")) {
-			throw new Exception("단어 영문명은 영문(A-Z,a-z)으로 시작하고 영문/숫자/공백/언더바만 사용할 수 있습니다. (입력값: " + eng + ")");
+		// 86번 #42 — 단어 영문명도 원자. 공백/언더바 불허 (CamelCase 또는 단일 토큰)
+		if (!eng.matches("^[A-Za-z][A-Za-z0-9]*$")) {
+			throw new Exception("단어 영문명은 영문(A-Z,a-z)으로 시작하고 영문/숫자(0-9)만 사용할 수 있습니다. (입력값: " + eng + ")");
 		}
 	}
 

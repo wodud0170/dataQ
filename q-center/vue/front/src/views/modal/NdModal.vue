@@ -9,6 +9,9 @@
             </slot>
         </v-card-text>
         <v-card-actions class="mr-2 pb-4 modal_footer" height="5vh" :class="breakpoint === 'xs'? 'modal_footer_xs' : 'modal_footer_lg'">
+            <!-- 86번 #41 — footer 왼쪽 영역 슬롯 (예: 최종 용어명 미리보기) -->
+            <slot name="footer-left"></slot>
+            <v-spacer />
             <template v-if="footerSubbtn">
                 <v-btn class="gradient subbtnStyle" @click="$emit('subbtn')">
                     {{ footerSubbtnTitle }}

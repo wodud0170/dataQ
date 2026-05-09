@@ -234,6 +234,15 @@
       <NdModal @hide="hideModal('add')" @submit="submitDialog('add')" :footer-submit="true"
         :header-title="'용어 등록 ' + (addTerm_user_selected_word.length > 0 ? '- ' + addTerm_user_selected_word : '')"
         footer-hide-title="취소" footer-submit-title="등록">
+        <!-- 86번 #41 — 최종 용어명 + 영문약어 + 도메인 V타입 미리보기 (footer 왼쪽 큼지막하게) -->
+        <template v-slot:footer-left>
+          <div v-if="addTerm_user_selected_word" class="d-flex align-center"
+            style="gap: 10px; padding: 4px 8px; background: #E8EAF6; border-radius: 6px;">
+            <span style="font-size: 1.1rem; font-weight: 700; color: #283593;">{{ addTerm_user_selected_word }}</span>
+            <span v-if="addTerm_termEngAbrvNm" style="font-size: .9rem; font-weight: 600; color: #5C6BC0;">{{ addTerm_termEngAbrvNm }}</span>
+            <span v-if="addTerm_finalDomainLabel" style="font-size: .85rem; color: #00695C; font-weight: 500;">{{ addTerm_finalDomainLabel }}</span>
+          </div>
+        </template>
         <template v-slot:body>
           <v-form ref="form">
             <!-- ① 용어명 + 영문약어 -->
@@ -330,20 +339,56 @@
                 </v-col>
               </v-row>
 
-              <!-- 86번 #23 — 사용자 수동 단어 추가 -->
-              <v-row :style="{ margin: '8px 0 0 0' }" align="center">
-                <v-col cols="9">
-                  <v-text-field v-model="addTerm_manualWordInput" dense outlined hide-details
-                    label="단어 직접 추가" placeholder="자동 분석이 잘못 쪼갠 경우 — 한글 단어명 입력 후 추가"
-                    @keyup.enter="addManualWord" />
-                </v-col>
-                <v-col cols="3">
-                  <v-btn small color="primary" outlined :disabled="!addTerm_manualWordInput || !addTerm_manualWordInput.trim()"
-                    @click="addManualWord">
-                    <v-icon small left>mdi-plus</v-icon>단어 추가
-                  </v-btn>
-                </v-col>
-              </v-row>
+              <!-- 86번 #41 — 단어 추가 / 형식단어 추가를 카드로 묶어 시각적 구분 -->
+              <v-sheet outlined rounded class="pa-3 mt-2"
+                :style="{ background: '#F5F7FB', borderColor: '#C5CAE9 !important' }">
+                <div class="caption font-weight-bold ndColor--text mb-2">
+                  <v-icon small color="indigo darken-2">mdi-plus-circle-outline</v-icon>
+                  단어 추가
+                </div>
+                <!-- 단어 직접 추가 -->
+                <v-row dense align="center">
+                  <v-col cols="9">
+                    <v-text-field v-model="addTerm_manualWordInput" dense outlined hide-details
+                      label="단어 직접 추가" placeholder="자동 분석이 잘못 쪼갠 경우 — 한글 단어명 입력 후 추가"
+                      background-color="white"
+                      @keyup.enter="addManualWord" />
+                  </v-col>
+                  <v-col cols="3">
+                    <v-btn small color="primary" :disabled="!addTerm_manualWordInput || !addTerm_manualWordInput.trim()"
+                      @click="addManualWord">
+                      <v-icon small left>mdi-plus</v-icon>단어 추가
+                    </v-btn>
+                  </v-col>
+                </v-row>
+                <!-- 형식단어 검색/선택 추가 -->
+                <v-row dense align="center" class="mt-2">
+                  <v-col cols="9">
+                    <v-autocomplete v-model="addTerm_selectedClsfWord" :items="addTerm_classWords"
+                      :item-text="clsfItemText" return-object dense outlined hide-details clearable
+                      label="형식단어 검색/선택"
+                      placeholder="예: 명, 일자, 코드 등"
+                      background-color="white"
+                      :loading="addTerm_loadingClsfWords" :menu-props="{ maxHeight: 320 }"
+                      no-data-text="일치하는 형식단어 없음">
+                      <template v-slot:selection="{ item }">
+                        <span>{{ item.wordNm }}</span>
+                        <span v-if="item.domainClsfNm" style="font-size:.75rem; color:#9E9E9E; margin-left:4px;">({{ item.domainClsfNm }})</span>
+                      </template>
+                      <template v-slot:item="{ item }">
+                        <span>{{ item.wordNm }}</span>
+                        <span v-if="item.domainClsfNm" style="font-size:.75rem; color:#9E9E9E; margin-left:6px;">[{{ item.domainClsfNm }}]</span>
+                      </template>
+                    </v-autocomplete>
+                  </v-col>
+                  <v-col cols="3">
+                    <v-btn small color="indigo" dark :disabled="!addTerm_selectedClsfWord"
+                      @click="addClassificationWord">
+                      <v-icon small left>mdi-plus</v-icon>형식단어 추가
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-sheet>
 
               <!-- 단어 순서 변경 (선택된 단어가 있을 때만) -->
               <v-row v-if="addTerm_wordList.length > 0" align="center">
@@ -368,6 +413,8 @@
             </div>
 
             <v-divider class="my-3" v-if="addTerm_wordList.length > 0"></v-divider>
+
+            <!-- 86번 #40/41 — 최종 용어명 미리보기는 footer 왼쪽으로 이동 (NdModal subbtn slot) -->
 
             <!-- ③ 도메인 (분석 결과 + 단어 선택이 있을 때만 노출 — 86번 #25 progressive disclosure) -->
             <v-row v-if="addTerm_lastWordIsCode && addTerm_wordList.length > 0" align="center">
@@ -998,6 +1045,10 @@ export default {
     addTerm_lastAnalysis: null,        // 마지막 analyzeTermsBatch 응답 원본 (alternativeWords 포함)
     addTerm_splitMode: 0,              // 0=추천1, 1=추천2
     addTerm_manualWordInput: '',       // 수동 추가 입력
+    // 86번 #39 — 형식단어 검색/추가
+    addTerm_classWords: [],            // [{wordId, wordNm, wordEngAbrvNm, wordEngNm, domainClsfNm}]
+    addTerm_selectedClsfWord: null,
+    addTerm_loadingClsfWords: false,
     // 수정 관련
     updateModalStep: 1, // 용어 수정 스테퍼 카운트
     updateTerm_id: null,
@@ -1088,6 +1139,24 @@ export default {
     systemNameList: [],
   }),
   computed: {
+    /** 86번 #41 — 최종 용어명 footer 의 도메인+타입 라벨. 코드면 코드명/그룹, 일반이면 도메인V타입(길이) */
+    addTerm_finalDomainLabel() {
+      if (this.addTerm_domainType === 'code' && this.addTerm_selectedCode) {
+        var c = this.addTerm_selectedCode;
+        var label = c.codeNm || c.codeGrp || '';
+        if (c.dataType) {
+          label += ' ' + c.dataType;
+          if (c.dataLen) label += '(' + c.dataLen + ')';
+        }
+        return label;
+      }
+      if (this.addTerm_domainNm) {
+        // 도메인 리스트에서 dataType/dataLen 찾기 (addTerm_domainNmItems 는 이름만 — 별도 캐시 없음)
+        // 간단하게 도메인명만 표시. (타입까지 표시하려면 추가 로드 필요 — domainsByNm 캐시 만드는 건 추후)
+        return this.addTerm_domainNm;
+      }
+      return '';
+    },
     /** 마지막 단어가 CD(코드)인지 여부 - 등록 */
     addTerm_lastWordIsCode() {
       var list = this.addTerm_wordList;
@@ -1483,6 +1552,8 @@ export default {
       if (value === 'add') {
         this.addTermModalShow = true;
         this.addModalOpenSetTermNm();
+        // 86번 #39 — 형식단어 목록 비동기 로드 (선택 input 에 사용)
+        this.loadClassificationWords();
         // 용어 등록 도메인명 리스트 바인드
         // this.getDomainData();
       } else if (value === 'update') {
@@ -1533,6 +1604,7 @@ export default {
       this.addTerm_lastAnalysis = null;
       this.addTerm_splitMode = 0;
       this.addTerm_manualWordInput = '';
+      this.addTerm_selectedClsfWord = null;  // 86번 #39
       // 81번 — 자동 분석 + 코드 picker 상태 초기화
       this.addTerm_analyzing = false;
       this.addTerm_selectedCodeLabel = '';
@@ -1614,11 +1686,12 @@ export default {
       try {
         // 이음동의어 배열을 가지고 온 다음 빈 값을 제외한 value로 새로운 배열을 생성한다.
         let arr_allophSynmLst = this.addTerm_allophSynmLst_arr.map(obj => obj.value).filter(val => val !== '');
-        let _term_name = this.addTerm_termNm;
-
-        // if (_term_name !== this.addTerm_user_selected_word) {
-        //   _term_name = this.addTerm_user_selected_word;
-        // }
+        // 86번 #40 — 사용자가 단어 구성 (× 삭제 / 단어 추가 / 형식단어 추가) 으로 편집한 결과를 termsNm 으로 사용.
+        //   기존엔 사용자가 처음 입력한 한글명 그대로 등록 → 편집 무시되고 승인 화면에서 원본명으로 노출되는 버그.
+        //   addTerm_user_selected_word 가 빈 문자열이면 fallback 으로 입력값 사용.
+        let _term_name = (this.addTerm_user_selected_word && this.addTerm_user_selected_word.length > 0)
+          ? this.addTerm_user_selected_word
+          : this.addTerm_termNm;
 
         var _domainNm = this.addTerm_domainNm;
         var _codeGrp = this.addTerm_codeGrp;
@@ -1689,14 +1762,10 @@ export default {
       try {
         // 이음동의어 배열을 가지고 온 다음 빈 값을 제외한 value로 새로운 배열을 생성한다.
         let arr_allophSynmLst = this.updateTerm_allophSynmLst_arr.map(obj => obj.value).filter(val => val !== '');
-
-        let _term_name = this.updateTerm_termNm;
-
-        // 2023.04.26 수정 : 사용자가 직접 용어명에 입력한 값으로 사용하도록 함
-
-        // if (_term_name !== this.updateTerm_user_selected_word) {
-        //   _term_name = this.updateTerm_user_selected_word;
-        // }
+        // 86번 #40 — 단어 구성 편집 결과를 termsNm 으로 사용 (수정 모달도 동일)
+        let _term_name = (this.updateTerm_user_selected_word && this.updateTerm_user_selected_word.length > 0)
+          ? this.updateTerm_user_selected_word
+          : this.updateTerm_termNm;
 
         var _domainNm = this.updateTerm_domainNm;
         var _codeGrp = this.updateTerm_codeGrp;
@@ -2288,6 +2357,39 @@ export default {
       if (!src) return;
       var words = mode === 1 ? (src.alternativeWords || []) : (src.words || []);
       this._applyAnalyzedWords(words, src.recommendedDomainNm);
+    },
+    /** 86번 #39 — 형식단어 목록 로드 (모달 진입 시 1회) */
+    loadClassificationWords() {
+      var self = this;
+      if (self.addTerm_classWords.length > 0) return;
+      self.addTerm_loadingClsfWords = true;
+      axios.get(self.$APIURL.base + 'api/std/getClassificationWords').then(function(res) {
+        self.addTerm_classWords = res.data || [];
+      }).catch(function() { /* 조용히 실패 */ }).finally(function() {
+        self.addTerm_loadingClsfWords = false;
+      });
+    },
+    /** 86번 #39 — autocomplete 검색 텍스트 — 한글명 + 분류명 둘 다 매칭 */
+    clsfItemText(item) {
+      return (item.wordNm || '') + ' ' + (item.domainClsfNm || '');
+    },
+    /** 86번 #39 — 형식단어 1개 추가 (MATCHED 상태로 push) */
+    addClassificationWord() {
+      var c = this.addTerm_selectedClsfWord;
+      if (!c) return;
+      var idx = this.addTerm_wordListArr.length;
+      var item = {
+        id: c.wordId, wordNm: c.wordNm,
+        wordEngAbrvNm: c.wordEngAbrvNm, wordEngNm: c.wordEngNm,
+        domainClsfNm: c.domainClsfNm, partOfSpeech: 'NN', index: idx
+      };
+      this.addTerm_wordListArr.push({
+        wordNm: c.wordNm, wordLst: [item],
+        inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
+        inlineSaving: false
+      });
+      this.addTerm_selected_word_list.push([item]);
+      this.addTerm_selectedClsfWord = null;
     },
     /**
      * 86번 #23 — 사용자가 수동으로 단어 한 개 추가.
