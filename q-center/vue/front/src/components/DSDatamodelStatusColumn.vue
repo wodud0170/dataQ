@@ -92,11 +92,11 @@
 
         <v-divider vertical class="mx-1" />
 
-        <!-- 한글명 기준 표준화 — filled indigo gradient (강조) + ? tooltip -->
+        <!-- 86번 #36 — 한글명 기준 표준화: 아이콘 제거 + 살짝 키움 + 색감 보강 -->
         <v-btn id="btn-resolve-selected" class="tb-btn tb-btn-magic" depressed
           :disabled="selectedRows.length === 0"
           v-on:click="resolveSelected" :loading="resolving">
-          <v-icon small left color="white">mdi-magic-staff</v-icon>한글명 기준 표준화
+          한글명 기준 표준화
         </v-btn>
         <v-tooltip bottom max-width="320">
           <template v-slot:activator="{ on, attrs }">

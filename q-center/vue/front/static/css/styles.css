@@ -502,17 +502,20 @@ td.v-data-table__mobile-row {
 }
 
 /* 표준화 강조 버튼 — 인디고 → 보라 그라데이션 + 약간 크게 (다른 툴바 버튼보다 강조) */
+/* 86번 #36 — 색감 더 vivid + 살짝 더 큼, 아이콘 제거 */
 .tb-btn-magic.v-btn {
-    background: linear-gradient(90deg, #5C6BC0 0%, #7E57C2 100%) !important;
+    background: linear-gradient(90deg, #3949AB 0%, #6A1B9A 100%) !important;
     color: #fff !important;
     font-weight: 600 !important;
-    height: 36px !important;
-    padding: 0 18px !important;
-    font-size: .88rem !important;
-    box-shadow: 0 2px 6px rgba(92, 107, 192, 0.35) !important;
+    height: 40px !important;
+    padding: 0 22px !important;
+    font-size: .9rem !important;
+    letter-spacing: 0.3px !important;
+    box-shadow: 0 2px 8px rgba(94, 53, 177, 0.45) !important;
 }
-.tb-btn-magic.v-btn .v-icon {
-    font-size: 18px !important;
+.tb-btn-magic.v-btn:hover {
+    background: linear-gradient(90deg, #303F9F 0%, #4A148C 100%) !important;
+    box-shadow: 0 3px 12px rgba(94, 53, 177, 0.55) !important;
 }
 .tb-btn-magic.v-btn--disabled {
     background: #E0E0E0 !important;
