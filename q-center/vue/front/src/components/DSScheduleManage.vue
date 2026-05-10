@@ -12,10 +12,10 @@
           :text-color="filterUseYn === 'N' ? 'white' : ''"
           :outlined="filterUseYn !== 'N'" @click="filterUseYn = 'N'">비활성만</v-chip>
         <v-spacer></v-spacer>
-        <v-btn v-if="isAdmin" small class="gradient" @click="openAddDialog">
+        <!-- 86번 #47 — 비관리자에게도 버튼 노출, 클릭 시 권한 체크 (등록 시점 체크는 제거) -->
+        <v-btn small class="gradient" @click="onAddScheduleClick">
           <v-icon small left>mdi-plus</v-icon>스케줄 추가
         </v-btn>
-        <span v-else style="font-size:.75rem; color:#9E9E9E;">조회 전용 (관리자만 등록/수정 가능)</span>
       </v-sheet>
 
       <!-- 목록 -->
@@ -239,6 +239,18 @@ export default {
           }));
         })
         .finally(() => { this.loading = false; });
+    },
+    // 86번 #47 — 추가 버튼 클릭 시점에 관리자 체크 (등록 시점 체크는 제거)
+    onAddScheduleClick() {
+      if (!this.isAdmin) {
+        this.$swal.fire({
+          title: '관리자만 등록 가능',
+          text: '스케줄 추가는 관리자 권한이 필요합니다.',
+          icon: 'warning', confirmButtonText: '확인'
+        });
+        return;
+      }
+      this.openAddDialog();
     },
     openAddDialog() {
       this.editMode = 'add';

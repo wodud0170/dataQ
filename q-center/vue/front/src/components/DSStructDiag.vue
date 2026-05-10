@@ -11,6 +11,17 @@
       <span class="filterLabel">데이터모델명</span>
       <v-autocomplete v-model="selectedModel" :items="dataModelList" item-text="dataModelNm" item-value="dataModelId"
         dense outlined hide-details clearable placeholder="데이터 모델 선택" style="width:280px; flex-grow:0;" @change="onModelChange" />
+      <!-- 86번 #45 — DB 데이터소스 연결된 모델만 노출 + 도움말 -->
+      <v-tooltip bottom max-width="320">
+        <template v-slot:activator="{ on, attrs }">
+          <v-icon v-bind="attrs" v-on="on" small color="indigo lighten-1" class="ml-1">mdi-help-circle-outline</v-icon>
+        </template>
+        <div style="font-size:.8rem; line-height:1.5;">
+          <strong>구조 변경 진단</strong>은 데이터 모델과 실제 DBMS 의 구조를 비교합니다.<br/>
+          <strong>데이터소스가 연결된 모델만</strong> 표시됩니다.<br/>
+          (수집 여부와 무관 — 연결만 되어 있으면 진단 가능)
+        </div>
+      </v-tooltip>
 
       <v-spacer />
 
@@ -95,7 +106,8 @@ export default {
   methods: {
     loadDataModelList() {
       var self = this;
-      axios.post(self.$APIURL.base + 'api/dm/getDataModelStatsList', { schNm: null, schSysNm: null }).then(function(res) {
+      // 86번 #45 — connectedOnly='Y' 로 DB 데이터소스 연결된 모델만 조회 (구조 변경 진단은 실제 DBMS 비교 필요)
+      axios.post(self.$APIURL.base + 'api/dm/getDataModelStatsList', { schNm: null, schSysNm: null, connectedOnly: 'Y' }).then(function(res) {
         self.dataModelList = (res.data || []).map(function(item) {
           return { dataModelId: item.dataModelId, dataModelNm: item.dataModelNm };
         });

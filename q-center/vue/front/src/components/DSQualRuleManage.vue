@@ -1,10 +1,12 @@
 <template>
   <v-main>
     <v-sheet class="pa-3" style="display:flex; flex-direction:column; height:100%;">
-      <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:6px;">
+      <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:8px;">
+        <span style="font-size:1.1rem; font-weight:600; color:#1A237E;">룰 관리</span>
+        <span style="font-size:.8rem; color:#9E9E9E;">— 모델 단위로 컬럼/테이블 룰을 정의하고 진단 실행</span>
+        <v-spacer></v-spacer>
         <v-autocomplete v-model="filterDmId" :items="dataModels" item-text="dataModelNm" item-value="dataModelId"
           label="모델" dense hide-details style="max-width:280px" clearable @change="loadRules"></v-autocomplete>
-        <v-spacer></v-spacer>
         <v-btn v-if="isAdmin" small class="gradient" @click="openAdd"
           :disabled="!filterDmId" id="btn-rule-add">
           <v-icon small left>mdi-plus</v-icon>룰 추가
@@ -141,16 +143,18 @@ export default {
     this.loadModels();
   },
   methods: {
+    // 86번 #46 — 모든 axios 에 .catch
     loadModels() {
-      axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' }).then(r => {
-        this.dataModels = (r.data || []).filter(m => m.modelType === 'PHYSICAL');
-      });
+      axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' })
+        .then(r => { this.dataModels = (r.data || []).filter(m => m.modelType === 'PHYSICAL'); })
+        .catch(err => { console.error('모델 목록 로드 실패:', err); this.dataModels = []; });
     },
     loadRules() {
       if (!this.filterDmId) { this.rules = []; return; }
       this.loading = true;
       axios.post(this.$APIURL.base + 'api/qual/rule/list', { dmId: this.filterDmId, useYn: 'Y' })
         .then(r => { this.rules = r.data || []; })
+        .catch(err => { console.error('룰 목록 로드 실패:', err); this.rules = []; })
         .finally(() => { this.loading = false; });
     },
     openAdd() {
@@ -173,12 +177,16 @@ export default {
         } else {
           this.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
         }
+      }).catch(err => {
+        this.$swal.fire({ icon: 'error', title: '저장 실패', text: (err.response && err.response.data && err.response.data.message) || '서버 오류' });
       });
     },
     del(item) {
       this.$swal.fire({ title: '룰 삭제?', showCancelButton: true }).then(r => {
         if (!r.isConfirmed) return;
-        axios.post(this.$APIURL.base + 'api/qual/rule/delete', { ruleId: item.ruleId }).then(() => this.loadRules());
+        axios.post(this.$APIURL.base + 'api/qual/rule/delete', { ruleId: item.ruleId })
+          .then(() => this.loadRules())
+          .catch(err => this.$swal.fire({ icon: 'error', title: '삭제 실패', text: '서버 오류' }));
       });
     },
     runDiag() {
@@ -196,12 +204,17 @@ export default {
         } else {
           this.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
         }
+      }).catch(err => {
+        this.$swal.fire({ icon: 'error', title: '진단 시작 실패', text: '서버 오류' });
       });
     },
     openCatalog() {
       axios.get(this.$APIURL.base + 'api/qual/rule/catalog').then(r => {
         this.catalog = r.data || [];
         this.catalogDialog = true;
+      }).catch(err => {
+        console.error('카탈로그 로드 실패:', err);
+        this.$swal.fire({ icon: 'error', title: '카탈로그 로드 실패' });
       });
     },
     importCat(c) {

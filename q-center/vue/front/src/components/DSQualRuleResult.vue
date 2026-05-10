@@ -4,6 +4,8 @@
 
       <!-- 상단: 모델 + 진단 이력 선택 -->
       <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:8px;">
+        <span style="font-size:1.1rem; font-weight:600; color:#1A237E;">진단 결과</span>
+        <span style="font-size:.8rem; color:#9E9E9E; margin-right:8px;">— 룰 진단 이력별 결과 분석 (룰별/도메인분류/상세)</span>
         <v-autocomplete v-model="dmId" :items="dataModels" item-text="dataModelNm" item-value="dataModelId"
           label="모델" dense hide-details style="max-width:280px" @change="loadHistoryList"
           id="cmb-rr-model"></v-autocomplete>
@@ -206,10 +208,12 @@ export default {
   },
   mounted() {
     var self = this;
+    // 86번 #46 — 모든 axios 에 .catch 추가
     axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', {})
       .then(function(r) {
         self.dataModels = (r.data || []).filter(function(m) { return m.modelType === 'PHYSICAL'; });
-      });
+      })
+      .catch(function(err) { console.error('모델 목록 로드 실패:', err); self.dataModels = []; });
   },
   methods: {
     histLabel(item) {
@@ -225,11 +229,11 @@ export default {
                 { params: { dmId: this.dmId, diagType: this.diagType } })
         .then(function(r) {
           self.histories = (r.data || []);
-          // 가장 최근 DONE 자동 선택
           var d = self.histories.filter(function(h) { return h.status === 'DONE'; });
           self.diagId = (d[0] && d[0].diagId) || null;
           if (self.diagId) self.loadAll();
-        });
+        })
+        .catch(function(err) { console.error('이력 로드 실패:', err); self.histories = []; });
     },
     loadAll() {
       if (!this.diagId) return;
@@ -243,7 +247,6 @@ export default {
         axios.get(base + 'api/qual/rule/resultByClsf',   { params: { diagId: this.diagId } })
       ]).then(function(arr) {
         self.history = arr[0].data || null;
-        // result endpoint는 contents=JSON string
         var c = arr[1].data && arr[1].data.contents;
         if (typeof c === 'string') { try { c = JSON.parse(c); } catch (e) { c = {}; } }
         self.rawResults = (c && c.results) || [];
@@ -251,6 +254,9 @@ export default {
         self.clsfAgg = arr[3].data || [];
         self.drillTarget = null;
         self.drillRows = [];
+      }).catch(function(err) {
+        console.error('진단 결과 로드 실패:', err);
+        self.history = null; self.rawResults = []; self.ruleAgg = []; self.clsfAgg = [];
       }).finally(function() { self.loading = false; });
     },
     drillClsf(clsfNm) {
@@ -263,7 +269,8 @@ export default {
       this.drillTarget = clsfNm;
       axios.get(this.$APIURL.base + 'api/qual/rule/resultByClsfDrill',
                 { params: { diagId: this.diagId, domainClsfNm: clsfNm } })
-        .then(function(r) { self.drillRows = r.data || []; });
+        .then(function(r) { self.drillRows = r.data || []; })
+        .catch(function(err) { console.error('드릴다운 로드 실패:', err); self.drillRows = []; });
     },
     openSamples(item) {
       var self = this;
@@ -272,11 +279,11 @@ export default {
       axios.get(this.$APIURL.base + 'api/qual/rule/violationSample',
                 { params: { diagId: this.diagId, ruleId: item.ruleId } })
         .then(function(r) {
-          // 같은 ruleId 안에서 obj/attr 일치하는 것만
           self.samples = (r.data || []).filter(function(s) {
             return s.objNm === item.objNm && s.attrNm === item.attrNm;
           });
-        });
+        })
+        .catch(function(err) { console.error('위반 샘플 로드 실패:', err); self.samples = []; });
     },
     barPct(r) {
       if (r == null) return '0%';

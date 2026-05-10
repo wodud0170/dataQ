@@ -178,27 +178,30 @@
         ORDER BY OBJ_NM, ATTR_NM
     </select>
 
+    <!--
+        테이블 상세: 전체 테이블 기준 1건=1행 (이슈 없는 테이블 포함)
+        - TB_DATA_MODEL_OBJ 기반 + TB_DIAG_RESULT LEFT JOIN
+        - 컬럼 상세 매퍼와 동일 패턴
+    -->
     <select id="selectDiagResultSummary" parameterType="String" resultType="map">
         SELECT
-             R.OBJ_NM as "objNm"
-            ,(SELECT O.OBJ_NM_KR FROM TB_DATA_MODEL_OBJ O
-              WHERE O.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
-              AND O.OBJ_NM = R.OBJ_NM
-              LIMIT 1) as "objNmKr"
-            ,(SELECT COALESCE(O.OBJ_OWNER,'') FROM TB_DATA_MODEL_OBJ O
-              WHERE O.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
-              AND O.OBJ_NM = R.OBJ_NM
-              LIMIT 1) as "objOwner"
-            ,COUNT(DISTINCT R.ATTR_NM) as "issueColCnt"
-            ,COUNT(*) as "issueCnt"
+             O.OBJ_NM                       as "objNm"
+            ,O.OBJ_NM_KR                    as "objNmKr"
+            ,COALESCE(O.OBJ_OWNER, '')      as "objOwner"
+            ,COUNT(DISTINCT R.ATTR_NM)      as "issueColCnt"
+            ,COUNT(R.DIAG_TYPE)             as "issueCnt"
             ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'TERM_NOT_EXIST')      as "termNotExistCnt"
             ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'TERM_KR_NM_MISMATCH') as "termKrNmMismatchCnt"
             ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'DATA_TYPE_MISMATCH')  as "dataTypeMismatchCnt"
             ,COUNT(*) FILTER (WHERE R.DIAG_TYPE = 'DATA_LEN_MISMATCH')   as "dataLenMismatchCnt"
-        FROM TB_DIAG_RESULT R
-        WHERE R.DIAG_JOB_ID = #{diagJobId}
-        GROUP BY R.OBJ_NM
-        ORDER BY R.OBJ_NM
+        FROM TB_DATA_MODEL_OBJ O
+        LEFT JOIN TB_DIAG_RESULT R
+               ON R.DIAG_JOB_ID = #{diagJobId}
+              AND R.OBJ_NM = O.OBJ_NM
+        WHERE O.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
+          AND O.USE_YN = 'Y'
+        GROUP BY O.OBJ_NM, O.OBJ_NM_KR, O.OBJ_OWNER
+        ORDER BY O.OBJ_NM
     </select>
 
     <!--

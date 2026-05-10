@@ -186,20 +186,20 @@
           <div class="quick-actions">
             <div class="section-subtitle">빠른 액션</div>
             <div class="quick-actions__grid">
-              <v-card class="quick-action-btn" @click="addTabItem('컬럼 표준화', 'termRecommend')">
+              <v-card class="quick-action-btn" @click="addTabItem('한글컬럼 일괄 표준화', 'termRecommend')">
                 <v-icon color="#3F51B5" x-large>mdi-auto-fix</v-icon>
-                <div class="quick-action-btn__label">컬럼 표준화</div>
-                <div class="quick-action-btn__desc">한글명 → 영문약어 변환</div>
+                <div class="quick-action-btn__label">한글컬럼 일괄 표준화</div>
+                <div class="quick-action-btn__desc">한글명 → 영문약어 자동 변환</div>
               </v-card>
               <v-card class="quick-action-btn" @click="addTabItem('진단 실행', 'dataDiag')">
                 <v-icon color="#303F9F" x-large>mdi-stethoscope</v-icon>
-                <div class="quick-action-btn__label">진단 실행</div>
-                <div class="quick-action-btn__desc">표준화 진단 수행</div>
+                <div class="quick-action-btn__label">표준 진단 실행</div>
+                <div class="quick-action-btn__desc">표준 사전 기준 컬럼 진단</div>
               </v-card>
-              <v-card class="quick-action-btn" @click="addTabItem('구조 진단', 'schemaCompare')">
+              <v-card class="quick-action-btn" @click="addTabItem('진단 실행', 'structDiag')">
                 <v-icon color="#283593" x-large>mdi-file-compare</v-icon>
-                <div class="quick-action-btn__label">구조 진단</div>
-                <div class="quick-action-btn__desc">모델-DB 구조 비교</div>
+                <div class="quick-action-btn__label">구조 변경 진단</div>
+                <div class="quick-action-btn__desc">실 DB 와 수집 스냅샷 비교</div>
               </v-card>
             </div>
           </div>
@@ -513,12 +513,26 @@ export default {
       }
     },
     getStructDiagRate() {
+      // 활성 모델이 0개면 차트도 0 — 삭제된 모델의 옛 진단 이력에 휘둘리지 않게
+      if (!this.modelList || this.modelList.length === 0) {
+        this.struct_series = [0, 0];
+        this.struct_pie_Key++;
+        return;
+      }
+      // 활성 모델 ID 셋 + 선택된 모델 (로컬 변수로 클로저에 캡처)
+      var activeIds = {};
+      for (var k = 0; k < this.modelList.length; k++) activeIds[this.modelList[k].dataModelId] = true;
+      var selectedId = this.selectedModelId;
       try {
         axios.get(this.$APIURL.base + "api/std/structDiag/history").then(result => {
           var data = result.data || [];
-          if (data.length > 0) {
-            // 최신 진단 결과에서 일치율 계산
-            var latest = data[0];
+          // selectedModelId 가 있으면 그것만, 없으면 활성 모델 전체 중 latest
+          var filtered = data.filter(function(h) {
+            if (selectedId) return h.dataModelId === selectedId;
+            return activeIds[h.dataModelId];
+          });
+          if (filtered.length > 0) {
+            var latest = filtered[0];
             var totalChanges = (latest.addedTables || 0) + (latest.addedColumns || 0) +
               (latest.modifiedColumns || 0) + (latest.deletedTables || 0) + (latest.deletedColumns || 0);
             var totalItems = (latest.totalTables || 0) + (latest.totalColumns || 0);
@@ -902,16 +916,18 @@ export default {
 
 .recent-history {
   flex: 1.2;
+  min-width: 0;       /* flex item content 가 길어도 너비 강제 분배 (overflow 방지) */
   display: flex;
   flex-direction: column;
   background: #FAFBFD;
   border-radius: 10px;
   padding: 12px 16px;
   border: 1px solid #E8EAF6;
+  overflow: hidden;   /* 안쪽 텍스트가 우측 이웃을 밀지 않도록 */
 }
 
 .quick-actions {
-  flex: 0.8;
+  flex: 0 0 320px;     /* 빠른 액션 너비 고정 — 최근 활동 길이에 휘둘리지 않게 */
   display: flex;
   flex-direction: column;
 }
@@ -973,6 +989,7 @@ export default {
 .recent-history__nm {
   font-weight: 600;
   color: #283593;
+  word-break: break-all;       /* 긴 컬럼명·반점 묶음이 가로 영역을 깨지 않게 */
 }
 
 .recent-history__summary {
@@ -981,6 +998,8 @@ export default {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .recent-history__more {

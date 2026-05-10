@@ -120,9 +120,11 @@ public class XmiParser {
 
         Map<String, Object> table = new HashMap<>();
         table.put("objNm", tableName);              // 물리명 = name (XMI 표준)
-        table.put("objNmKr", tableName);            // 별도 한글명 없음 — 동일값
+        // 86번 #43 — 한글명 alias 지원: ownedComment[body] 첫 줄을 한글명으로 사용 (없으면 영문명 fallback)
+        table.put("objNmKr", findKoreanAlias(classEl, tableName));
         // 컬럼 카운트
         int attrCnt = 0;
+        String tableKr = (String) table.get("objNmKr");
         NodeList directChildren = classEl.getChildNodes();
         for (int i = 0; i < directChildren.getLength(); i++) {
             Node n = directChildren.item(i);
@@ -130,7 +132,7 @@ public class XmiParser {
             Element child = (Element) n;
             if ("ownedAttribute".equals(child.getLocalName() != null ? child.getLocalName() : child.getTagName())
                 && XMI_TYPE_PROPERTY.equals(getXmiType(child))) {
-                addAttributeAsColumn(child, tableName, attrCnt + 1, columns, classIdToName);
+                addAttributeAsColumn(child, tableName, tableKr, attrCnt + 1, columns, classIdToName);
                 attrCnt++;
             }
         }
@@ -138,7 +140,30 @@ public class XmiParser {
         tables.add(table);
     }
 
-    private static void addAttributeAsColumn(Element attrEl, String tableName, int order,
+    /**
+     * 86번 #43 — XMI 의 한글 alias 추출.
+     * 우선순위:
+     *   1) &lt;ownedComment body="한글명"&gt; 첫 줄
+     *   2) name 속성 fallback (영문명 그대로)
+     */
+    private static String findKoreanAlias(Element el, String fallback) {
+        NodeList children = el.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node n = children.item(i);
+            if (!(n instanceof Element)) continue;
+            Element c = (Element) n;
+            String local = c.getLocalName() != null ? c.getLocalName() : c.getTagName();
+            if ("ownedComment".equals(local)) {
+                String body = c.getAttribute("body");
+                if (body != null && !body.trim().isEmpty()) {
+                    return body.trim().split("\\r?\\n")[0];
+                }
+            }
+        }
+        return fallback;
+    }
+
+    private static void addAttributeAsColumn(Element attrEl, String tableName, String tableNameKr, int order,
                                               List<Map<String, Object>> columns,
                                               Map<String, String> classIdToName) {
         String attrName = attrEl.getAttribute("name");
@@ -146,9 +171,10 @@ public class XmiParser {
 
         Map<String, Object> col = new HashMap<>();
         col.put("objNm", tableName);
-        col.put("objNmKr", tableName);
+        col.put("objNmKr", tableNameKr);
         col.put("attrNm", attrName);
-        col.put("attrNmKr", attrName);
+        // 86번 #43 — 컬럼 한글명 alias 도 동일하게 ownedComment 우선
+        col.put("attrNmKr", findKoreanAlias(attrEl, attrName));
 
         // 데이터타입 + FK parent 동시 결정
         // - 자식 <type href="...#String"> PrimitiveType → 단순 타입

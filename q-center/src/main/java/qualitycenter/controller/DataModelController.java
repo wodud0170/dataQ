@@ -163,10 +163,20 @@ public class DataModelController {
 
 		try {
 			sqlSessionTemplate.delete("datamodel.deleteDataModels", dataVos);
+			// cascade: 같은 모델의 진단 스케줄도 비활성화 (실패해도 모델 삭제는 유지)
+			int deactivatedSchedules = 0;
+			try {
+				deactivatedSchedules = sqlSessionTemplate.update(
+					"datamodel.deactivateSchedulesByDmIds", dataVos);
+			} catch (Exception cascadeErr) {
+				log.warn(">> deleteDataModels cascade(schedule) skipped: {}", cascadeErr.getMessage());
+			}
+			result.setContents(String.valueOf(deactivatedSchedules));
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
-			log.error(">> deleteDataModels failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			log.error(">> deleteDataModels failed : {}", e.getMessage(), e);
+			result.setResultInfo(RestResult.CODE_500.getCode(),
+				e.getMessage() != null ? e.getMessage() : "삭제 실패");
 		}
 		return Mono.just(result);
 	}
@@ -1080,8 +1090,21 @@ public class DataModelController {
 		}
 
 		List<Map<String, String>> attrs = (List<Map<String, String>>) req.get("attrs");
+		boolean dryRun = Boolean.TRUE.equals(req.get("dryRun"));
 		List<StdDataModelAttrVo> targets;
-		if (attrs == null || attrs.isEmpty()) {
+		if (dryRun && attrs != null && !attrs.isEmpty()) {
+			// dryRun: 사용자가 그리드에서 dirty 입력 중인 값 그대로 사용 (DB lookup 우회)
+			targets = new ArrayList<>();
+			for (Map<String, String> a : attrs) {
+				StdDataModelAttrVo vo = new StdDataModelAttrVo();
+				vo.setDataModelId(dataModelId);
+				vo.setObjOwner(a.get("objOwner"));
+				vo.setObjNm(a.get("objNm"));
+				vo.setAttrNm(a.get("attrNm"));
+				vo.setAttrNmKr(a.get("attrNmKr"));
+				targets.add(vo);
+			}
+		} else if (attrs == null || attrs.isEmpty()) {
 			targets = sqlSessionTemplate.selectList("datamodel.selectNonStandardAttrs", dataModelId);
 		} else {
 			Map<String, Object> p = new HashMap<>();
@@ -1090,10 +1113,16 @@ public class DataModelController {
 			targets = sqlSessionTemplate.selectList("datamodel.selectAttrListByKeys", p);
 		}
 
+		List<Map<String, Object>> items = new ArrayList<>();
 		for (StdDataModelAttrVo attr : targets) {
 			tried++;
 			try {
-				applyResolvedToAttr(attr);
+				if (dryRun) {
+					Map<String, Object> resolved = lookupForKr(attr);
+					items.add(resolved);
+				} else {
+					applyResolvedToAttr(attr);
+				}
 				succeeded++;
 			} catch (Exception e) {
 				failed++;
@@ -1110,7 +1139,141 @@ public class DataModelController {
 		result.put("succeeded", succeeded);
 		result.put("failed", failed);
 		result.put("failedList", failedList);
+		result.put("items", items);
 		return result;
+	}
+
+	/**
+	 * 영문명(ATTR_NM) 기준 컬럼 표준화.
+	 * TB_TERMS.TERMS_ENG_ABRV_NM 으로 용어 조회 → 한글명/데이터타입/길이/소수점 채움.
+	 * 영문명은 그대로 유지.
+	 */
+	@SuppressWarnings("unchecked")
+	@PostMapping(value = "/resolveAttrsByEng")
+	public Map<String, Object> resolveAttrsByEng(@RequestBody Map<String, Object> req) {
+		Map<String, Object> result = new HashMap<>();
+		List<Map<String, Object>> failedList = new ArrayList<>();
+		int tried = 0, succeeded = 0, failed = 0;
+
+		String dataModelId = (String) req.get("dataModelId");
+		if (dataModelId == null || dataModelId.trim().isEmpty()) {
+			result.put("tried", 0);
+			result.put("succeeded", 0);
+			result.put("failed", 0);
+			result.put("failedList", failedList);
+			result.put("message", "dataModelId는 필수입니다.");
+			return result;
+		}
+
+		List<Map<String, String>> attrs = (List<Map<String, String>>) req.get("attrs");
+		boolean dryRunByEng = Boolean.TRUE.equals(req.get("dryRun"));
+		List<StdDataModelAttrVo> targets;
+		if (attrs == null || attrs.isEmpty()) {
+			result.put("tried", 0);
+			result.put("succeeded", 0);
+			result.put("failed", 0);
+			result.put("failedList", failedList);
+			result.put("message", "선택된 컬럼이 없습니다.");
+			return result;
+		}
+		if (dryRunByEng) {
+			// dryRun: 사용자가 그리드에서 dirty 입력 중인 영문명 그대로 사용
+			targets = new ArrayList<>();
+			for (Map<String, String> a : attrs) {
+				StdDataModelAttrVo vo = new StdDataModelAttrVo();
+				vo.setDataModelId(dataModelId);
+				vo.setObjOwner(a.get("objOwner"));
+				vo.setObjNm(a.get("objNm"));
+				vo.setAttrNm(a.get("attrNm"));
+				vo.setAttrNmKr(a.get("attrNmKr"));
+				targets.add(vo);
+			}
+		} else {
+			Map<String, Object> p = new HashMap<>();
+			p.put("dataModelId", dataModelId);
+			p.put("attrs", attrs);
+			targets = sqlSessionTemplate.selectList("datamodel.selectAttrListByKeys", p);
+		}
+		List<Map<String, Object>> itemsByEng = new ArrayList<>();
+		for (StdDataModelAttrVo attr : targets) {
+			tried++;
+			try {
+				if (dryRunByEng) {
+					Map<String, Object> resolved = lookupForEng(attr);
+					itemsByEng.add(resolved);
+				} else {
+					applyResolvedToAttrByEng(attr);
+				}
+				succeeded++;
+			} catch (Exception e) {
+				failed++;
+				Map<String, Object> fi = new HashMap<>();
+				fi.put("objNm", attr.getObjNm());
+				fi.put("attrNm", attr.getAttrNm());
+				fi.put("attrNmKr", attr.getAttrNmKr());
+				fi.put("reason", e.getMessage());
+				failedList.add(fi);
+			}
+		}
+
+		result.put("tried", tried);
+		result.put("succeeded", succeeded);
+		result.put("failed", failed);
+		result.put("failedList", failedList);
+		result.put("items", itemsByEng);
+		return result;
+	}
+
+	/** dryRun 용 — 한글명 기준 lookup 후 새 값 반환 (DB UPDATE 안 함) */
+	private Map<String, Object> lookupForKr(StdDataModelAttrVo attr) {
+		String attrNmKr = attr.getAttrNmKr();
+		if (attrNmKr == null || attrNmKr.trim().isEmpty())
+			throw new IllegalStateException("한글명 없음");
+		Map<String, Object> resolved = resolveTermsInternal(attrNmKr);
+		Boolean found = (Boolean) resolved.get("found");
+		if (found == null || !found)
+			throw new IllegalStateException((String) resolved.getOrDefault("message", "용어 미등록"));
+		if (Boolean.TRUE.equals(resolved.get("domainMissing")))
+			throw new IllegalStateException("도메인 미등록");
+		String newAttrNm = (String) resolved.get("termsEngAbrvNm");
+		if (newAttrNm == null || newAttrNm.trim().isEmpty())
+			throw new IllegalStateException("용어 영문약어명 누락");
+		long dataLen = 0L;
+		Object dl = resolved.get("dataLen");
+		if (dl instanceof Number) dataLen = ((Number) dl).longValue();
+		short dataDecimalLen = 0;
+		Object ddl = resolved.get("dataDecimalLen");
+		if (ddl instanceof Number) dataDecimalLen = ((Number) ddl).shortValue();
+
+		Map<String, Object> item = new HashMap<>();
+		item.put("objNm", attr.getObjNm());
+		item.put("attrNm", attr.getAttrNm());                        // 기존 (식별용)
+		item.put("newAttrNm", newAttrNm);                            // 새 영문명
+		item.put("newAttrNmKr", attrNmKr);                           // 한글명 그대로 (입력값)
+		item.put("newDataType", resolved.get("dataType"));
+		item.put("newDataLen", dataLen);
+		item.put("newDataDecimalLen", dataDecimalLen);
+		return item;
+	}
+
+	/** dryRun 용 — 영문명 기준 lookup 후 새 값 반환 (DB UPDATE 안 함) */
+	private Map<String, Object> lookupForEng(StdDataModelAttrVo attr) {
+		String engNm = attr.getAttrNm();
+		if (engNm == null || engNm.trim().isEmpty())
+			throw new IllegalStateException("영문명 없음");
+		com.ndata.quality.model.std.StdTermsVo terms =
+			sqlSessionTemplate.selectOne("terms.selectTermsByEngNm", engNm.trim());
+		if (terms == null)
+			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
+		Map<String, Object> item = new HashMap<>();
+		item.put("objNm", attr.getObjNm());
+		item.put("attrNm", attr.getAttrNm());
+		item.put("newAttrNm", engNm);                                // 영문명 그대로
+		item.put("newAttrNmKr", terms.getTermsNm());                 // 새 한글명
+		item.put("newDataType", terms.getDataType());
+		item.put("newDataLen", (long) terms.getDataLen());
+		item.put("newDataDecimalLen", (short) terms.getDataDecimalLen());
+		return item;
 	}
 
 	/**
@@ -1125,6 +1288,10 @@ public class DataModelController {
 				throw new IllegalArgumentException("소속 테이블은 필수입니다.");
 			if (attrVo.getAttrNmKr() == null || attrVo.getAttrNmKr().trim().isEmpty())
 				throw new IllegalArgumentException("컬럼 한글명은 필수입니다.");
+			// 영문명 UPPER 강제 (Oracle 기준 — 다른 DBMS 차후 분기)
+			if (attrVo.getAttrNm() != null && !attrVo.getAttrNm().trim().isEmpty()) {
+				attrVo.setAttrNm(attrVo.getAttrNm().trim().toUpperCase());
+			}
 
 			// 86번 #11 — OBJ_OWNER 미지정 시 부모 OBJ 에서 lookup
 			if (attrVo.getObjOwner() == null || attrVo.getObjOwner().isEmpty()) {
@@ -1302,15 +1469,36 @@ public class DataModelController {
 						if ((attrNmKr == null || attrNmKr.trim().isEmpty())
 								&& (attrNmInput == null || attrNmInput.trim().isEmpty()))
 							throw new IllegalArgumentException("컬럼 영문명 또는 한글명 중 하나는 필수");
-						nextOrd++;
+						// 영문명은 항상 UPPER (Oracle 기준 — 다른 DBMS 차후 분기)
+						String addAttrNm = (attrNmInput != null && !attrNmInput.trim().isEmpty())
+								? attrNmInput.trim().toUpperCase() : ("TMP_COL_" + (nextOrd + 1));
+						// 사용자 입력 attrOrder 우선, 없으면 max+1
+						Integer addOrdIn = parseIntSafe(row.get("attrOrder"));
+						short useOrd;
+						if (addOrdIn != null && addOrdIn > 0) {
+							useOrd = addOrdIn.shortValue();
+							Map<String, Object> ordDup = new HashMap<>();
+							ordDup.put("dataModelId", dataModelId);
+							ordDup.put("objOwner",    objOwner);
+							ordDup.put("objNm",       objNm);
+							ordDup.put("attrOrder",   (int) useOrd);
+							ordDup.put("selfAttrNm",  addAttrNm);
+							@SuppressWarnings("unchecked")
+							List<String> conflicts = session.selectList("datamodel.selectAttrNmByOrder", ordDup);
+							if (conflicts != null && !conflicts.isEmpty())
+								throw new IllegalArgumentException("순서 " + useOrd + " 는 이미 '"
+										+ String.join("', '", conflicts) + "' 가 사용 중입니다 (" + objNm + ")");
+						} else {
+							nextOrd++;
+							useOrd = nextOrd;
+						}
 						StdDataModelAttrVo vo = new StdDataModelAttrVo();
 						vo.setDataModelId(dataModelId);
 						vo.setObjOwner(objOwner);  // 86번 #11 — 부모 OBJ 에서 상속한 OWNER 명시
 						vo.setObjNm(objNm);
-						vo.setAttrNm((attrNmInput != null && !attrNmInput.trim().isEmpty())
-								? attrNmInput.trim() : ("TMP_COL_" + nextOrd));
+						vo.setAttrNm(addAttrNm);
 						vo.setAttrNmKr(attrNmKr);
-						vo.setAttrOrder(nextOrd);
+						vo.setAttrOrder(useOrd);
 						String dataTypeIn = str(row.get("dataType"));
 						vo.setDataType((dataTypeIn != null && !dataTypeIn.trim().isEmpty()) ? dataTypeIn.trim() : "VARCHAR");
 						Integer dataLenIn = parseIntSafe(row.get("dataLen"));
@@ -1328,24 +1516,100 @@ public class DataModelController {
 						session.insert("datamodel.insertDataModelAttr", vo);
 						added++;
 					} else if ("UPDATE".equalsIgnoreCase(mode)) {
-						String attrNm = str(row.get("attrNm"));
-						if (attrNm == null || attrNm.trim().isEmpty())
-							throw new IllegalArgumentException("attrNm 누락");
-						// 기존 ATTR 조회 — dataType/dataLen/word_lst 등은 보존, 표준 플래그는 한글명 변경 여부에 따라 분기
-						// 86번 #11 — PK 매칭에 OBJ_OWNER 포함
+						// origAttrNm = DB 의 PK 매칭용 — DB 에 저장된 case 그대로 유지 (UPPER 처리 X)
+						String origAttrNm = str(row.get("origAttrNm"));
+						if (origAttrNm == null || origAttrNm.trim().isEmpty())
+							origAttrNm = str(row.get("attrNm"));
+						if (origAttrNm == null || origAttrNm.trim().isEmpty())
+							throw new IllegalArgumentException("origAttrNm 누락");
+						origAttrNm = origAttrNm.trim();
+						// newAttrNm 은 UPPER 강제 — 새로 저장될 값 (Oracle 기준, 다른 DBMS 차후 분기)
+						String newAttrNm = str(row.get("attrNm"));
+						if (newAttrNm == null || newAttrNm.trim().isEmpty())
+							newAttrNm = origAttrNm;
+						newAttrNm = newAttrNm.trim().toUpperCase();
+
 						Map<String, Object> sel = new HashMap<>();
 						sel.put("dataModelId", dataModelId);
 						sel.put("objOwner",    objOwner);
 						sel.put("objNm",       objNm);
-						sel.put("attrNm",      attrNm);
+						sel.put("attrNm",      origAttrNm);
 						StdDataModelAttrVo existing = session.selectOne("datamodel.selectDataModelAttrOne", sel);
-						if (existing == null) throw new IllegalArgumentException("수정 대상 ATTR 없음: " + objNm + "." + attrNm);
+						if (existing == null) throw new IllegalArgumentException("수정 대상 ATTR 없음: " + objNm + "." + origAttrNm);
 
+						// 영문명 변경 시 cascade rename (INDEX, CONSTRAINT, FK 참조)
+						boolean nmChanged = !Objects.equals(origAttrNm, newAttrNm);
+						if (nmChanged) {
+							// 새 ATTR_NM 이 같은 테이블 내 다른 행과 중복인지
+							Map<String, Object> dupParam = new HashMap<>();
+							dupParam.put("dataModelId", dataModelId);
+							dupParam.put("objOwner",    objOwner);
+							dupParam.put("objNm",       objNm);
+							dupParam.put("attrNm",      newAttrNm);
+							int dup = session.selectOne("datamodel.countDataModelAttr", dupParam);
+							if (dup > 0) throw new IllegalArgumentException("이미 존재하는 영문명: " + newAttrNm);
+
+							Map<String, Object> ren = new HashMap<>();
+							ren.put("dataModelId", dataModelId);
+							ren.put("objOwner",    objOwner);
+							ren.put("objNm",       objNm);
+							ren.put("origAttrNm",  origAttrNm);
+							ren.put("newAttrNm",   newAttrNm);
+							session.update("datamodel.renameAttrInIndex",         ren);
+							session.update("datamodel.renameAttrInConstraint",    ren);
+							session.update("datamodel.renameAttrInConstraintRef", ren);
+							session.update("datamodel.renameAttrInFkParent",      ren);
+						}
+
+						// 물리 컬럼 (영문명/타입/길이/소수점/순서) UPDATE
+						String dataTypeIn = str(row.get("dataType"));
+						Integer dataLenIn = parseIntSafe(row.get("dataLen"));
+						Integer decLenIn  = parseIntSafe(row.get("dataDecimalLen"));
+						Integer attrOrdIn = parseIntSafe(row.get("attrOrder"));
+
+						String  newType  = (dataTypeIn != null && !dataTypeIn.trim().isEmpty()) ? dataTypeIn.trim() : existing.getDataType();
+						long    newLen   = dataLenIn != null ? dataLenIn.longValue() : existing.getDataLen();
+						short   newDec   = decLenIn  != null ? decLenIn.shortValue() : existing.getDataDecimalLen();
+
+						short newOrd;
+						if (attrOrdIn != null && attrOrdIn > 0) {
+							newOrd = attrOrdIn.shortValue();
+							// self 식별 — cascade rename 이미 호출됐어도, INDEX/CONSTRAINT 만 rename 하고
+							// TB_DATA_MODEL_ATTR 본체는 updateAttrPhysical 에서 비로소 rename 됨.
+							// 즉 이 시점에 자기 자신은 DB 에 origAttrNm 으로 존재 → origAttrNm 으로 self 제외.
+							Map<String, Object> ordDup = new HashMap<>();
+							ordDup.put("dataModelId", dataModelId);
+							ordDup.put("objOwner",    objOwner);
+							ordDup.put("objNm",       objNm);
+							ordDup.put("attrOrder",   (int) newOrd);
+							ordDup.put("selfAttrNm",  origAttrNm);
+							@SuppressWarnings("unchecked")
+							List<String> conflicts = session.selectList("datamodel.selectAttrNmByOrder", ordDup);
+							if (conflicts != null && !conflicts.isEmpty())
+								throw new IllegalArgumentException("순서 " + newOrd + " 는 이미 '"
+										+ String.join("', '", conflicts) + "' 가 사용 중입니다 (" + objNm + ")");
+						} else {
+							newOrd = existing.getAttrOrder();
+						}
+
+						Map<String, Object> phys = new HashMap<>();
+						phys.put("dataModelId", dataModelId);
+						phys.put("objOwner",    objOwner);
+						phys.put("objNm",       objNm);
+						phys.put("origAttrNm",  origAttrNm);
+						phys.put("newAttrNm",   newAttrNm);
+						phys.put("dataType",    newType);
+						phys.put("dataLen",     newLen);
+						phys.put("dataDecimalLen", newDec);
+						phys.put("attrOrder",   newOrd);
+						session.update("datamodel.updateAttrPhysical", phys);
+
+						// 논리/플래그 별도 (PK 는 이미 newAttrNm)
 						StdDataModelAttrVo vo = new StdDataModelAttrVo();
 						vo.setDataModelId(dataModelId);
 						vo.setObjOwner(objOwner);
 						vo.setObjNm(objNm);
-						vo.setAttrNm(attrNm);
+						vo.setAttrNm(newAttrNm);
 						String newKr = str(row.get("attrNmKr"));
 						vo.setAttrNmKr(newKr);
 						vo.setPkYn("Y".equalsIgnoreCase(str(row.get("pkYn"))) ? "Y" : "N");
@@ -1354,20 +1618,42 @@ public class DataModelController {
 						vo.setNullableYn("Y".equalsIgnoreCase(vo.getPkYn()) ? "N"
 								: (nullableYn == null || nullableYn.isEmpty() ? "Y" : nullableYn));
 						vo.setDefaultVal(str(row.get("defaultVal")));
-						// 물리명/타입/길이/단어 매핑은 기존값 보존 (53번 §6-0)
-						vo.setDataType(existing.getDataType());
-						vo.setDataLen(existing.getDataLen());
-						vo.setDataDecimalLen(existing.getDataDecimalLen());
-						vo.setWordLst(existing.getWordLst());
-						vo.setWordStndLst(existing.getWordStndLst());
-						// 한글명이 변경됐으면 표준 플래그 강등 (영문명-한글명 매칭 깨질 가능성 → 재변환 유도)
-						boolean krChanged = !Objects.equals(existing.getAttrNmKr(), newKr);
-						if (krChanged) {
-							vo.setTermsStndYn("N");
-							vo.setDomainStndYn("N");
-						} else {
+						vo.setDataType(newType);
+						vo.setDataLen(newLen);
+						vo.setDataDecimalLen(newDec);
+						// 변경된 값이 표준에 맞는지 다시 평가 (영문명 토큰 + 도메인 매칭)
+						boolean krChanged   = !Objects.equals(existing.getAttrNmKr(), newKr);
+						boolean typeChanged = !Objects.equals(existing.getDataType(), newType)
+						                   || existing.getDataLen() != newLen
+						                   || existing.getDataDecimalLen() != newDec;
+						if (!krChanged && !nmChanged && !typeChanged) {
+							// 변경 없음 — 기존 플래그 유지
+							vo.setWordLst(existing.getWordLst());
+							vo.setWordStndLst(existing.getWordStndLst());
 							vo.setTermsStndYn(existing.getTermsStndYn());
 							vo.setDomainStndYn(existing.getDomainStndYn());
+						} else {
+							// 새 값으로 표준 검증 재실행
+							StdDataModelAttrVo recheck = new StdDataModelAttrVo();
+							recheck.setAttrNm(newAttrNm);
+							recheck.setAttrNmKr(newKr);
+							recheck.setDataType(newType);
+							recheck.setDataLen(newLen);
+							recheck.setDataDecimalLen((short) newDec);
+							try {
+								validateAttrStandards(recheck);
+								applyStandardFlags(recheck);
+								vo.setWordLst(recheck.getWordLst());
+								vo.setWordStndLst(recheck.getWordStndLst());
+								vo.setTermsStndYn(recheck.getTermsStndYn() != null ? recheck.getTermsStndYn() : "Y");
+								vo.setDomainStndYn(recheck.getDomainStndYn() != null ? recheck.getDomainStndYn() : "Y");
+							} catch (Exception stdErr) {
+								// 표준 미적합 — 강등
+								vo.setWordLst(existing.getWordLst());
+								vo.setWordStndLst(existing.getWordStndLst());
+								vo.setTermsStndYn("N");
+								vo.setDomainStndYn("N");
+							}
 						}
 						session.update("datamodel.updateDataModelAttr", vo);
 						updated++;
@@ -1375,6 +1661,7 @@ public class DataModelController {
 						String attrNm = str(row.get("attrNm"));
 						if (attrNm == null || attrNm.trim().isEmpty())
 							throw new IllegalArgumentException("attrNm 누락");
+						attrNm = attrNm.trim().toUpperCase();
 						Map<String, Object> p = new HashMap<>();
 						p.put("dataModelId", dataModelId);
 						p.put("objOwner",    objOwner);  // 86번 #11
@@ -1401,6 +1688,8 @@ public class DataModelController {
 			syncParam.put("objOwner",    objOwner);
 			syncParam.put("objNm",       objNm);
 			session.update("datamodel.syncDataModelObjAttrCnt", syncParam);
+			// 컬럼 순서 재배열 — 같은 (owner, objNm) 안의 빠진 자리 채워서 1..N 으로 재할당
+			session.update("datamodel.compactAttrOrders", syncParam);
 			session.commit();
 
 			Map<String, Object> data = new HashMap<>();
@@ -1510,6 +1799,7 @@ public class DataModelController {
 		if (!newAttrNm.equals(attr.getAttrNm())) {
 			Map<String, Object> dupParam = new HashMap<>();
 			dupParam.put("dataModelId", attr.getDataModelId());
+			dupParam.put("objOwner", attr.getObjOwner() == null ? "" : attr.getObjOwner());
 			dupParam.put("objNm", attr.getObjNm());
 			dupParam.put("attrNm", newAttrNm);
 			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelAttr", dupParam);
@@ -1531,6 +1821,7 @@ public class DataModelController {
 
 		Map<String, Object> updateMap = new HashMap<>();
 		updateMap.put("dataModelId", attr.getDataModelId());
+		updateMap.put("objOwner", attr.getObjOwner() == null ? "" : attr.getObjOwner());
 		updateMap.put("objNm", attr.getObjNm());
 		updateMap.put("origAttrNm", attr.getAttrNm());
 		updateMap.put("attrNm", newAttrNm);
@@ -1542,7 +1833,58 @@ public class DataModelController {
 		updateMap.put("domainStndYn", "Y");
 		updateMap.put("wordLst", flagsVo.getWordLst());
 		updateMap.put("wordStndLst", flagsVo.getWordStndLst());
-		sqlSessionTemplate.update("datamodel.updateDataModelAttrKey", updateMap);
+		int updated = sqlSessionTemplate.update("datamodel.updateDataModelAttrKey", updateMap);
+		if (updated == 0) {
+			throw new IllegalStateException("UPDATE 매칭 실패 (owner='" + updateMap.get("objOwner")
+				+ "', obj='" + attr.getObjNm() + "', attr='" + attr.getAttrNm() + "')");
+		}
+	}
+
+	/**
+	 * 영문명(ATTR_NM) 기준으로 표준 용어 조회해 한글명/데이터타입/길이/소수점 채움.
+	 * 영문명은 그대로 유지.
+	 */
+	private void applyResolvedToAttrByEng(StdDataModelAttrVo attr) {
+		String engNm = attr.getAttrNm();
+		if (engNm == null || engNm.trim().isEmpty())
+			throw new IllegalStateException("영문명 없음");
+
+		com.ndata.quality.model.std.StdTermsVo terms =
+			sqlSessionTemplate.selectOne("terms.selectTermsByEngNm", engNm.trim());
+		if (terms == null)
+			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
+
+		String newAttrNmKr = terms.getTermsNm();
+		String dataType    = terms.getDataType();
+		long dataLen       = terms.getDataLen();
+		short dataDecimalLen = (short) terms.getDataDecimalLen();
+
+		// 영문명은 유지하면서 표준 검증 통과 여부 평가 (단어 분리)
+		StdDataModelAttrVo flagsVo = new StdDataModelAttrVo();
+		flagsVo.setAttrNm(engNm);
+		flagsVo.setDataType(dataType);
+		validateAttrStandards(flagsVo);
+		applyStandardFlags(flagsVo);
+
+		Map<String, Object> updateMap = new HashMap<>();
+		updateMap.put("dataModelId", attr.getDataModelId());
+		updateMap.put("objOwner", attr.getObjOwner() == null ? "" : attr.getObjOwner());
+		updateMap.put("objNm", attr.getObjNm());
+		updateMap.put("origAttrNm", engNm);
+		updateMap.put("attrNm", engNm);   // 영문명 유지
+		updateMap.put("attrNmKr", newAttrNmKr);
+		updateMap.put("dataType", dataType);
+		updateMap.put("dataLen", dataLen);
+		updateMap.put("dataDecimalLen", dataDecimalLen);
+		updateMap.put("termsStndYn", "Y");
+		updateMap.put("domainStndYn", "Y");
+		updateMap.put("wordLst", flagsVo.getWordLst());
+		updateMap.put("wordStndLst", flagsVo.getWordStndLst());
+		int updated = sqlSessionTemplate.update("datamodel.updateDataModelAttrKey", updateMap);
+		if (updated == 0) {
+			throw new IllegalStateException("UPDATE 매칭 실패 (owner='" + updateMap.get("objOwner")
+				+ "', obj='" + attr.getObjNm() + "', attr='" + engNm + "')");
+		}
 	}
 
 	/**

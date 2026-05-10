@@ -34,6 +34,14 @@ import t09_excel_round_trip
 import t10_no_fake_success
 import t11_owner_cascade
 import t12_pagination_overlap
+import t30_term_register_edge
+import t40_qual_domain_rule
+import t41_qual_rule_manage
+import t42_qual_rule_result
+import t43_qual_value_profile
+import t44_qual_col_rule
+import t45_qual_stats
+import t46_schedule_admin_check
 
 ALL = [
     ("t01", t01_login_admin),
@@ -48,6 +56,14 @@ ALL = [
     ("t10", t10_no_fake_success),
     ("t11", t11_owner_cascade),
     ("t12", t12_pagination_overlap),
+    ("t30", t30_term_register_edge),
+    ("t40", t40_qual_domain_rule),
+    ("t41", t41_qual_rule_manage),
+    ("t42", t42_qual_rule_result),
+    ("t43", t43_qual_value_profile),
+    ("t44", t44_qual_col_rule),
+    ("t45", t45_qual_stats),
+    ("t46", t46_schedule_admin_check),
 ]
 
 

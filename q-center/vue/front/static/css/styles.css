@@ -508,10 +508,15 @@ td.v-data-table__mobile-row {
     color: #fff !important;
     font-weight: 600 !important;
     height: 40px !important;
-    padding: 0 22px !important;
+    padding: 0 28px !important;
     font-size: .9rem !important;
     letter-spacing: 0.3px !important;
     box-shadow: 0 2px 8px rgba(94, 53, 177, 0.45) !important;
+    min-width: 200px !important;
+    white-space: nowrap !important;
+}
+.tb-btn-magic.v-btn .v-btn__content {
+    white-space: nowrap !important;
 }
 .tb-btn-magic.v-btn:hover {
     background: linear-gradient(90deg, #303F9F 0%, #4A148C 100%) !important;

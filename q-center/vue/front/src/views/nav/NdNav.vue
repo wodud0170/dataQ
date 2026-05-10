@@ -232,164 +232,7 @@
                     </v-list-item>
                 </v-list-group>
 
-                <!-- 자동 표준화 지원 -->
-                <v-list-group link v-cloak :value="navAutoStdGroup" prepend-icon="auto_fix_high" active-class="ndColor--text"
-                    id="autoStdGroup" title="자동 표준화 지원" v-on:click.stop="addNavGroupData('autoStdGroup');">
-                    <template v-slot:activator>
-                        <v-list-item-content>
-                            <v-list-item-title :ripple="false">자동 표준화 지원</v-list-item-title>
-                        </v-list-item-content>
-                    </template>
-
-                    <v-list-item link id="nav_termRecommend" href="#tab_termRecommend"
-                        active-class="ndColor--text" title="컬럼 표준화"
-                        v-on:click.stop="addTabItem('컬럼 표준화', 'termRecommend');">
-                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>컬럼 표준화</v-list-item-title>
-                    </v-list-item>
-                </v-list-group>
-
-                <!-- 데이터 품질 -->
-                <!-- <v-list-group v-cloak link :value=" navDqGroup " prepend-icon="high_quality" active-class="ndColor--text"
-                    id="dqGroup" title="데이터 품질" v-on:click.stop=" addNavGroupData('dqGroup'); ">
-                    <template v-slot:activator>
-                        <v-list-item-content>
-                            <v-list-item-title :ripple=" false ">데이터 품질</v-list-item-title>
-                        </v-list-item-content>
-                    </template>
-
-                    <v-list-group id="navDqSub1" link sub-group :value=" navDqSub1 " active-class="ndColor--text"
-                        v-on:click.stop=" addNavSubGroupData('navDqSub1'); ">
-                        <template v-slot:activator>
-                            <v-list-item-title :ripple=" false " title="검증항목">검증항목</v-list-item-title>
-                        </template>
-
-                        <v-list-item link id="nav_dqi" href="#tab_dqi" active-class="ndColor--text" title="품질지표(DQI)"
-                            v-on:click.stop=" addTabItem('품질지표(DQI)', 'dqi'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>품질지표(DQI)</v-list-item-title>
-                        </v-list-item>
-
-                        <v-list-item link id="nav_ctq" href="#tab_ctq" active-class="ndColor--text" title="핵심관리항목(CTQ)"
-                            v-on:click.stop=" addTabItem('핵심관리항목(CTQ)', 'ctq'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>핵심관리항목(CTQ)</v-list-item-title>
-                        </v-list-item>
-
-                        <v-list-item link id="nav_dqbr" href="#tab_dqbr" active-class="ndColor--text" title="업무규칙(BR)"
-                            v-on:click.stop=" addTabItem('업무규칙(BR)', 'dqbr'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>업무규칙(BR)</v-list-item-title>
-                        </v-list-item>
-                    </v-list-group>
-
-                    <v-list-group id="navDqSub2" link sub-group :value=" navDqSub2 " active-class="ndColor--text"
-                        v-on:click.stop=" addNavSubGroupData('navDqSub2'); ">
-                        <template v-slot:activator>
-                            <v-list-item-title :ripple=" false " title="품질검증">품질검증</v-list-item-title>
-                        </template>
-
-                        <v-list-item link id="nav_target" href="#tab_target" active-class="ndColor--text" title="검증대상"
-                            v-on:click.stop=" addTabItem('검증대상', 'target'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>검증대상</v-list-item-title>
-                        </v-list-item>
-
-                        <v-list-item link id="nav_qv" href="#tab_qv" active-class="ndColor--text" title="품질검증"
-                            v-on:click.stop=" addTabItem('품질검증', 'qv'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>품질검증</v-list-item-title>
-                        </v-list-item>
-                    </v-list-group>
-
-                    <v-list-group id="navDqSub3" link sub-group :value=" navDqSub3 " active-class="ndColor--text"
-                        v-on:click.stop=" addNavSubGroupData('navDqSub3'); ">
-                        <template v-slot:activator>
-                            <v-list-item-title :ripple=" false " title="품질검증 결과">품질검증 결과</v-list-item-title>
-                        </template>
-
-                        <v-list-item link id="nav_rvi" href="#tab_rvi" active-class="ndColor--text" title="검증항목별 결과"
-                            v-on:click.stop=" addTabItem('검증항목별 결과', 'rvi'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>검증항목별 결과</v-list-item-title>
-                        </v-list-item>
-
-                        <v-list-item link id="nav_dqqvrt" href="#tab_dqqvrt" active-class="ndColor--text" title="테이블별 결과"
-                            v-on:click.stop=" addTabItem('테이블별 결과', 'dqqvrt'); ">
-                            <v-list-item-icon>
-                                <v-icon></v-icon>
-                            </v-list-item-icon>
-                            <v-list-item-title>테이블별 결과</v-list-item-title>
-                        </v-list-item>
-                    </v-list-group>
-                </v-list-group> -->
-
-
-                <!-- 진단 -->
-                <!-- <v-list-group link v-cloak :value=" navAndGroup " prepend-icon="assessment" active-class="ndColor--text"
-                    id="andGroup" title="진단" v-on:click.stop=" addNavGroupData('andGroup'); ">
-                    <template v-slot:activator>
-                        <v-list-item-content>
-                            <v-list-item-title :ripple=" false ">진단</v-list-item-title>
-                        </v-list-item-content>
-                    </template>
-
-                    <v-list-item link id="nav_scurrent" href="#tab_scurrent" active-class="ndColor--text" title="데이터 표준 진단"
-                        v-on:click.stop=" addTabItem('데이터 표준 진단', 'scurrent'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>데이터 표준 진단</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item link id="nav_qcurrent" href="#tab_qcurrent" active-class="ndColor--text" title="데이터 품질 현황"
-                        v-on:click.stop=" addTabItem('데이터 품질 현황', 'qcurrent'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>데이터 품질 현황</v-list-item-title>
-                    </v-list-item>
-
-                </v-list-group> -->
-
-                <!-- 커뮤니티 -->
-                <v-list-group link v-cloak :value="navCommunityGroup" prepend-icon="mdi-forum"
-                    active-class="ndColor--text" id="communityGroup" title="커뮤니티"
-                    v-on:click.stop="addNavGroupData('communityGroup');">
-                    <template v-slot:activator>
-                        <v-list-item-content>
-                            <v-list-item-title :ripple="false">커뮤니티</v-list-item-title>
-                        </v-list-item-content>
-                    </template>
-
-                    <v-list-item link id="nav_boardNotice" href="#tab_boardNotice" active-class="ndColor--text"
-                        title="공지사항"
-                        v-on:click.stop="addTabItem('공지사항', 'boardNotice');">
-                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>공지사항</v-list-item-title>
-                    </v-list-item>
-
-                    <v-list-item link id="nav_boardQna" href="#tab_boardQna" active-class="ndColor--text"
-                        title="Q&amp;A"
-                        v-on:click.stop="addTabItem('Q&amp;A', 'boardQna');">
-                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>Q&amp;A</v-list-item-title>
-                    </v-list-item>
-                </v-list-group>
-
-                <!-- 데이터 품질 진단 (값 진단 + 업무 규칙) — 67번 -->
+                <!-- 데이터 품질 진단 (값 진단 + 업무 규칙) — 67번 / 위치: 구조 변경 진단 직후 -->
                 <v-list-group link v-cloak :value="navQualGroup" prepend-icon="mdi-database-check"
                     active-class="ndColor--text" id="qualGroup" title="데이터 품질 진단" v-on:click.stop="addNavGroupData('qualGroup');">
                     <template v-slot:activator>
@@ -436,12 +279,54 @@
                     </v-list-item>
                 </v-list-group>
 
-                <!-- 진단 스케줄 (모든 사용자 조회. 관리자만 등록/수정/삭제) -->
-                <v-list-group link v-cloak :value="navScheduleGroup" prepend-icon="mdi-calendar-clock"
-                    active-class="ndColor--text" id="scheduleGroup" title="진단 스케줄" v-on:click.stop="addNavGroupData('scheduleGroup');">
+                <!-- 86번 #44 — "자동 표준화 지원" → "표준화 도구" / "컬럼 표준화" → "한글컬럼 일괄 표준화" -->
+                <v-list-group link v-cloak :value="navAutoStdGroup" prepend-icon="auto_fix_high" active-class="ndColor--text"
+                    id="autoStdGroup" title="표준화 도구" v-on:click.stop="addNavGroupData('autoStdGroup');">
                     <template v-slot:activator>
                         <v-list-item-content>
-                            <v-list-item-title :ripple="false">진단 스케줄</v-list-item-title>
+                            <v-list-item-title :ripple="false">표준화 도구</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_termRecommend" href="#tab_termRecommend"
+                        active-class="ndColor--text" title="한글컬럼 일괄 표준화"
+                        v-on:click.stop="addTabItem('한글컬럼 일괄 표준화', 'termRecommend');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>한글컬럼 일괄 표준화</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
+                <!-- 커뮤니티 -->
+                <v-list-group link v-cloak :value="navCommunityGroup" prepend-icon="mdi-forum"
+                    active-class="ndColor--text" id="communityGroup" title="커뮤니티"
+                    v-on:click.stop="addNavGroupData('communityGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">커뮤니티</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_boardNotice" href="#tab_boardNotice" active-class="ndColor--text"
+                        title="공지사항"
+                        v-on:click.stop="addTabItem('공지사항', 'boardNotice');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>공지사항</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_boardQna" href="#tab_boardQna" active-class="ndColor--text"
+                        title="Q&amp;A"
+                        v-on:click.stop="addTabItem('Q&amp;A', 'boardQna');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>Q&amp;A</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
+                <!-- 86번 #47 — "진단 스케줄" → "스케줄 관리" -->
+                <v-list-group link v-cloak :value="navScheduleGroup" prepend-icon="mdi-calendar-clock"
+                    active-class="ndColor--text" id="scheduleGroup" title="스케줄 관리" v-on:click.stop="addNavGroupData('scheduleGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">스케줄 관리</v-list-item-title>
                         </v-list-item-content>
                     </template>
 

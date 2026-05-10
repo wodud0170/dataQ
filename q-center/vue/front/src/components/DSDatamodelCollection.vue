@@ -482,7 +482,11 @@ export default {
         title: '정말로 데이터 모델을 삭제할까요?',
         icon: 'warning',
         showCancelButton: true,
-        text: removeName,
+        html: '<div style="text-align:left;">'
+            + '<b>' + removeName + '</b>'
+            + '<div style="margin-top:12px; padding:10px; background:#FFF3E0; border-left:3px solid #FB8C00; font-size:.9rem; color:#5D4037;">'
+            + '⚠ 해당 모델로 등록된 <b>진단 스케줄도 함께 비활성화</b>됩니다.'
+            + '</div></div>',
         confirmButtonColor: '#3678a7',
         cancelButtonColor: '#909090',
         confirmButtonText: '삭제',
@@ -506,11 +510,15 @@ export default {
 
                 if (res.data.resultCode === 200) {
 
+                  const deactivatedCnt = parseInt(res.data.contents, 10) || 0;
                   this.$swal.fire({
                     title: '데이터 모델이 삭제되었습니다.',
+                    text: deactivatedCnt > 0
+                          ? '연관된 진단 스케줄 ' + deactivatedCnt + '건도 함께 비활성화되었습니다.'
+                          : '',
                     icon: 'success',
-                    showConfirmButton: false,
-                    timer: 1500
+                    showConfirmButton: deactivatedCnt > 0,
+                    timer: deactivatedCnt > 0 ? null : 1500
                   });
 
                   this.getDataModel();

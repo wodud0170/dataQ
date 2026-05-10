@@ -20,6 +20,10 @@
         <result property="updtDt"       column="UPDT_DT"/>
     </resultMap>
 
+    <select id="countDomainById" parameterType="String" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM TB_DOMAIN WHERE DOMAIN_ID = #{value}
+    </select>
+
     <select id="selectByDomain" parameterType="String" resultMap="domainRuleMap">
         SELECT dr.*, d.DOMAIN_NM
           FROM TB_DOMAIN_RULE dr

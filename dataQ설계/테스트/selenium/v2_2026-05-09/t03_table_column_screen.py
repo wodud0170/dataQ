@@ -47,7 +47,10 @@ def run():
         pages = drv.find_elements(By.CSS_SELECTOR, ".v-pagination__item")
         if pages:
             try:
-                pages[-1].click(); time.sleep(1)
+                drv.execute_script("arguments[0].scrollIntoView({block:'center'});", pages[-1])
+                time.sleep(0.3)
+                drv.execute_script("arguments[0].click();", pages[-1])
+                time.sleep(1)
                 last_rows = drv.find_elements(By.CSS_SELECTOR, "#dmTable_table tbody tr")
                 if last_rows:
                     last_row = last_rows[-1]
@@ -55,12 +58,18 @@ def run():
                         "const r = arguments[0].getBoundingClientRect();"
                         "return {top: r.top, bottom: r.bottom};", last_row)
                     pagination_el = drv.find_element(By.CSS_SELECTOR, ".v-pagination")
-                    pag_rect = drv.execute_script(
+                    pag_info = drv.execute_script(
                         "const r = arguments[0].getBoundingClientRect();"
-                        "return {top: r.top};", pagination_el)
-                    overlap = last_row_rect["bottom"] > pag_rect["top"]
-                    t.step("페이지네이션이 마지막 행을 가리지 않음", not overlap,
-                           f"last_row.bottom={last_row_rect['bottom']}, pag.top={pag_rect['top']}")
+                        "return {top: r.top, bottom: r.bottom, visible: arguments[0].offsetParent !== null};",
+                        pagination_el)
+                    if not pag_info["visible"] or pag_info["bottom"] <= 0:
+                        # pagination 이 화면 밖 (페이지 1개라 가려짐 아님)
+                        t.step("페이지네이션이 마지막 행을 가리지 않음", True,
+                               f"pagination 비활성/뷰포트 외부 — 가림 발생 안 함")
+                    else:
+                        overlap = last_row_rect["bottom"] > pag_info["top"]
+                        t.step("페이지네이션이 마지막 행을 가리지 않음", not overlap,
+                               f"last_row.bottom={last_row_rect['bottom']}, pag.top={pag_info['top']}")
             except Exception as e:
                 t.step("페이지네이션 가림 체크", False, str(e))
         else:

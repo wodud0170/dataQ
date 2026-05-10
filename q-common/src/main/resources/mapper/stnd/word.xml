@@ -50,22 +50,23 @@
 				,REQ_SYS_NM 
 			from (
 				select WORD_ID
-					,WORD_NM			
+					,WORD_NM
 					,WORD_ENG_ABRV_NM
-					,WORD_ENG_NM		
-					,WORD_DESC		
-					,WORD_CLSF_YN	
-					,DOMAIN_CLSF_NM	
-					,ALLOPH_SYNM_LST	
-					,FORBDN_WORD_LST	
-					,COMM_STND_YN	
-					,MAGNTD_ORD		
-					,APRV_YN			
-					,APRV_USER_ID	
+					,WORD_ENG_NM
+					,WORD_DESC
+					,WORD_CLSF_YN
+					,DOMAIN_CLSF_NM
+					,ALLOPH_SYNM_LST
+					,FORBDN_WORD_LST
+					,COMM_STND_YN
+					,MAGNTD_ORD
+					,APRV_YN
+					,APRV_USER_ID
+					,CRET_DT as CRET_DT_RAW
 					,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
-					,CRET_USER_ID	
+					,CRET_USER_ID
 					,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
-					,UPDT_USER_ID	
+					,UPDT_USER_ID
 					,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
 					,REQ_SYS_CD
 					,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
@@ -88,10 +89,10 @@
 				AND A.WORD_CLSF_YN = #{wordClsfYn}
 			</if>
 			<if test="from != null and from != ''">
-				AND A.CRET_DT &gt;= #{from}
+				AND A.CRET_DT_RAW &gt;= #{from}
 			</if>
 			<if test="to != null and to != ''">
-				AND A.CRET_DT &lt;= #{to}
+				AND A.CRET_DT_RAW &lt;= #{to}
 			</if>
 			order by A.WORD_NM
 	</select>

@@ -4,6 +4,8 @@
 
       <!-- 상단: 모델 + 샘플링 + 시작 (오른쪽 끝 padding 추가로 버튼 잘림 방지) -->
       <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:8px; padding-right:32px !important;">
+        <span style="font-size:1.1rem; font-weight:600; color:#1A237E;">값 프로파일</span>
+        <span style="font-size:.8rem; color:#9E9E9E; margin-right:8px;">— 컬럼 단위 분포/이상값 진단 (도메인 룰 자동 매칭)</span>
         <v-autocomplete v-model="dmId" :items="dataModels" item-text="dataModelNm" item-value="dataModelId"
           label="모델 선택" dense hide-details style="max-width:280px" @change="loadCols" id="cmb-model"></v-autocomplete>
         <v-select v-model="sampleRate" :items="sampleOpts" item-text="text" item-value="value"
@@ -203,10 +205,12 @@ export default {
   },
   mounted() {
     var self = this;
+    // 86번 #46 — .catch 추가
     axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' })
       .then(function(r) {
         self.dataModels = (r.data || []).filter(function(m) { return m.modelType === 'PHYSICAL'; });
-      });
+      })
+      .catch(function(err) { console.error('모델 목록 로드 실패:', err); self.dataModels = []; });
   },
   beforeDestroy() {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
@@ -242,6 +246,7 @@ export default {
           });
           self.selected = [];
         })
+        .catch(function(err) { console.error('컬럼 룰 로드 실패:', err); self.rows = []; })
         .finally(function() { self.loading = false; });
     },
     selectAll()  { this.selected = this.filtered.slice(); },

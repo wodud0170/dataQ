@@ -9,7 +9,8 @@
         <v-text-field v-model="treeSearch" label="도메인 검색" dense hide-details clearable
           prepend-inner-icon="mdi-magnify" style="max-width:240px"
           @input="loadTree"></v-text-field>
-        <v-btn small outlined @click="openCatalogDialog" id="btn-catalog-open">
+        <v-btn small outlined @click="openCatalogDialog" id="btn-catalog-open"
+               style="flex-shrink:0; white-space:nowrap; min-width:110px; margin-right:12px;">
           <v-icon small left>mdi-book-open-variant</v-icon>카탈로그
         </v-btn>
       </v-sheet>
@@ -54,10 +55,12 @@
                 {{ selectedDomain.dataType }}{{ selectedDomain.dataLen ? '(' + selectedDomain.dataLen + ')' : '' }}
               </span>
               <v-spacer></v-spacer>
-              <v-btn small outlined @click="openImportDialog" id="btn-import-catalog">
+              <v-btn small outlined @click="openImportDialog" id="btn-import-catalog"
+                     style="flex-shrink:0; white-space:nowrap; min-width:170px;">
                 <v-icon small left>mdi-download</v-icon>카탈로그에서 가져오기
               </v-btn>
-              <v-btn small color="indigo" dark @click="openAddDialog" id="btn-rule-add">
+              <v-btn small color="indigo" dark @click="openAddDialog" id="btn-rule-add"
+                     style="flex-shrink:0; white-space:nowrap; min-width:90px; margin-right:12px;">
                 <v-icon small left>mdi-plus</v-icon>룰 추가
               </v-btn>
             </v-sheet>
@@ -193,8 +196,8 @@
       </v-card>
     </v-dialog>
 
-    <!-- 카탈로그 다이얼로그 -->
-    <v-dialog v-model="catalogDialog" max-width="900" persistent>
+    <!-- 86번 #46 — persistent 제거: 닫기 버튼 + ESC + 백드롭 클릭으로 닫기 가능 -->
+    <v-dialog v-model="catalogDialog" max-width="900" scrollable>
       <v-card>
         <v-card-title class="indigo white--text">
           카탈로그
@@ -212,6 +215,17 @@
             :items-per-page="100" :loading="loadingCatalog">
             <template v-slot:item.ruleType="{ item }">
               <v-chip x-small :color="typeColor(item.ruleType)" text-color="white">{{ item.ruleType }}</v-chip>
+            </template>
+            <template v-slot:item.ruleParams="{ item }">
+              <span style="font-family:Consolas,monospace; font-size:.8rem; color:#37474F;"
+                    :title="item.ruleParams">
+                {{ summaryParams(item.ruleParams) }}
+              </span>
+            </template>
+            <template v-slot:item.descr="{ item }">
+              <span style="font-size:.8rem; color:#546E7A;" :title="item.descr">
+                {{ item.descr || '' }}
+              </span>
             </template>
             <template v-slot:item.actions="{ item }">
               <v-btn x-small color="green" dark @click="mapToDomain(item)" :disabled="!selectedDomain"
@@ -276,10 +290,11 @@ export default {
     catRows: [],
     loadingCatalog: false,
     catalogHeaders: [
-      { text: '카탈로그명', value: 'catalogNm' },
-      { text: '유형', value: 'ruleType', width: 100 },
-      { text: '도메인 분류', value: 'domainClsfNm', width: 130 },
-      { text: '카테고리', value: 'category', width: 120 },
+      { text: '카탈로그명', value: 'catalogNm', width: 180 },
+      { text: '유형', value: 'ruleType', width: 90 },
+      { text: '파라미터', value: 'ruleParams' },
+      { text: '설명', value: 'descr', width: 200 },
+      { text: '도메인 분류', value: 'domainClsfNm', width: 110 },
       { text: '', value: 'actions', sortable: false, width: 220 },
     ],
   }),
@@ -311,7 +326,6 @@ export default {
       axios.get(this.$APIURL.base + 'api/qual/domain/tree',
                 { params: { schNm: this.treeSearch || null } })
         .then(r => {
-          // 분류별 그룹화 → 트리 데이터
           const groups = {};
           (r.data || []).forEach(d => {
             const c = d.domainClsfNm || '미분류';
@@ -335,7 +349,8 @@ export default {
             isDomain: false,
             children: groups[c],
           }));
-        });
+        })
+        .catch(err => { console.error('도메인 트리 로드 실패:', err); self.treeItems = []; });
     },
     onSelectDomain(activeKeys) {
       // v-treeview activatable=true 일 때 active 는 [key]
@@ -366,6 +381,7 @@ export default {
       axios.get(this.$APIURL.base + 'api/qual/domain/rules',
                 { params: { domainId: this.selectedDomain.domainId } })
         .then(r => { self.rules = r.data || []; })
+        .catch(err => { console.error('룰 목록 로드 실패:', err); self.rules = []; })
         .finally(() => { self.loadingRules = false; });
     },
 
@@ -453,6 +469,10 @@ export default {
           } else {
             self.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
           }
+        })
+        .catch(err => {
+          console.error('도메인 룰 저장 실패:', err);
+          self.$swal.fire({ icon: 'error', title: '저장 실패', text: (err.response && err.response.data && err.response.data.message) || '서버 오류' });
         });
     },
     deleteRule(item) {
@@ -466,10 +486,15 @@ export default {
       }).then(r => {
         if (!r.isConfirmed) return;
         axios.post(self.$APIURL.base + 'api/qual/domain/rule/delete',
-                   { domainRuleId: item.domainRuleId }).then(() => {
-          self.loadRules();
-          self.loadTree();
-        });
+                   { domainRuleId: item.domainRuleId })
+          .then(() => {
+            self.loadRules();
+            self.loadTree();
+          })
+          .catch(err => {
+            console.error('도메인 룰 삭제 실패:', err);
+            self.$swal.fire({ icon: 'error', title: '삭제 실패', text: '서버 오류' });
+          });
       });
     },
 
@@ -490,6 +515,16 @@ export default {
       axios.get(this.$APIURL.base + 'api/qual/rule/catalog',
                 { params: { schNm: this.catSearch || null } })
         .then(r => { self.catRows = r.data || []; })
+        .catch(err => {
+          // 86번 #46 — 무한로딩 방지: 에러 시 row 비우고 사용자에게 알림
+          console.error('카탈로그 로드 실패:', err);
+          self.catRows = [];
+          self.$swal.fire({
+            icon: 'error', title: '카탈로그 로드 실패',
+            text: (err.response && err.response.data && err.response.data.message) || '서버 응답 오류',
+            confirmButtonText: '확인'
+          });
+        })
         .finally(() => { self.loadingCatalog = false; });
     },
     mapToDomain(item) {
@@ -510,6 +545,9 @@ export default {
         } else {
           self.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
         }
+      }).catch(err => {
+        console.error('카탈로그 매핑 실패:', err);
+        self.$swal.fire({ icon: 'error', title: '매핑 실패', text: '서버 오류' });
       });
     },
     forkCatalog(item) {
@@ -524,6 +562,9 @@ export default {
         } else {
           self.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
         }
+      }).catch(err => {
+        console.error('카탈로그 복사 실패:', err);
+        self.$swal.fire({ icon: 'error', title: '복사 실패', text: '서버 오류' });
       });
     },
     deleteUserCatalog(item) {
@@ -536,7 +577,12 @@ export default {
       }).then(r => {
         if (!r.isConfirmed) return;
         axios.post(self.$APIURL.base + 'api/qual/rule/catalog/delete',
-                   { catalogId: item.catalogId }).then(() => self.loadCatalog());
+                   { catalogId: item.catalogId })
+          .then(() => self.loadCatalog())
+          .catch(err => {
+            console.error('사용자 카탈로그 삭제 실패:', err);
+            self.$swal.fire({ icon: 'error', title: '삭제 실패', text: '서버 오류' });
+          });
       });
     },
 

@@ -184,10 +184,12 @@ export default {
       { params: { user: this.$loginStatusData && this.$loginStatusData.id } })
       .then(r => { self.isAdmin = r.data === true; })
       .catch(() => { self.isAdmin = false; });
+    // 86번 #46 — .catch
     axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' })
       .then(r => {
         self.dataModels = (r.data || []).filter(m => m.modelType === 'PHYSICAL');
-      });
+      })
+      .catch(err => { console.error('모델 목록 로드 실패:', err); self.dataModels = []; });
   },
   methods: {
     loadCols() {
@@ -206,7 +208,8 @@ export default {
           x.rowKey = x.objNm + '.' + x.attrNm;
           return x;
         }).filter(x => x.effectiveSource !== 'EXCLUDED');
-      }).finally(() => { self.loading = false; });
+      }).catch(err => { console.error('컬럼 룰 로드 실패:', err); self.rows = []; })
+        .finally(() => { self.loading = false; });
     },
     openDetail(item) {
       this.detail = item;
@@ -219,7 +222,7 @@ export default {
       }).then(r => {
         self.violationSamples = r.data.violationSamples || [];
         self.ruleResults = r.data.ruleResults || [];
-      });
+      }).catch(err => { console.error('상세 로드 실패:', err); });
     },
     rerun(item) {
       var self = this;
@@ -239,8 +242,8 @@ export default {
               html: '약 30초 후 [새로고침] 클릭하여 결과 확인',
               timer: 2000, showConfirmButton: false
             });
-          });
-        });
+          }).catch(err => self.$swal.fire({ icon:'error', title:'룰 진단 실패' }));
+        }).catch(err => self.$swal.fire({ icon:'error', title:'값 진단 실패' }));
       });
     },
     pct(n, t) { if (!t) return '0.0%'; return ((n / t) * 100).toFixed(1) + '%'; },

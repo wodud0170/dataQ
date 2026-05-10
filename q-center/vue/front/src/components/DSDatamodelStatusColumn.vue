@@ -78,7 +78,8 @@
         <span class="filterLabel">추가 대상</span>
         <v-autocomplete v-model="addTargetKey" :items="objOptions" item-text="label" item-value="key"
           :disabled="!selectedModelId" dense outlined hide-details
-          :style="{ width: '300px' }" color="ndColor" placeholder="테이블 선택 (소유자.테이블)" />
+          :style="{ width: '300px' }" color="ndColor" placeholder="테이블 선택 (소유자.테이블)"
+          @change="onAddTargetChange" />
 
         <!-- 행 추가 -->
         <v-btn id="btn-add-col-row" class="tb-btn" color="primary" depressed
@@ -89,25 +90,6 @@
         <v-btn id="btn-add-col-rows-10" class="tb-btn" color="primary" outlined
           :disabled="!selectedModelId || !addTargetKey || newRows.length >= 100"
           v-on:click="addEmptyRows(10)">+10행</v-btn>
-
-        <v-divider vertical class="mx-1" />
-
-        <!-- 86번 #36 — 한글명 기준 표준화: 아이콘 제거 + 살짝 키움 + 색감 보강 -->
-        <v-btn id="btn-resolve-selected" class="tb-btn tb-btn-magic" depressed
-          :disabled="selectedRows.length === 0"
-          v-on:click="resolveSelected" :loading="resolving">
-          한글명 기준 표준화
-        </v-btn>
-        <v-tooltip bottom max-width="320">
-          <template v-slot:activator="{ on, attrs }">
-            <v-icon v-bind="attrs" v-on="on" small color="indigo lighten-1" class="ml-n1">mdi-help-circle-outline</v-icon>
-          </template>
-          <span style="font-size:.78rem; line-height:1.5;">
-            선택한 컬럼의 <b>한글명</b> 으로 표준 용어 사전을 조회해<br>
-            <b>영문명 / 데이터 타입 / 길이 / 소수점</b> 을 자동으로 채웁니다.<br>
-            <span style="color:#FFCDD2;">※ 매칭되는 표준 용어가 있어야 적용됨.</span>
-          </span>
-        </v-tooltip>
 
         <v-divider vertical class="mx-1" />
 
@@ -124,6 +106,28 @@
           v-on:click="saveAll">
           <v-icon small left>mdi-content-save-outline</v-icon>
           저장 <span v-if="newRows.length + pendingDeletes.length + dirtyCount > 0" class="ml-1">({{ newRows.length + pendingDeletes.length + dirtyCount }})</span>
+        </v-btn>
+      </v-row>
+
+      <!-- 표준화 액션 줄 — 한글명 기준 / 영문명 기준 (다음 줄로 분리) -->
+      <v-row no-gutters align="center" class="px-2 py-2" style="background:#F5F7FF; border-bottom:1px solid #E8EAF6; gap:10px;">
+        <span style="font-size:.85rem; font-weight:600; color:#1A237E; min-width:60px;">표준화</span>
+        <span style="font-size:.78rem; color:#546E7A; margin-right:12px;">
+          선택한 컬럼을 표준 용어 사전 기준으로 일괄 보정
+        </span>
+
+        <v-btn id="btn-resolve-selected" class="tb-btn tb-btn-magic" depressed
+          :disabled="selectedRows.length === 0"
+          v-on:click="resolveSelectedConfirm" :loading="resolving"
+          style="min-width:220px !important; width:220px !important; padding:0 24px !important; flex-shrink:0; white-space:nowrap;">
+          <span style="white-space:nowrap; display:inline-block;">한글명 기준 표준화</span>
+        </v-btn>
+
+        <v-btn id="btn-resolve-by-eng" class="tb-btn tb-btn-magic" depressed
+          :disabled="selectedRows.length === 0"
+          v-on:click="resolveByEngConfirm" :loading="resolvingByEng"
+          style="min-width:220px !important; width:220px !important; padding:0 24px !important; flex-shrink:0; white-space:nowrap;">
+          <span style="white-space:nowrap; display:inline-block;">영문명 기준 표준화</span>
         </v-btn>
       </v-row>
 
@@ -174,33 +178,43 @@
             dense hide-details outlined flat solo single-line
             :placeholder="item._mode === 'add' ? '컬럼 한글명 (논리)' : ''"
             :autofocus="item._mode === 'add'"
-            @paste.native="onCellPaste(item, $event)" />
+            @paste.native="onCellPaste(item, 'attrNmKr', $event)" />
         </div>
       </template>
 
       <template #item.attrNm="{ item }">
-        <v-text-field v-if="item._mode === 'add'" v-model="item.attrNm"
-          :class="'inline-edit ' + (item._error ? 'inline-error ' : '')"
-          dense hide-details outlined flat solo single-line placeholder="컬럼 영문명(물리)" />
-        <span v-else :style="{ margin: '0px 8px' }">{{ formatAttrNm(item) }}</span>
+        <v-text-field v-model="item.attrNm"
+          :class="'inline-edit ' + (item._error ? 'inline-error ' : '') + (isRowDirty(item) ? 'inline-dirty' : '')"
+          dense hide-details outlined flat solo single-line placeholder="컬럼 영문명(물리)"
+          @paste.native="onCellPaste(item, 'attrNm', $event)" />
       </template>
       <template #item.dataType="{ item }">
-        <v-text-field v-if="item._mode === 'add'" v-model="item.dataType"
-          class="inline-edit"
-          dense hide-details outlined flat solo single-line placeholder="VARCHAR" />
-        <span v-else :style="{ margin: '0px 8px' }">{{ formatDataType(item) }}</span>
+        <v-combobox v-model="item.dataType" :items="dataTypeOptions"
+          :class="'inline-edit ' + (isRowDirty(item) ? 'inline-dirty' : '')"
+          dense hide-details outlined flat solo single-line placeholder="VARCHAR"
+          :menu-props="{ maxHeight: 280 }"
+          @paste.native="onCellPaste(item, 'dataType', $event)" />
       </template>
       <template #item.dataLen="{ item }">
-        <v-text-field v-if="item._mode === 'add'" v-model.number="item.dataLen"
-          type="number" class="inline-edit"
-          dense hide-details outlined flat solo single-line placeholder="255" />
-        <span v-else :style="{ margin: '0px 8px' }">{{ formatDataLen(item) }}</span>
+        <v-text-field v-model.number="item.dataLen"
+          type="number"
+          :class="'inline-edit ' + (isRowDirty(item) ? 'inline-dirty' : '')"
+          dense hide-details outlined flat solo single-line placeholder="255"
+          @paste.native="onCellPaste(item, 'dataLen', $event)" />
       </template>
       <template #item.dataDecimalLen="{ item }">
-        <v-text-field v-if="item._mode === 'add'" v-model.number="item.dataDecimalLen"
-          type="number" class="inline-edit"
-          dense hide-details outlined flat solo single-line placeholder="-" />
-        <span v-else :style="{ margin: '0px 8px' }">{{ formatDataDecimalLen(item) }}</span>
+        <v-text-field v-model.number="item.dataDecimalLen"
+          type="number"
+          :class="'inline-edit ' + (isRowDirty(item) ? 'inline-dirty' : '')"
+          dense hide-details outlined flat solo single-line placeholder="-"
+          @paste.native="onCellPaste(item, 'dataDecimalLen', $event)" />
+      </template>
+      <template #item.attrOrder="{ item }">
+        <v-text-field v-model.number="item.attrOrder"
+          type="number" min="1"
+          :class="'inline-edit ' + (isRowDirty(item) ? 'inline-dirty' : '')"
+          dense hide-details outlined flat solo single-line placeholder="자동"
+          @paste.native="onCellPaste(item, 'attrOrder', $event)" />
       </template>
 
       <template #item.nullableYn="{ item }">
@@ -220,8 +234,9 @@
       </template>
       <template #item.defaultVal="{ item }">
         <v-text-field v-model="item.defaultVal"
-          :class="'inline-edit ' + (isRowDirty(item) ? 'inline-dirty' : '')"
-          dense hide-details outlined flat solo single-line placeholder="-" />
+          :class="'inline-edit inline-edit-center ' + (isRowDirty(item) ? 'inline-dirty' : '')"
+          dense hide-details outlined flat solo single-line placeholder="-"
+          @paste.native="onCellPaste(item, 'defaultVal', $event)" />
       </template>
 
       <template #item.termsStndYn="{ item }">
@@ -393,6 +408,14 @@ export default {
     pendingDeletes: [],     // 미저장 DELETE 행들
     selectedRows: [],       // show-select 체크된 행
     resolving: false,
+    resolvingByEng: false,
+    // 데이터 타입 드롭다운 옵션 — 일반적인 RDBMS 타입. v-combobox 라 비표준값도 직접 입력 가능
+    dataTypeOptions: [
+      'VARCHAR', 'CHAR', 'TEXT', 'CLOB', 'BLOB',
+      'NUMBER', 'NUMERIC', 'DECIMAL', 'INTEGER', 'BIGINT', 'SMALLINT',
+      'FLOAT', 'DOUBLE',
+      'DATE', 'TIMESTAMP', 'TIME', 'BOOLEAN',
+    ],
     dmColumnDetaileHeaders: [
       // [그룹 1] 테이블 식별 — 회색-블루 (#ECEFF1)
       { text: '소유자', align: 'center', sortable: true, value: 'objOwner', width: '80px', class: 'hdr-table' },
@@ -403,12 +426,13 @@ export default {
       { text: 'NULL', sortable: false, align: 'center', value: 'nullableYn', width: '60px', class: 'hdr-logical' },
       { text: 'PK', sortable: false, align: 'center', value: 'pkYn', width: '50px', class: 'hdr-logical' },
       { text: 'FK', sortable: false, align: 'center', value: 'fkYn', width: '50px', class: 'hdr-logical' },
-      { text: '디폴트', sortable: false, align: 'center', value: 'defaultVal', class: 'hdr-logical' },
+      { text: '디폴트', sortable: false, align: 'center', value: 'defaultVal', width: '90px', class: 'hdr-logical' },
       // [그룹 3] 자동 채움 / 물리 — 연한 인디고 (#E3F2FD)
-      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'attrNm', class: 'hdr-physical' },
+      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'attrNm', width: '200px', class: 'hdr-physical' },
       { text: '데이터 타입', sortable: false, align: 'center', value: 'dataType', class: 'hdr-physical' },
-      { text: '길이', sortable: false, align: 'center', value: 'dataLen', width: '60px', class: 'hdr-physical' },
-      { text: '소수점', sortable: false, align: 'center', value: 'dataDecimalLen', width: '60px', class: 'hdr-physical' },
+      { text: '길이', sortable: false, align: 'center', value: 'dataLen', width: '90px', class: 'hdr-physical' },
+      { text: '소수점', sortable: false, align: 'center', value: 'dataDecimalLen', width: '50px', class: 'hdr-physical' },
+      { text: '순서', sortable: true, align: 'center', value: 'attrOrder', width: '70px', class: 'hdr-physical' },
       // 메타 (기본 색)
       { text: '표준', sortable: false, align: 'center', value: 'termsStndYn', width: '60px' },
       { text: '변환 불가 사유', sortable: false, align: 'center', value: 'resolveReason', width: '160px' },
@@ -474,12 +498,18 @@ export default {
       // 86번 #11 —
       //  · 미저장 신규 행 (newRows): 가장 위. 최근 추가가 더 위 (reverse) — 페이징으로 밀려서 안 보이지 않게
       //  · 저장된 행 (dmColumnItems): owner > obj_nm > attr_ord 기본 정렬
+      // 정렬 키는 편집 중 값이 아닌 _orig (마지막 저장된) attrOrder 기준 — 입력 도중 행 위치가 흔들리지 않게.
+      // 신규 행(add)은 _orig 없으므로 attrOrder 그대로 사용.
+      const sortOrd = it => {
+        const v = (it._orig && it._orig.attrOrder != null) ? it._orig.attrOrder : it.attrOrder;
+        return Number(v) || 0;
+      };
       const sorted = [...this.dmColumnItems].sort((a, b) => {
         const oa = a.objOwner || '', ob = b.objOwner || '';
         if (oa !== ob) return oa.localeCompare(ob);
         const na = a.objNm || '',    nb = b.objNm || '';
         if (na !== nb) return na.localeCompare(nb);
-        return (a.attrOrd || 0) - (b.attrOrd || 0);
+        return sortOrd(a) - sortOrd(b);
       });
       return [...this.newRows.slice().reverse(), ...sorted];
     },
@@ -576,28 +606,53 @@ export default {
         const fkYn       = item.fkYn       || 'N';
         const defaultVal = item.defaultVal || '';
         const attrNmKr   = item.attrNmKr   || '';
+        const attrNm     = item.attrNm     || '';
+        const dataType   = item.dataType   || '';
+        const dataLen    = item.dataLen    || 0;
+        const dataDecimalLen = item.dataDecimalLen || 0;
+        const attrOrder  = item.attrOrder  || 0;
         return {
           attrId: item.attrId,
           objOwner: item.objOwner, objNm: item.objNm, objNmKr: item.objNmKr,
-          attrNm: item.attrNm, attrNmKr,
-          dataType: item.dataType, dataLen: item.dataLen, dataDecimalLen: item.dataDecimalLen,
+          attrNm, attrNmKr,
+          dataType, dataLen, dataDecimalLen,
+          attrOrder,
           nullableYn, termsStndYn: item.termsStndYn, domainStndYn: item.domainStndYn,
           pkYn, fkYn, defaultVal,
           clctId: item.clctId, dataModelId: item.dataModelId,
           _rowKey: 's_' + item.objNm + '_' + item.attrNm,
           _mode: 'saved',
           _resolveReason: null,
-          _orig: { attrNmKr, nullableYn, pkYn, fkYn, defaultVal },
+          _orig: { attrNmKr, nullableYn, pkYn, fkYn, defaultVal,
+                   attrNm, dataType, dataLen, dataDecimalLen, attrOrder },
         };
       });
     },
+    // 추가 대상 변경 시 검색 필터(소유자/테이블 영문/한글)를 그 테이블로 자동 세팅 — 사용자가 즉시 그 테이블 컬럼만 보게
+    onAddTargetChange(key) {
+      if (!key) return;
+      const tgt = (this.objOptions || []).find(o => o.key === key);
+      if (!tgt) return;
+      this.searchOwner = tgt.objOwner || '';
+      this.searchOwnerMode = 'exact';
+      this.searchTable = tgt.objNm || '';
+      this.searchTableMode = 'exact';
+      this.searchTableKr = tgt.objNmKr || '';
+      this.searchTableKrMode = tgt.objNmKr ? 'exact' : 'contains';
+    },
     isRowDirty(item) {
       if (!item || item._mode === 'add' || !item._orig) return false;
-      return (item.attrNmKr || '')   !== (item._orig.attrNmKr   || '')
-          || (item.nullableYn || '') !== (item._orig.nullableYn || '')
-          || (item.pkYn || '')       !== (item._orig.pkYn       || '')
-          || (item.fkYn || '')       !== (item._orig.fkYn       || '')
-          || (item.defaultVal || '') !== (item._orig.defaultVal || '');
+      const o = item._orig;
+      return (item.attrNmKr || '')   !== (o.attrNmKr   || '')
+          || (item.nullableYn || '') !== (o.nullableYn || '')
+          || (item.pkYn || '')       !== (o.pkYn       || '')
+          || (item.fkYn || '')       !== (o.fkYn       || '')
+          || (item.defaultVal || '') !== (o.defaultVal || '')
+          || (item.attrNm || '')     !== (o.attrNm     || '')
+          || (item.dataType || '')   !== (o.dataType   || '')
+          || Number(item.dataLen || 0)        !== Number(o.dataLen || 0)
+          || Number(item.dataDecimalLen || 0) !== Number(o.dataDecimalLen || 0)
+          || Number(item.attrOrder || 0)      !== Number(o.attrOrder || 0);
     },
     loadObjOptions() {
       if (!this.selectedModelId) { this.objOptions = []; return; }
@@ -722,23 +777,24 @@ export default {
         });
       }
     },
-    onCellPaste(targetItem, e) {
-      // 한글명 inline input 에서 발생한 paste — 여러 줄이면 같은 컬럼의 행들에 분배
+    onCellPaste(targetItem, field, e) {
+      // 신규 행의 inline input paste — 여러 줄이면 같은 컬럼(field)의 행들에 분배
+      // 호출 시 field 미지정이면 'attrNmKr' 로 fallback (이전 호환)
+      if (typeof field !== 'string') { e = field; field = 'attrNmKr'; }
       const cd = e.clipboardData || window.clipboardData;
       if (!cd) return;
       const text = cd.getData('text') || '';
-      // 줄바꿈 없으면 일반 paste 동작 (한 셀 안에 텍스트 그대로 들어감)
-      if (!/\r|\n/.test(text)) return;
+      if (!/\r|\n/.test(text)) return;  // 단일 행은 기본 paste
       e.preventDefault();
-      // 이미 저장된 행에서는 가로채지 않음
       const startIdx = this.newRows.findIndex(r => r._rowKey === targetItem._rowKey);
       if (startIdx < 0) {
         this.$swal.fire({ title: '미저장 행에서만 멀티 paste 가능', icon: 'info', timer: 1500, showConfirmButton: false });
         return;
       }
-      const lines = text.replace(/\r\n?/g, '\n').split('\n').map(s => s.trim()).filter(Boolean);
+      const lines = text.replace(/\r\n?/g, '\n').split('\n').map(s => s.trim()).filter(s => s !== '');
       if (lines.length === 0) return;
-      // 100행 상한
+      const numericFields = new Set(['dataLen', 'dataDecimalLen', 'attrOrder']);
+      const upperFields   = new Set(['attrNm', 'dataType']);
       const totalCap = 100;
       let appliedCnt = 0;
       let truncated = 0;
@@ -751,10 +807,16 @@ export default {
           break;
         }
         if (idx >= this.newRows.length) {
-          // 빈 행 자동 추가
           this.newRows.push(this._makeBlankRow(targetObj, this.newRows.length));
         }
-        this.$set(this.newRows[idx], 'attrNmKr', lines[i]);
+        let val = lines[i];
+        if (numericFields.has(field)) {
+          const n = parseInt(val, 10);
+          val = isNaN(n) ? 0 : n;
+        } else if (upperFields.has(field)) {
+          val = val.toUpperCase();
+        }
+        this.$set(this.newRows[idx], field, val);
         appliedCnt++;
       }
       if (appliedCnt > 0) {
@@ -854,6 +916,40 @@ export default {
           ok = false;
         }
       });
+
+      // 3) 영문명(ATTR_NM) 중복 검사 — 같은 테이블(objNm) + owner 내, 대소문자 무시 (저장시 UPPER)
+      const changingEn = [
+        ...this.newRows.filter(r => r.attrNm && r.objNm),
+        ...dirtyItems.filter(r => r.attrNm && r.objNm),
+      ];
+      // 3-1) 입력/수정 행 내부 중복
+      const seenEn = {};
+      changingEn.forEach(r => {
+        const key = (r.objOwner || '') + '|' + r.objNm + '|' + r.attrNm.trim().toUpperCase();
+        if (seenEn[key]) {
+          r._error = true;
+          seenEn[key]._error = true;
+          this._dupErrorList.push(`${r.objNmKr || r.objNm} 테이블 : 영문명 '${r.attrNm.trim().toUpperCase()}' 중복 (입력/수정 행)`);
+          ok = false;
+        } else {
+          seenEn[key] = r;
+        }
+      });
+      // 3-2) 변경되지 않는 기존 행과의 영문명 중복
+      const existingEn = {};
+      (this.dmColumnAllItems || []).forEach(it => {
+        if (it._mode === 'add' || !it.attrNm || !it.objNm) return;
+        if (this.isRowDirty(it)) return;
+        existingEn[(it.objOwner || '') + '|' + it.objNm + '|' + (it.attrNm || '').trim().toUpperCase()] = it;
+      });
+      changingEn.forEach(r => {
+        const key = (r.objOwner || '') + '|' + r.objNm + '|' + r.attrNm.trim().toUpperCase();
+        if (existingEn[key]) {
+          r._error = true;
+          this._dupErrorList.push(`${r.objNmKr || r.objNm} 테이블 : 영문명 '${r.attrNm.trim().toUpperCase()}' 이미 등록됨`);
+          ok = false;
+        }
+      });
       return ok;
     },
     _groupByObj(rows) {
@@ -868,6 +964,33 @@ export default {
       return groups;
     },
     saveAll() {
+      // 영문명(ATTR_NM) 변경된 UPDATE 행이 있으면 cascade 안내 confirm
+      const dirtyForCheck = (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it));
+      const renamed = dirtyForCheck.filter(r => r._orig && (r.attrNm || '') !== (r._orig.attrNm || ''));
+      if (renamed.length > 0) {
+        const list = renamed.slice(0, 6).map(r =>
+          '· ' + r.objNm + ': ' + (r._orig.attrNm || '') + ' → ' + (r.attrNm || '')).join('<br>');
+        const more = renamed.length > 6 ? '<br>외 ' + (renamed.length - 6) + '건' : '';
+        this.$swal.fire({
+          title: '영문명 변경 cascade 확인',
+          html: '<div style="text-align:left; font-size:.88rem; line-height:1.55;">'
+              + '<b>' + renamed.length + '건</b>의 컬럼 영문명이 변경됩니다:<br><br>'
+              + list + more
+              + '<div style="margin-top:10px; padding:8px; background:#FFF3E0; border-left:3px solid #FB8C00; font-size:.82rem; color:#5D4037;">'
+              + '⚠ 같은 모델 내 INDEX / CONSTRAINT / FK 참조도 함께 자동 갱신됩니다.<br>'
+              + '표준/도메인 일치 플래그는 강등됩니다 (재변환 필요).'
+              + '</div></div>',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: '저장',
+          cancelButtonText: '취소',
+          confirmButtonColor: '#3949AB',
+        }).then(r => { if (r.isConfirmed) this._doSaveAll(); });
+        return;
+      }
+      this._doSaveAll();
+    },
+    _doSaveAll() {
       if (!this._validateNewRows()) {
         const dups = this._dupErrorList || [];
         if (dups.length > 0) {
@@ -898,12 +1021,18 @@ export default {
         ((addGroups[k] && addGroups[k].rows) || []).forEach(r => attrs.push({
           mode: 'ADD', attrNmKr: r.attrNmKr,
           attrNm: r.attrNm, dataType: r.dataType, dataLen: r.dataLen, dataDecimalLen: r.dataDecimalLen,
+          attrOrder: r.attrOrder,
           pkYn: r.pkYn, fkYn: r.fkYn,
           nullableYn: r.nullableYn, defaultVal: r.defaultVal,
         }));
         ((updGroups[k] && updGroups[k].rows) || []).forEach(r => attrs.push({
-          mode: 'UPDATE', attrNm: r.attrNm,
-          attrNmKr: r.attrNmKr, pkYn: r.pkYn, fkYn: r.fkYn,
+          mode: 'UPDATE',
+          origAttrNm: (r._orig && r._orig.attrNm) || r.attrNm,  // PK 매칭용
+          attrNm: r.attrNm,                                      // 새 영문명 (변경 시 cascade)
+          attrNmKr: r.attrNmKr,
+          dataType: r.dataType, dataLen: r.dataLen, dataDecimalLen: r.dataDecimalLen,
+          attrOrder: r.attrOrder,
+          pkYn: r.pkYn, fkYn: r.fkYn,
           nullableYn: r.nullableYn, defaultVal: r.defaultVal,
         }));
         ((delGroups[k] && delGroups[k].rows) || []).forEach(r => attrs.push({
@@ -942,6 +1071,34 @@ export default {
         this.$swal.fire({ title: '저장 실패', text: msg, icon: 'error' });
       });
     },
+    // 한글명 기준 표준화 — 사전 confirm
+    resolveSelectedConfirm() {
+      const saved = this.selectedRows.filter(r => r._mode === 'saved');
+      if (saved.length === 0) {
+        this.$swal.fire({ title: '변환할 저장된 컬럼이 없습니다.', text: '신규 행은 먼저 저장 후 변환하세요.', icon: 'info' });
+        return;
+      }
+      this.$swal.fire({
+        title: '한글명 기준 표준화',
+        html: '<div style="text-align:left; font-size:.9rem; line-height:1.6;">'
+            + '선택한 <b>' + saved.length + '건</b>의 컬럼을 처리합니다.<br><br>'
+            + '<b>한글명</b> (예: 사용자ID) 으로 표준 용어를 검색해<br>'
+            + '아래 항목을 자동으로 채웁니다:<br>'
+            + '<ul style="margin:6px 0 6px 18px;">'
+            + '<li><b>영문명</b> (물리, ATTR_NM)</li>'
+            + '<li><b>데이터 타입 / 길이 / 소수점</b></li>'
+            + '<li>표준/도메인 일치 플래그</li>'
+            + '</ul>'
+            + '<div style="margin-top:8px; padding:8px; background:#FFF3E0; border-left:3px solid #FB8C00; font-size:.85rem; color:#5D4037;">'
+            + '⚠ 매칭되는 표준 용어가 없으면 해당 행은 실패로 표시됩니다.'
+            + '</div></div>',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '실행',
+        cancelButtonText: '취소',
+        confirmButtonColor: '#3949AB',
+      }).then(r => { if (r.isConfirmed) this.resolveSelected(); });
+    },
     resolveSelected() {
       const saved = this.selectedRows.filter(r => r._mode === 'saved');
       if (saved.length === 0) {
@@ -951,33 +1108,121 @@ export default {
       this.resolving = true;
       const payload = {
         dataModelId: this.selectedModelId,
-        attrs: saved.map(r => ({ objNm: r.objNm, attrNm: r.attrNm })),
+        attrs: saved.map(r => ({
+          objNm: r.objNm, attrNm: r.attrNm, attrNmKr: r.attrNmKr, objOwner: r.objOwner,
+        })),
+        dryRun: true,
       };
       axios.post(this.$APIURL.base + 'api/dm/resolveAttrs', payload).then((res) => {
         const data = res.data || {};
-        const failedKeySet = new Set((data.failedList || []).map(f => f.objNm + '::' + f.attrNm));
+        const items = data.items || [];
         const reasonMap = {};
         (data.failedList || []).forEach(f => { reasonMap[f.objNm + '::' + f.attrNm] = f.reason; });
-        // 변환 결과 메시지
+        // 응답 items 를 그리드 행에 직접 반영 (DB 업데이트 X — 저장 버튼 누를 때 일괄)
+        items.forEach(it => {
+          const row = this.dmColumnAllItems.find(r =>
+            r._mode === 'saved' && r.objNm === it.objNm && r.attrNm === it.attrNm);
+          if (!row) return;
+          this.$set(row, 'attrNm',         it.newAttrNm);
+          this.$set(row, 'attrNmKr',       it.newAttrNmKr);
+          this.$set(row, 'dataType',       it.newDataType);
+          this.$set(row, 'dataLen',        it.newDataLen);
+          this.$set(row, 'dataDecimalLen', it.newDataDecimalLen);
+          this.$set(row, '_resolveReason', null);
+        });
+        // 실패 사유 주입
+        this.dmColumnAllItems.forEach(r => {
+          const k = r.objNm + '::' + r.attrNm;
+          if (reasonMap[k]) this.$set(r, '_resolveReason', reasonMap[k]);
+        });
         this.$swal.fire({
           title: `변환 결과: ${data.succeeded || 0} / ${data.tried || 0}`,
-          text: (data.failed || 0) > 0 ? `실패 ${data.failed}건 — 그리드 "변환 불가 사유" 컬럼에 표시됩니다.` : '전체 성공',
+          text: (data.failed || 0) > 0
+                ? `실패 ${data.failed}건 — 그리드 "변환 불가 사유" 컬럼에 표시됩니다.`
+                : '값이 그리드에 채워졌습니다. 저장 버튼을 눌러야 DB 에 반영됩니다.',
           icon: (data.failed || 0) > 0 ? 'warning' : 'success',
-          timer: 2000, showConfirmButton: false,
+          timer: 2200, showConfirmButton: false,
         });
         this.resolving = false;
-        // 목록 새로고침 후 실패 사유 주입
-        this.load();
-        this.$nextTick(() => {
-          setTimeout(() => {
-            this.dmColumnAllItems.forEach(r => {
-              const k = r.objNm + '::' + r.attrNm;
-              if (reasonMap[k]) r._resolveReason = reasonMap[k];
-            });
-          }, 300);
-        });
       }).catch((err) => {
         this.resolving = false;
+        const msg = (err.response && err.response.data && err.response.data.resultMessage) || '변환 실패';
+        this.$swal.fire({ title: '변환 실패', text: msg, icon: 'error' });
+      });
+    },
+    // 영문명 기준 표준화 — 사전 confirm
+    resolveByEngConfirm() {
+      const saved = this.selectedRows.filter(r => r._mode === 'saved');
+      if (saved.length === 0) {
+        this.$swal.fire({ title: '변환할 저장된 컬럼이 없습니다.', text: '신규 행은 먼저 저장 후 변환하세요.', icon: 'info' });
+        return;
+      }
+      this.$swal.fire({
+        title: '영문명 기준 표준화',
+        html: '<div style="text-align:left; font-size:.9rem; line-height:1.6;">'
+            + '선택한 <b>' + saved.length + '건</b>의 컬럼을 처리합니다.<br><br>'
+            + '<b>영문명</b> (예: USER_ID) 으로 표준 용어를 검색해<br>'
+            + '아래 항목을 자동으로 채웁니다:<br>'
+            + '<ul style="margin:6px 0 6px 18px;">'
+            + '<li><b>한글명</b> (논리, ATTR_NM_KR)</li>'
+            + '<li><b>데이터 타입 / 길이 / 소수점</b></li>'
+            + '<li>표준/도메인 일치 플래그</li>'
+            + '</ul>'
+            + '<div style="margin-top:8px; padding:8px; background:#E3F2FD; border-left:3px solid #1976D2; font-size:.85rem; color:#1A237E;">'
+            + 'ℹ 영문명은 그대로 유지됩니다.'
+            + '</div>'
+            + '<div style="margin-top:6px; padding:8px; background:#FFF3E0; border-left:3px solid #FB8C00; font-size:.85rem; color:#5D4037;">'
+            + '⚠ 영문명이 표준 용어 사전에 없으면 해당 행은 실패로 표시됩니다.'
+            + '</div></div>',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '실행',
+        cancelButtonText: '취소',
+        confirmButtonColor: '#3949AB',
+      }).then(r => { if (r.isConfirmed) this.resolveByEng(); });
+    },
+    resolveByEng() {
+      const saved = this.selectedRows.filter(r => r._mode === 'saved');
+      if (saved.length === 0) return;
+      this.resolvingByEng = true;
+      const payload = {
+        dataModelId: this.selectedModelId,
+        attrs: saved.map(r => ({
+          objNm: r.objNm, attrNm: r.attrNm, attrNmKr: r.attrNmKr, objOwner: r.objOwner,
+        })),
+        dryRun: true,
+      };
+      axios.post(this.$APIURL.base + 'api/dm/resolveAttrsByEng', payload).then((res) => {
+        const data = res.data || {};
+        const items = data.items || [];
+        const reasonMap = {};
+        (data.failedList || []).forEach(f => { reasonMap[f.objNm + '::' + f.attrNm] = f.reason; });
+        items.forEach(it => {
+          const row = this.dmColumnAllItems.find(r =>
+            r._mode === 'saved' && r.objNm === it.objNm && r.attrNm === it.attrNm);
+          if (!row) return;
+          this.$set(row, 'attrNm',         it.newAttrNm);
+          this.$set(row, 'attrNmKr',       it.newAttrNmKr);
+          this.$set(row, 'dataType',       it.newDataType);
+          this.$set(row, 'dataLen',        it.newDataLen);
+          this.$set(row, 'dataDecimalLen', it.newDataDecimalLen);
+          this.$set(row, '_resolveReason', null);
+        });
+        this.dmColumnAllItems.forEach(r => {
+          const k = r.objNm + '::' + r.attrNm;
+          if (reasonMap[k]) this.$set(r, '_resolveReason', reasonMap[k]);
+        });
+        this.$swal.fire({
+          title: '변환 결과: ' + (data.succeeded || 0) + ' / ' + (data.tried || 0),
+          text: (data.failed || 0) > 0
+                ? '실패 ' + data.failed + '건 — 그리드 "변환 불가 사유" 컬럼에 표시됩니다.'
+                : '값이 그리드에 채워졌습니다. 저장 버튼을 눌러야 DB 에 반영됩니다.',
+          icon: (data.failed || 0) > 0 ? 'warning' : 'success',
+          timer: 2200, showConfirmButton: false,
+        });
+        this.resolvingByEng = false;
+      }).catch((err) => {
+        this.resolvingByEng = false;
         const msg = (err.response && err.response.data && err.response.data.resultMessage) || '변환 실패';
         this.$swal.fire({ title: '변환 실패', text: msg, icon: 'error' });
       });
@@ -1167,6 +1412,7 @@ pre { font-family: 'Roboto'; }
 .row-nonstandard > td { background-color: #FFEBEE !important; }
 .inline-edit { min-width: 100px; }
 .inline-edit >>> input { padding: 2px 6px; }
+.inline-edit-center >>> input { text-align: center; }
 .inline-error >>> .v-input__slot { background-color: #FFEBEE !important; }
 .inline-dirty >>> .v-input__slot { background-color: #FFF8E1 !important; }
 .inline-dirty-cb >>> .v-input--selection-controls__input { background-color: #FFF8E1 !important; border-radius: 4px; }

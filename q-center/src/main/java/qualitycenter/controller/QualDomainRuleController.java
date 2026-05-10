@@ -99,9 +99,15 @@ public class QualDomainRuleController {
         Response res = new Response();
         try {
             assertAdmin();
-            if (vo.getDomainId() == null) throw new IllegalArgumentException("domainId 필수");
-            if (vo.getRuleNm() == null)   throw new IllegalArgumentException("ruleNm 필수");
-            if (vo.getRuleType() == null) throw new IllegalArgumentException("ruleType 필수");
+            if (vo.getDomainId() == null || vo.getDomainId().isEmpty()) throw new IllegalArgumentException("domainId 필수");
+            if (vo.getRuleNm() == null || vo.getRuleNm().isEmpty())     throw new IllegalArgumentException("ruleNm 필수");
+            if (vo.getRuleType() == null || vo.getRuleType().isEmpty()) throw new IllegalArgumentException("ruleType 필수");
+            // 도메인 존재 검증 (신규 등록 시)
+            if (vo.getDomainRuleId() == null || vo.getDomainRuleId().isEmpty()) {
+                Integer domainExists = sql.selectOne("qualDomainRule.countDomainById", vo.getDomainId());
+                if (domainExists == null || domainExists == 0)
+                    throw new IllegalArgumentException("존재하지 않는 도메인입니다: " + vo.getDomainId());
+            }
             if (vo.getDomainRuleId() == null || vo.getDomainRuleId().isEmpty()) {
                 vo.setDomainRuleId(StringUtils.getUUID());
                 vo.setCretUserId(session.getUserId());

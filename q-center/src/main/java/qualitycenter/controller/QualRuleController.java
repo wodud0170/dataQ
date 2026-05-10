@@ -488,10 +488,12 @@ public class QualRuleController {
     }
 
     private void validate(QualRuleVo vo) {
-        if (vo.getDmId() == null)        throw new IllegalArgumentException("dmId 필수");
-        if (vo.getRuleNm() == null)      throw new IllegalArgumentException("ruleNm 필수");
-        if (vo.getRuleType() == null)    throw new IllegalArgumentException("ruleType 필수");
-        if (vo.getObjNm() == null && vo.getDomainId() == null)
+        if (vo.getDmId() == null     || vo.getDmId().isEmpty())     throw new IllegalArgumentException("dmId 필수");
+        if (vo.getRuleNm() == null   || vo.getRuleNm().isEmpty())   throw new IllegalArgumentException("ruleNm 필수");
+        if (vo.getRuleType() == null || vo.getRuleType().isEmpty()) throw new IllegalArgumentException("ruleType 필수");
+        boolean noObj    = vo.getObjNm() == null    || vo.getObjNm().isEmpty();
+        boolean noDomain = vo.getDomainId() == null || vo.getDomainId().isEmpty();
+        if (noObj && noDomain)
             throw new IllegalArgumentException("objNm 또는 domainId 중 하나 필수");
     }
 

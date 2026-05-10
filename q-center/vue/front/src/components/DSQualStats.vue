@@ -4,6 +4,8 @@
 
       <!-- 상단 필터 -->
       <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:8px;">
+        <span style="font-size:1.1rem; font-weight:600; color:#1A237E;">시계열 통계</span>
+        <span style="font-size:.8rem; color:#9E9E9E; margin-right:8px;">— 모델/컬럼 단위 적합률 추이 (최근 30회)</span>
         <v-autocomplete v-model="dmId" :items="dataModels" item-text="dataModelNm" item-value="dataModelId"
           label="모델" dense hide-details style="max-width:280px" @change="onModelChange"
           id="cmb-stats-model"></v-autocomplete>
@@ -138,9 +140,14 @@ export default {
   },
   mounted() {
     var self = this;
+    // 86번 #46 — 모든 axios 에 .catch 추가 (무한로딩/빈화면 방지)
     axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' })
       .then(function(r) {
         self.dataModels = (r.data || []).filter(function(m) { return m.modelType === 'PHYSICAL'; });
+      })
+      .catch(function(err) {
+        console.error('모델 목록 로드 실패:', err);
+        self.dataModels = [];
       });
   },
   methods: {
@@ -164,6 +171,7 @@ export default {
           });
           self.objList = Object.keys(objs).sort();
         })
+        .catch(function(err) { console.error('모델 컬럼 로드 실패:', err); self.modelAttrs = []; })
         .finally(function() { self.loadModelTrend(); });
     },
     onObjChange() {
@@ -197,7 +205,8 @@ export default {
           }).filter(function(p) { return p.y != null; });
           self.modelSeries = [{ name: '적합률 (%)', data: pts }];
           self.modelChartKey += 1;
-        });
+        })
+        .catch(function(err) { console.error('모델 추이 로드 실패:', err); self.modelSeries = [{ name: '적합률 (%)', data: [] }]; });
     },
     loadColumnTrends() {
       this.loadRuleTrend();
@@ -224,7 +233,8 @@ export default {
             return { name: k, data: byRule[k] };
           });
           self.ruleChartKey += 1;
-        });
+        })
+        .catch(function(err) { console.error('룰별 추이 로드 실패:', err); self.ruleSeries = []; });
     },
     loadProfileTrend() {
       var self = this;
@@ -242,6 +252,10 @@ export default {
             { name: 'DISTINCT%', data: distPts }
           ];
           self.profChartKey += 1;
+        })
+        .catch(function(err) {
+          console.error('프로파일 추이 로드 실패:', err);
+          self.profSeries = [{ name: 'NULL%', data: [] }, { name: 'DISTINCT%', data: [] }];
         });
     }
   }

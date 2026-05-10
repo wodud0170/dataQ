@@ -469,13 +469,15 @@ def run():
 
     finally:
         drv.quit()
-        # cleanup
-        cleanup_words_like(f'팝콘{ts}')
-        cleanup_words_like(f'중복단어{ts}')
-        cleanup_words_like(f'다른단어{ts}')
-        cleanup_words_like(f'테스트단어{ts}')
-        cleanup_words_like(f'A')
-        db_query(f"DELETE FROM tb_word WHERE word_eng_abrv_nm IN ('PCT{ts}','DUP{ts}','DIFF{ts}','JY{ts}')")
+        # cleanup — FK 위반 등으로 실패해도 테스트 결과 보고는 유지
+        for name in (f'팝콘{ts}', f'중복단어{ts}', f'다른단어{ts}', f'테스트단어{ts}', 'A'):
+            try: cleanup_words_like(name)
+            except Exception as ce: print(f"  [cleanup 무시] {ce}".replace("\n", " ")[:200])
+        try:
+            db_query(f"DELETE FROM tb_word WHERE word_eng_abrv_nm IN ('PCT{ts}','DUP{ts}','DIFF{ts}','JY{ts}')")
+        except Exception as ce:
+            print(f"  [cleanup 무시] {ce}".replace("\n", " ")[:200])
+    return t
 
     return t
 

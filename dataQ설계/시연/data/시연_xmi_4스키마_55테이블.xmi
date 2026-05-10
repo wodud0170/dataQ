@@ -1,0 +1,1262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.1"
+         xmlns:uml="http://schema.omg.org/spec/UML/2.1"
+         xmlns:xmi="http://schema.omg.org/spec/XMI/2.1">
+  <xmi:Documentation exporter="DataQ test sample" exporterVersion="2.0"/>
+  <uml:Model xmi:id="model-001" name="DataQ_Test_Model_55Tables">
+    <packagedElement xmi:type="uml:Package" xmi:id="pkg-001" name="HR">
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-employee" name="EMPLOYEE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-employee-cmt" body="직원"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-employee-emp_id" name="EMP_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-employee-emp_id-cmt" body="직원ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-employee-emp_name" name="EMP_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-employee-emp_name-cmt" body="직원명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-employee-email" name="EMAIL">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-employee-email-cmt" body="이메일"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-employee-hire_dt" name="HIRE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-employee-hire_dt-cmt" body="입사일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-employee-dept_id" name="DEPT_ID" type="cls-department">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-employee-dept_id-cmt" body="부서ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-employee-salary" name="SALARY">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-employee-salary-cmt" body="급여"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-department" name="DEPARTMENT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-department-cmt" body="부서"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-department-dept_id" name="DEPT_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-department-dept_id-cmt" body="부서ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-department-dept_name" name="DEPT_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-department-dept_name-cmt" body="부서명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-department-manager_id" name="MANAGER_ID">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-department-manager_id-cmt" body="관리자ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-position" name="POSITION">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-position-cmt" body="직급"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-position-pos_id" name="POS_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-position-pos_id-cmt" body="직급ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-position-pos_name" name="POS_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-position-pos_name-cmt" body="직급명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-position-level_cd" name="LEVEL_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-position-level_cd-cmt" body="레벨코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-attendance" name="ATTENDANCE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-attendance-cmt" body="근태"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-attendance-att_id" name="ATT_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-attendance-att_id-cmt" body="근태ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-attendance-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-attendance-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-attendance-check_in_dt" name="CHECK_IN_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-attendance-check_in_dt-cmt" body="출근일시"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#DateTime"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-attendance-check_out_dt" name="CHECK_OUT_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-attendance-check_out_dt-cmt" body="퇴근일시"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#DateTime"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-leave_request" name="LEAVE_REQUEST">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-leave_request-cmt" body="휴가신청"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-leave_request-req_id" name="REQ_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-leave_request-req_id-cmt" body="신청ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-leave_request-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-leave_request-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-leave_request-leave_type" name="LEAVE_TYPE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-leave_request-leave_type-cmt" body="휴가유형"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-leave_request-start_dt" name="START_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-leave_request-start_dt-cmt" body="시작일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-leave_request-end_dt" name="END_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-leave_request-end_dt-cmt" body="종료일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-leave_request-status_cd" name="STATUS_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-leave_request-status_cd-cmt" body="상태코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-payroll" name="PAYROLL">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-payroll-cmt" body="급여대장"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-payroll-payroll_id" name="PAYROLL_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-payroll-payroll_id-cmt" body="급여ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-payroll-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-payroll-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-payroll-pay_dt" name="PAY_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-payroll-pay_dt-cmt" body="지급일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-payroll-amt" name="AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-payroll-amt-cmt" body="금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-training" name="TRAINING">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-training-cmt" body="교육"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-training-tr_id" name="TR_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-training-tr_id-cmt" body="교육ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-training-tr_name" name="TR_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-training-tr_name-cmt" body="교육명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-training-tr_desc" name="TR_DESC">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-training-tr_desc-cmt" body="교육설명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-emp_training" name="EMP_TRAINING">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-emp_training-cmt" body="직원교육"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-emp_training-etr_id" name="ETR_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-emp_training-etr_id-cmt" body="직원교육ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-emp_training-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-emp_training-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-emp_training-tr_id" name="TR_ID" type="cls-training">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-emp_training-tr_id-cmt" body="교육ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-emp_training-comp_dt" name="COMP_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-emp_training-comp_dt-cmt" body="이수일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-performance_review" name="PERFORMANCE_REVIEW">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-performance_review-cmt" body="성과평가"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-performance_review-prv_id" name="PRV_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-performance_review-prv_id-cmt" body="평가ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-performance_review-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-performance_review-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-performance_review-review_dt" name="REVIEW_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-performance_review-review_dt-cmt" body="평가일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-performance_review-score" name="SCORE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-performance_review-score-cmt" body="점수"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-job_history" name="JOB_HISTORY">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-job_history-cmt" body="직무이력"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-job_history-jh_id" name="JH_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-job_history-jh_id-cmt" body="이력ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-job_history-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-job_history-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-job_history-pos_id" name="POS_ID" type="cls-position">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-job_history-pos_id-cmt" body="직급ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-job_history-start_dt" name="START_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-job_history-start_dt-cmt" body="시작일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-job_history-end_dt" name="END_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-job_history-end_dt-cmt" body="종료일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-benefit" name="BENEFIT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-benefit-cmt" body="복리후생"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-benefit-ben_id" name="BEN_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-benefit-ben_id-cmt" body="복리후생ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-benefit-ben_name" name="BEN_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-benefit-ben_name-cmt" body="복리후생명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-benefit-ben_desc" name="BEN_DESC">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-benefit-ben_desc-cmt" body="복리후생설명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-emp_benefit" name="EMP_BENEFIT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-emp_benefit-cmt" body="직원복리후생"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-emp_benefit-ebn_id" name="EBN_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-emp_benefit-ebn_id-cmt" body="직원복리후생ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-emp_benefit-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-emp_benefit-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-emp_benefit-ben_id" name="BEN_ID" type="cls-benefit">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-emp_benefit-ben_id-cmt" body="복리후생ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-emp_benefit-grant_dt" name="GRANT_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-emp_benefit-grant_dt-cmt" body="지급일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-overtime" name="OVERTIME">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-overtime-cmt" body="초과근무"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-overtime-ot_id" name="OT_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-overtime-ot_id-cmt" body="초과근무ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-overtime-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-overtime-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-overtime-ot_dt" name="OT_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-overtime-ot_dt-cmt" body="일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-overtime-hours" name="HOURS">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-overtime-hours-cmt" body="시간"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-certificate" name="CERTIFICATE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-certificate-cmt" body="자격증"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-certificate-cert_id" name="CERT_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-certificate-cert_id-cmt" body="자격증ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-certificate-emp_id" name="EMP_ID" type="cls-employee">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-certificate-emp_id-cmt" body="직원ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-certificate-cert_name" name="CERT_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-certificate-cert_name-cmt" body="자격증명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-certificate-issue_dt" name="ISSUE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-certificate-issue_dt-cmt" body="발급일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-certificate-expire_dt" name="EXPIRE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-certificate-expire_dt-cmt" body="만료일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-org_unit" name="ORG_UNIT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-org_unit-cmt" body="조직단위"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-org_unit-org_id" name="ORG_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-org_unit-org_id-cmt" body="조직ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-org_unit-org_name" name="ORG_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-org_unit-org_name-cmt" body="조직명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-org_unit-parent_org_id" name="PARENT_ORG_ID">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-org_unit-parent_org_id-cmt" body="상위조직ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Package" xmi:id="pkg-002" name="SALES">
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-customer" name="CUSTOMER">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-customer-cmt" body="고객"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-customer-cust_id" name="CUST_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-customer-cust_id-cmt" body="고객ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-customer-cust_name" name="CUST_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-customer-cust_name-cmt" body="고객명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-customer-phone" name="PHONE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-customer-phone-cmt" body="전화번호"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-customer-email" name="EMAIL">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-customer-email-cmt" body="이메일"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-customer-reg_dt" name="REG_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-customer-reg_dt-cmt" body="등록일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-sales_order" name="SALES_ORDER">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-sales_order-cmt" body="판매주문"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_order-ord_id" name="ORD_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_order-ord_id-cmt" body="주문ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_order-cust_id" name="CUST_ID" type="cls-customer">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_order-cust_id-cmt" body="고객ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_order-ord_dt" name="ORD_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_order-ord_dt-cmt" body="주문일시"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#DateTime"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_order-total_amt" name="TOTAL_AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_order-total_amt-cmt" body="총금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_order-status_cd" name="STATUS_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_order-status_cd-cmt" body="상태코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-order_item" name="ORDER_ITEM">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-order_item-cmt" body="주문항목"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-order_item-oitm_id" name="OITM_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-order_item-oitm_id-cmt" body="주문항목ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-order_item-ord_id" name="ORD_ID" type="cls-sales_order">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-order_item-ord_id-cmt" body="주문ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-order_item-prod_id" name="PROD_ID">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-order_item-prod_id-cmt" body="상품ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-order_item-qty" name="QTY">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-order_item-qty-cmt" body="수량"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-order_item-unit_price" name="UNIT_PRICE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-order_item-unit_price-cmt" body="단가"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-promotion" name="PROMOTION">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-promotion-cmt" body="프로모션"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-promotion-promo_id" name="PROMO_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-promotion-promo_id-cmt" body="프로모션ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-promotion-promo_name" name="PROMO_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-promotion-promo_name-cmt" body="프로모션명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-promotion-start_dt" name="START_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-promotion-start_dt-cmt" body="시작일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-promotion-end_dt" name="END_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-promotion-end_dt-cmt" body="종료일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-promotion-discount_rate" name="DISCOUNT_RATE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-promotion-discount_rate-cmt" body="할인율"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-campaign" name="CAMPAIGN">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-campaign-cmt" body="캠페인"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-campaign-camp_id" name="CAMP_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-campaign-camp_id-cmt" body="캠페인ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-campaign-camp_name" name="CAMP_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-campaign-camp_name-cmt" body="캠페인명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-campaign-target_segment" name="TARGET_SEGMENT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-campaign-target_segment-cmt" body="타겟세그먼트"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-customer_grade" name="CUSTOMER_GRADE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-customer_grade-cmt" body="고객등급"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-customer_grade-grade_cd" name="GRADE_CD" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-customer_grade-grade_cd-cmt" body="등급코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-customer_grade-grade_name" name="GRADE_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-customer_grade-grade_name-cmt" body="등급명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-customer_grade-min_amt" name="MIN_AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-customer_grade-min_amt-cmt" body="최소금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-shipment" name="SHIPMENT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-shipment-cmt" body="배송"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-shipment-ship_id" name="SHIP_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-shipment-ship_id-cmt" body="배송ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-shipment-ord_id" name="ORD_ID" type="cls-sales_order">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-shipment-ord_id-cmt" body="주문ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-shipment-ship_dt" name="SHIP_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-shipment-ship_dt-cmt" body="배송일시"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#DateTime"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-shipment-tracking_no" name="TRACKING_NO">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-shipment-tracking_no-cmt" body="송장번호"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-return_request" name="RETURN_REQUEST">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-return_request-cmt" body="반품신청"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-return_request-ret_id" name="RET_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-return_request-ret_id-cmt" body="반품ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-return_request-ord_id" name="ORD_ID" type="cls-sales_order">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-return_request-ord_id-cmt" body="주문ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-return_request-reason" name="REASON">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-return_request-reason-cmt" body="사유"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-return_request-req_dt" name="REQ_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-return_request-req_dt-cmt" body="신청일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-refund" name="REFUND">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-refund-cmt" body="환불"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-refund-ref_id" name="REF_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-refund-ref_id-cmt" body="환불ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-refund-ret_id" name="RET_ID" type="cls-return_request">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-refund-ret_id-cmt" body="반품ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-refund-amt" name="AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-refund-amt-cmt" body="금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-refund-refund_dt" name="REFUND_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-refund-refund_dt-cmt" body="환불일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-sales_region" name="SALES_REGION">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-sales_region-cmt" body="판매지역"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_region-region_cd" name="REGION_CD" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_region-region_cd-cmt" body="지역코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_region-region_name" name="REGION_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_region-region_name-cmt" body="지역명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-sales_rep" name="SALES_REP">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-sales_rep-cmt" body="영업담당자"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_rep-rep_id" name="REP_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_rep-rep_id-cmt" body="담당자ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_rep-rep_name" name="REP_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_rep-rep_name-cmt" body="담당자명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-sales_rep-region_cd" name="REGION_CD" type="cls-sales_region">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-sales_rep-region_cd-cmt" body="지역코드"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-quotation" name="QUOTATION">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-quotation-cmt" body="견적"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-quotation-qt_id" name="QT_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-quotation-qt_id-cmt" body="견적ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-quotation-cust_id" name="CUST_ID" type="cls-customer">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-quotation-cust_id-cmt" body="고객ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-quotation-qt_dt" name="QT_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-quotation-qt_dt-cmt" body="견적일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-quotation-valid_until" name="VALID_UNTIL">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-quotation-valid_until-cmt" body="유효기한"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-contract" name="CONTRACT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-contract-cmt" body="계약"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-contract-ctr_id" name="CTR_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-contract-ctr_id-cmt" body="계약ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-contract-cust_id" name="CUST_ID" type="cls-customer">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-contract-cust_id-cmt" body="고객ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-contract-sign_dt" name="SIGN_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-contract-sign_dt-cmt" body="서명일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-contract-amt" name="AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-contract-amt-cmt" body="계약금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-lead" name="LEAD">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-lead-cmt" body="잠재고객"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-lead-lead_id" name="LEAD_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-lead-lead_id-cmt" body="잠재고객ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-lead-lead_name" name="LEAD_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-lead-lead_name-cmt" body="잠재고객명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-lead-source_cd" name="SOURCE_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-lead-source_cd-cmt" body="소스코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-lead-status_cd" name="STATUS_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-lead-status_cd-cmt" body="상태코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-opportunity" name="OPPORTUNITY">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-opportunity-cmt" body="영업기회"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-opportunity-opp_id" name="OPP_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-opportunity-opp_id-cmt" body="기회ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-opportunity-lead_id" name="LEAD_ID" type="cls-lead">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-opportunity-lead_id-cmt" body="잠재고객ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-opportunity-stage" name="STAGE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-opportunity-stage-cmt" body="단계"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-opportunity-close_dt" name="CLOSE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-opportunity-close_dt-cmt" body="종료일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Package" xmi:id="pkg-003" name="INVENTORY">
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-product" name="PRODUCT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-product-cmt" body="상품"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-product-prod_id" name="PROD_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-product-prod_id-cmt" body="상품ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-product-prod_name" name="PROD_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-product-prod_name-cmt" body="상품명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-product-category_cd" name="CATEGORY_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-product-category_cd-cmt" body="분류코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-product-unit_price" name="UNIT_PRICE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-product-unit_price-cmt" body="단가"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-category" name="CATEGORY">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-category-cmt" body="상품분류"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-category-category_cd" name="CATEGORY_CD" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-category-category_cd-cmt" body="분류코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-category-category_name" name="CATEGORY_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-category-category_name-cmt" body="분류명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-category-parent_cd" name="PARENT_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-category-parent_cd-cmt" body="상위분류코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-warehouse" name="WAREHOUSE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-warehouse-cmt" body="창고"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-warehouse-wh_id" name="WH_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-warehouse-wh_id-cmt" body="창고ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-warehouse-wh_name" name="WH_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-warehouse-wh_name-cmt" body="창고명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-warehouse-loc_addr" name="LOC_ADDR">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-warehouse-loc_addr-cmt" body="위치주소"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-stock" name="STOCK">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-stock-cmt" body="재고"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock-stk_id" name="STK_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock-stk_id-cmt" body="재고ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock-prod_id" name="PROD_ID" type="cls-product">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock-prod_id-cmt" body="상품ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock-wh_id" name="WH_ID" type="cls-warehouse">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock-wh_id-cmt" body="창고ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock-qty" name="QTY">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock-qty-cmt" body="수량"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-stock_movement" name="STOCK_MOVEMENT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-stock_movement-cmt" body="재고이동"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock_movement-sm_id" name="SM_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock_movement-sm_id-cmt" body="이동ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock_movement-stk_id" name="STK_ID" type="cls-stock">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock_movement-stk_id-cmt" body="재고ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock_movement-move_type" name="MOVE_TYPE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock_movement-move_type-cmt" body="이동유형"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock_movement-qty" name="QTY">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock_movement-qty-cmt" body="수량"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock_movement-move_dt" name="MOVE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock_movement-move_dt-cmt" body="이동일시"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#DateTime"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-supplier" name="SUPPLIER">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-supplier-cmt" body="공급사"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-supplier-sup_id" name="SUP_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-supplier-sup_id-cmt" body="공급사ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-supplier-sup_name" name="SUP_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-supplier-sup_name-cmt" body="공급사명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-supplier-contact" name="CONTACT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-supplier-contact-cmt" body="연락처"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-purchase_order" name="PURCHASE_ORDER">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-purchase_order-cmt" body="구매주문"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-purchase_order-po_id" name="PO_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-purchase_order-po_id-cmt" body="구매주문ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-purchase_order-sup_id" name="SUP_ID" type="cls-supplier">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-purchase_order-sup_id-cmt" body="공급사ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-purchase_order-po_dt" name="PO_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-purchase_order-po_dt-cmt" body="주문일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-purchase_order-status_cd" name="STATUS_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-purchase_order-status_cd-cmt" body="상태코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-po_item" name="PO_ITEM">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-po_item-cmt" body="구매주문항목"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-po_item-poi_id" name="POI_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-po_item-poi_id-cmt" body="구매주문항목ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-po_item-po_id" name="PO_ID" type="cls-purchase_order">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-po_item-po_id-cmt" body="구매주문ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-po_item-prod_id" name="PROD_ID" type="cls-product">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-po_item-prod_id-cmt" body="상품ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-po_item-qty" name="QTY">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-po_item-qty-cmt" body="수량"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-po_item-unit_cost" name="UNIT_COST">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-po_item-unit_cost-cmt" body="단가"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-goods_receipt" name="GOODS_RECEIPT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-goods_receipt-cmt" body="입고"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-goods_receipt-gr_id" name="GR_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-goods_receipt-gr_id-cmt" body="입고ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-goods_receipt-po_id" name="PO_ID" type="cls-purchase_order">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-goods_receipt-po_id-cmt" body="구매주문ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-goods_receipt-recv_dt" name="RECV_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-goods_receipt-recv_dt-cmt" body="입고일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-stock_take" name="STOCK_TAKE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-stock_take-cmt" body="재고실사"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock_take-st_id" name="ST_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock_take-st_id-cmt" body="실사ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock_take-wh_id" name="WH_ID" type="cls-warehouse">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock_take-wh_id-cmt" body="창고ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-stock_take-take_dt" name="TAKE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-stock_take-take_dt-cmt" body="실사일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-product_barcode" name="PRODUCT_BARCODE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-product_barcode-cmt" body="상품바코드"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-product_barcode-bc_id" name="BC_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-product_barcode-bc_id-cmt" body="바코드ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-product_barcode-prod_id" name="PROD_ID" type="cls-product">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-product_barcode-prod_id-cmt" body="상품ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-product_barcode-barcode" name="BARCODE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-product_barcode-barcode-cmt" body="바코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-lot" name="LOT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-lot-cmt" body="로트"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-lot-lot_id" name="LOT_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-lot-lot_id-cmt" body="로트ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-lot-prod_id" name="PROD_ID" type="cls-product">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-lot-prod_id-cmt" body="상품ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-lot-lot_no" name="LOT_NO">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-lot-lot_no-cmt" body="로트번호"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-lot-expire_dt" name="EXPIRE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-lot-expire_dt-cmt" body="만료일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-bin_location" name="BIN_LOCATION">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-bin_location-cmt" body="진열위치"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-bin_location-bin_id" name="BIN_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-bin_location-bin_id-cmt" body="위치ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-bin_location-wh_id" name="WH_ID" type="cls-warehouse">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-bin_location-wh_id-cmt" body="창고ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-bin_location-bin_code" name="BIN_CODE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-bin_location-bin_code-cmt" body="위치코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-transfer" name="TRANSFER">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-transfer-cmt" body="이전"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-transfer-tr_id" name="TR_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-transfer-tr_id-cmt" body="이전ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-transfer-from_wh" name="FROM_WH" type="cls-warehouse">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-transfer-from_wh-cmt" body="출발창고ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-transfer-to_wh" name="TO_WH" type="cls-warehouse">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-transfer-to_wh-cmt" body="도착창고ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-transfer-transfer_dt" name="TRANSFER_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-transfer-transfer_dt-cmt" body="이전일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-uom" name="UOM">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-uom-cmt" body="단위"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-uom-uom_cd" name="UOM_CD" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-uom-uom_cd-cmt" body="단위코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-uom-uom_name" name="UOM_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-uom-uom_name-cmt" body="단위명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Package" xmi:id="pkg-004" name="FINANCE">
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-account" name="ACCOUNT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-account-cmt" body="계정"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-account-acc_id" name="ACC_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-account-acc_id-cmt" body="계정ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-account-acc_cd" name="ACC_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-account-acc_cd-cmt" body="계정코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-account-acc_name" name="ACC_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-account-acc_name-cmt" body="계정명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-account-acc_type" name="ACC_TYPE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-account-acc_type-cmt" body="계정유형"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-journal" name="JOURNAL">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-journal-cmt" body="분개"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal-je_id" name="JE_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal-je_id-cmt" body="분개ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal-je_dt" name="JE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal-je_dt-cmt" body="분개일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal-ref_no" name="REF_NO">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal-ref_no-cmt" body="참조번호"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal-description" name="DESCRIPTION">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal-description-cmt" body="설명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-journal_line" name="JOURNAL_LINE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-journal_line-cmt" body="분개라인"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal_line-jel_id" name="JEL_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal_line-jel_id-cmt" body="분개라인ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal_line-je_id" name="JE_ID" type="cls-journal">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal_line-je_id-cmt" body="분개ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal_line-acc_id" name="ACC_ID" type="cls-account">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal_line-acc_id-cmt" body="계정ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal_line-debit_amt" name="DEBIT_AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal_line-debit_amt-cmt" body="차변금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-journal_line-credit_amt" name="CREDIT_AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-journal_line-credit_amt-cmt" body="대변금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-invoice" name="INVOICE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-invoice-cmt" body="청구서"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-invoice-inv_id" name="INV_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-invoice-inv_id-cmt" body="청구서ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-invoice-inv_no" name="INV_NO">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-invoice-inv_no-cmt" body="청구서번호"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-invoice-customer_ref" name="CUSTOMER_REF">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-invoice-customer_ref-cmt" body="고객참조"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-invoice-inv_dt" name="INV_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-invoice-inv_dt-cmt" body="청구일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-invoice-amt" name="AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-invoice-amt-cmt" body="금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-payment" name="PAYMENT">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-payment-cmt" body="결제"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-payment-pay_id" name="PAY_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-payment-pay_id-cmt" body="결제ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-payment-inv_id" name="INV_ID" type="cls-invoice">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-payment-inv_id-cmt" body="청구서ID"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-payment-pay_dt" name="PAY_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-payment-pay_dt-cmt" body="결제일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-payment-amt" name="AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-payment-amt-cmt" body="금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-budget" name="BUDGET">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-budget-cmt" body="예산"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-budget-bud_id" name="BUD_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-budget-bud_id-cmt" body="예산ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-budget-fiscal_yr" name="FISCAL_YR">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-budget-fiscal_yr-cmt" body="회계연도"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-budget-dept_ref" name="DEPT_REF">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-budget-dept_ref-cmt" body="부서참조"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-budget-planned_amt" name="PLANNED_AMT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-budget-planned_amt-cmt" body="계획금액"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-tax_rate" name="TAX_RATE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-tax_rate-cmt" body="세율"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-tax_rate-tax_cd" name="TAX_CD" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-tax_rate-tax_cd-cmt" body="세금코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-tax_rate-tax_name" name="TAX_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-tax_rate-tax_name-cmt" body="세금명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-tax_rate-rate" name="RATE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-tax_rate-rate-cmt" body="세율"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-currency" name="CURRENCY">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-currency-cmt" body="통화"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-currency-ccy_cd" name="CCY_CD" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-currency-ccy_cd-cmt" body="통화코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-currency-ccy_name" name="CCY_NAME">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-currency-ccy_name-cmt" body="통화명"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-currency-symbol" name="SYMBOL">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-currency-symbol-cmt" body="기호"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-fx_rate" name="FX_RATE">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-fx_rate-cmt" body="환율"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-fx_rate-fx_id" name="FX_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-fx_rate-fx_id-cmt" body="환율ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-fx_rate-ccy_cd" name="CCY_CD" type="cls-currency">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-fx_rate-ccy_cd-cmt" body="통화코드"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-fx_rate-rate_dt" name="RATE_DT">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-fx_rate-rate_dt-cmt" body="적용일자"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Date"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-fx_rate-rate" name="RATE">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-fx_rate-rate-cmt" body="환율"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Decimal"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="cls-fiscal_period" name="FISCAL_PERIOD">
+        <ownedComment xmi:type="uml:Comment" xmi:id="cls-fiscal_period-cmt" body="회계기간"/>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-fiscal_period-fp_id" name="FP_ID" isID="true">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-fiscal_period-fp_id-cmt" body="회계기간ID"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="1"/>
+          <upperValue xmi:type="uml:LiteralUnlimitedNatural" value="1"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-fiscal_period-yr" name="YR">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-fiscal_period-yr-cmt" body="연도"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-fiscal_period-period_no" name="PERIOD_NO">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-fiscal_period-period_no-cmt" body="기간번호"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#Integer"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+        <ownedAttribute xmi:type="uml:Property" xmi:id="attr-cls-fiscal_period-status_cd" name="STATUS_CD">
+          <ownedComment xmi:type="uml:Comment" xmi:id="attr-cls-fiscal_period-status_cd-cmt" body="상태코드"/>
+          <type xmi:type="uml:PrimitiveType" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#String"/>
+          <lowerValue xmi:type="uml:LiteralInteger" value="0"/>
+        </ownedAttribute>
+      </packagedElement>
+    </packagedElement>
+  </uml:Model>
+</xmi:XMI>
