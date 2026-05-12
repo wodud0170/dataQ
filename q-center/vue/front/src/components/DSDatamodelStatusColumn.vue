@@ -1069,8 +1069,8 @@ export default {
       const objNm = this.fkForm.objNm;
       const refOwnerKey = this.fkForm.refOwner || '';
       const refObjNm = this.fkForm.refTableNm;
-      // 부모 PK 정보 — constraintsByKey 에서 조회
-      const refKey = refOwnerKey + '' + refObjNm;
+      // 부모 PK 정보 — constraintsByKey 에서 조회. 키 형식: 'owner|objNm' (fetchConstraints 와 동일)
+      const refKey = refOwnerKey + '|' + refObjNm;
       const refConstraints = this.constraintsByKey[refKey] || {};
       const refPk = refConstraints.pk;
       const pkCols = (refPk && refPk.columns) || [];
