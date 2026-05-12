@@ -371,7 +371,7 @@ export default {
       this.objForm = {
         objNm: item.objNm, objNmKr: item.objNmKr || '',
         objOwner: item.objOwner || '', objDesc: item.objDesc || '',
-        origObjNm: item.objNm,
+        origObjNm: item.objNm, origObjOwner: item.objOwner || '',
       };
       this.objDialog = true;
     },

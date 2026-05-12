@@ -30,7 +30,7 @@
        , DIAG_TARGET_UPDT_USER_ID = #{userId}
        , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
      WHERE DM_ID     = #{dmId}
-       AND OBJ_OWNER = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+       AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
        AND OBJ_NM    = #{objNm}
   </update>
 
@@ -82,7 +82,7 @@
        , DIAG_TARGET_UPDT_USER_ID = #{userId}
        , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
      WHERE DM_ID     = #{dmId}
-       AND OBJ_OWNER = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+       AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
        AND OBJ_NM    = #{objNm}
        AND ATTR_NM   = #{attrNm}
   </update>
@@ -108,7 +108,7 @@
        , DIAG_TARGET_UPDT_USER_ID = #{userId}
        , DIAG_TARGET_UPDT_DT      = to_char(now(),'YYYYMMDDHH24MISS')
      WHERE DM_ID     = #{dmId}
-       AND OBJ_OWNER = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+       AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
        AND OBJ_NM    = #{objNm}
        AND ATTR_NM IN
        <foreach item="nm" collection="attrNms" open="(" separator="," close=")">
@@ -152,7 +152,7 @@
       ,to_char(to_timestamp(DIAG_TARGET_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') AS "diagTargetUpdtDt"
     FROM TB_DATA_MODEL_OBJ
     WHERE DM_ID     = #{dmId}
-      AND OBJ_OWNER = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+      AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
       AND OBJ_NM    = #{objNm}
   </select>
 

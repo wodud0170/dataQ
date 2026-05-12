@@ -894,6 +894,401 @@ public class DataModelController {
 		return Mono.just(result);
 	}
 
+	// ======== 87-3: PK / FK 자동 생성·삭제 endpoint ========
+
+	/**
+	 * PK 생성. body: { dataModelId, objOwner, tableNm, pkName(옵션), columns: [attrNm, ...] }
+	 * - pkName 미입력 시 PK_<TABLE> 자동 (중복이면 _2 _3 접미)
+	 * - 같은 테이블에 PK 이미 있으면 거부 (PK 1개 제한)
+	 * - TB_DATA_MODEL_CONSTRAINT (TYPE='P') + TB_DATA_MODEL_INDEX (UNIQUENESS='UNIQUE') row 들 INSERT
+	 * - 해당 ATTR 들의 PK_YN='Y' 갱신
+	 */
+	@SuppressWarnings("unchecked")
+	@PostMapping("/createPk")
+	public Mono<Response> createPk(@RequestBody Map<String, Object> body) {
+		Response res = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String dataModelId = (String) body.get("dataModelId");
+			String objOwner    = body.get("objOwner") == null ? "" : (String) body.get("objOwner");
+			String tableNm     = (String) body.get("tableNm");
+			List<String> columns = (List<String>) body.get("columns");
+			if (dataModelId == null || tableNm == null || columns == null || columns.isEmpty())
+				throw new IllegalArgumentException("dataModelId/tableNm/columns 필수");
+
+			Map<String, Object> p = new HashMap<>();
+			p.put("dataModelId", dataModelId);
+			p.put("objOwner",    objOwner);
+			p.put("objNm",       tableNm);
+			int existing = session.selectOne("datamodel.countPkOfTable", p);
+			if (existing > 0) throw new IllegalStateException("이미 PK 가 있는 테이블입니다. 기존 PK 를 먼저 삭제하세요.");
+
+			String pkName = (String) body.get("pkName");
+			if (pkName == null || pkName.trim().isEmpty()) pkName = "PK_" + tableNm.toUpperCase();
+			pkName = pkName.trim().toUpperCase();
+			// 모델 내 이름 중복이면 _2, _3 접미
+			Map<String, Object> chk = new HashMap<>();
+			chk.put("dataModelId", dataModelId);
+			String candidate = pkName;
+			int suffix = 2;
+			while (true) {
+				chk.put("constraintNm", candidate);
+				int dup = session.selectOne("datamodel.countConstraintByName", chk);
+				if (dup == 0) break;
+				candidate = pkName + "_" + (suffix++);
+			}
+			pkName = candidate;
+
+			String idxName = pkName; // 인덱스 이름은 PK 이름과 동일 (관례)
+			// CONSTRAINT row 들 + INDEX row 들 INSERT
+			for (int i = 0; i < columns.size(); i++) {
+				String col = columns.get(i);
+				Map<String, Object> cr = new HashMap<>();
+				cr.put("dataModelId", dataModelId);
+				cr.put("objOwner",    objOwner);
+				cr.put("objNm",       tableNm);
+				cr.put("constraintNm", pkName);
+				cr.put("constraintType", "P");
+				cr.put("columnNm",    col);
+				cr.put("columnPos",   i + 1);
+				cr.put("status",      "ENABLED");
+				session.insert("datamodel.insertConstraintRow", cr);
+
+				Map<String, Object> ir = new HashMap<>();
+				ir.put("dataModelId", dataModelId);
+				ir.put("objOwner",    objOwner);
+				ir.put("objNm",       tableNm);
+				ir.put("indexNm",     idxName);
+				ir.put("indexType",   "NORMAL");
+				ir.put("uniqueness",  "UNIQUE");
+				ir.put("columnNm",    col);
+				ir.put("columnPos",   i + 1);
+				ir.put("sortOrder",   "ASC");
+				session.insert("datamodel.insertIndexRow", ir);
+
+				Map<String, Object> ap = new HashMap<>();
+				ap.put("dataModelId", dataModelId);
+				ap.put("objOwner",    objOwner);
+				ap.put("objNm",       tableNm);
+				ap.put("attrNm",      col);
+				ap.put("pkYn",        "Y");
+				session.update("datamodel.updateAttrPkYn", ap);
+			}
+			session.commit();
+			res.setContents(pkName);
+			res.setResultInfo(RestResult.CODE_200);
+		} catch (IllegalArgumentException | IllegalStateException e) {
+			session.rollback();
+			res.setResultInfo(400, e.getMessage());
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> createPk failed: {}", e.getMessage(), e);
+			res.setResultInfo(500, e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(res);
+	}
+
+	/**
+	 * FK 생성. body: { dataModelId, objOwner, tableNm, fkName(옵션), refOwner, refTableNm,
+	 *                  mappings: [{ ownAttrNm, refAttrNm }, ...] }
+	 */
+	@SuppressWarnings("unchecked")
+	@PostMapping("/createFk")
+	public Mono<Response> createFk(@RequestBody Map<String, Object> body) {
+		Response res = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String dataModelId = (String) body.get("dataModelId");
+			String objOwner    = body.get("objOwner") == null ? "" : (String) body.get("objOwner");
+			String tableNm     = (String) body.get("tableNm");
+			String refOwner    = body.get("refOwner") == null ? "" : (String) body.get("refOwner");
+			String refTableNm  = (String) body.get("refTableNm");
+			List<Map<String, String>> mappings = (List<Map<String, String>>) body.get("mappings");
+			if (dataModelId == null || tableNm == null || refTableNm == null
+					|| mappings == null || mappings.isEmpty())
+				throw new IllegalArgumentException("dataModelId/tableNm/refTableNm/mappings 필수");
+
+			String fkName = (String) body.get("fkName");
+			if (fkName == null || fkName.trim().isEmpty())
+				fkName = "FK_" + tableNm.toUpperCase() + "_" + refTableNm.toUpperCase();
+			fkName = fkName.trim().toUpperCase();
+			Map<String, Object> chk = new HashMap<>();
+			chk.put("dataModelId", dataModelId);
+			String candidate = fkName;
+			int suffix = 2;
+			while (true) {
+				chk.put("constraintNm", candidate);
+				int dup = session.selectOne("datamodel.countConstraintByName", chk);
+				if (dup == 0) break;
+				candidate = fkName + "_" + (suffix++);
+			}
+			fkName = candidate;
+
+			for (int i = 0; i < mappings.size(); i++) {
+				Map<String, String> m = mappings.get(i);
+				String ownCol = m.get("ownAttrNm");
+				String refCol = m.get("refAttrNm");
+				if (ownCol == null || refCol == null)
+					throw new IllegalArgumentException("mappings[].ownAttrNm/refAttrNm 누락");
+
+				Map<String, Object> cr = new HashMap<>();
+				cr.put("dataModelId",  dataModelId);
+				cr.put("objOwner",     objOwner);
+				cr.put("objNm",        tableNm);
+				cr.put("constraintNm", fkName);
+				cr.put("constraintType", "R");
+				cr.put("columnNm",     ownCol);
+				cr.put("columnPos",    i + 1);
+				cr.put("refOwner",     refOwner);
+				cr.put("refTableNm",   refTableNm);
+				cr.put("refColumnNm",  refCol);
+				cr.put("status",       "ENABLED");
+				session.insert("datamodel.insertConstraintRow", cr);
+
+				Map<String, Object> ap = new HashMap<>();
+				ap.put("dataModelId",     dataModelId);
+				ap.put("objOwner",        objOwner);
+				ap.put("objNm",           tableNm);
+				ap.put("attrNm",          ownCol);
+				ap.put("fkYn",            "Y");
+				ap.put("fkParentObjNm",   refTableNm);
+				ap.put("fkParentAttrNm",  refCol);
+				session.update("datamodel.updateAttrFk", ap);
+			}
+			session.commit();
+			res.setContents(fkName);
+			res.setResultInfo(RestResult.CODE_200);
+		} catch (IllegalArgumentException e) {
+			session.rollback();
+			res.setResultInfo(400, e.getMessage());
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> createFk failed: {}", e.getMessage(), e);
+			res.setResultInfo(500, e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(res);
+	}
+
+	/**
+	 * PK 삭제 (이름 기준). 관련 ATTR 들의 PK_YN='N', CONSTRAINT/INDEX 물리 DELETE.
+	 */
+	/**
+	 * 87-x — 특정 PK 가 해제될 때 cascade 될 외부 FK 목록 미리보기 (FE 확인 모달용)
+	 */
+	@PostMapping("/getPkDependentFks")
+	public Map<String, Object> getPkDependentFks(@RequestBody Map<String, Object> body) {
+		Map<String, Object> out = new HashMap<>();
+		try {
+			String dataModelId = (String) body.get("dataModelId");
+			String objOwner    = body.get("objOwner") == null ? "" : (String) body.get("objOwner");
+			String tableNm     = (String) body.get("tableNm");
+			String pkName      = (String) body.get("pkName");
+			Map<String, Object> sp = new HashMap<>();
+			sp.put("dataModelId", dataModelId);
+			sp.put("objOwner",    objOwner);
+			sp.put("objNm",       tableNm);
+			List<Map<String, Object>> rows = sqlSessionTemplate.selectList("datamodel.selectConstraintsByTable", sp);
+			List<String> pkCols = new ArrayList<>();
+			for (Map<String, Object> r : rows) {
+				if (pkName != null && pkName.equalsIgnoreCase((String) r.get("constraintNm")))
+					pkCols.add((String) r.get("columnNm"));
+			}
+			out.put("pkColumns", pkCols);
+			if (pkCols.isEmpty()) { out.put("dependentFks", new ArrayList<>()); return out; }
+			Map<String, Object> fp = new HashMap<>();
+			fp.put("dataModelId", dataModelId);
+			fp.put("refOwner",    objOwner);
+			fp.put("refTableNm",  tableNm);
+			fp.put("pkColumns",   pkCols);
+			out.put("dependentFks", sqlSessionTemplate.selectList("datamodel.selectInboundFksByPkOfTable", fp));
+		} catch (Exception e) {
+			log.error(">> getPkDependentFks failed: {}", e.getMessage(), e);
+			out.put("error", e.getMessage());
+		}
+		return out;
+	}
+
+	@PostMapping("/deletePk")
+	public Mono<Response> deletePk(@RequestBody Map<String, Object> body) {
+		Response res = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String dataModelId = (String) body.get("dataModelId");
+			String objOwner    = body.get("objOwner") == null ? "" : (String) body.get("objOwner");
+			String tableNm     = (String) body.get("tableNm");
+			String pkName      = (String) body.get("pkName");
+			boolean cascadeFk  = Boolean.TRUE.equals(body.get("cascadeFk"));
+			if (dataModelId == null || tableNm == null || pkName == null)
+				throw new IllegalArgumentException("dataModelId/tableNm/pkName 필수");
+
+			// 1) 삭제 전 — 어떤 컬럼들이 PK 구성원인지 조회
+			Map<String, Object> sp = new HashMap<>();
+			sp.put("dataModelId", dataModelId);
+			sp.put("objOwner",    objOwner);
+			sp.put("objNm",       tableNm);
+			List<Map<String, Object>> rows = session.selectList("datamodel.selectConstraintsByTable", sp);
+			List<String> pkCols = new ArrayList<>();
+			for (Map<String, Object> r : rows) {
+				if (!pkName.equalsIgnoreCase((String) r.get("constraintNm"))) continue;
+				pkCols.add((String) r.get("columnNm"));
+				Map<String, Object> ap = new HashMap<>();
+				ap.put("dataModelId", dataModelId);
+				ap.put("objOwner",    objOwner);
+				ap.put("objNm",       tableNm);
+				ap.put("attrNm",      r.get("columnNm"));
+				ap.put("pkYn",        "N");
+				session.update("datamodel.updateAttrPkYn", ap);
+			}
+
+			// 87-x — PK 컬럼을 참조하는 외부 FK constraint 도 cascade 삭제 (cascadeFk=true 일 때만)
+			if (cascadeFk && !pkCols.isEmpty()) {
+				Map<String, Object> fp = new HashMap<>();
+				fp.put("dataModelId", dataModelId);
+				fp.put("refOwner",    objOwner);
+				fp.put("refTableNm",  tableNm);
+				fp.put("pkColumns",   pkCols);
+				List<Map<String, Object>> inFks = session.selectList("datamodel.selectInboundFksByPkOfTable", fp);
+				for (Map<String, Object> fk : inFks) {
+					String fkOwner    = fk.get("objOwner") == null ? "" : (String) fk.get("objOwner");
+					String fkTableNm  = (String) fk.get("tableNm");
+					String fkName     = (String) fk.get("constraintNm");
+					Map<String, Object> rows2 = new HashMap<>();
+					rows2.put("dataModelId", dataModelId);
+					rows2.put("objOwner",    fkOwner);
+					rows2.put("objNm",       fkTableNm);
+					List<Map<String, Object>> fkRows = session.selectList("datamodel.selectConstraintsByTable", rows2);
+					for (Map<String, Object> rr : fkRows) {
+						if (!fkName.equalsIgnoreCase((String) rr.get("constraintNm"))) continue;
+						Map<String, Object> ap2 = new HashMap<>();
+						ap2.put("dataModelId", dataModelId);
+						ap2.put("objOwner",    fkOwner);
+						ap2.put("objNm",       fkTableNm);
+						ap2.put("attrNm",      rr.get("columnNm"));
+						ap2.put("fkYn",        "N");
+						ap2.put("fkParentObjNm",  null);
+						ap2.put("fkParentAttrNm", null);
+						session.update("datamodel.updateAttrFk", ap2);
+					}
+					Map<String, Object> dp2 = new HashMap<>();
+					dp2.put("dataModelId",  dataModelId);
+					dp2.put("objOwner",     fkOwner);
+					dp2.put("objNm",        fkTableNm);
+					dp2.put("constraintNm", fkName);
+					session.delete("datamodel.deleteConstraintByName", dp2);
+				}
+			}
+
+			// 2) CONSTRAINT / INDEX 물리 DELETE
+			Map<String, Object> dp = new HashMap<>();
+			dp.put("dataModelId",  dataModelId);
+			dp.put("objOwner",     objOwner);
+			dp.put("objNm",        tableNm);
+			dp.put("constraintNm", pkName);
+			session.delete("datamodel.deleteConstraintByName", dp);
+
+			Map<String, Object> dx = new HashMap<>();
+			dx.put("dataModelId", dataModelId);
+			dx.put("objOwner",    objOwner);
+			dx.put("objNm",       tableNm);
+			dx.put("indexNm",     pkName);
+			session.delete("datamodel.deleteIndexByName", dx);
+			session.commit();
+			res.setResultInfo(RestResult.CODE_200);
+		} catch (IllegalArgumentException e) {
+			session.rollback();
+			res.setResultInfo(400, e.getMessage());
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> deletePk failed: {}", e.getMessage(), e);
+			res.setResultInfo(500, e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(res);
+	}
+
+	/**
+	 * FK 삭제 (이름 기준). 관련 ATTR 들의 FK_YN='N', FK_PARENT_* clear, CONSTRAINT 물리 DELETE.
+	 */
+	@PostMapping("/deleteFk")
+	public Mono<Response> deleteFk(@RequestBody Map<String, String> body) {
+		Response res = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String dataModelId = body.get("dataModelId");
+			String objOwner    = body.get("objOwner") == null ? "" : body.get("objOwner");
+			String tableNm     = body.get("tableNm");
+			String fkName      = body.get("fkName");
+			if (dataModelId == null || tableNm == null || fkName == null)
+				throw new IllegalArgumentException("dataModelId/tableNm/fkName 필수");
+
+			Map<String, Object> sp = new HashMap<>();
+			sp.put("dataModelId", dataModelId);
+			sp.put("objOwner",    objOwner);
+			sp.put("objNm",       tableNm);
+			List<Map<String, Object>> rows = session.selectList("datamodel.selectConstraintsByTable", sp);
+			for (Map<String, Object> r : rows) {
+				if (!fkName.equalsIgnoreCase((String) r.get("constraintNm"))) continue;
+				Map<String, Object> ap = new HashMap<>();
+				ap.put("dataModelId",     dataModelId);
+				ap.put("objOwner",        objOwner);
+				ap.put("objNm",           tableNm);
+				ap.put("attrNm",          r.get("columnNm"));
+				ap.put("fkYn",            "N");
+				ap.put("fkParentObjNm",   null);
+				ap.put("fkParentAttrNm",  null);
+				session.update("datamodel.updateAttrFk", ap);
+			}
+
+			Map<String, Object> dp = new HashMap<>();
+			dp.put("dataModelId",  dataModelId);
+			dp.put("objOwner",     objOwner);
+			dp.put("objNm",        tableNm);
+			dp.put("constraintNm", fkName);
+			session.delete("datamodel.deleteConstraintByName", dp);
+			session.commit();
+			res.setResultInfo(RestResult.CODE_200);
+		} catch (IllegalArgumentException e) {
+			session.rollback();
+			res.setResultInfo(400, e.getMessage());
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> deleteFk failed: {}", e.getMessage(), e);
+			res.setResultInfo(500, e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(res);
+	}
+
+	/**
+	 * 테이블 단위 제약조건 목록 (PK/FK) — 컬럼 그리드 칩 표시용
+	 */
+	@GetMapping("/getConstraintsByTable")
+	public List<Map<String, Object>> getConstraintsByTable(@RequestParam String dataModelId,
+	                                                        @RequestParam(required = false) String objOwner,
+	                                                        @RequestParam String objNm) {
+		Map<String, Object> p = new HashMap<>();
+		p.put("dataModelId", dataModelId);
+		p.put("objOwner",    objOwner == null ? "" : objOwner);
+		p.put("objNm",       objNm);
+		return sqlSessionTemplate.selectList("datamodel.selectConstraintsByTable", p);
+	}
+
+	/**
+	 * 모델 단위 제약조건 일괄 — 컬럼 그리드 칩 매핑 (N+1 회피)
+	 */
+	@GetMapping("/getConstraintsByDmId")
+	public List<Map<String, Object>> getConstraintsByDmId(@RequestParam String dataModelId) {
+		return sqlSessionTemplate.selectList("datamodel.selectConstraintsByDmId", dataModelId);
+	}
+
+	// ======== / 87-3 ========
+
 	/**
 	 * 테이블(OBJ) 물리명 rename 영향 범위 미리보기.
 	 *
@@ -1381,7 +1776,7 @@ public class DataModelController {
 	}
 
 	/**
-	 * 컬럼(ATTR) 삭제
+	 * 컬럼(ATTR) 삭제 — 87-3: PK/FK CONSTRAINT, INDEX, 외부 FK 참조까지 cascade
 	 */
 	@RequestMapping(value = "/deleteAttr", method = RequestMethod.POST)
 	public Mono<Response> deleteAttr(@RequestBody StdDataModelAttrVo attrVo) {
@@ -1390,9 +1785,10 @@ public class DataModelController {
 		try {
 			Map<String, Object> param = new HashMap<>();
 			param.put("dataModelId", attrVo.getDataModelId());
-			param.put("objOwner",    attrVo.getObjOwner() == null ? "" : attrVo.getObjOwner());  // 86번 #11
+			param.put("objOwner",    attrVo.getObjOwner() == null ? "" : attrVo.getObjOwner());
 			param.put("objNm",       attrVo.getObjNm());
 			param.put("attrNm",      attrVo.getAttrNm());
+			cascadeDeleteAttrRefs(session, param);
 			session.delete("datamodel.deleteDataModelAttr", param);
 			session.update("datamodel.syncDataModelObjAttrCnt", param);
 			session.commit();
@@ -1405,6 +1801,34 @@ public class DataModelController {
 			session.close();
 		}
 		return Mono.just(result);
+	}
+
+	/**
+	 * 87-3 — 컬럼 삭제 전 참조 조회 (FE 가 삭제 확인 시 무엇이 함께 정리될지 미리 보여주기 위함)
+	 */
+	@RequestMapping(value = "/getAttrReferences", method = RequestMethod.POST)
+	public Map<String, Object> getAttrReferences(@RequestBody Map<String, Object> body) {
+		Map<String, Object> p = new HashMap<>();
+		p.put("dataModelId", body.get("dataModelId"));
+		p.put("objOwner",    body.get("objOwner") == null ? "" : body.get("objOwner"));
+		p.put("objNm",       body.get("objNm"));
+		p.put("attrNm",      body.get("attrNm"));
+		Map<String, Object> refs = new HashMap<>();
+		refs.put("ownConstraints", sqlSessionTemplate.selectList("datamodel.selectOwnConstraintRefsByAttr", p));
+		refs.put("ownIndexes",     sqlSessionTemplate.selectList("datamodel.selectOwnIndexRefsByAttr",     p));
+		refs.put("inboundFks",     sqlSessionTemplate.selectList("datamodel.selectInboundFkByAttr",        p));
+		refs.put("fkParentAttrs",  sqlSessionTemplate.selectList("datamodel.selectFkParentAttrRefsByAttr", p));
+		return refs;
+	}
+
+	/**
+	 * 87-3 — 컬럼 삭제 시 cascade 정리 (CONSTRAINT, INDEX, 외부 FK, FK_PARENT_*)
+	 */
+	private void cascadeDeleteAttrRefs(SqlSession session, Map<String, Object> param) {
+		session.delete("datamodel.deleteConstraintByAttr",  param);
+		session.delete("datamodel.deleteIndexByAttr",       param);
+		session.delete("datamodel.deleteInboundFkByAttr",   param);
+		session.update("datamodel.clearFkParentRefByAttr",  param);
 	}
 
 	/**
@@ -1434,7 +1858,10 @@ public class DataModelController {
 				throw new IllegalArgumentException("attrs 배열이 아닙니다.");
 
 			@SuppressWarnings("unchecked")
-			List<Map<String, Object>> attrs = (List<Map<String, Object>>) rawAttrs;
+			List<Map<String, Object>> rawList = (List<Map<String, Object>>) rawAttrs;
+			// 87-x — DELETE → UPDATE → ADD 순으로 정렬해 처리. 같은 배치 안의 ADD 가 DELETE 대상 attr_ord 와 충돌하는 케이스 방지.
+			List<Map<String, Object>> attrs = new ArrayList<>(rawList);
+			attrs.sort((a, b) -> modeOrder(str(a.get("mode"))) - modeOrder(str(b.get("mode"))));
 
 			// 86번 #11 — objOwner 미전달 시 부모 OBJ 에서 lookup. PK (DM_ID, OBJ_OWNER, OBJ_NM) 일관 매칭 위해 명시화.
 			if (objOwner == null || objOwner.isEmpty()) {
@@ -1455,6 +1882,25 @@ public class DataModelController {
 			ordParam.put("objNm",       objNm);
 			Short maxOrdObj = sqlSessionTemplate.selectOne("datamodel.selectMaxAttrOrd", ordParam);
 			short nextOrd = (short) (maxOrdObj == null ? 0 : maxOrdObj);
+			// 87-3 — TMP_COL_N 자동 명명 시 ATTR_NM 충돌 회피. attr_ord 와 별개로 기존 TMP_COL_N 의 최대 N 으로 시작.
+			Integer maxTmpSuffixObj = sqlSessionTemplate.selectOne("datamodel.selectMaxTmpColSuffix", ordParam);
+			int tmpColSuffix = (maxTmpSuffixObj == null ? 0 : maxTmpSuffixObj);
+
+			// 86번 #11 — 스왑 대응: 이 batch 안에서 ATTR_ORD 가 바뀌는 attr 들의 (origAttrNm → newOrd) 맵
+			// dup 체크 시 batch 안에서 다른 order 로 이동하는 attr 는 충돌에서 제외
+			Map<String, Short> batchNewOrders = new HashMap<>();
+			for (Object o : attrs) {
+				if (!(o instanceof Map)) continue;
+				@SuppressWarnings("unchecked")
+				Map<String, Object> r = (Map<String, Object>) o;
+				String m = str(r.get("mode"));
+				if (!"UPDATE".equalsIgnoreCase(m)) continue;
+				String orig = str(r.get("origAttrNm"));
+				if (orig == null || orig.trim().isEmpty()) orig = str(r.get("attrNm"));
+				if (orig == null || orig.trim().isEmpty()) continue;
+				Integer ord = parseIntSafe(r.get("attrOrder"));
+				if (ord != null && ord > 0) batchNewOrders.put(orig.trim(), ord.shortValue());
+			}
 
 			int added = 0, updated = 0, deleted = 0;
 			List<Map<String, Object>> errors = new ArrayList<>();
@@ -1470,8 +1916,14 @@ public class DataModelController {
 								&& (attrNmInput == null || attrNmInput.trim().isEmpty()))
 							throw new IllegalArgumentException("컬럼 영문명 또는 한글명 중 하나는 필수");
 						// 영문명은 항상 UPPER (Oracle 기준 — 다른 DBMS 차후 분기)
-						String addAttrNm = (attrNmInput != null && !attrNmInput.trim().isEmpty())
-								? attrNmInput.trim().toUpperCase() : ("TMP_COL_" + (nextOrd + 1));
+						// 87-3 — TMP_COL_N 자동 생성 시 같은 테이블 내 기존 TMP_COL_N 과 충돌 회피
+						String addAttrNm;
+						if (attrNmInput != null && !attrNmInput.trim().isEmpty()) {
+							addAttrNm = attrNmInput.trim().toUpperCase();
+						} else {
+							tmpColSuffix++;
+							addAttrNm = "TMP_COL_" + tmpColSuffix;
+						}
 						// 사용자 입력 attrOrder 우선, 없으면 max+1
 						Integer addOrdIn = parseIntSafe(row.get("attrOrder"));
 						short useOrd;
@@ -1485,9 +1937,16 @@ public class DataModelController {
 							ordDup.put("selfAttrNm",  addAttrNm);
 							@SuppressWarnings("unchecked")
 							List<String> conflicts = session.selectList("datamodel.selectAttrNmByOrder", ordDup);
-							if (conflicts != null && !conflicts.isEmpty())
-								throw new IllegalArgumentException("순서 " + useOrd + " 는 이미 '"
-										+ String.join("', '", conflicts) + "' 가 사용 중입니다 (" + objNm + ")");
+							if (conflicts != null && !conflicts.isEmpty()) {
+								List<String> realConflicts = new ArrayList<>();
+								for (String c : conflicts) {
+									Short movedTo = batchNewOrders.get(c);
+									if (movedTo == null || movedTo.shortValue() == useOrd) realConflicts.add(c);
+								}
+								if (!realConflicts.isEmpty())
+									throw new IllegalArgumentException("순서 " + useOrd + " 는 이미 '"
+											+ String.join("', '", realConflicts) + "' 가 사용 중입니다 (" + objNm + ")");
+							}
 						} else {
 							nextOrd++;
 							useOrd = nextOrd;
@@ -1585,9 +2044,16 @@ public class DataModelController {
 							ordDup.put("selfAttrNm",  origAttrNm);
 							@SuppressWarnings("unchecked")
 							List<String> conflicts = session.selectList("datamodel.selectAttrNmByOrder", ordDup);
-							if (conflicts != null && !conflicts.isEmpty())
-								throw new IllegalArgumentException("순서 " + newOrd + " 는 이미 '"
-										+ String.join("', '", conflicts) + "' 가 사용 중입니다 (" + objNm + ")");
+							if (conflicts != null && !conflicts.isEmpty()) {
+								List<String> realConflicts = new ArrayList<>();
+								for (String c : conflicts) {
+									Short movedTo = batchNewOrders.get(c);
+									if (movedTo == null || movedTo.shortValue() == newOrd) realConflicts.add(c);
+								}
+								if (!realConflicts.isEmpty())
+									throw new IllegalArgumentException("순서 " + newOrd + " 는 이미 '"
+											+ String.join("', '", realConflicts) + "' 가 사용 중입니다 (" + objNm + ")");
+							}
 						} else {
 							newOrd = existing.getAttrOrder();
 						}
@@ -1667,6 +2133,7 @@ public class DataModelController {
 						p.put("objOwner",    objOwner);  // 86번 #11
 						p.put("objNm",       objNm);
 						p.put("attrNm",      attrNm);
+						cascadeDeleteAttrRefs(session, p);  // 87-3 — CONSTRAINT/INDEX/외부FK/FK_PARENT cascade
 						session.delete("datamodel.deleteDataModelAttr", p);
 						deleted++;
 					} else {
@@ -1721,6 +2188,16 @@ public class DataModelController {
 		String s = o.toString().trim();
 		if (s.isEmpty()) return null;
 		try { return Integer.parseInt(s); } catch (NumberFormatException e) { return null; }
+	}
+
+	// 87-x — saveAttrs 처리 순서: DELETE(0) → UPDATE(1) → ADD(2). attr_ord 충돌 회피.
+	private static int modeOrder(String mode) {
+		if (mode == null) return 99;
+		String m = mode.trim().toUpperCase();
+		if ("DELETE".equals(m)) return 0;
+		if ("UPDATE".equals(m)) return 1;
+		if ("ADD".equals(m))    return 2;
+		return 99;
 	}
 
 	// ---------- 내부 헬퍼 ----------

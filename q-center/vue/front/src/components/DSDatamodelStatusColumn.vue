@@ -77,10 +77,19 @@
       <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '8px' }">
         <span class="filterLabel">추가 대상</span>
         <v-autocomplete v-model="addTargetKey" :items="objOptions" item-text="label" item-value="key"
-          :disabled="!selectedModelId" dense outlined hide-details
-          :style="{ width: '300px' }" color="ndColor" placeholder="테이블 선택 (소유자.테이블)"
+          :disabled="!selectedModelId || addTargetLocked" dense outlined hide-details
+          :style="{ width: '300px' }" color="ndColor"
+          :placeholder="addTargetLocked ? '저장/취소 후 변경 가능' : '테이블 선택 (소유자.테이블)'"
+          :hint="addTargetLocked ? (newRows.length > 0 ? '미저장 신규 행이 있어 대상 변경 잠금' : '컬럼 순서 변경됨 — 저장 후 변경 가능') : ''" persistent-hint
           @change="onAddTargetChange" />
 
+        <!-- 87-x — 추가 위치 선택 (맨위 default / 맨아래 / 체크된 컬럼 뒤) — 컬럼 추가 왼쪽 -->
+        <div style="width:90px; min-width:90px; max-width:90px;">
+          <v-select v-model="addPosition" :items="addPositionOptions"
+            dense outlined hide-details color="ndColor"
+            class="add-position-select"
+            :disabled="!selectedModelId || !addTargetKey" />
+        </div>
         <!-- 행 추가 -->
         <v-btn id="btn-add-col-row" class="tb-btn" color="primary" depressed
           :disabled="!selectedModelId || !addTargetKey || newRows.length >= 100"
@@ -90,6 +99,25 @@
         <v-btn id="btn-add-col-rows-10" class="tb-btn" color="primary" outlined
           :disabled="!selectedModelId || !addTargetKey || newRows.length >= 100"
           v-on:click="addEmptyRows(10)">+10행</v-btn>
+
+        <v-divider vertical class="mx-1" />
+
+        <!-- 87-x — 현재 그리드 출력 순서로 1..N 재할당 (보류: mergedItems 정렬로 충분).
+        <v-btn class="tb-btn" color="deep-orange" dark depressed
+          :disabled="!selectedModelId || !addTargetKey"
+          style="min-width:300px; height:40px; padding:0 22px; letter-spacing:0; font-size:.92rem; font-weight:600; flex-shrink:0; white-space:nowrap;"
+          v-on:click="renumberByDisplayOrder">
+          <span style="white-space:nowrap;">현재 출력 순서로 컬럼 순서 지정</span>
+        </v-btn>
+        -->
+
+        <!-- 87-x — 미저장 변경 전부 버리고 DB 에서 새로 조회 -->
+        <v-btn class="tb-btn" color="grey darken-1" outlined
+          :disabled="!selectedModelId"
+          style="min-width:220px !important; width:220px !important; height:40px; padding:0 18px !important; flex-shrink:0; white-space:nowrap; letter-spacing:0;"
+          v-on:click="reloadDiscardChanges">
+          <span style="white-space:nowrap;"><v-icon small left>mdi-refresh</v-icon>새로 조회 (변경 버림)</span>
+        </v-btn>
 
         <v-divider vertical class="mx-1" />
 
@@ -131,6 +159,26 @@
         </v-btn>
       </v-row>
 
+      <!-- 87-3 제약조건 액션 줄 — PK/FK 생성 (왼쪽 체크박스로 컬럼 선택 후 클릭) -->
+      <v-row no-gutters align="center" class="px-2 py-2" style="background:#FAFAFE; border-bottom:1px solid #E8EAF6; gap:10px;">
+        <span style="font-size:.85rem; font-weight:600; color:#1A237E; min-width:60px;">제약조건</span>
+        <span style="font-size:.78rem; color:#546E7A; margin-right:12px;">
+          선택한 컬럼들로 PK / FK 생성 — 다중 컬럼이면 복합키
+        </span>
+        <v-btn small class="tb-btn" color="indigo" dark depressed
+          :disabled="selectedRows.length === 0"
+          v-on:click="openPkDialogFromSelection"
+          style="min-width:130px; flex-shrink:0; white-space:nowrap;">
+          <v-icon small left>mdi-key-variant</v-icon>PK 생성
+        </v-btn>
+        <v-btn small class="tb-btn" color="deep-purple" dark depressed
+          :disabled="selectedRows.length === 0"
+          v-on:click="openFkDialogFromSelection"
+          style="min-width:130px; flex-shrink:0; white-space:nowrap;">
+          <v-icon small left>mdi-link-variant</v-icon>FK 생성
+        </v-btn>
+      </v-row>
+
       <!-- 안내 라인 (조건부) -->
       <div v-if="newRows.length >= 100" class="mt-1 px-1" style="color:#D32F2F;font-size:.78rem;">
         100행 도달 — 대량 입력은 엑셀 업로드 사용
@@ -159,6 +207,8 @@
     <v-data-table id="clTable_table" :headers="dmColumnDetaileHeaders" :items="mergedItems"
       :page.sync="page" :items-per-page="itemsPerPage" hide-default-footer
       item-key="_rowKey" show-select v-model="selectedRows"
+      :sort-by.sync="userSortBy" :sort-desc.sync="userSortDesc"
+      :must-sort="false"
       fixed-header :height="tableHeight"
       class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요.">
 
@@ -223,14 +273,16 @@
           dense hide-details />
       </template>
       <template #item.pkYn="{ item }">
-        <v-checkbox v-model="item.pkYn" true-value="Y" false-value="N"
-          :class="'ma-0 pa-0 ' + (isRowDirty(item) ? 'inline-dirty-cb' : '')"
-          dense hide-details />
+        <v-icon v-if="getPkInfo(item)" small color="indigo" style="cursor:pointer;"
+          :title="'PK 해제 — ' + getPkInfo(item).name"
+          @click="confirmDeletePk(item)">mdi-check-circle</v-icon>
+        <span v-else style="color:#CFD8DC;">-</span>
       </template>
       <template #item.fkYn="{ item }">
-        <v-checkbox v-model="item.fkYn" true-value="Y" false-value="N"
-          :class="'ma-0 pa-0 ' + (isRowDirty(item) ? 'inline-dirty-cb' : '')"
-          dense hide-details />
+        <v-icon v-if="getFkInfo(item)" small color="deep-purple" style="cursor:pointer;"
+          :title="'FK 해제 — ' + getFkInfo(item).name + ' → ' + getFkInfo(item).refTableNm + '.' + getFkInfo(item).refColumnNm"
+          @click="confirmDeleteFk(item)">mdi-check-circle</v-icon>
+        <span v-else style="color:#CFD8DC;">-</span>
       </template>
       <template #item.defaultVal="{ item }">
         <v-text-field v-model="item.defaultVal"
@@ -264,6 +316,80 @@
         <span v-show="loadTable">잠시만 기다려주세요.</span>
       </template>
     </v-data-table>
+
+    <!-- ===== 87-3 PK 생성 모달 ===== -->
+    <v-dialog v-model="pkDialog" max-width="640" persistent>
+      <v-card>
+        <v-card-title class="indigo white--text">PK 생성 — {{ pkForm.objNm }}</v-card-title>
+        <v-card-text class="pt-4">
+          <v-text-field v-model="pkForm.pkName" label="PK 이름" dense
+            :placeholder="'PK_' + (pkForm.objNm || '').toUpperCase()" hint="비우면 자동 생성"
+            persistent-hint />
+          <div class="mt-3" style="font-size:.85rem; color:#37474F;">
+            PK 구성 컬럼 (순서 중요)
+          </div>
+          <div v-for="(c, i) in pkForm.columns" :key="i" class="d-flex align-center mt-2" style="gap:8px;">
+            <span style="width:28px; color:#90A4AE;">{{ i + 1 }}.</span>
+            <v-select v-model="pkForm.columns[i]" :items="pkColumnOptions" dense hide-details
+              outlined style="flex:1;" />
+            <v-btn icon small color="error" @click="pkForm.columns.splice(i, 1)"
+              v-if="pkForm.columns.length > 1"><v-icon small>mdi-close</v-icon></v-btn>
+          </div>
+          <v-btn small outlined color="indigo" class="mt-3" @click="pkForm.columns.push(null)">
+            <v-icon small left>mdi-plus</v-icon>컬럼 추가
+          </v-btn>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="pkDialog = false">취소</v-btn>
+          <v-btn color="indigo" dark @click="submitPk">생성</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- ===== 87-3 FK 생성 모달 ===== -->
+    <v-dialog v-model="fkDialog" max-width="780" persistent>
+      <v-card>
+        <v-card-title class="deep-purple white--text">FK 생성 — {{ fkForm.objNm }}</v-card-title>
+        <v-card-text class="pt-4">
+          <v-row dense>
+            <v-col cols="6">
+              <v-text-field v-model="fkForm.fkName" label="FK 이름" dense
+                :placeholder="'FK_' + (fkForm.objNm || '').toUpperCase() + '_' + (fkForm.refTableNm || '').toUpperCase()"
+                hint="비우면 자동 생성" persistent-hint />
+            </v-col>
+            <v-col cols="6">
+              <v-autocomplete v-model="fkForm.refTableKey" :items="refTableOptions"
+                item-text="label" item-value="key" label="참조 테이블 *"
+                dense outlined hide-details @change="onRefTableChange" />
+            </v-col>
+          </v-row>
+          <div class="mt-3" style="font-size:.85rem; color:#37474F;">
+            컬럼 매핑 (자기 → 참조)
+          </div>
+          <div v-for="(m, i) in fkForm.mappings" :key="i" class="d-flex align-center mt-2" style="gap:8px;">
+            <span style="width:28px; color:#90A4AE;">{{ i + 1 }}.</span>
+            <v-select v-model="fkForm.mappings[i].ownAttrNm" :items="fkOwnColumnOptions"
+              dense hide-details outlined style="flex:1;" placeholder="자기 컬럼" />
+            <v-icon small color="grey">mdi-arrow-right</v-icon>
+            <v-select v-model="fkForm.mappings[i].refAttrNm" :items="fkRefColumnOptions"
+              dense hide-details outlined style="flex:1;" placeholder="참조 컬럼"
+              :disabled="!fkForm.refTableKey" />
+            <v-btn icon small color="error" @click="fkForm.mappings.splice(i, 1)"
+              v-if="fkForm.mappings.length > 1"><v-icon small>mdi-close</v-icon></v-btn>
+          </div>
+          <v-btn small outlined color="deep-purple" class="mt-3"
+            @click="fkForm.mappings.push({ownAttrNm:null, refAttrNm:null})">
+            <v-icon small left>mdi-plus</v-icon>매핑 추가
+          </v-btn>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="fkDialog = false">취소</v-btn>
+          <v-btn color="deep-purple" dark @click="submitFk">생성</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-sheet class="split_bottom_wrap">
       <div class="text-center px-4 pt-2 pb-2 pagination_wrap" v-show="pageCount > 1">
@@ -368,6 +494,21 @@ export default {
     itemsPerPage() {
       this.pageCount = Math.ceil(this.mergedItems.length / this.itemsPerPage);
     },
+    addTargetKey(newVal, oldVal) {
+      if (this.addTargetLocked && newVal !== oldVal && oldVal != null) {
+        this.$nextTick(() => {
+          this.addTargetKey = oldVal;
+          this.$swal.fire({
+            title: '추가 대상 변경 불가',
+            text: this.newRows.length > 0
+              ? '미저장 신규 행이 있어 변경할 수 없습니다. 저장 또는 삭제 후 다시 시도하세요.'
+              : '컬럼 순서가 변경되었습니다. 저장 또는 새로고침 후 다시 시도하세요.',
+            icon: 'warning',
+            confirmButtonText: '확인',
+          });
+        });
+      }
+    },
   },
   data: () => ({
     modelList: [],
@@ -404,11 +545,31 @@ export default {
     // 그리드 편집 상태
     objOptions: [],
     addTargetKey: null,
+    // 87-x — v-data-table 헤더 클릭 정렬 상태 (renumberByDisplayOrder 가 동일 정렬로 iterate)
+    userSortBy: [],
+    userSortDesc: [],
+    // 87-x — 컬럼 추가 위치 (맨위 default / 맨아래 / 체크된 컬럼 뒤)
+    addPosition: 'top',
+    addPositionOptions: [
+      { text: '맨 위 추가', value: 'top' },
+      { text: '맨 아래 추가', value: 'bottom' },
+      { text: '체크된 컬럼 뒤 추가', value: 'afterChecked' },
+    ],
     newRows: [],            // 미저장 ADD 행들
     pendingDeletes: [],     // 미저장 DELETE 행들
     selectedRows: [],       // show-select 체크된 행
     resolving: false,
     resolvingByEng: false,
+    // 87-3 PK/FK
+    // key = ownerObjNm (예: USER1TB_MEMBER), value = { byCol: { ATTR_NM: { pk:{name,columns}, fk:{name,refTable,refCol} } }, pk: {...}, fkList: [...] }
+    constraintsByKey: {},
+    pkDialog: false,
+    pkForm: { dataModelId: null, objOwner: '', objNm: '', pkName: '', columns: [] },
+    fkDialog: false,
+    fkForm: { dataModelId: null, objOwner: '', objNm: '', fkName: '',
+              refOwner: '', refTableNm: '', refTableKey: null,
+              mappings: [{ ownAttrNm: null, refAttrNm: null }] },
+    fkRefColumnOptions: [],
     // 데이터 타입 드롭다운 옵션 — 일반적인 RDBMS 타입. v-combobox 라 비표준값도 직접 입력 가능
     dataTypeOptions: [
       'VARCHAR', 'CHAR', 'TEXT', 'CLOB', 'BLOB',
@@ -436,7 +597,7 @@ export default {
       // 메타 (기본 색)
       { text: '표준', sortable: false, align: 'center', value: 'termsStndYn', width: '60px' },
       { text: '변환 불가 사유', sortable: false, align: 'center', value: 'resolveReason', width: '160px' },
-      { text: '', sortable: false, align: 'center', value: 'actions', width: '60px' },
+      { text: '삽입/삭제', sortable: false, align: 'center', value: 'actions', width: '110px' },
     ],
     // 엑셀 업로드
     uploadDialog: false,
@@ -482,6 +643,25 @@ export default {
     ],
   }),
   computed: {
+    // 87-3 모달용 옵션
+    pkColumnOptions() {
+      return (this.dmColumnAllItems || [])
+        .filter(r => r.objNm === this.pkForm.objNm && (r.objOwner || '') === (this.pkForm.objOwner || '')
+                  && r._mode === 'saved')
+        .map(r => this._toColumnOption(r));
+    },
+    fkOwnColumnOptions() {
+      return (this.dmColumnAllItems || [])
+        .filter(r => r.objNm === this.fkForm.objNm && (r.objOwner || '') === (this.fkForm.objOwner || '')
+                  && r._mode === 'saved')
+        .map(r => this._toColumnOption(r));
+    },
+    refTableOptions() {
+      // FK 참조 가능 후보 — 자기 자신 제외
+      return (this.objOptions || []).filter(o =>
+        !(o.objNm === this.fkForm.objNm && (o.objOwner || '') === (this.fkForm.objOwner || ''))
+      );
+    },
     dmColumnItems() {
       // 86번 #11 — 소유자/테이블 한글·영문/컬럼 한글·영문 (모드: contains/exact/start/end)
       return this.dmColumnAllItems.filter(item => {
@@ -495,26 +675,31 @@ export default {
       });
     },
     mergedItems() {
-      // 86번 #11 —
-      //  · 미저장 신규 행 (newRows): 가장 위. 최근 추가가 더 위 (reverse) — 페이징으로 밀려서 안 보이지 않게
-      //  · 저장된 행 (dmColumnItems): owner > obj_nm > attr_ord 기본 정렬
-      // 정렬 키는 편집 중 값이 아닌 _orig (마지막 저장된) attrOrder 기준 — 입력 도중 행 위치가 흔들리지 않게.
-      // 신규 행(add)은 _orig 없으므로 attrOrder 그대로 사용.
-      const sortOrd = it => {
-        const v = (it._orig && it._orig.attrOrder != null) ? it._orig.attrOrder : it.attrOrder;
-        return Number(v) || 0;
-      };
-      const sorted = [...this.dmColumnItems].sort((a, b) => {
+      // 87-x — 신규 + 저장 행을 같이 owner > obj_nm > attr_ord 정렬.
+      // (addPosition 이 맨아래여도 신규 행이 attr_ord 기준 아래로 가도록)
+      const sortOrd = it => Number(it.attrOrder) || 0;
+      const combined = [...this.newRows, ...this.dmColumnItems];
+      return combined.slice().sort((a, b) => {
         const oa = a.objOwner || '', ob = b.objOwner || '';
         if (oa !== ob) return oa.localeCompare(ob);
         const na = a.objNm || '',    nb = b.objNm || '';
         if (na !== nb) return na.localeCompare(nb);
         return sortOrd(a) - sortOrd(b);
       });
-      return [...this.newRows.slice().reverse(), ...sorted];
     },
     dirtyCount() {
       return (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it)).length;
+    },
+    // 87-x — saved 행의 attr_ord 가 변경된 게 있는지 (추가 대상 변경 잠금 조건의 일부)
+    hasOrderChanged() {
+      return (this.dmColumnAllItems || []).some(it =>
+        it._mode === 'saved' && it._orig
+        && Number(it.attrOrder || 0) !== Number(it._orig.attrOrder || 0)
+      );
+    },
+    // 87-x — 추가 대상 lock 여부 (미저장 신규 OR attr_ord 변경)
+    addTargetLocked() {
+      return this.newRows.length > 0 || this.hasOrderChanged;
     },
   },
   methods: {
@@ -590,9 +775,377 @@ export default {
         this.dmColumnAllItems = this._mapColumnData(res.data);
         this.selectedRows = [];
         this.loadTable = false;
+        this.fetchConstraints();
       }).catch(() => {
         this.$swal.fire({ title: '컬럼 정보 로드 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
         this.loadTable = false;
+      });
+    },
+    // 87-3 — 모델 단위 PK/FK 일괄 조회 + 컬럼별 매핑
+    fetchConstraints() {
+      if (!this.selectedModelId) { this.constraintsByKey = {}; return; }
+      axios.get(this.$APIURL.base + 'api/dm/getConstraintsByDmId', {
+        params: { dataModelId: this.selectedModelId }
+      }).then((res) => {
+        const map = {};
+        (res.data || []).forEach(c => {
+          const key = (c.objOwner || '') + '|' + c.objNm;
+          if (!map[key]) map[key] = { byCol: {}, pk: null, fkList: [] };
+          if (!map[key].byCol[c.columnNm]) map[key].byCol[c.columnNm] = {};
+          if (c.constraintType === 'P') {
+            map[key].byCol[c.columnNm].pk = { name: c.constraintNm };
+            if (!map[key].pk) map[key].pk = { name: c.constraintNm, columns: [] };
+            if (map[key].pk.name === c.constraintNm) map[key].pk.columns.push(c.columnNm);
+          } else if (c.constraintType === 'R') {
+            map[key].byCol[c.columnNm].fk = {
+              name: c.constraintNm,
+              refOwner: c.refOwner || '',
+              refTableNm: c.refTableNm || '',
+              refColumnNm: c.refColumnNm || '',
+            };
+          }
+        });
+        this.constraintsByKey = map;
+      }).catch(() => { this.constraintsByKey = {}; });
+    },
+    getPkInfo(item) {
+      const k = (item.objOwner || '') + '|' + item.objNm;
+      const entry = this.constraintsByKey[k];
+      return entry && entry.byCol[item.attrNm] && entry.byCol[item.attrNm].pk || null;
+    },
+    getFkInfo(item) {
+      const k = (item.objOwner || '') + '|' + item.objNm;
+      const entry = this.constraintsByKey[k];
+      return entry && entry.byCol[item.attrNm] && entry.byCol[item.attrNm].fk || null;
+    },
+
+    // 그리드 셀의 PK/FK 체크박스 클릭 — 설정된 행은 해제(삭제), 미설정 행은 안내
+    onPkCheckClick(item, e) {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      if (this.getPkInfo(item)) {
+        this.confirmDeletePk(item);
+      } else {
+        this.$swal.fire({
+          title: 'PK 생성은 위쪽 [PK 생성] 버튼 사용',
+          text: '왼쪽 체크박스로 컬럼들을 선택한 뒤 상단 [PK 생성] 을 클릭하세요. (다중 컬럼 = 복합키)',
+          icon: 'info',
+        });
+      }
+    },
+    onFkCheckClick(item, e) {
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      if (this.getFkInfo(item)) {
+        this.confirmDeleteFk(item);
+      } else {
+        this.$swal.fire({
+          title: 'FK 생성은 위쪽 [FK 생성] 버튼 사용',
+          text: '왼쪽 체크박스로 자기 테이블의 컬럼들을 선택한 뒤 상단 [FK 생성] 을 클릭하세요.',
+          icon: 'info',
+        });
+      }
+    },
+
+    // 선택된 행들에서 PK 모달 진입 — 같은 테이블 + saved 만 허용
+    openPkDialogFromSelection() {
+      const sel = this.selectedRows || [];
+      if (sel.length === 0) {
+        this.$swal.fire({ title: '왼쪽 체크박스로 PK 컬럼을 선택하세요.', icon: 'warning' }); return;
+      }
+      const owner = sel[0].objOwner || '';
+      const objNm = sel[0].objNm;
+      const same = sel.every(r => r.objNm === objNm && (r.objOwner || '') === owner);
+      if (!same) {
+        this.$swal.fire({ title: '같은 테이블의 컬럼만 선택해주세요.', icon: 'warning' }); return;
+      }
+      const allSaved = sel.every(r => r._mode === 'saved');
+      if (!allSaved) {
+        this.$swal.fire({ title: '미저장 신규 행은 PK 로 묶을 수 없습니다.', text: '먼저 저장 후 다시 시도', icon: 'warning' }); return;
+      }
+      this.pkForm = {
+        dataModelId: this.selectedModelId,
+        objOwner: owner,
+        objNm: objNm,
+        pkName: '',
+        columns: sel.map(r => r.attrNm),
+      };
+      this.pkDialog = true;
+    },
+    openFkDialogFromSelection() {
+      const sel = this.selectedRows || [];
+      if (sel.length === 0) {
+        this.$swal.fire({ title: '왼쪽 체크박스로 FK 컬럼을 선택하세요.', icon: 'warning' }); return;
+      }
+      const owner = sel[0].objOwner || '';
+      const objNm = sel[0].objNm;
+      const same = sel.every(r => r.objNm === objNm && (r.objOwner || '') === owner);
+      if (!same) {
+        this.$swal.fire({ title: '같은 테이블의 컬럼만 선택해주세요.', icon: 'warning' }); return;
+      }
+      const allSaved = sel.every(r => r._mode === 'saved');
+      if (!allSaved) {
+        this.$swal.fire({ title: '미저장 신규 행은 FK 로 묶을 수 없습니다.', text: '먼저 저장 후 다시 시도', icon: 'warning' }); return;
+      }
+      this.fkForm = {
+        dataModelId: this.selectedModelId,
+        objOwner: owner,
+        objNm: objNm,
+        fkName: '',
+        refOwner: '',
+        refTableNm: '',
+        refTableKey: null,
+        mappings: sel.map(r => ({ ownAttrNm: r.attrNm, refAttrNm: null })),
+      };
+      this.fkRefColumnOptions = [];
+      this.fkDialog = true;
+    },
+
+    // ===== PK 모달 =====
+    openPkDialog(item) {
+      this.pkForm = {
+        dataModelId: this.selectedModelId,
+        objOwner: item.objOwner || '',
+        objNm: item.objNm,
+        pkName: '',
+        columns: [item.attrNm],
+      };
+      this.pkDialog = true;
+    },
+    submitPk() {
+      const cols = (this.pkForm.columns || []).filter(c => c);
+      if (cols.length === 0) {
+        this.$swal.fire({ title: '컬럼을 선택하세요.', icon: 'warning' }); return;
+      }
+      axios.post(this.$APIURL.base + 'api/dm/createPk', {
+        dataModelId: this.pkForm.dataModelId,
+        objOwner: this.pkForm.objOwner,
+        tableNm: this.pkForm.objNm,
+        pkName: this.pkForm.pkName,
+        columns: cols,
+      }).then((res) => {
+        if (res.data.resultCode === 200) {
+          this.$swal.fire({ title: 'PK 생성 완료', text: 'PK 이름: ' + res.data.contents,
+            icon: 'success', timer: 1500, showConfirmButton: false });
+          this.pkDialog = false;
+          this.load();
+        } else {
+          this.$swal.fire({ title: 'PK 생성 실패', text: res.data.resultMessage || '', icon: 'error' });
+        }
+      }).catch((err) => {
+        const msg = (err.response && err.response.data && err.response.data.resultMessage) || '서버 오류';
+        this.$swal.fire({ title: 'PK 생성 실패', text: msg, icon: 'error' });
+      });
+    },
+    confirmDeletePk(item) {
+      const info = this.getPkInfo(item);
+      if (!info) return;
+      // 87-x — PK 해제 전 종속 FK 미리 조회 → cascade 안내
+      axios.post(this.$APIURL.base + 'api/dm/getPkDependentFks', {
+        dataModelId: this.selectedModelId,
+        objOwner: item.objOwner || '',
+        tableNm: item.objNm,
+        pkName: info.name,
+      }).then((res) => {
+        const data = (res && res.data) || {};
+        const deps = data.dependentFks || [];
+        const baseHtml = '<b>' + info.name + '</b><br>이 PK 를 구성하는 모든 컬럼에서 해제됩니다.';
+        let html = baseHtml;
+        if (deps.length > 0) {
+          const list = deps.map(d =>
+            '· ' + (d.objOwner ? d.objOwner + '.' : '') + d.tableNm + ' → ' + d.constraintNm
+          ).join('<br>');
+          html += '<br><br><div style="text-align:left; padding:8px; background:#FFEBEE; border-left:3px solid #C62828; font-size:.86rem;">'
+            + '❌ 아래 외부 FK 가 이 PK 를 참조 중입니다 (총 ' + deps.length + '건):<br><br>' + list
+            + '<br><br>PK 해제 시 위 FK 도 함께 삭제됩니다.</div>';
+        }
+        this.$swal.fire({
+          title: 'PK 삭제', html, icon: 'warning', showCancelButton: true,
+          confirmButtonText: deps.length > 0 ? 'PK + FK 모두 삭제' : 'PK 삭제',
+          cancelButtonText: '취소',
+          confirmButtonColor: deps.length > 0 ? '#C62828' : undefined,
+        }).then(r => {
+          if (!r.isConfirmed) return;
+          axios.post(this.$APIURL.base + 'api/dm/deletePk', {
+            dataModelId: this.selectedModelId,
+            objOwner: item.objOwner || '',
+            tableNm: item.objNm,
+            pkName: info.name,
+            cascadeFk: deps.length > 0,
+          }).then(() => {
+            this.$swal.fire({
+              title: deps.length > 0 ? `PK + FK ${deps.length}건 삭제 완료` : 'PK 삭제 완료',
+              icon: 'success', timer: 1500, showConfirmButton: false,
+            });
+            this.load();
+          }).catch(() => this.$swal.fire({ title: 'PK 삭제 실패', icon: 'error' }));
+        });
+      }).catch(() => this.$swal.fire({ title: 'PK 종속 FK 조회 실패', icon: 'error' }));
+    },
+
+    // ===== FK 모달 =====
+    openFkDialog(item) {
+      this.fkForm = {
+        dataModelId: this.selectedModelId,
+        objOwner: item.objOwner || '',
+        objNm: item.objNm,
+        fkName: '',
+        refOwner: '',
+        refTableNm: '',
+        refTableKey: null,
+        mappings: [{ ownAttrNm: item.attrNm, refAttrNm: null }],
+      };
+      this.fkRefColumnOptions = [];
+      this.fkDialog = true;
+    },
+    onRefTableChange(key) {
+      const tgt = (this.objOptions || []).find(o => o.key === key);
+      if (!tgt) { this.fkForm.refOwner = ''; this.fkForm.refTableNm = ''; this.fkRefColumnOptions = []; return; }
+      this.fkForm.refOwner = tgt.objOwner || '';
+      this.fkForm.refTableNm = tgt.objNm;
+      // 참조 테이블의 컬럼 옵션 — dmColumnAllItems 에서 같은 테이블 의 ATTR 추출
+      this.fkRefColumnOptions = (this.dmColumnAllItems || [])
+        .filter(r => r.objNm === tgt.objNm && (r.objOwner || '') === (tgt.objOwner || ''))
+        .map(r => this._toColumnOption(r));
+    },
+    _toColumnOption(r) {
+      const en = (r.attrNm || '').trim();
+      const kr = (r.attrNmKr || '').trim();
+      let text;
+      if (kr && en) text = kr + ' (' + en + ')';
+      else if (kr)  text = kr;
+      else          text = en;
+      return { text: text, value: en };
+    },
+    submitFk() {
+      const maps = (this.fkForm.mappings || []).filter(m => m.ownAttrNm && m.refAttrNm);
+      if (maps.length === 0) {
+        this.$swal.fire({ title: '컬럼 매핑을 1개 이상 채워주세요.', icon: 'warning' }); return;
+      }
+      if (!this.fkForm.refTableNm) {
+        this.$swal.fire({ title: '참조 테이블을 선택하세요.', icon: 'warning' }); return;
+      }
+      // 87-x — FK DBMS 호환성 사전 검증. 모든 위반을 한 번에 모달로 노출.
+      const warnings = this._validateFkMappings(maps);
+      const proceed = () => {
+        axios.post(this.$APIURL.base + 'api/dm/createFk', {
+          dataModelId: this.fkForm.dataModelId,
+          objOwner: this.fkForm.objOwner,
+          tableNm: this.fkForm.objNm,
+          fkName: this.fkForm.fkName,
+          refOwner: this.fkForm.refOwner,
+          refTableNm: this.fkForm.refTableNm,
+          mappings: maps,
+        }).then((res) => {
+          if (res.data.resultCode === 200) {
+            this.$swal.fire({ title: 'FK 생성 완료', text: 'FK 이름: ' + res.data.contents,
+              icon: 'success', timer: 1500, showConfirmButton: false });
+            this.fkDialog = false;
+            this.load();
+          } else {
+            this.$swal.fire({ title: 'FK 생성 실패', text: res.data.resultMessage || '', icon: 'error' });
+          }
+        }).catch((err) => {
+          const msg = (err.response && err.response.data && err.response.data.resultMessage) || '서버 오류';
+          this.$swal.fire({ title: 'FK 생성 실패', text: msg, icon: 'error' });
+        });
+      };
+      if (warnings.length === 0) { proceed(); return; }
+      const html = '<div style="text-align:left; font-size:.88rem; line-height:1.55;">'
+        + '<div style="padding:8px; background:#FFEBEE; border-left:3px solid #C62828; margin-bottom:10px;">'
+        + '❌ 아래 항목은 DBMS 에서 FK 생성이 실패하거나 데이터 잘림이 발생할 수 있어 진행할 수 없습니다.<br>'
+        + '모델을 수정한 뒤 다시 시도하세요.'
+        + '</div>'
+        + warnings.map(w => '<div style="margin-bottom:4px;">· ' + w + '</div>').join('')
+        + '</div>';
+      this.$swal.fire({
+        title: 'FK 생성 불가 (' + warnings.length + '건)',
+        html, icon: 'error',
+        confirmButtonText: '확인', confirmButtonColor: '#C62828',
+      });
+    },
+    // 87-x — FK 매핑 DBMS 호환성 검증. 위반 메시지 배열 반환 (빈 배열 = 문제 없음).
+    _validateFkMappings(maps) {
+      const w = [];
+      const ownerKey = this.fkForm.objOwner || '';
+      const objNm = this.fkForm.objNm;
+      const refOwnerKey = this.fkForm.refOwner || '';
+      const refObjNm = this.fkForm.refTableNm;
+      // 부모 PK 정보 — constraintsByKey 에서 조회
+      const refKey = refOwnerKey + '' + refObjNm;
+      const refConstraints = this.constraintsByKey[refKey] || {};
+      const refPk = refConstraints.pk;
+      const pkCols = (refPk && refPk.columns) || [];
+      // 부모 컬럼 사전 — attr_nm → row
+      const refAttrByNm = {};
+      (this.dmColumnAllItems || []).forEach(r => {
+        if ((r.objOwner || '') === refOwnerKey && r.objNm === refObjNm) {
+          refAttrByNm[r.attrNm] = r;
+        }
+      });
+      const ownAttrByNm = {};
+      (this.dmColumnAllItems || []).forEach(r => {
+        if ((r.objOwner || '') === ownerKey && r.objNm === objNm) {
+          ownAttrByNm[r.attrNm] = r;
+        }
+      });
+      // 1) 복합 PK 컬럼 수 vs FK 매핑 수
+      if (pkCols.length > 0 && pkCols.length !== maps.length) {
+        w.push('부모 테이블 PK 컬럼 수(' + pkCols.length + ': ' + pkCols.join(', ')
+          + ') 와 FK 매핑 수(' + maps.length + ') 불일치');
+      }
+      // 2) 부모 컬럼이 PK 의 일부인지 — PK 자체가 없으면 별도 경고
+      if (pkCols.length === 0) {
+        w.push('부모 테이블 (' + refObjNm + ') 에 PK 가 정의되어있지 않음 — FK 참조 컬럼은 PK 또는 UNIQUE 여야 함');
+      } else {
+        maps.forEach(m => {
+          if (pkCols.indexOf(m.refAttrNm) < 0) {
+            w.push('참조 컬럼 ' + refObjNm + '.' + m.refAttrNm + ' 가 부모 PK 의 일부가 아님');
+          }
+        });
+      }
+      // 3) 매핑별 타입 / 길이 비교
+      maps.forEach(m => {
+        const c = ownAttrByNm[m.ownAttrNm];
+        const p = refAttrByNm[m.refAttrNm];
+        if (!c) { w.push('자기 컬럼 ' + m.ownAttrNm + ' 정보 없음'); return; }
+        if (!p) { w.push('참조 컬럼 ' + m.refAttrNm + ' 정보 없음'); return; }
+        const ct = (c.dataType || '').toUpperCase();
+        const pt = (p.dataType || '').toUpperCase();
+        if (ct && pt && ct !== pt) {
+          w.push(m.ownAttrNm + ' (' + ct + ') ↔ ' + refObjNm + '.' + m.refAttrNm + ' (' + pt + ') — 타입 불일치');
+        }
+        const cl = Number(c.dataLen || 0);
+        const pl = Number(p.dataLen || 0);
+        if (cl && pl && cl !== pl) {
+          const severe = cl < pl ? ' (자식이 더 짧음 — 데이터 잘림 위험)' : '';
+          w.push(m.ownAttrNm + ' 길이(' + cl + ') ↔ ' + refObjNm + '.' + m.refAttrNm + ' 길이(' + pl + ') — 길이 불일치' + severe);
+        }
+        const cd = Number(c.dataDecimalLen || 0);
+        const pd = Number(p.dataDecimalLen || 0);
+        if (cd !== pd) {
+          w.push(m.ownAttrNm + ' 소수점(' + cd + ') ↔ ' + refObjNm + '.' + m.refAttrNm + ' 소수점(' + pd + ') — 소수점 불일치');
+        }
+      });
+      return w;
+    },
+    confirmDeleteFk(item) {
+      const info = this.getFkInfo(item);
+      if (!info) return;
+      this.$swal.fire({
+        title: 'FK 삭제',
+        html: '<b>' + info.name + '</b><br>' + info.refTableNm + '.' + info.refColumnNm + ' 참조 해제',
+        icon: 'warning', showCancelButton: true,
+        confirmButtonText: '삭제', cancelButtonText: '취소',
+      }).then(r => {
+        if (!r.isConfirmed) return;
+        axios.post(this.$APIURL.base + 'api/dm/deleteFk', {
+          dataModelId: this.selectedModelId,
+          objOwner: item.objOwner || '',
+          tableNm: item.objNm,
+          fkName: info.name,
+        }).then(() => {
+          this.$swal.fire({ title: 'FK 삭제 완료', icon: 'success', timer: 1200, showConfirmButton: false });
+          this.load();
+        }).catch(() => this.$swal.fire({ title: 'FK 삭제 실패', icon: 'error' }));
       });
     },
     _mapColumnData(data) {
@@ -684,7 +1237,7 @@ export default {
         _resolveReason: null,
         objOwner: targetObj.objOwner || '',  // 86번 #11 — 부모 OBJ 의 OWNER 자동 상속
         objNm: targetObj.objNm,
-        objNmKr: (targetObj.label || '').replace(/ \(.+\)$/, ''),
+        objNmKr: targetObj.objNmKr || '',
         attrNm: '',
         attrNmKr: '',
         dataType: '',
@@ -704,9 +1257,141 @@ export default {
       }
       if (this.newRows.length >= 100) return;
       const targetObj = this.objOptions.find(o => o.key === this.addTargetKey) || { objNm: this.addTargetKey, objOwner: '', label: '' };
-      this.newRows.push(this._makeBlankRow(targetObj, this.newRows.length));
-      // 86번 #11 — 신규 행이 mergedItems 에서 맨 위에 표시되므로 1페이지로 이동해 즉시 보이게
+      this._pushBlankRowAtPosition(targetObj, this.addPosition);
       this.page = 1;
+    },
+    // 87-x — 같은 테이블의 (saved + new) 최대 attrOrder + 1 (pendingDeletes 는 이미 dmColumnAllItems 에서 빠져있어 invisible)
+    _nextOrderForTarget(targetObj) {
+      const ownerKey = (targetObj.objOwner || '');
+      const objNm = targetObj.objNm;
+      let max = 0;
+      (this.dmColumnAllItems || []).forEach(it => {
+        if ((it.objOwner || '') !== ownerKey || it.objNm !== objNm) return;
+        const v = Number(it.attrOrder) || 0;
+        if (v > max) max = v;
+      });
+      this.newRows.forEach(r => {
+        if ((r.objOwner || '') !== ownerKey || r.objNm !== objNm) return;
+        const v = Number(r.attrOrder) || 0;
+        if (v > max) max = v;
+      });
+      return max + 1;
+    },
+    // 87-x — addPosition (top / bottom / afterChecked) 에 따라 신규 행 attrOrder 결정 + push.
+    // top / afterChecked 는 후행 saved+new 행을 +1 시프트 (saved 는 dirty 표시)
+    _pushBlankRowAtPosition(targetObj, position) {
+      const ownerKey = (targetObj.objOwner || '');
+      const objNm = targetObj.objNm;
+      let insertAt;
+      if (position === 'bottom') {
+        insertAt = this._nextOrderForTarget(targetObj);
+      } else if (position === 'afterChecked') {
+        const sameTableChecks = (this.selectedRows || []).filter(r =>
+          (r.objOwner || '') === ownerKey && r.objNm === objNm);
+        if (sameTableChecks.length === 0) {
+          this.$swal.fire({ title: '컬럼을 한 개 체크하세요.', icon: 'warning' });
+          return;
+        }
+        if (sameTableChecks.length > 1) {
+          this.$swal.fire({
+            title: '한 개만 체크하세요.',
+            text: `현재 ${sameTableChecks.length}개 선택됨`,
+            icon: 'warning',
+          });
+          return;
+        }
+        insertAt = (Number(sameTableChecks[0].attrOrder) || 0) + 1;
+      } else { // top
+        insertAt = 1;
+      }
+      // 후행 시프트 (bottom 은 시프트 불필요)
+      if (position !== 'bottom') {
+        (this.dmColumnAllItems || []).forEach(it => {
+          if ((it.objOwner || '') !== ownerKey || it.objNm !== objNm) return;
+          const cur = Number(it.attrOrder) || 0;
+          if (cur >= insertAt) this.$set(it, 'attrOrder', cur + 1);
+        });
+        this.newRows.forEach(r => {
+          if ((r.objOwner || '') !== ownerKey || r.objNm !== objNm) return;
+          const cur = Number(r.attrOrder) || 0;
+          if (cur >= insertAt) r.attrOrder = cur + 1;
+        });
+      }
+      const row = this._makeBlankRow(targetObj, this.newRows.length);
+      row.attrOrder = insertAt;
+      this.newRows.push(row);
+    },
+    // 87-x — 미저장 변경 (newRows, pendingDeletes, dirty) 모두 버리고 DB 에서 새로 조회
+    reloadDiscardChanges() {
+      const dirty = this.dirtyCount;
+      const total = this.newRows.length + this.pendingDeletes.length + dirty;
+      if (total === 0) {
+        this.load();
+        return;
+      }
+      this.$swal.fire({
+        title: '미저장 변경 버리고 새로 조회?',
+        html: `<div style="text-align:left; font-size:.9rem; line-height:1.5;">`
+          + (this.newRows.length > 0    ? `· 미저장 신규 ${this.newRows.length}건<br>`    : '')
+          + (dirty > 0                  ? `· 수정중 ${dirty}건<br>`                      : '')
+          + (this.pendingDeletes.length > 0 ? `· 삭제 대기 ${this.pendingDeletes.length}건<br>` : '')
+          + `</div>`,
+        icon: 'warning', showCancelButton: true,
+        confirmButtonText: '버리고 새로 조회', cancelButtonText: '취소',
+      }).then(r => {
+        if (!r.isConfirmed) return;
+        this.newRows = [];
+        this.pendingDeletes = [];
+        this.selectedRows = [];
+        this.load();
+      });
+    },
+    // 87-x — 현재 그리드 표시 순서대로 (같은 추가 대상 테이블의 행만) attrOrder 1..N 재할당.
+    // v-data-table 헤더 클릭 정렬 (userSortBy / userSortDesc) 도 반영.
+    renumberByDisplayOrder() {
+      if (!this.addTargetKey) return;
+      const targetObj = this.objOptions.find(o => o.key === this.addTargetKey);
+      if (!targetObj) return;
+      const ownerKey = targetObj.objOwner || '';
+      const objNm = targetObj.objNm;
+      // 기본 정렬 결과 (mergedItems) 에서 추가 대상 행만 추출 후, 사용자가 헤더 정렬을 잡았으면 그 순서로 재정렬
+      let targetRows = (this.mergedItems || []).filter(r =>
+        (r.objOwner || '') === ownerKey && r.objNm === objNm
+      );
+      const sortKeys = (this.userSortBy && this.userSortBy.length) ? this.userSortBy : [];
+      if (sortKeys.length > 0) {
+        const descs = this.userSortDesc || [];
+        targetRows = targetRows.slice().sort((a, b) => {
+          for (let i = 0; i < sortKeys.length; i++) {
+            const k = sortKeys[i];
+            const desc = !!descs[i];
+            const va = a[k], vb = b[k];
+            let cmp = 0;
+            if (va == null && vb == null) cmp = 0;
+            else if (va == null) cmp = -1;
+            else if (vb == null) cmp = 1;
+            else if (typeof va === 'number' && typeof vb === 'number') cmp = va - vb;
+            else cmp = String(va).localeCompare(String(vb));
+            if (cmp !== 0) return desc ? -cmp : cmp;
+          }
+          return 0;
+        });
+      }
+      if (targetRows.length === 0) {
+        this.$swal.fire({ title: '대상 행이 없습니다.', icon: 'info' });
+        return;
+      }
+      let ord = 1;
+      targetRows.forEach(r => {
+        if (r._mode === 'add') r.attrOrder = ord;
+        else this.$set(r, 'attrOrder', ord);
+        ord++;
+      });
+      this.$swal.fire({
+        title: `${targetRows.length}건 순서 재할당`,
+        text: '저장 버튼을 눌러야 최종 반영됩니다.',
+        icon: 'success', timer: 1500, showConfirmButton: false,
+      });
     },
     addEmptyRows(n) {
       if (!this.addTargetKey) {
@@ -716,10 +1401,44 @@ export default {
       const targetObj = this.objOptions.find(o => o.key === this.addTargetKey) || { objNm: this.addTargetKey, objOwner: '', label: '' };
       const remain = 100 - this.newRows.length;
       const add = Math.min(n, remain);
-      for (let i = 0; i < add; i++) {
-        this.newRows.push(this._makeBlankRow(targetObj, this.newRows.length));
+      if (add <= 0) { this.page = 1; return; }
+      const ownerKey = targetObj.objOwner || '';
+      const objNm = targetObj.objNm;
+      // 87-x — addPosition 반영: insertAt 결정 후 후행 시프트 (add 만큼) → 연속 attrOrder 부여
+      let insertAt;
+      if (this.addPosition === 'bottom') {
+        insertAt = this._nextOrderForTarget(targetObj);
+      } else if (this.addPosition === 'afterChecked') {
+        const checks = (this.selectedRows || []).filter(r =>
+          (r.objOwner || '') === ownerKey && r.objNm === objNm);
+        if (checks.length === 0) {
+          this.$swal.fire({ title: '컬럼을 한 개 체크하세요.', icon: 'warning' }); return;
+        }
+        if (checks.length > 1) {
+          this.$swal.fire({ title: '한 개만 체크하세요.', text: `현재 ${checks.length}개 선택됨`, icon: 'warning' }); return;
+        }
+        insertAt = (Number(checks[0].attrOrder) || 0) + 1;
+      } else { // top
+        insertAt = 1;
       }
-      this.page = 1;  // 86번 #11
+      if (this.addPosition !== 'bottom') {
+        (this.dmColumnAllItems || []).forEach(it => {
+          if ((it.objOwner || '') !== ownerKey || it.objNm !== objNm) return;
+          const cur = Number(it.attrOrder) || 0;
+          if (cur >= insertAt) this.$set(it, 'attrOrder', cur + add);
+        });
+        this.newRows.forEach(r => {
+          if ((r.objOwner || '') !== ownerKey || r.objNm !== objNm) return;
+          const cur = Number(r.attrOrder) || 0;
+          if (cur >= insertAt) r.attrOrder = cur + add;
+        });
+      }
+      for (let i = 0; i < add; i++) {
+        const row = this._makeBlankRow(targetObj, this.newRows.length);
+        row.attrOrder = insertAt + i;
+        this.newRows.push(row);
+      }
+      this.page = 1;
     },
     _parseBool(v) {
       if (v === undefined || v === null) return null;
@@ -763,6 +1482,7 @@ export default {
         if (fk) row.fkYn = fk;
         if (pk === 'Y') row.nullableYn = 'N';
         if (cols[4] !== undefined) row.defaultVal = cols[4].trim();
+        row.attrOrder = this._nextOrderForTarget(targetObj);
         this.newRows.push(row);
         added++;
       }
@@ -850,18 +1570,53 @@ export default {
       const savedSel = this.selectedRows.filter(r => r._mode === 'saved');
       const newSel = this.selectedRows.filter(r => r._mode === 'add');
       if (savedSel.length + newSel.length === 0) return;
-      this.$swal.fire({
-        title: `${savedSel.length + newSel.length}건을 삭제하시겠습니까?`,
-        text: '저장 버튼을 눌러야 최종 반영됩니다.',
-        icon: 'warning', showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소'
-      }).then(r => {
-        if (!r.isConfirmed) return;
-        newSel.forEach(n => this.removeNewRow(n));
-        savedSel.forEach(s => {
-          this.pendingDeletes.push({ objNm: s.objNm, attrNm: s.attrNm });
-          this.dmColumnAllItems = this.dmColumnAllItems.filter(x => x._rowKey !== s._rowKey);
+
+      const apply = (cascadeHtml) => {
+        const title = `${savedSel.length + newSel.length}건을 삭제하시겠습니까?`;
+        const baseText = '저장 버튼을 눌러야 최종 반영됩니다.';
+        this.$swal.fire({
+          title,
+          html: cascadeHtml
+            ? `<div style="text-align:left; font-size:.85rem; line-height:1.5;">${baseText}<br><br>${cascadeHtml}</div>`
+            : baseText,
+          icon: 'warning', showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소'
+        }).then(r => {
+          if (!r.isConfirmed) return;
+          newSel.forEach(n => this.removeNewRow(n));
+          savedSel.forEach(s => {
+            this.pendingDeletes.push({ objNm: s.objNm, attrNm: s.attrNm });
+            this.dmColumnAllItems = this.dmColumnAllItems.filter(x => x._rowKey !== s._rowKey);
+          });
+          this.selectedRows = [];
         });
-        this.selectedRows = [];
+      };
+
+      // 저장된 컬럼만 ref 사전 조회 (신규 행은 DB 영향 없음)
+      if (savedSel.length === 0) { apply(''); return; }
+      Promise.all(savedSel.map(s =>
+        axios.post(this.$APIURL.base + 'api/dm/getAttrReferences', {
+          dataModelId: this.selectedModelId,
+          objOwner: s.objOwner || '',
+          objNm: s.objNm, attrNm: s.attrNm,
+        }).then(res => ({ s, refs: res.data || {} })).catch(() => ({ s, refs: {} }))
+      )).then(results => {
+        const lines = [];
+        results.forEach(({ s, refs }) => {
+          const own = (refs.ownConstraints || []).map(c => `${c.constraintNm} (${c.constraintType})`);
+          const idx = (refs.ownIndexes || []).map(c => c.indexNm);
+          const inb = (refs.inboundFks || []).map(c => `${c.objOwner ? c.objOwner + '.' : ''}${c.tableNm}.${c.columnNm} → ${c.constraintNm}`);
+          const fkp = (refs.fkParentAttrs || []).map(c => `${c.objOwner ? c.objOwner + '.' : ''}${c.objNm}.${c.attrNm}`);
+          if (own.length + idx.length + inb.length + fkp.length === 0) return;
+          const parts = [];
+          if (own.length) parts.push(`자기 테이블 제약조건: <b>${own.join(', ')}</b>`);
+          if (idx.length) parts.push(`자기 테이블 인덱스: <b>${idx.join(', ')}</b>`);
+          if (inb.length) parts.push(`<span style="color:#D32F2F;">외부 FK 참조: <b>${inb.join(', ')}</b></span>`);
+          if (fkp.length) parts.push(`<span style="color:#D32F2F;">FK_PARENT 가리키는 컬럼: <b>${fkp.join(', ')}</b></span>`);
+          lines.push(`<div style="margin-bottom:6px;"><b>${s.objNm}.${s.attrNm}</b><br>&nbsp;&nbsp;${parts.join('<br>&nbsp;&nbsp;')}</div>`);
+        });
+        if (lines.length === 0) { apply(''); return; }
+        const html = `<div style="padding:8px; background:#FFF3E0; border-left:3px solid #FB8C00;">⚠ 아래 참조도 함께 삭제됩니다:<br><br>${lines.join('')}</div>`;
+        apply(html);
       });
     },
     _validateNewRows() {
@@ -1412,6 +2167,9 @@ pre { font-family: 'Roboto'; }
 .row-nonstandard > td { background-color: #FFEBEE !important; }
 .inline-edit { min-width: 100px; }
 .inline-edit >>> input { padding: 2px 6px; }
+.add-position-select { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
+.add-position-select >>> .v-input__slot { min-width: 0 !important; padding: 0 6px !important; }
+.add-position-select >>> .v-select__selection { font-size: .82rem; }
 .inline-edit-center >>> input { text-align: center; }
 .inline-error >>> .v-input__slot { background-color: #FFEBEE !important; }
 .inline-dirty >>> .v-input__slot { background-color: #FFF8E1 !important; }
