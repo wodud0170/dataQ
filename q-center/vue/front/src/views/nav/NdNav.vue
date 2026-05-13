@@ -232,7 +232,9 @@
                     </v-list-item>
                 </v-list-group>
 
-                <!-- 데이터 품질 진단 (값 진단 + 업무 규칙) — 67번 / 위치: 구조 변경 진단 직후 -->
+                <!-- 데이터 품질 진단 (값 진단 + 업무 규칙) — 67번 / 위치: 구조 변경 진단 직후
+                     2026-05-13: 영업 라인업 분리 (DataQ ↔ DQ 별도) 결정에 따라 메뉴 전체 주석 처리.
+                     표준화 진단은 메타 필수라 유지. 복원 시 아래 블록 주석 해제만 하면 됨.
                 <v-list-group link v-cloak :value="navQualGroup" prepend-icon="mdi-database-check"
                     active-class="ndColor--text" id="qualGroup" title="데이터 품질 진단" v-on:click.stop="addNavGroupData('qualGroup');">
                     <template v-slot:activator>
@@ -241,7 +243,7 @@
                         </v-list-item-content>
                     </template>
 
-                    <!-- 83번 신규: 도메인 룰 관리 (분류 트리 + 룰 정의 + 카탈로그 가져오기) -->
+                    83번 신규: 도메인 룰 관리 (분류 트리 + 룰 정의 + 카탈로그 가져오기)
                     <v-list-item link id="nav_qualDomainRule" href="#tab_qualDomainRule" active-class="ndColor--text" title="도메인 룰 관리"
                         v-on:click.stop="addTabItem('도메인 룰 관리', 'qualDomainRule');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
@@ -278,6 +280,8 @@
                         <v-list-item-title>진단 통계</v-list-item-title>
                     </v-list-item>
                 </v-list-group>
+                -->
+                <!-- /데이터 품질 진단 메뉴 주석 처리 끝 -->
 
                 <!-- 86번 #44 — "자동 표준화 지원" → "표준화 도구" / "컬럼 표준화" → "한글컬럼 일괄 표준화" -->
                 <v-list-group link v-cloak :value="navAutoStdGroup" prepend-icon="auto_fix_high" active-class="ndColor--text"
