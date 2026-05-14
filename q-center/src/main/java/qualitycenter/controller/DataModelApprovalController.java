@@ -46,7 +46,7 @@ public class DataModelApprovalController {
 
 	/** 본인 DRAFT 목록 (신청 모달용) */
 	@RequestMapping(value = "/myDrafts", method = RequestMethod.POST)
-	public List<Map<String, Object>> myDrafts(@RequestBody Map<String, Object> body) {
+	public List<com.ndata.quality.model.std.StdDataModelChangeHistoryVo> myDrafts(@RequestBody Map<String, Object> body) {
 		Map<String, Object> p = new HashMap<>();
 		p.put("currentUserId", changeHistory.safeUserId());
 		p.put("dmId", body.get("dmId"));
@@ -108,7 +108,7 @@ public class DataModelApprovalController {
 
 	/** 관리자 — 특정 묶음의 항목들 */
 	@PostMapping("/submissionItems")
-	public List<Map<String, Object>> submissionItems(@RequestBody Map<String, Object> body) {
+	public List<com.ndata.quality.model.std.StdDataModelChangeHistoryVo> submissionItems(@RequestBody Map<String, Object> body) {
 		if (!sessionService.isAdmin()) return new ArrayList<>();
 		String submissionId = (String) body.get("submissionId");
 		return sqlSessionTemplate.selectList("dmChangeHistory.selectBySubmissionId", submissionId);
@@ -127,13 +127,7 @@ public class DataModelApprovalController {
 			String adminId = changeHistory.safeUserId();
 			int n = 0;
 			for (Object seq : seqList) {
-				Map<String, Object> p = new HashMap<>();
-				p.put("changeSeq",   seq);
-				p.put("aprvStatus",  "APPROVED");
-				p.put("aprvUserId",  adminId);
-				p.put("aprvDt",      now);
-				p.put("aprvComment", body.get("aprvComment"));
-				n += sqlSessionTemplate.update("dmChangeHistory.updateAprvStatus", p);
+				n += applyApprovalStatus(seq, "APPROVED", adminId, now, body.get("aprvComment"));
 			}
 			res.setResultInfo(RestResult.CODE_200);
 			res.setContents("{\"approved\":" + n + "}");
@@ -157,13 +151,7 @@ public class DataModelApprovalController {
 			String adminId = changeHistory.safeUserId();
 			int n = 0;
 			for (Object seq : seqList) {
-				Map<String, Object> p = new HashMap<>();
-				p.put("changeSeq",   seq);
-				p.put("aprvStatus",  "REJECTED");
-				p.put("aprvUserId",  adminId);
-				p.put("aprvDt",      now);
-				p.put("aprvComment", body.get("aprvComment"));
-				n += sqlSessionTemplate.update("dmChangeHistory.updateAprvStatus", p);
+				n += applyApprovalStatus(seq, "REJECTED", adminId, now, body.get("aprvComment"));
 			}
 			res.setResultInfo(RestResult.CODE_200);
 			res.setContents("{\"rejected\":" + n + "}");
@@ -174,9 +162,47 @@ public class DataModelApprovalController {
 		return Mono.just(res);
 	}
 
+	/**
+	 * change_history 의 status 갱신 + 실제 모델 row 의 aprv_status 동기화.
+	 * change_type 별 분기 — ADD_ATTR/MODIFY_ATTR/DEL_ATTR → tb_data_model_attr,
+	 * ADD_OBJ/MODIFY_OBJ/DEL_OBJ → tb_data_model_obj.
+	 */
+	private int applyApprovalStatus(Object changeSeq, String status, String adminId, String now, Object comment) {
+		Map<String, Object> p = new HashMap<>();
+		p.put("changeSeq",   changeSeq);
+		p.put("aprvStatus",  status);
+		p.put("aprvUserId",  adminId);
+		p.put("aprvDt",      now);
+		p.put("aprvComment", comment);
+		int n = sqlSessionTemplate.update("dmChangeHistory.updateAprvStatus", p);
+		// 실제 모델 row 동기화
+		Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", changeSeq);
+		if (hist != null) {
+			String changeType = (String) hist.get("change_type");
+			String dmId       = (String) hist.get("dm_id");
+			String objOwner   = (String) hist.get("obj_owner");
+			String objNm      = (String) hist.get("obj_nm");
+			String attrNm     = (String) hist.get("attr_nm");
+			Map<String, Object> sp = new HashMap<>();
+			sp.put("dmId",        dmId);
+			sp.put("objOwner",    objOwner);
+			sp.put("objNm",       objNm);
+			sp.put("attrNm",      attrNm);
+			sp.put("aprvStatus",  status);
+			sp.put("aprvUserId",  adminId);
+			sp.put("aprvDt",      now);
+			if (changeType != null && changeType.contains("_ATTR") && attrNm != null) {
+				sqlSessionTemplate.update("dmChangeHistory.syncAttrAprvStatus", sp);
+			} else if (changeType != null && changeType.contains("_OBJ")) {
+				sqlSessionTemplate.update("dmChangeHistory.syncObjAprvStatus", sp);
+			}
+		}
+		return n;
+	}
+
 	/** 변경 이력 조회 (관리자: 전체, 사용자: 본인 + APPROVED) */
 	@PostMapping("/history")
-	public List<Map<String, Object>> history(@RequestBody Map<String, Object> body) {
+	public List<com.ndata.quality.model.std.StdDataModelChangeHistoryVo> history(@RequestBody Map<String, Object> body) {
 		Map<String, Object> p = new HashMap<>(body);
 		p.put("currentUserId", changeHistory.safeUserId());
 		p.put("isAdmin",       sessionService.isAdmin());

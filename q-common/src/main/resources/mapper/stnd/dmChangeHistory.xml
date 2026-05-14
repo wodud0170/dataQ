@@ -53,8 +53,11 @@
 	<!-- 모델 단위 이력 목록 (관리자: 전체, 사용자: 본인 + APPROVED) -->
 	<select id="selectByDmId" parameterType="java.util.Map" resultMap="map">
 		SELECT * FROM TB_DATA_MODEL_CHANGE_HISTORY
-		WHERE DM_ID = #{dmId}
-		<if test="!isAdmin">
+		WHERE 1=1
+		<if test="dmId != null and dmId != ''">
+			AND DM_ID = #{dmId}
+		</if>
+		<if test="isAdmin == null or isAdmin == false">
 			AND (APRV_STATUS = 'APPROVED' OR CHANGE_USER_ID = #{currentUserId})
 		</if>
 		<if test="changeUserId != null and changeUserId != ''">
@@ -152,5 +155,36 @@
 		   AND CHANGE_USER_ID  = #{currentUserId}
 		   AND APRV_STATUS     = 'DRAFT'
 	</delete>
+
+	<!-- 88번 — change_seq 단건 조회 (승인 처리 시 change_type/dmId/objOwner 등 lookup) -->
+	<select id="selectByChangeSeq" resultType="java.util.Map">
+		SELECT CHANGE_SEQ as change_seq, DM_ID as dm_id, CHANGE_TYPE as change_type,
+		       OBJ_OWNER as obj_owner, OBJ_NM as obj_nm, ATTR_NM as attr_nm,
+		       CONSTRAINT_NM as constraint_nm, INDEX_NM as index_nm,
+		       APRV_STATUS as aprv_status, CHANGE_USER_ID as change_user_id
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY
+		 WHERE CHANGE_SEQ = #{value}
+	</select>
+
+	<!-- 88번 — 승인/반려 시 실제 모델 row 의 aprv_status 동기화용 -->
+	<update id="syncAttrAprvStatus" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt}
+		 WHERE DM_ID = #{dmId}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND OBJ_NM = #{objNm}
+		   AND ATTR_NM = #{attrNm}
+	</update>
+	<update id="syncObjAprvStatus" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt}
+		 WHERE DM_ID = #{dmId}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND OBJ_NM = #{objNm}
+	</update>
 
 </mapper>

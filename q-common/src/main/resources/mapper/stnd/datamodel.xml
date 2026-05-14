@@ -703,6 +703,13 @@
 			,TERMS_STND_YN
 			,DOMAIN_STND_YN
 			,USE_YN
+			<!-- 88번 거버넌스 -->
+			,APRV_STATUS
+			,REQUESTER_USER_ID
+			,REQ_DT
+			,APRV_USER_ID
+			,APRV_DT
+			,SUBMISSION_ID
            )
            VALUES
            (
@@ -732,6 +739,12 @@
 			,COALESCE(#{termsStndYn, jdbcType=VARCHAR}, 'N')
 			,COALESCE(#{domainStndYn, jdbcType=VARCHAR}, 'N')
 			,'Y'
+			,COALESCE(#{aprvStatus, jdbcType=VARCHAR}, 'APPROVED')
+			,#{requesterUserId, jdbcType=VARCHAR}
+			,#{reqDt, jdbcType=VARCHAR}
+			,#{aprvUserId, jdbcType=VARCHAR}
+			,#{aprvDt, jdbcType=VARCHAR}
+			,#{submissionId, jdbcType=VARCHAR}
 		   )
 		   ON CONFLICT (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) DO UPDATE SET
 			ATTR_COMMENT = EXCLUDED.ATTR_COMMENT,
@@ -746,7 +759,14 @@
 			DEFAULT_VAL = EXCLUDED.DEFAULT_VAL,
 			ATTR_ORD = EXCLUDED.ATTR_ORD,
 			USE_YN = 'Y',
-			DELETED_DT = NULL
+			DELETED_DT = NULL,
+			<!-- 88번 거버넌스 — UPSERT 시 거버넌스 필드도 갱신 (수집 시 APPROVED 유지, 사용자 변경 시 DRAFT 등) -->
+			APRV_STATUS       = EXCLUDED.APRV_STATUS,
+			REQUESTER_USER_ID = EXCLUDED.REQUESTER_USER_ID,
+			REQ_DT            = EXCLUDED.REQ_DT,
+			APRV_USER_ID      = EXCLUDED.APRV_USER_ID,
+			APRV_DT           = EXCLUDED.APRV_DT,
+			SUBMISSION_ID     = EXCLUDED.SUBMISSION_ID
 	</insert>
 
 	<!-- OBJ UPSERT (MERGE): 수집 시 기존 행 갱신, 신규 행 삽입 -->
@@ -1059,6 +1079,14 @@
 			,DOMAIN_STND_YN   = #{domainStndYn, jdbcType=VARCHAR}
 			,WORD_LST         = #{wordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
 			,WORD_STND_LST    = #{wordStndLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+			<!-- 88번 거버넌스 — 변경 endpoint 가 aprvStatus 보내면 갱신 (예: 사용자가 본인 DRAFT 위에 추가 편집) -->
+			<if test="aprvStatus != null">
+			,APRV_STATUS       = #{aprvStatus, jdbcType=VARCHAR}
+			,REQUESTER_USER_ID = #{requesterUserId, jdbcType=VARCHAR}
+			,REQ_DT            = #{reqDt, jdbcType=VARCHAR}
+			,APRV_USER_ID      = #{aprvUserId, jdbcType=VARCHAR}
+			,APRV_DT           = #{aprvDt, jdbcType=VARCHAR}
+			</if>
 		WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '') AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
 	</update>
 
