@@ -181,6 +181,26 @@
                         <v-list-item-title>진단 제외 관리</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 88번 거버넌스 — 내 변경 신청 (사용자 + 관리자 모두 사용) -->
+                    <v-list-item link id="nav_my_dm_changes" href="#tab_my_dm_changes"
+                        active-class="ndColor--text" title="내 변경 신청"
+                        v-on:click.stop="addTabItem('내 변경 신청', 'myDmChanges');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>내 변경 신청</v-list-item-title>
+                    </v-list-item>
+
+                    <!-- 88번 거버넌스 — 데이터 모델 변경 이력 (양쪽 모두 사용) -->
+                    <v-list-item link id="nav_dm_history" href="#tab_dm_history"
+                        active-class="ndColor--text" title="데이터 모델 변경 이력"
+                        v-on:click.stop="addTabItem('데이터 모델 변경 이력', 'dmHistory');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 모델 변경 이력</v-list-item-title>
+                    </v-list-item>
+
                 </v-list-group>
 
                 <!-- 표준 진단 -->
@@ -409,31 +429,13 @@
                         <v-list-item-title>승인</v-list-item-title>
                     </v-list-item>
 
-                    <!-- 88번 거버넌스 — 데이터 모델 변경 승인 (관리자 전용 별도 메뉴) -->
+                    <!-- 88번 거버넌스 — 데이터 모델 변경 승인 (관리자 전용) -->
                     <v-list-item link id="nav_dm_approval" href="#tab_dm_approval" active-class="ndColor--text" title="데이터 모델 변경 승인"
                         v-on:click.stop=" addTabItem('데이터 모델 변경 승인', 'dmApproval'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
                         <v-list-item-title>데이터 모델 변경 승인</v-list-item-title>
-                    </v-list-item>
-
-                    <!-- 88번 거버넌스 — 내 변경 신청 현황 (사용자용) -->
-                    <v-list-item link id="nav_my_dm_changes" href="#tab_my_dm_changes" active-class="ndColor--text" title="내 변경 신청"
-                        v-on:click.stop=" addTabItem('내 변경 신청', 'myDmChanges'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>내 변경 신청</v-list-item-title>
-                    </v-list-item>
-
-                    <!-- 88번 거버넌스 — 데이터 모델 변경 이력 -->
-                    <v-list-item link id="nav_dm_history" href="#tab_dm_history" active-class="ndColor--text" title="데이터 모델 변경 이력"
-                        v-on:click.stop=" addTabItem('데이터 모델 변경 이력', 'dmHistory'); ">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>데이터 모델 변경 이력</v-list-item-title>
                     </v-list-item>
 
                     <v-list-item link id="nav_datasource" href="#tab_datasource" active-class="ndColor--text" title="데이터 소스"
