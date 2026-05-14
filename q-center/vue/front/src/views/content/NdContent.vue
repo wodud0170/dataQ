@@ -224,6 +224,20 @@
                     <approval :key="approvalKey" :isMobile="isMobile" :approvalStatus="approvalStatus"/>
                 </keep-alive>
             </div>
+            <!-- 88번 거버넌스 — 데이터 모델 변경 승인 (관리자) -->
+            <div v-if="this.activeContent === 'dmApproval'" id="tab_dm_approval" class="tab_contents"
+                :class="{ active: this.activeContent === 'dmApproval' }">
+                <keep-alive>
+                    <dmApproval :key="dmApprovalKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <!-- 88번 거버넌스 — 내 변경 신청 현황 (사용자) -->
+            <div v-if="this.activeContent === 'myDmChanges'" id="tab_my_dm_changes" class="tab_contents"
+                :class="{ active: this.activeContent === 'myDmChanges' }">
+                <keep-alive>
+                    <myDmChanges :key="myDmChangesKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'datasource'" id="tab_datasource" class="tab_contents"
                 :class="{ active: this.activeContent === 'datasource' }">
                 <keep-alive>
@@ -384,6 +398,9 @@ import DQQVRT from "./../../components/DQQVRT.vue"
 import MMUser from "./../../components/MMUser.vue"
 import MMRoles from "./../../components/MMRoles.vue"
 import MMApproval from "./../../components/MMApproval.vue"
+// 88번 거버넌스
+import MMDataModelApproval from "./../../components/MMDataModelApproval.vue"
+import MMMyDataModelChanges from "./../../components/MMMyDataModelChanges.vue"
 import MMDatasource from "./../../components/MMDatasource.vue"
 import DSScheduleManage from "./../../components/DSScheduleManage.vue"
 import DSQualDomainRule   from "./../../components/DSQualDomainRule.vue"   // 83번 신규
@@ -461,6 +478,8 @@ export default {
             userKey: this.createUUID(),
             rolesKey: this.createUUID(),
             approvalKey: this.createUUID(),
+            dmApprovalKey: this.createUUID(),
+            myDmChangesKey: this.createUUID(),
             datasourceKey: this.createUUID(),
             scheduleManageKey: this.createUUID(),
             scheduleLogKey: this.createUUID(),
@@ -514,6 +533,8 @@ export default {
         "user": MMUser,
         "roles": MMRoles,
         "approval": MMApproval,
+        "dmApproval": MMDataModelApproval,
+        "myDmChanges": MMMyDataModelChanges,
         "datasource": MMDatasource,
         "scheduleManage": DSScheduleManage,
         "scheduleLog": DSScheduleLog,
