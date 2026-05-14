@@ -27,6 +27,16 @@ public class SearchController {
     @Autowired
 	private SqlSessionTemplate sqlSessionTemplate;
 
+    /** 88번 거버넌스 — FE 가 현재 사용자의 관리자 여부 확인 */
+    @RequestMapping(value = "/getUserInfo", method = RequestMethod.GET)
+    public java.util.Map<String, Object> getUserInfo() {
+        java.util.Map<String, Object> m = new HashMap<>();
+        m.put("userId", sessionService.getUserId());
+        m.put("admin",  sessionService.isAdmin());
+        m.put("role",   sessionService.isAdmin() ? "A" : "M");
+        return m;
+    }
+
     @RequestMapping(value = "/getDashboardInfo", method = RequestMethod.GET)
 	public HashMap getDashboardInfo() {
         StdApproveStatVo.RetrieveCond retCond = new StdApproveStatVo.RetrieveCond();

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="area">
+
+	<!-- 88번 거버넌스 §15 — 업무영역(BIZ, 논리) / 주제영역(SUBJ, 물리) CRUD -->
+
+	<select id="selectBizAreas" resultType="java.util.Map">
+		SELECT biz_area_id   as "bizAreaId",
+		       biz_area_nm   as "bizAreaNm",
+		       biz_area_desc as "bizAreaDesc",
+		       parent_id     as "parentId",
+		       sort_order    as "sortOrder",
+		       use_yn        as "useYn"
+		  FROM tb_biz_area
+		 WHERE COALESCE(use_yn, 'Y') = 'Y'
+		 ORDER BY sort_order, biz_area_nm
+	</select>
+
+	<select id="selectSubjAreas" resultType="java.util.Map">
+		SELECT subj_area_id   as "subjAreaId",
+		       subj_area_nm   as "subjAreaNm",
+		       subj_area_desc as "subjAreaDesc",
+		       parent_id      as "parentId",
+		       sort_order     as "sortOrder",
+		       use_yn         as "useYn"
+		  FROM tb_subj_area
+		 WHERE COALESCE(use_yn, 'Y') = 'Y'
+		 ORDER BY sort_order, subj_area_nm
+	</select>
+
+	<insert id="insertBizArea" parameterType="java.util.Map">
+		INSERT INTO tb_biz_area
+		  (biz_area_id, biz_area_nm, biz_area_desc, parent_id, sort_order,
+		   use_yn, cret_user_id, cret_dt, aprv_status, aprv_user_id, aprv_dt)
+		VALUES
+		  (#{bizAreaId}, #{bizAreaNm}, #{bizAreaDesc, jdbcType=VARCHAR},
+		   #{parentId, jdbcType=VARCHAR}, #{sortOrder, jdbcType=INTEGER},
+		   'Y', #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'),
+		   'APPROVED', #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'))
+		ON CONFLICT (biz_area_id) DO UPDATE SET
+		   biz_area_nm = EXCLUDED.biz_area_nm,
+		   biz_area_desc = EXCLUDED.biz_area_desc,
+		   parent_id = EXCLUDED.parent_id,
+		   sort_order = EXCLUDED.sort_order,
+		   updt_user_id = EXCLUDED.cret_user_id,
+		   updt_dt = to_char(now(), 'YYYYMMDDHH24MISS')
+	</insert>
+
+	<insert id="insertSubjArea" parameterType="java.util.Map">
+		INSERT INTO tb_subj_area
+		  (subj_area_id, subj_area_nm, subj_area_desc, parent_id, sort_order,
+		   use_yn, cret_user_id, cret_dt, aprv_status, aprv_user_id, aprv_dt)
+		VALUES
+		  (#{subjAreaId}, #{subjAreaNm}, #{subjAreaDesc, jdbcType=VARCHAR},
+		   #{parentId, jdbcType=VARCHAR}, #{sortOrder, jdbcType=INTEGER},
+		   'Y', #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'),
+		   'APPROVED', #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'))
+		ON CONFLICT (subj_area_id) DO UPDATE SET
+		   subj_area_nm = EXCLUDED.subj_area_nm,
+		   subj_area_desc = EXCLUDED.subj_area_desc,
+		   parent_id = EXCLUDED.parent_id,
+		   sort_order = EXCLUDED.sort_order,
+		   updt_user_id = EXCLUDED.cret_user_id,
+		   updt_dt = to_char(now(), 'YYYYMMDDHH24MISS')
+	</insert>
+
+	<update id="deleteBizArea" parameterType="String">
+		UPDATE tb_biz_area SET use_yn = 'N' WHERE biz_area_id = #{value}
+	</update>
+	<update id="deleteSubjArea" parameterType="String">
+		UPDATE tb_subj_area SET use_yn = 'N' WHERE subj_area_id = #{value}
+	</update>
+</mapper>

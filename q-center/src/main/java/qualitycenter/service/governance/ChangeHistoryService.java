@@ -83,4 +83,55 @@ public class ChangeHistoryService {
 	public String currentDt() {
 		return LocalDateTime.now().format(DT_FMT);
 	}
+
+	/**
+	 * 88번 §8 — Tier 1 변경에 대해 ALTER 문 생성 (DBMS 일반 SQL 기준).
+	 * dialect 분기는 차후. NULL 반환 = snippet 불필요.
+	 */
+	public String generateDdlSnippet(String changeType, String objOwner, String objNm, String attrNm,
+	                                  com.ndata.quality.model.std.StdDataModelAttrVo attrVo,
+	                                  com.ndata.quality.model.std.StdDataModelObjVo objVo) {
+		if (changeType == null) return null;
+		String qOwner = (objOwner != null && !objOwner.isEmpty()) ? (objOwner + ".") : "";
+		String table = qOwner + objNm;
+		switch (changeType) {
+			case "ADD_OBJ":
+				if (objVo != null) {
+					StringBuilder sb = new StringBuilder("CREATE TABLE ").append(table).append(" (...)");
+					if (objVo.getTablespaceNm() != null && !objVo.getTablespaceNm().isEmpty())
+						sb.append(" TABLESPACE ").append(objVo.getTablespaceNm());
+					sb.append(";");
+					return sb.toString();
+				}
+				return "CREATE TABLE " + table + " (...);";
+			case "DEL_OBJ":
+				return "DROP TABLE " + table + ";";
+			case "ADD_ATTR":
+				if (attrVo != null) {
+					return "ALTER TABLE " + table + " ADD COLUMN " + attrNm + " "
+						+ (attrVo.getDataType() == null ? "VARCHAR(255)" : attrVo.getDataType())
+						+ (attrVo.getDataLen() > 0 ? "(" + attrVo.getDataLen() + ")" : "")
+						+ ("N".equalsIgnoreCase(attrVo.getNullableYn()) ? " NOT NULL" : "")
+						+ ";";
+				}
+				return "ALTER TABLE " + table + " ADD COLUMN " + attrNm + ";";
+			case "DEL_ATTR":
+				return "ALTER TABLE " + table + " DROP COLUMN " + attrNm + ";";
+			case "MODIFY_ATTR":
+				if (attrVo != null) {
+					return "ALTER TABLE " + table + " ALTER COLUMN " + attrNm + " TYPE "
+						+ (attrVo.getDataType() == null ? "VARCHAR(255)" : attrVo.getDataType())
+						+ (attrVo.getDataLen() > 0 ? "(" + attrVo.getDataLen() + ")" : "")
+						+ ";";
+				}
+				return null;
+			case "SWAP_ATTR_ORD":
+				// 대부분 DBMS 는 컬럼 순서 ALTER 안 함 — DDL snippet 없음
+				return null;
+			case "MODIFY_OBJ":
+				return "-- 테이블 메타 변경: " + table;
+			default:
+				return null;
+		}
+	}
 }

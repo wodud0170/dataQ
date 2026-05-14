@@ -438,6 +438,15 @@
                         <v-list-item-title>데이터 모델 변경 승인</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 88번 §15 — 영역 관리 (관리자 전용) -->
+                    <v-list-item link id="nav_area_mgmt" href="#tab_area_mgmt" active-class="ndColor--text" title="영역 관리 (업무/주제)"
+                        v-on:click.stop=" addTabItem('영역 관리', 'areaMgmt'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>영역 관리 (업무/주제)</v-list-item-title>
+                    </v-list-item>
+
                     <v-list-item link id="nav_datasource" href="#tab_datasource" active-class="ndColor--text" title="데이터 소스"
                         v-on:click.stop=" addTabItem('데이터 소스', 'datasource'); ">
                         <v-list-item-icon>

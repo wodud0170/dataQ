@@ -129,7 +129,12 @@ public class DdlGenerator {
 			if (i < allLines.size() - 1) sb.append(",");
 			sb.append("\n");
 		}
-		sb.append(");\n");
+		sb.append(")");
+		// 88번 §15 — TABLESPACE 절 (NULL 이면 생략)
+		if (obj.getTablespaceNm() != null && !obj.getTablespaceNm().trim().isEmpty()) {
+			sb.append(" TABLESPACE ").append(obj.getTablespaceNm().trim());
+		}
+		sb.append(";\n");
 	}
 
 	private String buildPkLine(String tbl, List<Map<String, Object>> cons, List<StdDataModelAttrVo> pkAttrsFromFlag) {

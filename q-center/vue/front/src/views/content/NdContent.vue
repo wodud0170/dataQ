@@ -245,6 +245,13 @@
                     <dmHistory :key="dmHistoryKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 88번 §15 — 영역 관리 -->
+            <div v-if="this.activeContent === 'areaMgmt'" id="tab_area_mgmt" class="tab_contents"
+                :class="{ active: this.activeContent === 'areaMgmt' }">
+                <keep-alive>
+                    <areaMgmt :key="areaMgmtKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'datasource'" id="tab_datasource" class="tab_contents"
                 :class="{ active: this.activeContent === 'datasource' }">
                 <keep-alive>
@@ -409,6 +416,7 @@ import MMApproval from "./../../components/MMApproval.vue"
 import MMDataModelApproval from "./../../components/MMDataModelApproval.vue"
 import MMMyDataModelChanges from "./../../components/MMMyDataModelChanges.vue"
 import MMDataModelChangeHistory from "./../../components/MMDataModelChangeHistory.vue"
+import MMBizSubjArea from "./../../components/MMBizSubjArea.vue"
 import MMDatasource from "./../../components/MMDatasource.vue"
 import DSScheduleManage from "./../../components/DSScheduleManage.vue"
 import DSQualDomainRule   from "./../../components/DSQualDomainRule.vue"   // 83번 신규
@@ -489,6 +497,7 @@ export default {
             dmApprovalKey: this.createUUID(),
             myDmChangesKey: this.createUUID(),
             dmHistoryKey: this.createUUID(),
+            areaMgmtKey: this.createUUID(),
             datasourceKey: this.createUUID(),
             scheduleManageKey: this.createUUID(),
             scheduleLogKey: this.createUUID(),
@@ -545,6 +554,7 @@ export default {
         "dmApproval": MMDataModelApproval,
         "myDmChanges": MMMyDataModelChanges,
         "dmHistory": MMDataModelChangeHistory,
+        "areaMgmt": MMBizSubjArea,
         "datasource": MMDatasource,
         "scheduleManage": DSScheduleManage,
         "scheduleLog": DSScheduleLog,

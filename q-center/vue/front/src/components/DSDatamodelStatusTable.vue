@@ -120,6 +120,15 @@
           <v-text-field v-model="objForm.objNmKr" label="테이블 한글명 (논리)" outlined dense />
           <v-text-field v-model="objForm.objOwner" label="소유자 (스키마)" outlined dense />
           <v-text-field v-model="objForm.objDesc" label="테이블 설명" outlined dense />
+          <!-- 88번 §15 — 테이블스페이스 (물리) + 업무영역 (논리) + 주제영역 (물리) -->
+          <v-text-field v-model="objForm.tablespaceNm" label="테이블스페이스 (선택, 물리)" outlined dense
+            class="hdr-physical-bg" persistent-hint hint="DDL 출력 시 TABLESPACE 절 자동 포함" />
+          <v-select v-model="objForm.bizAreaId" :items="bizAreaOptions" item-text="bizAreaNm" item-value="bizAreaId"
+            label="업무영역 (논리, 선택)" outlined dense clearable
+            class="hdr-logical-bg" />
+          <v-select v-model="objForm.subjAreaId" :items="subjAreaOptions" item-text="subjAreaNm" item-value="subjAreaId"
+            label="주제영역 (물리, 선택)" outlined dense clearable
+            class="hdr-physical-bg" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -222,7 +231,10 @@ export default {
     ],
     objDialog: false,
     objDialogMode: 'add',
-    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '' },
+    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null, subjAreaId: null },
+    // 88번 §15 — 영역 옵션
+    bizAreaOptions: [],
+    subjAreaOptions: [],
     // 엑셀 업로드
     uploadDialog: false,
     uploadFile: null,
@@ -254,6 +266,11 @@ export default {
     },
   },
   methods: {
+    // 88번 §15 — 영역 옵션 로드
+    loadAreaOptions() {
+      axios.post(this.$APIURL.base + 'api/area/biz/list', {}).then(r => { this.bizAreaOptions = r.data || []; }).catch(() => {});
+      axios.post(this.$APIURL.base + 'api/area/subj/list', {}).then(r => { this.subjAreaOptions = r.data || []; }).catch(() => {});
+    },
     /** 86번 #11 — 검색 모드 매칭: contains/exact/start/end */
     _matchName(value, keyword, mode) {
       if (!keyword) return true;
@@ -363,7 +380,8 @@ export default {
     },
     openAddObjDialog() {
       this.objDialogMode = 'add';
-      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '' };
+      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null, subjAreaId: null };
+      this.loadAreaOptions();
       this.objDialog = true;
     },
     openEditObjDialog(item) {
@@ -372,7 +390,11 @@ export default {
         objNm: item.objNm, objNmKr: item.objNmKr || '',
         objOwner: item.objOwner || '', objDesc: item.objDesc || '',
         origObjNm: item.objNm, origObjOwner: item.objOwner || '',
+        tablespaceNm: item.tablespaceNm || '',
+        bizAreaId: item.bizAreaId || null,
+        subjAreaId: item.subjAreaId || null,
       };
+      this.loadAreaOptions();
       this.objDialog = true;
     },
     async submitObj() {

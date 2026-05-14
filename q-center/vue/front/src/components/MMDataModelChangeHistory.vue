@@ -42,6 +42,13 @@
           <v-btn v-if="item.ddlSnippet" x-small text v-on:click="copyDdl(item)">
             <v-icon x-small>mdi-content-copy</v-icon>DDL
           </v-btn>
+          <v-btn v-if="isAdmin && item.aprvStatus==='APPROVED' && item.ddlSnippet && !item.ddlExecDt"
+            x-small text color="success" v-on:click="execDdl(item)">
+            <v-icon x-small>mdi-database-arrow-up</v-icon>DB 반영
+          </v-btn>
+          <v-chip v-if="item.ddlExecDt" x-small outlined :color="item.ddlExecResult==='SUCCESS' ? 'success' : 'error'">
+            {{ item.ddlExecResult }}
+          </v-chip>
         </template>
       </v-data-table>
     </v-sheet>
@@ -86,6 +93,8 @@ export default {
   props: ['isMobile'],
   data: () => ({
     items: [],
+    isAdmin: false,
+    dsId: '',
     filter: { dmId: '', changeUserId: '', changeTier: '', aprvStatus: '' },
     tierOptions: [
       { text: '전체', value: '' },
@@ -113,9 +122,14 @@ export default {
     detailDialog: false,
     detail: {},
   }),
-  mounted() { this.load(); },
-  activated() { this.load(); },
+  mounted() { this.load(); this.loadIsAdmin(); },
+  activated() { this.load(); this.loadIsAdmin(); },
   methods: {
+    loadIsAdmin() {
+      axios.get(this.$APIURL.base + 'api/search/getUserInfo').then(r => {
+        this.isAdmin = !!(r.data && (r.data.admin || r.data.role === 'A'));
+      }).catch(() => { this.isAdmin = false; });
+    },
     load() {
       axios.post(this.$APIURL.base + 'api/dmApproval/history', this.filter).then(res => {
         this.items = res.data || [];
@@ -147,6 +161,26 @@ export default {
     copyDdl(item) {
       navigator.clipboard.writeText(item.ddlSnippet || '').then(() => {
         this.$swal.fire({ title: 'DDL 복사됨', icon: 'success', timer: 1000, showConfirmButton: false });
+      });
+    },
+    execDdl(item) {
+      this.$swal.fire({
+        title: 'DB 직접 반영',
+        html: `<div style="text-align:left;font-size:.85rem;"><b>실행될 DDL:</b><pre style="background:#263238;color:#B0BEC5;padding:6px;border-radius:4px;font-size:.78rem;">${item.ddlSnippet}</pre><br>대상 데이터소스 ID:</div>`,
+        input: 'text',
+        inputValue: this.dsId,
+        showCancelButton: true,
+        confirmButtonText: '실행', cancelButtonText: '취소',
+      }).then(r => {
+        if (!r.isConfirmed) return;
+        this.dsId = r.value || '';
+        axios.post(this.$APIURL.base + 'api/dmApproval/execDdl', {
+          changeSeqList: [item.changeSeq], dsId: r.value,
+        }).then(res => {
+          const c = res.data && res.data.contents ? JSON.parse(res.data.contents) : {};
+          this.$swal.fire({ title: `DB 반영: success ${c.success||0} / failed ${c.failed||0} / noPriv ${c.noPriv||0}`, icon: 'info' });
+          this.load();
+        }).catch(e => this.$swal.fire({ title: 'DB 반영 실패', text: (e.response && e.response.data && e.response.data.resultMessage) || '', icon: 'error' }));
       });
     },
   },

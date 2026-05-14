@@ -41,6 +41,7 @@ public class DataModelApprovalController {
 	@Autowired private SqlSessionTemplate sqlSessionTemplate;
 	@Autowired private SessionService sessionService;
 	@Autowired private ChangeHistoryService changeHistory;
+	@Autowired private com.ndata.quality.tool.DataSourceUtils dataSourceUtils;
 
 	private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -198,6 +199,70 @@ public class DataModelApprovalController {
 			}
 		}
 		return n;
+	}
+
+	/** 88번 §8 — 관리자: 변경 이력의 DDL_SNIPPET 을 실제 DB 에 실행 */
+	@PostMapping("/execDdl")
+	@SuppressWarnings("unchecked")
+	public Mono<Response> execDdl(@RequestBody Map<String, Object> body) {
+		Response res = new Response();
+		try {
+			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			List<Object> seqList = (List<Object>) body.get("changeSeqList");
+			String dsId = (String) body.get("dsId");
+			if (seqList == null || seqList.isEmpty()) throw new IllegalArgumentException("changeSeqList 필수");
+			if (dsId == null || dsId.isEmpty()) throw new IllegalArgumentException("dsId 필수");
+
+			com.ndata.model.DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
+			if (ds == null) throw new IllegalStateException("데이터소스 없음: " + dsId);
+
+			int success = 0, failed = 0, noPriv = 0;
+			java.util.List<String> messages = new java.util.ArrayList<>();
+			String adminId = changeHistory.safeUserId();
+			String now = LocalDateTime.now().format(DT_FMT);
+			for (Object seq : seqList) {
+				Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+				if (hist == null) { failed++; messages.add(seq + ": history 없음"); continue; }
+				String ddl = (String) hist.get("ddl_snippet");
+				if (ddl == null || ddl.trim().isEmpty() || ddl.startsWith("--") || ddl.contains("(...)")) {
+					failed++; messages.add(seq + ": 실행 가능한 DDL 없음 (snippet=" + ddl + ")");
+					Map<String, Object> u = new HashMap<>();
+					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
+					u.put("ddlExecResult", "SKIPPED"); u.put("ddlExecMessage", "DDL 미완성 또는 미지원");
+					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
+					continue;
+				}
+				com.ndata.datasource.dbms.handler.DBHandler h = null;
+				try {
+					h = dataSourceUtils.getDBHandler(ds);
+					h.execute(ddl);
+					success++;
+					Map<String, Object> u = new HashMap<>();
+					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
+					u.put("ddlExecResult", "SUCCESS"); u.put("ddlExecMessage", "OK");
+					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
+				} catch (Exception ex) {
+					String msg = ex.getMessage() == null ? "" : ex.getMessage();
+					boolean priv = msg.contains("ORA-01031") || msg.contains("insufficient")
+							|| msg.contains("denied") || msg.contains("permission");
+					String result = priv ? "NO_PRIVILEGE" : "FAILED";
+					if (priv) noPriv++; else failed++;
+					messages.add(seq + ": " + result + " — " + msg.substring(0, Math.min(200, msg.length())));
+					Map<String, Object> u = new HashMap<>();
+					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
+					u.put("ddlExecResult", result); u.put("ddlExecMessage", msg.substring(0, Math.min(2000, msg.length())));
+					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
+				} finally {
+					if (h != null) try { h.close(); } catch (Exception e) {}
+				}
+			}
+			res.setResultInfo(RestResult.CODE_200);
+			res.setContents("{\"success\":" + success + ",\"failed\":" + failed + ",\"noPriv\":" + noPriv + "}");
+		} catch (Exception e) {
+			log.error(">> execDdl failed: {}", e.getMessage(), e);
+			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return Mono.just(res);
 	}
 
 	/** 변경 이력 조회 (관리자: 전체, 사용자: 본인 + APPROVED) */

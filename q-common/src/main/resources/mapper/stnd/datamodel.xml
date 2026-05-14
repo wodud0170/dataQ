@@ -1396,6 +1396,22 @@
 		     <foreach collection="pkColumns" item="col" open="(" separator="," close=")">#{col}</foreach>
 	</select>
 
+	<!-- 88번 §7.3 — 컬럼 순서 swap (Tier 1.5, 관리자만). 인접 두 행의 attr_ord 를 교환 -->
+	<select id="selectAttrOrdForSwap" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT ATTR_NM as "attrNm", ATTR_ORD as "attrOrder"
+		  FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dataModelId}
+		   AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+		   AND OBJ_NM = #{objNm} AND USE_YN = 'Y'
+		 ORDER BY ATTR_ORD
+	</select>
+	<update id="updateAttrOrdByName" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR SET ATTR_ORD = #{attrOrder}
+		 WHERE DM_ID = #{dataModelId}
+		   AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
+		   AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+	</update>
+
 	<!-- 87-3 — 컬럼 삭제 전 참조 조회 (자기 테이블의 CONSTRAINT/INDEX, 외부 FK 의 ref_*, 다른 ATTR 의 FK_PARENT_*) -->
 	<select id="selectOwnConstraintRefsByAttr" parameterType="java.util.Map" resultType="java.util.Map">
 		SELECT CONSTRAINT_NM as constraintNm, CONSTRAINT_TYPE as constraintType

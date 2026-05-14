@@ -91,6 +91,66 @@ public class DataModelController {
 	@Autowired
 	private qualitycenter.service.governance.ChangeHistoryService changeHistory;
 
+	/**
+	 * 88번 §7.3 — 컬럼 순서 swap (Tier 1.5, 관리자만).
+	 * direction = UP : 인접 위 행과 attr_ord 스왑.  DOWN : 아래 행과 스왑.
+	 */
+	@PostMapping("/swapAttrOrd")
+	public Mono<Response> swapAttrOrd(@RequestBody Map<String, Object> body) {
+		Response res = new Response();
+		try {
+			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			String dataModelId = (String) body.get("dataModelId");
+			String objOwner    = body.get("objOwner") == null ? "" : (String) body.get("objOwner");
+			String objNm       = (String) body.get("objNm");
+			String attrNm      = (String) body.get("attrNm");
+			String direction   = (String) body.get("direction");
+			if (dataModelId == null || objNm == null || attrNm == null || direction == null)
+				throw new IllegalArgumentException("dataModelId/objNm/attrNm/direction 필수");
+
+			Map<String, Object> p = new HashMap<>();
+			p.put("dataModelId", dataModelId);
+			p.put("objOwner",    objOwner);
+			p.put("objNm",       objNm);
+			List<Map<String, Object>> rows = sqlSessionTemplate.selectList("datamodel.selectAttrOrdForSwap", p);
+			int idx = -1;
+			for (int i = 0; i < rows.size(); i++) {
+				if (attrNm.equals(rows.get(i).get("attrNm"))) { idx = i; break; }
+			}
+			if (idx < 0) throw new IllegalStateException("대상 컬럼 없음");
+			int swapWith = "UP".equalsIgnoreCase(direction) ? idx - 1 : idx + 1;
+			if (swapWith < 0 || swapWith >= rows.size())
+				throw new IllegalStateException("인접 컬럼 없음");
+
+			Map<String, Object> a = rows.get(idx);
+			Map<String, Object> b = rows.get(swapWith);
+			Number ordA = (Number) a.get("attrOrder");
+			Number ordB = (Number) b.get("attrOrder");
+
+			Map<String, Object> u1 = new HashMap<>();
+			u1.put("dataModelId", dataModelId); u1.put("objOwner", objOwner); u1.put("objNm", objNm);
+			u1.put("attrNm", a.get("attrNm")); u1.put("attrOrder", ordB.shortValue());
+			sqlSessionTemplate.update("datamodel.updateAttrOrdByName", u1);
+
+			Map<String, Object> u2 = new HashMap<>();
+			u2.put("dataModelId", dataModelId); u2.put("objOwner", objOwner); u2.put("objNm", objNm);
+			u2.put("attrNm", b.get("attrNm")); u2.put("attrOrder", ordA.shortValue());
+			sqlSessionTemplate.update("datamodel.updateAttrOrdByName", u2);
+
+			// 이력 기록 (Tier 1.5, 즉시 APPROVED)
+			changeHistory.record(null, dataModelId, "SWAP_ATTR_ORD", "TIER1_5",
+					objOwner, objNm, attrNm, null, null,
+					"{\"a\":\"" + a.get("attrNm") + "\":" + ordA + ",\"b\":\"" + b.get("attrNm") + "\":" + ordB + "}",
+					"{\"a\":\"" + a.get("attrNm") + "\":" + ordB + ",\"b\":\"" + b.get("attrNm") + "\":" + ordA + "}",
+					null, "APPROVED");
+			res.setResultInfo(RestResult.CODE_200);
+		} catch (Exception e) {
+			log.error(">> swapAttrOrd failed: {}", e.getMessage(), e);
+			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return Mono.just(res);
+	}
+
 	@Autowired
 	SecurityManager securityUtils;
 
@@ -912,7 +972,9 @@ public class DataModelController {
 			session.insert("datamodel.insertDataModelObj", objVo);
 			changeHistory.record(session, objVo.getDataModelId(), "ADD_OBJ", "TIER1",
 					objVo.getObjOwner(), objVo.getObjNm(), null, null, null,
-					null, toJsonSafe(objVo), null, addObjAprvStatus);
+					null, toJsonSafe(objVo),
+					changeHistory.generateDdlSnippet("ADD_OBJ", objVo.getObjOwner(), objVo.getObjNm(), null, null, objVo),
+					addObjAprvStatus);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -1484,7 +1546,9 @@ public class DataModelController {
 			String delObjAprvStatus = changeHistory.resolveAprvStatusForUserChange();
 			changeHistory.record(session, objVo.getDataModelId(), "DEL_OBJ", "TIER1",
 					(String)param.get("objOwner"), objVo.getObjNm(), null, null, null,
-					null, null, null, delObjAprvStatus);
+					null, null,
+					changeHistory.generateDdlSnippet("DEL_OBJ", (String)param.get("objOwner"), objVo.getObjNm(), null, null, null),
+					delObjAprvStatus);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -2030,7 +2094,9 @@ public class DataModelController {
 						added++;
 						changeHistory.record(session, dataModelId, "ADD_ATTR", "TIER1",
 								objOwner, objNm, addAttrNm, null, null,
-								null, toJsonSafe(vo), null, addAprvStatus);
+								null, toJsonSafe(vo),
+								changeHistory.generateDdlSnippet("ADD_ATTR", objOwner, objNm, addAttrNm, vo, null),
+								addAprvStatus);
 					} else if ("UPDATE".equalsIgnoreCase(mode)) {
 						// origAttrNm = DB 의 PK 매칭용 — DB 에 저장된 case 그대로 유지 (UPPER 처리 X)
 						String origAttrNm = str(row.get("origAttrNm"));
@@ -2187,7 +2253,9 @@ public class DataModelController {
 								: "APPROVED";
 						changeHistory.record(session, dataModelId, "MODIFY_ATTR", updTier,
 								objOwner, objNm, newAttrNm, null, null,
-								toJsonSafe(existing), toJsonSafe(vo), null, updAprvStatus);
+								toJsonSafe(existing), toJsonSafe(vo),
+								"TIER1".equals(updTier) ? changeHistory.generateDdlSnippet("MODIFY_ATTR", objOwner, objNm, newAttrNm, vo, null) : null,
+								updAprvStatus);
 					} else if ("DELETE".equalsIgnoreCase(mode)) {
 						String attrNm = str(row.get("attrNm"));
 						if (attrNm == null || attrNm.trim().isEmpty())
@@ -2205,7 +2273,9 @@ public class DataModelController {
 						String delAprvStatus = changeHistory.resolveAprvStatusForUserChange();
 						changeHistory.record(session, dataModelId, "DEL_ATTR", "TIER1",
 								objOwner, objNm, attrNm, null, null,
-								null, null, null, delAprvStatus);
+								null, null,
+								changeHistory.generateDdlSnippet("DEL_ATTR", objOwner, objNm, attrNm, null, null),
+								delAprvStatus);
 					} else {
 						throw new IllegalArgumentException("알 수 없는 mode: " + mode);
 					}

@@ -209,6 +209,7 @@
       item-key="_rowKey" show-select v-model="selectedRows"
       :sort-by.sync="userSortBy" :sort-desc.sync="userSortDesc"
       :must-sort="false"
+      :item-class="row => row.aprvStatus === 'DRAFT' || row.aprvStatus === 'SUBMITTED' ? 'row-draft' : (row.aprvStatus === 'REJECTED' ? 'row-rejected' : '')"
       fixed-header :height="tableHeight"
       class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요.">
 
@@ -260,11 +261,20 @@
           @paste.native="onCellPaste(item, 'dataDecimalLen', $event)" />
       </template>
       <template #item.attrOrder="{ item }">
-        <v-text-field v-model.number="item.attrOrder"
-          type="number" min="1"
-          :class="'inline-edit ' + (isRowDirty(item) ? 'inline-dirty' : '')"
-          dense hide-details outlined flat solo single-line placeholder="자동"
-          @paste.native="onCellPaste(item, 'attrOrder', $event)" />
+        <div style="display:flex; align-items:center; gap:2px;">
+          <v-text-field v-model.number="item.attrOrder"
+            type="number" min="1" style="flex:1;"
+            :class="'inline-edit ' + (isRowDirty(item) ? 'inline-dirty' : '')"
+            dense hide-details outlined flat solo single-line placeholder="자동"
+            @paste.native="onCellPaste(item, 'attrOrder', $event)" />
+          <!-- 88번 §7.3 — 컬럼 순서 ↑↓ (관리자만, saved 행) -->
+          <v-icon v-if="isAdmin && item._mode === 'saved' && item.attrNm" small
+            color="indigo lighten-2" title="위와 자리 바꾸기" style="cursor:pointer;"
+            @click="swapAttrOrd(item, 'UP')">mdi-arrow-up-bold</v-icon>
+          <v-icon v-if="isAdmin && item._mode === 'saved' && item.attrNm" small
+            color="indigo lighten-2" title="아래와 자리 바꾸기" style="cursor:pointer;"
+            @click="swapAttrOrd(item, 'DOWN')">mdi-arrow-down-bold</v-icon>
+        </div>
       </template>
 
       <template #item.nullableYn="{ item }">
@@ -558,6 +568,8 @@ export default {
     newRows: [],            // 미저장 ADD 행들
     pendingDeletes: [],     // 미저장 DELETE 행들
     selectedRows: [],       // show-select 체크된 행
+    // 88번 거버넌스 — 관리자 여부 (서버에서 lookup, mounted)
+    isAdmin: false,
     resolving: false,
     resolvingByEng: false,
     // 87-3 PK/FK
@@ -1320,6 +1332,22 @@ export default {
       const row = this._makeBlankRow(targetObj, this.newRows.length);
       row.attrOrder = insertAt;
       this.newRows.push(row);
+    },
+    // 88번 §7.3 — 컬럼 순서 ↑↓ (관리자 only, 인접 행과 attr_ord 스왑)
+    swapAttrOrd(item, direction) {
+      if (!this.isAdmin) return;
+      axios.post(this.$APIURL.base + 'api/dm/swapAttrOrd', {
+        dataModelId: this.selectedModelId,
+        objOwner: item.objOwner || '',
+        objNm: item.objNm,
+        attrNm: item.attrNm,
+        direction: direction,
+      }).then(() => { this.load(); })
+      .catch((e) => this.$swal.fire({
+        title: '순서 변경 실패',
+        text: (e.response && e.response.data && e.response.data.resultMessage) || '실패',
+        icon: 'error', timer: 1500, showConfirmButton: false,
+      }));
     },
     // 87-x — 미저장 변경 (newRows, pendingDeletes, dirty) 모두 버리고 DB 에서 새로 조회
     reloadDiscardChanges() {
@@ -2127,6 +2155,10 @@ export default {
   },
   created() {
     this.getModelList();
+    // 88번 거버넌스 — 관리자 여부 lookup
+    axios.get(this.$APIURL.base + 'api/search/getUserInfo').then(res => {
+      this.isAdmin = !!(res.data && (res.data.admin || res.data.isAdmin || res.data.role === 'A'));
+    }).catch(() => { this.isAdmin = false; });
   },
   mounted() {
     this.$resizableGrid && this.$resizableGrid();
@@ -2165,6 +2197,9 @@ pre { font-family: 'Roboto'; }
 .checkboxStyle { margin-top: 0; padding-top: 0; }
 /* 86번 #11 — height/overflow 는 v-data-table fixed-header + :height prop 에서 처리. CSS 강제 height 제거. */
 .row-nonstandard > td { background-color: #FFEBEE !important; }
+/* 88번 거버넌스 — DRAFT/SUBMITTED 노란 배경, REJECTED 빨간 배경 */
+.row-draft > td { background-color: #FFF8E1 !important; }
+.row-rejected > td { background-color: #FFEBEE !important; }
 .inline-edit { min-width: 100px; }
 .inline-edit >>> input { padding: 2px 6px; }
 .add-position-select { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
