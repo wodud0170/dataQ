@@ -146,6 +146,25 @@
 		WHERE h.DIAG_ID = #{diagId}
 	</select>
 
+	<!-- 88번 — 대시보드용: 특정 데이터 모델의 최신 구조 진단 이력 1건 -->
+	<select id="selectLatestStructDiagByModel" parameterType="String" resultMap="structDiagHistoryMap">
+		SELECT h.DIAG_ID, h.DS_ID, h.DATA_MODEL_ID, h.SCHEMA_NM,
+			to_char(h.DIAG_DT, 'YYYY-MM-DD HH24:MI:SS') AS DIAG_DT,
+			to_char(h.PREV_COLLECT_DT, 'YYYY-MM-DD HH24:MI:SS') AS PREV_COLLECT_DT,
+			h.TOTAL_TABLES, h.TOTAL_COLUMNS,
+			h.ADDED_TABLES, h.ADDED_COLUMNS, h.MODIFIED_COLUMNS,
+			h.DELETED_TABLES, h.DELETED_COLUMNS,
+			h.TOTAL_INDEXES, h.ADDED_INDEXES, h.MODIFIED_INDEXES, h.DELETED_INDEXES,
+			h.TOTAL_CONSTRAINTS, h.ADDED_CONSTRAINTS, h.MODIFIED_CONSTRAINTS, h.DELETED_CONSTRAINTS,
+			h.STATUS, h.CRET_USER_ID,
+			dm.DM_NM AS DATA_MODEL_NM
+		FROM TB_STRUCT_DIAG_HISTORY h
+		LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DATA_MODEL_ID
+		WHERE h.DATA_MODEL_ID = #{dataModelId}
+		ORDER BY h.DIAG_DT DESC
+		LIMIT 1
+	</select>
+
 	<!-- 스키마별 최신 구조 진단 상태 조회 (뱃지용) -->
 	<select id="selectLatestStructDiagStatus" parameterType="java.util.HashMap" resultMap="structDiagHistoryMap">
 		SELECT DIAG_ID, DS_ID, DATA_MODEL_ID, SCHEMA_NM, to_char(DIAG_DT, 'YYYY-MM-DD HH24:MI:SS') AS DIAG_DT, STATUS,

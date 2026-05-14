@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 120" width="460" height="120">
+  <defs>
+    <linearGradient id="gm7" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5C6BC0"/>
+      <stop offset="100%" style="stop-color:#1A237E"/>
+    </linearGradient>
+  </defs>
+  <!-- DB 실린더 스택 (3단) — 메타 = 데이터에 대한 데이터 -->
+  <!-- top -->
+  <ellipse cx="50" cy="22" rx="36" ry="8" fill="#7986CB"/>
+  <path d="M 14 22 L 14 38 Q 50 46 86 38 L 86 22" fill="#5C6BC0"/>
+  <ellipse cx="50" cy="38" rx="36" ry="8" fill="#5C6BC0"/>
+  <!-- middle -->
+  <path d="M 14 38 L 14 58 Q 50 66 86 58 L 86 38" fill="#3F51B5"/>
+  <ellipse cx="50" cy="58" rx="36" ry="8" fill="#3F51B5"/>
+  <!-- bottom -->
+  <path d="M 14 58 L 14 80 Q 50 92 86 84 Q 86 84 86 80 L 86 58" fill="url(#gm7)"/>
+  <ellipse cx="50" cy="80" rx="36" ry="8" fill="#1A237E"/>
+  <!-- Meta label dot — top tier highlighted -->
+  <ellipse cx="50" cy="22" rx="36" ry="8" fill="none" stroke="#C5CAE9" stroke-width="1.5"/>
+  <text x="110" y="48" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="300" fill="#5C6BC0" letter-spacing="4">NARAE</text>
+  <text x="110" y="84" font-family="'Segoe UI', Arial, sans-serif" font-size="36" font-weight="700" fill="#1A237E">Meta</text>
+</svg>

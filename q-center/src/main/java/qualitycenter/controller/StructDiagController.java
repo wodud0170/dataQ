@@ -146,6 +146,26 @@ public class StructDiagController {
 		return sqlSessionTemplate.selectList("structdiag.selectStructDiagHistoryList");
 	}
 
+	/** 88번 — 대시보드용: 특정 모델의 최신 구조 진단 결과 (요약 + 변경 상세) */
+	@GetMapping("/latestByModel")
+	public Map<String, Object> latestByModel(@RequestParam String dataModelId) {
+		Map<String, Object> result = new HashMap<>();
+		Map<String, Object> history = sqlSessionTemplate.selectOne("structdiag.selectLatestStructDiagByModel", dataModelId);
+		if (history == null) {
+			result.put("history", null);
+			result.put("details", new java.util.ArrayList<>());
+			result.put("indexDetails", new java.util.ArrayList<>());
+			result.put("constraintDetails", new java.util.ArrayList<>());
+			return result;
+		}
+		String diagId = (String) history.get("diagId");
+		result.put("history",            history);
+		result.put("details",            sqlSessionTemplate.selectList("structdiag.selectStructDiagDetailList", diagId));
+		result.put("indexDetails",       sqlSessionTemplate.selectList("structdiag.selectStructDiagIndexDetailList", diagId));
+		result.put("constraintDetails",  sqlSessionTemplate.selectList("structdiag.selectStructDiagConstraintDetailList", diagId));
+		return result;
+	}
+
 	/** 특정 진단 결과 (요약 + 상세: 컬럼/인덱스/제약조건) */
 	@GetMapping("/result/{diagId}")
 	public Map<String, Object> getResult(@PathVariable String diagId) {

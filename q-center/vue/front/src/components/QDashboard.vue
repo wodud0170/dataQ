@@ -114,44 +114,55 @@
         </v-sheet>
       </v-card>
 
-      <!-- ===== 3. 승인 현황 ===== -->
+      <!-- ===== 3. 구조 변경 (DBA 직접 변경 감지) — 우 상단 선택 모델 기준 ===== -->
       <v-card class="itemsWrapper">
-        <h2><v-icon>dashboard_customize</v-icon>&nbsp;&nbsp;{{ isAdmin ? '승인 현황' : '내 요청 현황' }}</h2>
-        <v-sheet class="chartWrapper">
-          <!-- 승인대기 -->
-          <v-card class="aprv-card" v-on:click.stop="onAprvCardClick('REQUESTED')">
-            <div class="aprv-card__bar" style="background: #1976D2;"></div>
-            <div class="aprv-card__icon-area" style="background: rgba(25,118,210,0.1);">
-              <v-icon color="#1976D2" large>mdi-send</v-icon>
+        <div class="d-flex align-center">
+          <h2><v-icon>mdi-shield-alert-outline</v-icon>&nbsp;&nbsp;구조 변경 감지</h2>
+          <v-chip x-small class="ml-2" outlined color="grey darken-1" v-if="structDiagHistory">
+            {{ structDiagHistory.diagDt }}
+          </v-chip>
+          <v-spacer />
+          <v-btn x-small text color="indigo" v-if="structDiagHistory"
+            @click="goToStructDiagResult(structDiagHistory.diagId)">
+            상세 보기<v-icon x-small right>mdi-arrow-right</v-icon>
+          </v-btn>
+        </div>
+        <div class="struct-diag-panel">
+          <div v-if="!selectedModelId" class="struct-diag-empty">
+            우 상단에서 데이터 모델을 선택하세요.
+          </div>
+          <div v-else-if="structDiagLoading" class="struct-diag-empty">로딩 중...</div>
+          <div v-else-if="!structDiagHistory" class="struct-diag-empty">
+            구조 진단 이력 없음 — DB 수집 후 구조 진단을 실행하세요.
+          </div>
+          <template v-else>
+            <div class="struct-diag-summary">
+              <span class="sd-badge sd-badge--add" v-if="structDiagSummary.added > 0">
+                추가 {{ structDiagSummary.added }}
+              </span>
+              <span class="sd-badge sd-badge--mod" v-if="structDiagSummary.modified > 0">
+                변경 {{ structDiagSummary.modified }}
+              </span>
+              <span class="sd-badge sd-badge--del" v-if="structDiagSummary.deleted > 0">
+                삭제 {{ structDiagSummary.deleted }}
+              </span>
+              <span v-if="structDiagSummary.total === 0" class="sd-clean">
+                <v-icon small color="success">mdi-check-circle</v-icon> 변경 없음 — 모델과 DB 일치
+              </span>
             </div>
-            <div class="aprv-card__content">
-              <div class="aprv-card__label">승인대기</div>
-              <div class="aprv-card__value">{{ aprvStatRequestedCnt }}<span class="aprv-card__unit">건</span></div>
+            <div class="struct-diag-list" v-if="structDiagChanges.length > 0">
+              <div v-for="(c, i) in structDiagChanges.slice(0, 30)" :key="i" class="sd-item">
+                <span class="sd-tag" :class="'sd-tag--' + c.changeType.toLowerCase()">{{ c.changeType }}</span>
+                <span class="sd-cat">{{ c.category }}</span>
+                <span class="sd-path">{{ c.path }}</span>
+                <span class="sd-detail" v-if="c.detail">{{ c.detail }}</span>
+              </div>
+              <div v-if="structDiagChanges.length > 30" class="sd-more">
+                외 {{ structDiagChanges.length - 30 }}건 — [상세 보기] 클릭
+              </div>
             </div>
-          </v-card>
-          <!-- 승인완료 -->
-          <v-card class="aprv-card" v-on:click.stop="onAprvCardClick('APPROVED')">
-            <div class="aprv-card__bar" style="background: #43A047;"></div>
-            <div class="aprv-card__icon-area" style="background: rgba(67,160,71,0.1);">
-              <v-icon color="#43A047" large>mdi-check-circle</v-icon>
-            </div>
-            <div class="aprv-card__content">
-              <div class="aprv-card__label">승인완료</div>
-              <div class="aprv-card__value">{{ aprvStatApprovedCnt }}<span class="aprv-card__unit">건</span></div>
-            </div>
-          </v-card>
-          <!-- 반려 -->
-          <v-card class="aprv-card" v-on:click.stop="onAprvCardClick('REJECTED')">
-            <div class="aprv-card__bar" style="background: #E53935;"></div>
-            <div class="aprv-card__icon-area" style="background: rgba(229,57,53,0.1);">
-              <v-icon color="#E53935" large>mdi-close-circle</v-icon>
-            </div>
-            <div class="aprv-card__content">
-              <div class="aprv-card__label">반려</div>
-              <div class="aprv-card__value">{{ aprvStatRejectedCnt }}<span class="aprv-card__unit">건</span></div>
-            </div>
-          </v-card>
-        </v-sheet>
+          </template>
+        </div>
       </v-card>
 
       <!-- ===== 4. 최근 활동 / 빠른 액션 ===== -->
@@ -227,10 +238,6 @@ export default {
     wordCnt: 0,
     // 관리자 여부
     isAdmin: false,
-    // 승인현황
-    aprvStatRequestedCnt: 0,
-    aprvStatApprovedCnt: 0,
-    aprvStatRejectedCnt: 0,
     // 데이터 모델 현황
     dataModelCnt: 0,
     objCnt: 0,
@@ -239,6 +246,12 @@ export default {
     selectedModelId: null,
     selectedModelNm: '',
     selectedClctId: null,
+    // 88번 — 구조 변경 감지 (선택 모델 기준 최신 진단)
+    structDiagLoading: false,
+    structDiagHistory: null,
+    structDiagDetails: [],
+    structDiagIndexDetails: [],
+    structDiagConstraintDetails: [],
     //
     term_series: [],
     word_series: [],
@@ -433,6 +446,68 @@ export default {
   },
   mounted() {
   },
+  computed: {
+    // 88번 — 구조 변경 요약 (added / modified / deleted 합산)
+    structDiagSummary() {
+      const h = this.structDiagHistory || {};
+      const added    = (h.addedTables || 0) + (h.addedColumns || 0)
+                     + (h.addedIndexes || 0) + (h.addedConstraints || 0);
+      const modified = (h.modifiedColumns || 0)
+                     + (h.modifiedIndexes || 0) + (h.modifiedConstraints || 0);
+      const deleted  = (h.deletedTables || 0) + (h.deletedColumns || 0)
+                     + (h.deletedIndexes || 0) + (h.deletedConstraints || 0);
+      return { added, modified, deleted, total: added + modified + deleted };
+    },
+    // 88번 — 변경 상세를 컬럼/인덱스/제약조건 모두 합쳐 화면용 단일 리스트로 변환
+    structDiagChanges() {
+      const rows = [];
+      (this.structDiagDetails || []).forEach(d => {
+        const path = (d.owner ? d.owner + '.' : '') + d.tableNm + (d.columnNm ? '.' + d.columnNm : '');
+        let detail = '';
+        if (d.changeType === 'MODIFIED') {
+          const parts = [];
+          if (d.prevDataType !== d.currDataType) parts.push(`타입 ${d.prevDataType} → ${d.currDataType}`);
+          if (Number(d.prevDataLen || 0) !== Number(d.currDataLen || 0)) parts.push(`길이 ${d.prevDataLen} → ${d.currDataLen}`);
+          if (d.prevNullable !== d.currNullable) parts.push(`NULL ${d.prevNullable} → ${d.currNullable}`);
+          detail = parts.join(', ');
+        }
+        rows.push({ changeType: d.changeType, category: '컬럼', path, detail });
+      });
+      (this.structDiagIndexDetails || []).forEach(d => {
+        const path = (d.owner ? d.owner + '.' : '') + d.tableNm + ' / ' + d.indexNm;
+        let detail = '';
+        if (d.changeType === 'MODIFIED') {
+          const parts = [];
+          if (d.prevIndexType !== d.currIndexType) parts.push(`타입 ${d.prevIndexType} → ${d.currIndexType}`);
+          if (d.prevUniqueness !== d.currUniqueness) parts.push(`UNIQUE ${d.prevUniqueness} → ${d.currUniqueness}`);
+          if (d.prevColumns !== d.currColumns) parts.push(`컬럼 ${d.prevColumns} → ${d.currColumns}`);
+          detail = parts.join(', ');
+        }
+        rows.push({ changeType: d.changeType, category: '인덱스', path, detail });
+      });
+      (this.structDiagConstraintDetails || []).forEach(d => {
+        const path = (d.owner ? d.owner + '.' : '') + d.tableNm + ' / ' + d.constraintNm;
+        let detail = '';
+        if (d.changeType === 'MODIFIED') {
+          const parts = [];
+          if (d.prevConstraintType !== d.currConstraintType) parts.push(`타입 ${d.prevConstraintType} → ${d.currConstraintType}`);
+          if (d.prevColumns !== d.currColumns) parts.push(`컬럼 ${d.prevColumns} → ${d.currColumns}`);
+          if (d.prevRefTable !== d.currRefTable) parts.push(`참조 ${d.prevRefTable} → ${d.currRefTable}`);
+          detail = parts.join(', ');
+        }
+        rows.push({ changeType: d.changeType, category: '제약조건', path, detail });
+      });
+      // ADDED > MODIFIED > DELETED 우선, 그 다음 category, path
+      const tOrder = { ADDED: 0, MODIFIED: 1, DELETED: 2 };
+      rows.sort((a, b) => {
+        const ta = tOrder[a.changeType] != null ? tOrder[a.changeType] : 9;
+        const tb = tOrder[b.changeType] != null ? tOrder[b.changeType] : 9;
+        if (ta !== tb) return ta - tb;
+        return (a.path || '').localeCompare(b.path || '');
+      });
+      return rows;
+    },
+  },
   methods: {
     loadModelList() {
       var self = this;
@@ -446,6 +521,7 @@ export default {
           }
           self.getDataModelStat();
           self.getDiagTrend();
+          self.loadStructDiagChanges();
         });
       } catch (e) { console.error(e); }
     },
@@ -453,6 +529,34 @@ export default {
       this.getDataModelStat();
       this.getStructDiagRate();
       this.getDiagTrend();
+      this.loadStructDiagChanges();
+    },
+    // 88번 — 선택 모델의 최신 구조 진단 결과 로드
+    loadStructDiagChanges() {
+      this.structDiagHistory = null;
+      this.structDiagDetails = [];
+      this.structDiagIndexDetails = [];
+      this.structDiagConstraintDetails = [];
+      if (!this.selectedModelId) return;
+      this.structDiagLoading = true;
+      axios.get(this.$APIURL.base + 'api/std/structDiag/latestByModel', {
+        params: { dataModelId: this.selectedModelId },
+      }).then(res => {
+        const d = res.data || {};
+        this.structDiagHistory = d.history || null;
+        this.structDiagDetails = d.details || [];
+        this.structDiagIndexDetails = d.indexDetails || [];
+        this.structDiagConstraintDetails = d.constraintDetails || [];
+      }).catch(() => {
+        this.structDiagHistory = null;
+      }).finally(() => {
+        this.structDiagLoading = false;
+      });
+    },
+    goToStructDiagResult(diagId) {
+      if (!diagId) return;
+      eventBus.pendingStructDiagId = diagId;
+      this.addTabItem('구조 변경 진단', 'structDiag');
     },
     getDashboardInfo() {
       try {
@@ -460,11 +564,8 @@ export default {
           let _data = result.data;
 
           this.domainCnt = _data.domainCnt;
-          this.aprvStatRequestedCnt = _data.aprvStatRequestedCnt;
           this.termsCnt = _data.termsCnt;
-          this.aprvStatApprovedCnt = _data.aprvStatApprovedCnt;
           this.wordCnt = _data.wordCnt;
-          this.aprvStatRejectedCnt = _data.aprvStatRejectedCnt;
 
         }).catch(error => {
           this.$swal.fire({
@@ -657,15 +758,6 @@ export default {
       }, 500);
 
     },
-    onAprvCardClick(status) {
-      if (this.isAdmin) {
-        eventBus.pendingApprovalFilter = status;
-        this.addTabItem('승인', 'approval');
-      } else {
-        eventBus.pendingMyRequestFilter = status === 'REQUESTED' ? 'PENDING' : status;
-        this.addTabItem('요청 현황', 'myRequest');
-      }
-    }
   },
 }
 </script>
@@ -904,6 +996,27 @@ export default {
   color: #9E9E9E;
   margin-left: 3px;
 }
+
+/* 88번 — 구조 변경 감지 패널 */
+.struct-diag-panel { padding: 8px 4px 4px 4px; height: calc(100% - 36px); display: flex; flex-direction: column; }
+.struct-diag-empty { color: #90A4AE; font-size: .82rem; padding: 16px; text-align: center; }
+.struct-diag-summary { display: flex; gap: 6px; align-items: center; padding: 4px 4px 8px 4px; flex-wrap: wrap; }
+.sd-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: .72rem; font-weight: 600; color: #fff; }
+.sd-badge--add { background: #43A047; }
+.sd-badge--mod { background: #FB8C00; }
+.sd-badge--del { background: #E53935; }
+.sd-clean { color: #2E7D32; font-size: .85rem; font-weight: 500; }
+.struct-diag-list { flex: 1; overflow: auto; border: 1px solid #ECEFF1; border-radius: 4px; background: #FAFAFA; }
+.sd-item { display: flex; gap: 8px; align-items: center; padding: 4px 8px; font-size: .76rem; border-bottom: 1px dashed #ECEFF1; }
+.sd-item:last-child { border-bottom: none; }
+.sd-tag { display: inline-block; min-width: 60px; padding: 1px 6px; border-radius: 3px; font-size: .68rem; font-weight: 600; text-align: center; color: #fff; }
+.sd-tag--added { background: #43A047; }
+.sd-tag--modified { background: #FB8C00; }
+.sd-tag--deleted { background: #E53935; }
+.sd-cat { font-size: .7rem; color: #546E7A; min-width: 50px; }
+.sd-path { font-family: monospace; color: #1A237E; font-weight: 500; }
+.sd-detail { color: #455A64; font-size: .72rem; }
+.sd-more { padding: 6px 8px; font-size: .72rem; color: #607D8B; text-align: center; font-style: italic; }
 
 /* ===== 4. 최근 활동 / 빠른 액션 ===== */
 .bottom-split {

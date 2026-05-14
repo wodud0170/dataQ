@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 120" width="460" height="120">
+  <defs>
+    <linearGradient id="gm2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5C6BC0"/>
+      <stop offset="100%" style="stop-color:#1A237E"/>
+    </linearGradient>
+  </defs>
+  <!-- 메타데이터 = 데이터를 설명하는 데이터 → 3개 레이어 적층 -->
+  <rect x="14" y="22" width="76" height="14" rx="3" fill="#C5CAE9"/>
+  <rect x="14" y="40" width="76" height="14" rx="3" fill="#7986CB"/>
+  <rect x="14" y="58" width="76" height="14" rx="3" fill="#5C6BC0"/>
+  <rect x="14" y="76" width="76" height="14" rx="3" fill="url(#gm2)"/>
+  <!-- Top layer indicator dots (meta = description of each row) -->
+  <circle cx="22" cy="29" r="2.2" fill="#1A237E"/>
+  <circle cx="32" cy="29" r="2.2" fill="#1A237E"/>
+  <circle cx="42" cy="29" r="2.2" fill="#1A237E"/>
+  <text x="110" y="48" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="300" fill="#5C6BC0" letter-spacing="4">NARAE</text>
+  <text x="110" y="84" font-family="'Segoe UI', Arial, sans-serif" font-size="36" font-weight="700" fill="#1A237E">Meta</text>
+</svg>

@@ -90,6 +90,31 @@ COMMENT ON COLUMN quality.tb_aprv_stats.req_item_nm IS '요청 항목명 (반려
 
 
 --
+-- Name: tb_biz_area; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_biz_area (
+    biz_area_id character varying(40) NOT NULL,
+    biz_area_nm character varying(200) NOT NULL,
+    biz_area_desc character varying(500),
+    parent_id character varying(40),
+    sort_order integer DEFAULT 0,
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    cret_user_id character varying(50),
+    cret_dt character varying(14),
+    updt_user_id character varying(50),
+    updt_dt character varying(14),
+    aprv_status character varying(20) DEFAULT 'APPROVED'::character varying,
+    requester_user_id character varying(50),
+    req_dt character varying(14),
+    aprv_user_id character varying(50),
+    aprv_dt character varying(14),
+    aprv_comment character varying(500),
+    submission_id character varying(40)
+);
+
+
+--
 -- Name: tb_board; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -241,7 +266,14 @@ CREATE TABLE quality.tb_data_model (
     use_yn character(1) DEFAULT 'Y'::bpchar,
     struct_diag_yn character(1) DEFAULT 'N'::bpchar,
     struct_diag_dt timestamp without time zone,
-    model_type character varying(10) DEFAULT 'PHYSICAL'::character varying
+    model_type character varying(10) DEFAULT 'PHYSICAL'::character varying,
+    aprv_status character varying(20) DEFAULT 'APPROVED'::character varying,
+    requester_user_id character varying(50),
+    req_dt character varying(14),
+    aprv_user_id character varying(50),
+    aprv_dt character varying(14),
+    aprv_comment character varying(500),
+    submission_id character varying(40)
 );
 
 
@@ -300,7 +332,14 @@ CREATE TABLE quality.tb_data_model_attr (
     diag_target_updt_user_id character varying(50),
     diag_target_updt_dt character varying(14),
     fk_parent_obj_nm character varying(255),
-    fk_parent_attr_nm character varying(255)
+    fk_parent_attr_nm character varying(255),
+    aprv_status character varying(20) DEFAULT 'APPROVED'::character varying,
+    requester_user_id character varying(50),
+    req_dt character varying(14),
+    aprv_user_id character varying(50),
+    aprv_dt character varying(14),
+    aprv_comment character varying(500),
+    submission_id character varying(40)
 );
 
 
@@ -403,6 +442,56 @@ COMMENT ON COLUMN quality.tb_data_model_attr.fk_parent_attr_nm IS '85번 — FK 
 
 
 --
+-- Name: tb_data_model_change_history; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_data_model_change_history (
+    change_seq bigint NOT NULL,
+    dm_id character varying(40) NOT NULL,
+    change_dt character varying(14) NOT NULL,
+    change_user_id character varying(50) NOT NULL,
+    change_type character varying(30) NOT NULL,
+    change_tier character varying(10) NOT NULL,
+    submission_id character varying(40),
+    obj_owner character varying(100),
+    obj_nm character varying(255),
+    attr_nm character varying(255),
+    constraint_nm character varying(200),
+    index_nm character varying(200),
+    before_json text,
+    after_json text,
+    ddl_snippet text,
+    aprv_status character varying(20),
+    aprv_user_id character varying(50),
+    aprv_dt character varying(14),
+    aprv_comment character varying(500),
+    ddl_exec_dt character varying(14),
+    ddl_exec_user_id character varying(50),
+    ddl_exec_result character varying(20),
+    ddl_exec_message character varying(2000)
+);
+
+
+--
+-- Name: tb_data_model_change_history_change_seq_seq; Type: SEQUENCE; Schema: quality; Owner: -
+--
+
+CREATE SEQUENCE quality.tb_data_model_change_history_change_seq_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tb_data_model_change_history_change_seq_seq; Type: SEQUENCE OWNED BY; Schema: quality; Owner: -
+--
+
+ALTER SEQUENCE quality.tb_data_model_change_history_change_seq_seq OWNED BY quality.tb_data_model_change_history.change_seq;
+
+
+--
 -- Name: tb_data_model_clct; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -474,7 +563,14 @@ CREATE TABLE quality.tb_data_model_constraint (
     status character varying(10),
     search_condition character varying(2000),
     use_yn character(1) DEFAULT 'Y'::bpchar,
-    deleted_dt character varying(14)
+    deleted_dt character varying(14),
+    aprv_status character varying(20) DEFAULT 'APPROVED'::character varying,
+    requester_user_id character varying(50),
+    req_dt character varying(14),
+    aprv_user_id character varying(50),
+    aprv_dt character varying(14),
+    aprv_comment character varying(500),
+    submission_id character varying(40)
 );
 
 
@@ -508,7 +604,14 @@ CREATE TABLE quality.tb_data_model_index (
     sort_order character varying(10),
     tablespace_nm character varying(100),
     use_yn character(1) DEFAULT 'Y'::bpchar,
-    deleted_dt character varying(14)
+    deleted_dt character varying(14),
+    aprv_status character varying(20) DEFAULT 'APPROVED'::character varying,
+    requester_user_id character varying(50),
+    req_dt character varying(14),
+    aprv_user_id character varying(50),
+    aprv_dt character varying(14),
+    aprv_comment character varying(500),
+    submission_id character varying(40)
 );
 
 
@@ -572,7 +675,17 @@ CREATE TABLE quality.tb_data_model_obj (
     qual_diag_target_yn character varying(1) DEFAULT 'Y'::character varying,
     qual_diag_target_reason character varying(200),
     diag_target_updt_user_id character varying(50),
-    diag_target_updt_dt character varying(14)
+    diag_target_updt_dt character varying(14),
+    aprv_status character varying(20) DEFAULT 'APPROVED'::character varying,
+    requester_user_id character varying(50),
+    req_dt character varying(14),
+    aprv_user_id character varying(50),
+    aprv_dt character varying(14),
+    aprv_comment character varying(500),
+    submission_id character varying(40),
+    tablespace_nm character varying(100),
+    biz_area_id character varying(40),
+    subj_area_id character varying(40)
 );
 
 
@@ -1547,6 +1660,31 @@ CREATE TABLE quality.tb_struct_diag_index_detail (
 
 
 --
+-- Name: tb_subj_area; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_subj_area (
+    subj_area_id character varying(40) NOT NULL,
+    subj_area_nm character varying(200) NOT NULL,
+    subj_area_desc character varying(500),
+    parent_id character varying(40),
+    sort_order integer DEFAULT 0,
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    cret_user_id character varying(50),
+    cret_dt character varying(14),
+    updt_user_id character varying(50),
+    updt_dt character varying(14),
+    aprv_status character varying(20) DEFAULT 'APPROVED'::character varying,
+    requester_user_id character varying(50),
+    req_dt character varying(14),
+    aprv_user_id character varying(50),
+    aprv_dt character varying(14),
+    aprv_comment character varying(500),
+    submission_id character varying(40)
+);
+
+
+--
 -- Name: tb_sys_info; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -1707,6 +1845,13 @@ CREATE TABLE quality.tb_word_dict_bak (
     word_abrv character varying(50),
     domain_clsf_nm character varying(100)
 );
+
+
+--
+-- Name: tb_data_model_change_history change_seq; Type: DEFAULT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_data_model_change_history ALTER COLUMN change_seq SET DEFAULT nextval('quality.tb_data_model_change_history_change_seq_seq'::regclass);
 
 
 --
@@ -1925,6 +2070,14 @@ ALTER TABLE ONLY quality.tb_aprv_stats
 
 
 --
+-- Name: tb_biz_area tb_biz_area_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_biz_area
+    ADD CONSTRAINT tb_biz_area_pkey PRIMARY KEY (biz_area_id);
+
+
+--
 -- Name: tb_board_file tb_board_file_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -1946,6 +2099,14 @@ ALTER TABLE ONLY quality.tb_code_data
 
 ALTER TABLE ONLY quality.tb_data_model_attr
     ADD CONSTRAINT tb_data_model_attr_pkey PRIMARY KEY (dm_id, obj_owner, obj_nm, attr_nm);
+
+
+--
+-- Name: tb_data_model_change_history tb_data_model_change_history_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_data_model_change_history
+    ADD CONSTRAINT tb_data_model_change_history_pkey PRIMARY KEY (change_seq);
 
 
 --
@@ -2010,6 +2171,14 @@ ALTER TABLE ONLY quality.tb_domain_grp
 
 ALTER TABLE ONLY quality.tb_domain
     ADD CONSTRAINT tb_domain_pkey PRIMARY KEY (domain_id);
+
+
+--
+-- Name: tb_subj_area tb_subj_area_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_subj_area
+    ADD CONSTRAINT tb_subj_area_pkey PRIMARY KEY (subj_area_id);
 
 
 --
@@ -2127,6 +2296,48 @@ CREATE INDEX ix_qual_profile_hist_timeline ON quality.tb_qual_profile_history US
 --
 
 CREATE INDEX ix_qual_rule_dm ON quality.tb_qual_rule USING btree (dm_id, use_yn);
+
+
+--
+-- Name: ix_tb_biz_area_parent; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_tb_biz_area_parent ON quality.tb_biz_area USING btree (parent_id);
+
+
+--
+-- Name: ix_tb_dmch_dm; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_tb_dmch_dm ON quality.tb_data_model_change_history USING btree (dm_id, change_dt DESC);
+
+
+--
+-- Name: ix_tb_dmch_status; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_tb_dmch_status ON quality.tb_data_model_change_history USING btree (aprv_status);
+
+
+--
+-- Name: ix_tb_dmch_submission; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_tb_dmch_submission ON quality.tb_data_model_change_history USING btree (submission_id);
+
+
+--
+-- Name: ix_tb_dmch_user; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_tb_dmch_user ON quality.tb_data_model_change_history USING btree (change_user_id);
+
+
+--
+-- Name: ix_tb_subj_area_parent; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_tb_subj_area_parent ON quality.tb_subj_area USING btree (parent_id);
 
 
 --
