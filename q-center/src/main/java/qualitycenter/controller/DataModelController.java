@@ -297,7 +297,15 @@ public class DataModelController {
 	 */
 	@RequestMapping(value = "/getDataModelObjListByClctId", method = RequestMethod.GET)
 	public List<StdDataModelObjVo> getDataModelObjListByClctId(String clctId) {
-		return sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", clctId);
+		List<StdDataModelObjVo> all = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", clctId);
+		// 88번 거버넌스 — 관리자=전체 / 사용자=APPROVED + 본인 신청만
+		if (sessionService.isAdmin()) return all;
+		String currentUser = sessionService.getUserId();
+		return all.stream()
+			.filter(o -> o.getAprvStatus() == null
+					|| "APPROVED".equals(o.getAprvStatus())
+					|| (currentUser != null && currentUser.equals(o.getRequesterUserId())))
+			.collect(java.util.stream.Collectors.toList());
 	}
 
 	/**
@@ -338,7 +346,15 @@ public class DataModelController {
 	 */
 	@RequestMapping(value = "/getDataModelAttrListByClctId", method = RequestMethod.GET)
 	public List<StdDataModelAttrVo> getDataModelAttrListByClctId(String clctId) {
-		return sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", clctId);
+		List<StdDataModelAttrVo> all = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", clctId);
+		// 88번 거버넌스 — 관리자=전체 / 사용자=APPROVED + 본인 신청만
+		if (sessionService.isAdmin()) return all;
+		String currentUser = sessionService.getUserId();
+		return all.stream()
+			.filter(a -> a.getAprvStatus() == null
+					|| "APPROVED".equals(a.getAprvStatus())
+					|| (currentUser != null && currentUser.equals(a.getRequesterUserId())))
+			.collect(java.util.stream.Collectors.toList());
 	}
 
 	/** 데이터모델 인덱스 목록 조회 (DM_ID 기준, CLCT 폐기 이후) */

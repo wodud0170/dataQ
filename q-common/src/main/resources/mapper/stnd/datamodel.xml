@@ -2,6 +2,20 @@
 
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="datamodel">
+
+	<!-- 88번 거버넌스 — 가시성 필터 SQL 조각.
+	     관리자가 아니면 (APPROVED OR 본인이 신청한 row) 만 노출.
+	     매개변수 currentUserId / isAdmin 둘 다 필요. 둘 다 NULL 이면 admin 처럼 동작 (호환성).
+	     테이블 별칭 alias 매개변수로 받음 (예: alias=A → A.APRV_STATUS).
+	     사용 예: <include refid="visibilityFilter"><property name="alias" value="A"/></include> -->
+	<sql id="visibilityFilter">
+		<if test="isAdmin == null or isAdmin == false">
+			<if test="currentUserId != null and currentUserId != ''">
+				AND (${alias}.APRV_STATUS = 'APPROVED' OR ${alias}.REQUESTER_USER_ID = #{currentUserId})
+			</if>
+		</if>
+	</sql>
+
 	<!-- 데이터모델 -->
 	<resultMap id="stdDataModelMap" type="com.ndata.quality.model.std.StdDataModelVo">
 		<result property="dataModelId" column="DM_ID"/>
@@ -223,6 +237,12 @@
 				,QUAL_DIAG_TARGET_REASON              as qualDiagTargetReason
 				,DIAG_TARGET_UPDT_USER_ID             as diagTargetUpdtUserId
 				,to_char(to_timestamp(DIAG_TARGET_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as diagTargetUpdtDt
+				<!-- 88번 거버넌스 — Java side 필터용 -->
+				,APRV_STATUS         as aprvStatus
+				,REQUESTER_USER_ID   as requesterUserId
+				,TABLESPACE_NM       as tablespaceNm
+				,BIZ_AREA_ID         as bizAreaId
+				,SUBJ_AREA_ID        as subjAreaId
 			from TB_DATA_MODEL_OBJ
 			where DM_ID = #{clctId} AND USE_YN = 'Y'
 			order by OBJ_NM
@@ -237,6 +257,12 @@
 				,OBJ_COMMENT   as objComment
 				,OBJ_ATTR_CNT  as objAttrCnt
 				,USE_YN        as useYn
+				<!-- 88번 거버넌스 — Java side 필터용 -->
+				,APRV_STATUS         as aprvStatus
+				,REQUESTER_USER_ID   as requesterUserId
+				,TABLESPACE_NM       as tablespaceNm
+				,BIZ_AREA_ID         as bizAreaId
+				,SUBJ_AREA_ID        as subjAreaId
 			from TB_DATA_MODEL_OBJ
 			where DM_ID = #{dataModelId}
 			<if test="_parameter != null">
@@ -293,6 +319,9 @@
 				,A.QUAL_DIAG_TARGET_REASON
 				,A.DIAG_TARGET_UPDT_USER_ID
 				,A.DIAG_TARGET_UPDT_DT
+				<!-- 88번 거버넌스 — Java side 필터용 -->
+				,A.APRV_STATUS
+				,A.REQUESTER_USER_ID
 			from TB_DATA_MODEL_ATTR	A
 			where A.DM_ID = #{clctId} AND A.USE_YN = 'Y'
 			order by A.OBJ_NM, A.ATTR_ORD
