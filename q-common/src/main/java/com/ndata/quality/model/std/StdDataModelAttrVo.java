@@ -39,4 +39,13 @@ public class StdDataModelAttrVo {
 	private String qualDiagTargetReason;
 	private String diagTargetUpdtUserId;
 	private String diagTargetUpdtDt;
+
+	// 88번 거버넌스 — 승인 워크플로우
+	private String aprvStatus;
+	private String requesterUserId;
+	private String reqDt;
+	private String aprvUserId;
+	private String aprvDt;
+	private String aprvComment;
+	private String submissionId;
 }

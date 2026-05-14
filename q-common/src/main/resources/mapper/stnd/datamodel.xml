@@ -20,6 +20,14 @@
 		<result property="objCnt" column="OBJ_CNT"/>
 		<result property="attrCnt" column="ATTR_CNT"/>
 		<result property="clctDt" column="CLCT_DT"/>
+		<!-- 88번 거버넌스 -->
+		<result property="aprvStatus"       column="APRV_STATUS"/>
+		<result property="requesterUserId"  column="REQUESTER_USER_ID"/>
+		<result property="reqDt"            column="REQ_DT"/>
+		<result property="aprvUserId"       column="APRV_USER_ID"/>
+		<result property="aprvDt"           column="APRV_DT"/>
+		<result property="aprvComment"      column="APRV_COMMENT"/>
+		<result property="submissionId"     column="SUBMISSION_ID"/>
 	</resultMap>
 	<resultMap id="stdDataModelAttrMap" type="com.ndata.quality.model.std.StdDataModelAttrVo">
 		<result property="dataModelId" column="DM_ID"/>
@@ -52,6 +60,14 @@
 		<result property="qualDiagTargetReason" column="QUAL_DIAG_TARGET_REASON"/>
 		<result property="diagTargetUpdtUserId" column="DIAG_TARGET_UPDT_USER_ID"/>
 		<result property="diagTargetUpdtDt"     column="DIAG_TARGET_UPDT_DT"/>
+		<!-- 88번 거버넌스 -->
+		<result property="aprvStatus"      column="APRV_STATUS"/>
+		<result property="requesterUserId" column="REQUESTER_USER_ID"/>
+		<result property="reqDt"           column="REQ_DT"/>
+		<result property="aprvUserId"      column="APRV_USER_ID"/>
+		<result property="aprvDt"          column="APRV_DT"/>
+		<result property="aprvComment"     column="APRV_COMMENT"/>
+		<result property="submissionId"    column="SUBMISSION_ID"/>
 	</resultMap>
 
 	<select id="selectDataModelStatsList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDataModelMap">
@@ -716,6 +732,16 @@
 			,OBJ_COMMENT
 			,OBJ_ATTR_CNT
 			,USE_YN
+			<!-- 88번 거버넌스 -->
+			,APRV_STATUS
+			,REQUESTER_USER_ID
+			,REQ_DT
+			,APRV_USER_ID
+			,APRV_DT
+			,SUBMISSION_ID
+			,TABLESPACE_NM
+			,BIZ_AREA_ID
+			,SUBJ_AREA_ID
            )
            VALUES
            (
@@ -728,6 +754,15 @@
 			,#{objComment, jdbcType=VARCHAR}
 			,#{objAttrCnt, jdbcType=SMALLINT}
 			,'Y'
+			,COALESCE(#{aprvStatus, jdbcType=VARCHAR}, 'APPROVED')
+			,#{requesterUserId, jdbcType=VARCHAR}
+			,#{reqDt, jdbcType=VARCHAR}
+			,#{aprvUserId, jdbcType=VARCHAR}
+			,#{aprvDt, jdbcType=VARCHAR}
+			,#{submissionId, jdbcType=VARCHAR}
+			,#{tablespaceNm, jdbcType=VARCHAR}
+			,#{bizAreaId, jdbcType=VARCHAR}
+			,#{subjAreaId, jdbcType=VARCHAR}
 		   )
 		   ON CONFLICT (DM_ID, OBJ_OWNER, OBJ_NM) DO UPDATE SET
 			OBJ_COMMENT = EXCLUDED.OBJ_COMMENT,

@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dmChangeHistory">
+
+	<!-- 88번 — 데이터 모델 변경 이력 매퍼 -->
+
+	<resultMap id="map" type="com.ndata.quality.model.std.StdDataModelChangeHistoryVo">
+		<result property="changeSeq"       column="CHANGE_SEQ"/>
+		<result property="dmId"            column="DM_ID"/>
+		<result property="changeDt"        column="CHANGE_DT"/>
+		<result property="changeUserId"    column="CHANGE_USER_ID"/>
+		<result property="changeType"      column="CHANGE_TYPE"/>
+		<result property="changeTier"      column="CHANGE_TIER"/>
+		<result property="submissionId"    column="SUBMISSION_ID"/>
+		<result property="objOwner"        column="OBJ_OWNER"/>
+		<result property="objNm"           column="OBJ_NM"/>
+		<result property="attrNm"          column="ATTR_NM"/>
+		<result property="constraintNm"    column="CONSTRAINT_NM"/>
+		<result property="indexNm"         column="INDEX_NM"/>
+		<result property="beforeJson"      column="BEFORE_JSON"/>
+		<result property="afterJson"       column="AFTER_JSON"/>
+		<result property="ddlSnippet"      column="DDL_SNIPPET"/>
+		<result property="aprvStatus"      column="APRV_STATUS"/>
+		<result property="aprvUserId"      column="APRV_USER_ID"/>
+		<result property="aprvDt"          column="APRV_DT"/>
+		<result property="aprvComment"     column="APRV_COMMENT"/>
+		<result property="ddlExecDt"       column="DDL_EXEC_DT"/>
+		<result property="ddlExecUserId"   column="DDL_EXEC_USER_ID"/>
+		<result property="ddlExecResult"   column="DDL_EXEC_RESULT"/>
+		<result property="ddlExecMessage"  column="DDL_EXEC_MESSAGE"/>
+	</resultMap>
+
+	<insert id="insert" parameterType="com.ndata.quality.model.std.StdDataModelChangeHistoryVo">
+		INSERT INTO TB_DATA_MODEL_CHANGE_HISTORY
+		( DM_ID, CHANGE_DT, CHANGE_USER_ID, CHANGE_TYPE, CHANGE_TIER, SUBMISSION_ID,
+		  OBJ_OWNER, OBJ_NM, ATTR_NM, CONSTRAINT_NM, INDEX_NM,
+		  BEFORE_JSON, AFTER_JSON, DDL_SNIPPET,
+		  APRV_STATUS, APRV_USER_ID, APRV_DT, APRV_COMMENT,
+		  DDL_EXEC_DT, DDL_EXEC_USER_ID, DDL_EXEC_RESULT, DDL_EXEC_MESSAGE )
+		VALUES
+		( #{dmId}, #{changeDt}, #{changeUserId}, #{changeType}, #{changeTier},
+		  #{submissionId, jdbcType=VARCHAR},
+		  #{objOwner, jdbcType=VARCHAR}, #{objNm, jdbcType=VARCHAR},
+		  #{attrNm, jdbcType=VARCHAR}, #{constraintNm, jdbcType=VARCHAR}, #{indexNm, jdbcType=VARCHAR},
+		  #{beforeJson, jdbcType=VARCHAR}, #{afterJson, jdbcType=VARCHAR}, #{ddlSnippet, jdbcType=VARCHAR},
+		  COALESCE(#{aprvStatus, jdbcType=VARCHAR}, 'APPROVED'),
+		  #{aprvUserId, jdbcType=VARCHAR}, #{aprvDt, jdbcType=VARCHAR}, #{aprvComment, jdbcType=VARCHAR},
+		  #{ddlExecDt, jdbcType=VARCHAR}, #{ddlExecUserId, jdbcType=VARCHAR},
+		  #{ddlExecResult, jdbcType=VARCHAR}, #{ddlExecMessage, jdbcType=VARCHAR}
+		)
+	</insert>
+
+	<!-- 모델 단위 이력 목록 (관리자: 전체, 사용자: 본인 + APPROVED) -->
+	<select id="selectByDmId" parameterType="java.util.Map" resultMap="map">
+		SELECT * FROM TB_DATA_MODEL_CHANGE_HISTORY
+		WHERE DM_ID = #{dmId}
+		<if test="!isAdmin">
+			AND (APRV_STATUS = 'APPROVED' OR CHANGE_USER_ID = #{currentUserId})
+		</if>
+		<if test="changeUserId != null and changeUserId != ''">
+			AND CHANGE_USER_ID = #{changeUserId}
+		</if>
+		<if test="changeTier != null and changeTier != ''">
+			AND CHANGE_TIER = #{changeTier}
+		</if>
+		<if test="aprvStatus != null and aprvStatus != ''">
+			AND APRV_STATUS = #{aprvStatus}
+		</if>
+		<if test="fromDt != null and fromDt != ''">
+			AND CHANGE_DT &gt;= #{fromDt}
+		</if>
+		<if test="toDt != null and toDt != ''">
+			AND CHANGE_DT &lt;= #{toDt}
+		</if>
+		ORDER BY CHANGE_SEQ DESC
+		LIMIT 500
+	</select>
+
+	<!-- 신청 묶음 단위 — 관리자 승인 화면용 -->
+	<select id="selectSubmissions" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT SUBMISSION_ID                 as submissionId,
+		       MAX(CHANGE_USER_ID)           as changeUserId,
+		       MIN(CHANGE_DT)                as firstDt,
+		       MAX(CHANGE_DT)                as lastDt,
+		       COUNT(*)                      as itemCnt,
+		       MIN(APRV_STATUS)              as oldestStatus,
+		       MAX(DM_ID)                    as dmId
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY
+		 WHERE SUBMISSION_ID IS NOT NULL
+		   AND APRV_STATUS = 'SUBMITTED'
+		<if test="changeUserId != null and changeUserId != ''">
+		   AND CHANGE_USER_ID = #{changeUserId}
+		</if>
+		 GROUP BY SUBMISSION_ID
+		 ORDER BY firstDt DESC
+		 LIMIT 200
+	</select>
+
+	<!-- 특정 묶음의 항목 -->
+	<select id="selectBySubmissionId" parameterType="String" resultMap="map">
+		SELECT * FROM TB_DATA_MODEL_CHANGE_HISTORY
+		WHERE SUBMISSION_ID = #{submissionId}
+		ORDER BY CHANGE_SEQ ASC
+	</select>
+
+	<!-- 사용자 본인의 DRAFT 목록 -->
+	<select id="selectMyDrafts" parameterType="java.util.Map" resultMap="map">
+		SELECT * FROM TB_DATA_MODEL_CHANGE_HISTORY
+		WHERE CHANGE_USER_ID = #{currentUserId}
+		  AND APRV_STATUS = 'DRAFT'
+		<if test="dmId != null and dmId != ''">
+		  AND DM_ID = #{dmId}
+		</if>
+		ORDER BY CHANGE_SEQ ASC
+	</select>
+
+	<!-- 승인 / 반려 / 신청 / 롤백 -->
+	<update id="updateAprvStatus" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt},
+		       APRV_COMMENT = #{aprvComment, jdbcType=VARCHAR}
+		 WHERE CHANGE_SEQ = #{changeSeq}
+	</update>
+
+	<!-- DRAFT → SUBMITTED 일괄 (신청 묶음) -->
+	<update id="submitDrafts" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
+		   SET APRV_STATUS  = 'SUBMITTED',
+		       SUBMISSION_ID = #{submissionId}
+		 WHERE CHANGE_USER_ID = #{currentUserId}
+		   AND APRV_STATUS    = 'DRAFT'
+		   AND CHANGE_SEQ IN
+		   <foreach collection="changeSeqList" item="seq" open="(" separator="," close=")">#{seq}</foreach>
+	</update>
+
+	<!-- DDL 실행 결과 기록 -->
+	<update id="updateDdlExecResult" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
+		   SET DDL_EXEC_DT      = #{ddlExecDt},
+		       DDL_EXEC_USER_ID = #{ddlExecUserId},
+		       DDL_EXEC_RESULT  = #{ddlExecResult},
+		       DDL_EXEC_MESSAGE = #{ddlExecMessage, jdbcType=VARCHAR}
+		 WHERE CHANGE_SEQ = #{changeSeq}
+	</update>
+
+	<!-- DRAFT 삭제 (사용자 본인의 롤백) -->
+	<delete id="deleteDraft" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_CHANGE_HISTORY
+		 WHERE CHANGE_SEQ      = #{changeSeq}
+		   AND CHANGE_USER_ID  = #{currentUserId}
+		   AND APRV_STATUS     = 'DRAFT'
+	</delete>
+
+</mapper>

@@ -37,4 +37,13 @@ public class StdDataModelVo {
     // 표준화 진단 결과 (최신 Job 기준)
     private double diagStndRate;      // 표준화 진단 준수율 (%)
     private String diagDt;            // 표준화 진단 최종 실행일시
+
+    // 88번 거버넌스
+    private String aprvStatus;
+    private String requesterUserId;
+    private String reqDt;
+    private String aprvUserId;
+    private String aprvDt;
+    private String aprvComment;
+    private String submissionId;
 }

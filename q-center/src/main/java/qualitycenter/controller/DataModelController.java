@@ -89,6 +89,9 @@ public class DataModelController {
 	private ExcelDownloadService excelDownloadService;
 
 	@Autowired
+	private qualitycenter.service.governance.ChangeHistoryService changeHistory;
+
+	@Autowired
 	SecurityManager securityUtils;
 
 	@Autowired
@@ -881,7 +884,19 @@ public class DataModelController {
 			if (dup != null && dup > 0) throw new IllegalStateException("이미 존재하는 테이블입니다: " + objVo.getObjNm());
 
 			if (objVo.getObjAttrCnt() == 0) objVo.setObjAttrCnt((short) 0);
+			// 88번 거버넌스 — 관리자=APPROVED 즉시, 사용자=DRAFT
+			String addObjAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+			objVo.setAprvStatus(addObjAprvStatus);
+			objVo.setRequesterUserId(changeHistory.safeUserId());
+			objVo.setReqDt(changeHistory.currentDt());
+			if ("APPROVED".equals(addObjAprvStatus)) {
+				objVo.setAprvUserId(objVo.getRequesterUserId());
+				objVo.setAprvDt(objVo.getReqDt());
+			}
 			session.insert("datamodel.insertDataModelObj", objVo);
+			changeHistory.record(session, objVo.getDataModelId(), "ADD_OBJ", "TIER1",
+					objVo.getObjOwner(), objVo.getObjNm(), null, null, null,
+					null, toJsonSafe(objVo), null, addObjAprvStatus);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -1418,6 +1433,15 @@ public class DataModelController {
 				sqlSessionTemplate.update("datamodel.updateObjOwnerKey", ownerUpd);
 			}
 
+			// 88번 거버넌스 — updateObj 이력 (Tier 1 if owner/rename, else Tier 2)
+			String updObjTier = (rename || ownerChange) ? "TIER1" : "TIER2";
+			String updObjAprvStatus = "TIER1".equals(updObjTier)
+					? changeHistory.resolveAprvStatusForUserChange()
+					: "APPROVED";
+			changeHistory.record(null, dataModelId, "MODIFY_OBJ", updObjTier,
+					objOwner, newObjNm != null ? newObjNm : origObjNm, null, null, null,
+					null, null, null, updObjAprvStatus);
+
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			log.error(">> updateObj failed : {}", e.getMessage(), e);
@@ -1440,6 +1464,11 @@ public class DataModelController {
 			param.put("objNm",       objVo.getObjNm());
 			session.delete("datamodel.deleteDataModelAttrsByObj", param);
 			session.delete("datamodel.deleteDataModelObj", param);
+			// 88번 거버넌스 — DELETE 이력 (Tier 1)
+			String delObjAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+			changeHistory.record(session, objVo.getDataModelId(), "DEL_OBJ", "TIER1",
+					(String)param.get("objOwner"), objVo.getObjNm(), null, null, null,
+					null, null, null, delObjAprvStatus);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -1972,8 +2001,20 @@ public class DataModelController {
 						vo.setDefaultVal(str(row.get("defaultVal")));
 						vo.setTermsStndYn("N");
 						vo.setDomainStndYn("N");
+						// 88번 거버넌스 — 관리자=APPROVED 즉시, 사용자=DRAFT
+						String addAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+						vo.setAprvStatus(addAprvStatus);
+						vo.setRequesterUserId(changeHistory.safeUserId());
+						vo.setReqDt(changeHistory.currentDt());
+						if ("APPROVED".equals(addAprvStatus)) {
+							vo.setAprvUserId(vo.getRequesterUserId());
+							vo.setAprvDt(vo.getReqDt());
+						}
 						session.insert("datamodel.insertDataModelAttr", vo);
 						added++;
+						changeHistory.record(session, dataModelId, "ADD_ATTR", "TIER1",
+								objOwner, objNm, addAttrNm, null, null,
+								null, toJsonSafe(vo), null, addAprvStatus);
 					} else if ("UPDATE".equalsIgnoreCase(mode)) {
 						// origAttrNm = DB 의 PK 매칭용 — DB 에 저장된 case 그대로 유지 (UPPER 처리 X)
 						String origAttrNm = str(row.get("origAttrNm"));
@@ -2123,6 +2164,14 @@ public class DataModelController {
 						}
 						session.update("datamodel.updateDataModelAttr", vo);
 						updated++;
+						// 88번 거버넌스 — UPDATE 이력 (Tier 1: 영문명/타입/길이 변경 / Tier 2: 한글명만 변경)
+						String updTier = (nmChanged || typeChanged) ? "TIER1" : "TIER2";
+						String updAprvStatus = "TIER1".equals(updTier)
+								? changeHistory.resolveAprvStatusForUserChange()
+								: "APPROVED";
+						changeHistory.record(session, dataModelId, "MODIFY_ATTR", updTier,
+								objOwner, objNm, newAttrNm, null, null,
+								toJsonSafe(existing), toJsonSafe(vo), null, updAprvStatus);
 					} else if ("DELETE".equalsIgnoreCase(mode)) {
 						String attrNm = str(row.get("attrNm"));
 						if (attrNm == null || attrNm.trim().isEmpty())
@@ -2136,6 +2185,11 @@ public class DataModelController {
 						cascadeDeleteAttrRefs(session, p);  // 87-3 — CONSTRAINT/INDEX/외부FK/FK_PARENT cascade
 						session.delete("datamodel.deleteDataModelAttr", p);
 						deleted++;
+						// 88번 거버넌스 — DELETE 이력 (Tier 1)
+						String delAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+						changeHistory.record(session, dataModelId, "DEL_ATTR", "TIER1",
+								objOwner, objNm, attrNm, null, null,
+								null, null, null, delAprvStatus);
 					} else {
 						throw new IllegalArgumentException("알 수 없는 mode: " + mode);
 					}
@@ -2198,6 +2252,13 @@ public class DataModelController {
 		if ("UPDATE".equals(m)) return 1;
 		if ("ADD".equals(m))    return 2;
 		return 99;
+	}
+
+	// 88번 — 이력 record 시 VO 직렬화 (최선 노력, 실패해도 변경 자체는 진행)
+	private static String toJsonSafe(Object o) {
+		if (o == null) return null;
+		try { return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(o); }
+		catch (Exception e) { return null; }
 	}
 
 	// ---------- 내부 헬퍼 ----------

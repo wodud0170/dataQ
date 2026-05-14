@@ -26,4 +26,16 @@ public class StdDataModelObjVo {
 	private String qualDiagTargetReason;
 	private String diagTargetUpdtUserId;
 	private String diagTargetUpdtDt;
+
+	// 88번 거버넌스 — 승인 워크플로우 + 분류
+	private String aprvStatus;          // DRAFT / SUBMITTED / APPROVED / REJECTED (default APPROVED)
+	private String requesterUserId;
+	private String reqDt;
+	private String aprvUserId;
+	private String aprvDt;
+	private String aprvComment;
+	private String submissionId;
+	private String tablespaceNm;        // 물리 — DDL `TABLESPACE xxx` 절
+	private String bizAreaId;           // 논리 분류 (FK → TB_BIZ_AREA)
+	private String subjAreaId;          // 물리 분류 (FK → TB_SUBJ_AREA)
 }
