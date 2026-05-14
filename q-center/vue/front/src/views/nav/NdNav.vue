@@ -427,6 +427,15 @@
                         <v-list-item-title>내 변경 신청</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 88번 거버넌스 — 데이터 모델 변경 이력 -->
+                    <v-list-item link id="nav_dm_history" href="#tab_dm_history" active-class="ndColor--text" title="데이터 모델 변경 이력"
+                        v-on:click.stop=" addTabItem('데이터 모델 변경 이력', 'dmHistory'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 모델 변경 이력</v-list-item-title>
+                    </v-list-item>
+
                     <v-list-item link id="nav_datasource" href="#tab_datasource" active-class="ndColor--text" title="데이터 소스"
                         v-on:click.stop=" addTabItem('데이터 소스', 'datasource'); ">
                         <v-list-item-icon>
