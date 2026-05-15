@@ -58,7 +58,8 @@
       <!-- 액션 영역 (다른 화면과 동일 패턴 — DSWord/DSTerm) -->
       <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
         class="d-flex flex-nowrap align-center" style="gap: 6px;">
-        <v-btn class="gradient" v-on:click="excelDownload" title="엑셀 다운로드">
+        <v-btn class="gradient" v-on:click="excelDownload" title="엑셀 다운로드"
+          :style="{ minWidth: '140px' }">
           <v-icon small left>mdi-file-excel</v-icon>엑셀 다운로드
         </v-btn>
       </v-sheet>
@@ -211,3 +212,21 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+/* DSWord 패턴 동일 — scoped 라서 컴포넌트별로 재정의 필요 */
+.splitTopWrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #E8EAF6;
+}
+.tableSpt {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: #FAFBFF;
+}
+</style>
