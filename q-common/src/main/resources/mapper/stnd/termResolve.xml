@@ -20,55 +20,59 @@
 		   #{changeUserId}, #{changeDt})
 	</insert>
 
-	<!-- 변환 이력 조회. 관리자: 전체 / 사용자: 본인 것만. 다양한 필터 지원. -->
+	<!-- 변환 이력 조회. 관리자: 전체 / 사용자: 본인 것만.
+	     데이터타입/길이는 snapshot 저장 안 하고 TB_TERMS → TB_DOMAIN 으로 JOIN 하여 현재값 노출. -->
 	<select id="selectList" parameterType="java.util.Map" resultType="java.util.Map">
-		SELECT history_seq        as "historySeq",
-		       dm_id              as "dmId",
-		       obj_owner          as "objOwner",
-		       obj_nm             as "objNm",
-		       attr_nm            as "attrNm",
-		       input_kr_nm        as "inputKrNm",
-		       resolved_kr_nm     as "resolvedKrNm",
-		       resolved_en_nm     as "resolvedEnNm",
-		       resolved_terms_id  as "resolvedTermsId",
-		       resolved_data_type as "resolvedDataType",
-		       resolved_data_len  as "resolvedDataLen",
-		       resolve_reason     as "resolveReason",
-		       change_user_id     as "changeUserId",
-		       change_dt          as "changeDt"
-		  FROM TB_TERM_RESOLVE_HISTORY
+		SELECT h.history_seq        as "historySeq",
+		       h.dm_id              as "dmId",
+		       h.obj_owner          as "objOwner",
+		       h.obj_nm             as "objNm",
+		       h.attr_nm            as "attrNm",
+		       h.input_kr_nm        as "inputKrNm",
+		       h.resolved_kr_nm     as "resolvedKrNm",
+		       h.resolved_en_nm     as "resolvedEnNm",
+		       h.resolved_terms_id  as "resolvedTermsId",
+		       COALESCE(d.data_type, h.resolved_data_type) as "resolvedDataType",
+		       COALESCE(d.data_len, h.resolved_data_len)   as "resolvedDataLen",
+		       h.resolve_reason     as "resolveReason",
+		       h.change_user_id     as "changeUserId",
+		       h.change_dt          as "changeDt",
+		       t.domain_nm          as "resolvedDomainNm"
+		  FROM TB_TERM_RESOLVE_HISTORY h
+		  LEFT JOIN TB_TERMS  t ON t.terms_id  = h.resolved_terms_id
+		  LEFT JOIN TB_DOMAIN d ON d.domain_nm = t.domain_nm
 		 WHERE 1=1
 		<if test="isAdmin == null or isAdmin == false">
-		   AND change_user_id = #{currentUserId}
+		   AND h.change_user_id = #{currentUserId}
 		</if>
 		<if test="changeUserId != null and changeUserId != ''">
-		   AND change_user_id = #{changeUserId}
+		   AND h.change_user_id = #{changeUserId}
 		</if>
 		<if test="dmId != null and dmId != ''">
-		   AND dm_id = #{dmId}
+		   AND h.dm_id = #{dmId}
 		</if>
 		<if test="inputKrNm != null and inputKrNm != ''">
-		   AND input_kr_nm LIKE '%' || #{inputKrNm} || '%'
+		   AND h.input_kr_nm LIKE '%' || #{inputKrNm} || '%'
 		</if>
 		<if test="resolvedKrNm != null and resolvedKrNm != ''">
-		   AND resolved_kr_nm LIKE '%' || #{resolvedKrNm} || '%'
+		   AND h.resolved_kr_nm LIKE '%' || #{resolvedKrNm} || '%'
 		</if>
 		<if test="resolvedEnNm != null and resolvedEnNm != ''">
-		   AND resolved_en_nm ILIKE '%' || #{resolvedEnNm} || '%'
+		   AND h.resolved_en_nm ILIKE '%' || #{resolvedEnNm} || '%'
 		</if>
 		<if test='"Y".equals(nmChangedYn)'>
-		   AND COALESCE(resolved_kr_nm,'') != COALESCE(input_kr_nm,'')
+		   AND COALESCE(h.resolved_kr_nm,'') != COALESCE(h.input_kr_nm,'')
 		</if>
 		<if test='"N".equals(nmChangedYn)'>
-		   AND COALESCE(resolved_kr_nm,'') = COALESCE(input_kr_nm,'')
+		   AND COALESCE(h.resolved_kr_nm,'') = COALESCE(h.input_kr_nm,'')
 		</if>
 		<if test="fromDt != null and fromDt != ''">
-		   AND change_dt &gt;= #{fromDt}
+		   AND h.change_dt &gt;= #{fromDt}
 		</if>
 		<if test="toDt != null and toDt != ''">
-		   AND change_dt &lt;= #{toDt}
+		   AND h.change_dt &lt;= #{toDt}
 		</if>
-		 ORDER BY history_seq DESC
+		 ORDER BY h.history_seq DESC
 		 LIMIT 500
 	</select>
 
