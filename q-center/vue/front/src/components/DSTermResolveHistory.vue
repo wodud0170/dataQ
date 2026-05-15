@@ -1,8 +1,9 @@
 <template>
   <v-main>
-    <v-sheet class="splitTopWrapper pt-4 pb-4" :style="{ 'flex-direction': 'column' }">
-      <!-- 검색 영역 - 2줄 -->
-      <v-sheet :style="{ padding: '0px 12px' }">
+    <v-sheet class="splitTopWrapper pt-4 pb-4"
+      v-bind:style="[isMobile ? { 'flex-direction': 'column' } : { 'flex-direction': 'row' }]">
+      <!-- 검색 (2줄 분리) -->
+      <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
         <!-- 1줄: 한글 검색 3개 -->
         <v-row :style="{ alignItems: 'center', margin: '0px 0px 8px 0px' }">
           <span :style="{ fontSize: '.875rem' }">원래 입력 한글 (A)</span>
@@ -22,7 +23,7 @@
             single-line dense outlined hide-details :style="{ width: '200px' }" />
         </v-row>
 
-        <!-- 2줄: 변경여부 / 사용자 / 변환일자 / 액션 -->
+        <!-- 2줄: 변경여부 / 사용자 / 변환일자 + 검색·초기화 -->
         <v-row :style="{ alignItems: 'center', margin: '0px' }">
           <span :style="{ fontSize: '.875rem' }">한글명 변경</span>
           <v-select class="pr-4 pl-2" v-model="searchChanged" :items="changedOptions"
@@ -51,13 +52,15 @@
             :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }">
             <v-icon>restart_alt</v-icon>
           </v-btn>
-
-          <v-spacer />
-
-          <v-btn class="gradient" v-on:click="excelDownload" title="엑셀 다운로드">
-            <v-icon small left>mdi-file-excel</v-icon>엑셀 다운로드
-          </v-btn>
         </v-row>
+      </v-sheet>
+
+      <!-- 액션 영역 (다른 화면과 동일 패턴 — DSWord/DSTerm) -->
+      <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
+        class="d-flex flex-nowrap align-center" style="gap: 6px;">
+        <v-btn class="gradient" v-on:click="excelDownload" title="엑셀 다운로드">
+          <v-icon small left>mdi-file-excel</v-icon>엑셀 다운로드
+        </v-btn>
       </v-sheet>
     </v-sheet>
 
@@ -142,9 +145,8 @@ export default {
       { text: '표준 매핑 한글 (B)', value: 'afterNm', sortable: false },
       { text: '표준 매핑 영문 (B)', value: 'resolvedEnNm', sortable: false, width: '160px' },
       { text: '한글명 변경', value: 'changed', sortable: false, align: 'center', width: '90px' },
-      { text: '데이터 타입', value: 'resolvedDataType', width: '110px', align: 'center' },
-      { text: '길이', value: 'resolvedDataLen', width: '70px', align: 'right' },
-      { text: '대상', value: 'target', sortable: false },
+      { text: '데이터 타입', value: 'resolvedDataType', width: '120px', align: 'center' },
+      { text: '길이', value: 'resolvedDataLen', width: '80px', align: 'right' },
       { text: '사용자', value: 'changeUserId', width: '110px', align: 'center' },
       { text: '변환 시각', value: 'changeDt', width: '140px', align: 'center' },
       { text: '변환 사유', value: 'resolveReason', sortable: false },
