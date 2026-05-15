@@ -2462,6 +2462,36 @@ public class DataModelController {
 			throw new IllegalStateException("UPDATE 매칭 실패 (owner='" + updateMap.get("objOwner")
 				+ "', obj='" + attr.getObjNm() + "', attr='" + attr.getAttrNm() + "')");
 		}
+		// 88번 §16 — 변환 이력 기록 (사용자가 입력했던 한글 → 표준 매핑)
+		recordResolveHistory(attr.getDataModelId(), attr.getObjOwner(), attr.getObjNm(),
+				newAttrNm, attrNmKr, attrNmKr, newAttrNm,
+				(String) resolved.get("termsId"), (String) resolved.get("dataType"), dataLen,
+				"한글명 기준 표준화 성공");
+	}
+
+	/** 88번 §16 — 변환 이력 기록 헬퍼 */
+	private void recordResolveHistory(String dmId, String objOwner, String objNm, String attrNm,
+	                                   String inputKr, String resolvedKr, String resolvedEn,
+	                                   String termsId, String dataType, long dataLen, String reason) {
+		try {
+			Map<String, Object> r = new HashMap<>();
+			r.put("dmId", dmId);
+			r.put("objOwner", objOwner == null ? "" : objOwner);
+			r.put("objNm", objNm);
+			r.put("attrNm", attrNm);
+			r.put("inputKrNm", inputKr);
+			r.put("resolvedKrNm", resolvedKr);
+			r.put("resolvedEnNm", resolvedEn);
+			r.put("resolvedTermsId", termsId);
+			r.put("resolvedDataType", dataType);
+			r.put("resolvedDataLen", dataLen);
+			r.put("resolveReason", reason);
+			r.put("changeUserId", changeHistory.safeUserId());
+			r.put("changeDt", changeHistory.currentDt());
+			sqlSessionTemplate.insert("termResolve.insert", r);
+		} catch (Exception e) {
+			log.warn(">> recordResolveHistory failed: {}", e.getMessage());
+		}
 	}
 
 	/**
@@ -2509,6 +2539,12 @@ public class DataModelController {
 			throw new IllegalStateException("UPDATE 매칭 실패 (owner='" + updateMap.get("objOwner")
 				+ "', obj='" + attr.getObjNm() + "', attr='" + engNm + "')");
 		}
+		// 88번 §16 — 변환 이력 기록 (영문명 기준 표준화 — 한글이 채워진 케이스)
+		String origKr = attr.getAttrNmKr() == null ? "" : attr.getAttrNmKr();
+		recordResolveHistory(attr.getDataModelId(), attr.getObjOwner(), attr.getObjNm(),
+				engNm, origKr, newAttrNmKr, engNm,
+				terms.getId(), dataType, dataLen,
+				"영문명 기준 표준화 성공");
 	}
 
 	/**

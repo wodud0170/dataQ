@@ -252,6 +252,13 @@
                     <areaMgmt :key="areaMgmtKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 88번 §16 — 한글 변환 이력 -->
+            <div v-if="this.activeContent === 'termResolveHistory'" id="tab_term_resolve_history" class="tab_contents"
+                :class="{ active: this.activeContent === 'termResolveHistory' }">
+                <keep-alive>
+                    <termResolveHistory :key="termResolveHistoryKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'datasource'" id="tab_datasource" class="tab_contents"
                 :class="{ active: this.activeContent === 'datasource' }">
                 <keep-alive>
@@ -417,6 +424,7 @@ import MMDataModelApproval from "./../../components/MMDataModelApproval.vue"
 import MMMyDataModelChanges from "./../../components/MMMyDataModelChanges.vue"
 import MMDataModelChangeHistory from "./../../components/MMDataModelChangeHistory.vue"
 import MMBizSubjArea from "./../../components/MMBizSubjArea.vue"
+import DSTermResolveHistory from "./../../components/DSTermResolveHistory.vue"
 import MMDatasource from "./../../components/MMDatasource.vue"
 import DSScheduleManage from "./../../components/DSScheduleManage.vue"
 import DSQualDomainRule   from "./../../components/DSQualDomainRule.vue"   // 83번 신규
@@ -498,6 +506,7 @@ export default {
             myDmChangesKey: this.createUUID(),
             dmHistoryKey: this.createUUID(),
             areaMgmtKey: this.createUUID(),
+            termResolveHistoryKey: this.createUUID(),
             datasourceKey: this.createUUID(),
             scheduleManageKey: this.createUUID(),
             scheduleLogKey: this.createUUID(),
@@ -555,6 +564,7 @@ export default {
         "myDmChanges": MMMyDataModelChanges,
         "dmHistory": MMDataModelChangeHistory,
         "areaMgmt": MMBizSubjArea,
+        "termResolveHistory": DSTermResolveHistory,
         "datasource": MMDatasource,
         "scheduleManage": DSScheduleManage,
         "scheduleLog": DSScheduleLog,

@@ -318,6 +318,14 @@
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>한글컬럼 일괄 표준화</v-list-item-title>
                     </v-list-item>
+
+                    <!-- 88번 §16 — 한글 변환 이력 (매핑 정의서 작성용) -->
+                    <v-list-item link id="nav_termResolveHistory" href="#tab_term_resolve_history"
+                        active-class="ndColor--text" title="한글 변환 이력"
+                        v-on:click.stop="addTabItem('한글 변환 이력', 'termResolveHistory');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>한글 변환 이력</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
                 <!-- 커뮤니티 -->

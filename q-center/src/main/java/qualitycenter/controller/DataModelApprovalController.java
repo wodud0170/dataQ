@@ -167,6 +167,9 @@ public class DataModelApprovalController {
 	 * change_history 의 status 갱신 + 실제 모델 row 의 aprv_status 동기화.
 	 * change_type 별 분기 — ADD_ATTR/MODIFY_ATTR/DEL_ATTR → tb_data_model_attr,
 	 * ADD_OBJ/MODIFY_OBJ/DEL_OBJ → tb_data_model_obj.
+	 *
+	 * 88번 §13 — 반려 cascade: REJECTED 시 종속 PENDING 자식 자동 반려.
+	 * (예: 부모 컬럼 반려 → 그 컬럼을 FK_PARENT 로 참조하는 PENDING ATTR 도 반려)
 	 */
 	private int applyApprovalStatus(Object changeSeq, String status, String adminId, String now, Object comment) {
 		Map<String, Object> p = new HashMap<>();
@@ -194,8 +197,33 @@ public class DataModelApprovalController {
 			sp.put("aprvDt",      now);
 			if (changeType != null && changeType.contains("_ATTR") && attrNm != null) {
 				sqlSessionTemplate.update("dmChangeHistory.syncAttrAprvStatus", sp);
+				// 88번 §13 cascade — 반려 시 종속 PENDING 자식 자동 반려 (FK_PARENT 참조)
+				if ("REJECTED".equals(status)) {
+					Map<String, Object> casc = new HashMap<>();
+					casc.put("dmId", dmId);
+					casc.put("parentObjNm", objNm);
+					casc.put("parentAttrNm", attrNm);
+					casc.put("aprvStatus", "REJECTED");
+					casc.put("aprvUserId", adminId);
+					casc.put("aprvDt",     now);
+					casc.put("aprvComment", "부모 컬럼 반려에 의한 cascade");
+					int cnt = sqlSessionTemplate.update("dmChangeHistory.cascadeRejectDependents", casc);
+					if (cnt > 0) log.info(">> reject cascade: {} dependents rejected", cnt);
+				}
 			} else if (changeType != null && changeType.contains("_OBJ")) {
 				sqlSessionTemplate.update("dmChangeHistory.syncObjAprvStatus", sp);
+				// 테이블 반려 → 그 테이블의 PENDING 컬럼들 cascade
+				if ("REJECTED".equals(status)) {
+					Map<String, Object> casc = new HashMap<>();
+					casc.put("dmId", dmId);
+					casc.put("objNm", objNm);
+					casc.put("aprvStatus", "REJECTED");
+					casc.put("aprvUserId", adminId);
+					casc.put("aprvDt",     now);
+					casc.put("aprvComment", "부모 테이블 반려에 의한 cascade");
+					int cnt = sqlSessionTemplate.update("dmChangeHistory.cascadeRejectAttrsInObj", casc);
+					if (cnt > 0) log.info(">> reject cascade (obj→attrs): {} attrs rejected", cnt);
+				}
 			}
 		}
 		return n;

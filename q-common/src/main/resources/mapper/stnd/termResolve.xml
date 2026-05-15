@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="termResolve">
+
+	<!-- 88번 §16 — 한글 변환 이력 (매핑 정의서 작성용) -->
+
+	<insert id="insert" parameterType="java.util.Map">
+		INSERT INTO TB_TERM_RESOLVE_HISTORY
+		  (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM,
+		   INPUT_KR_NM, RESOLVED_KR_NM, RESOLVED_EN_NM, RESOLVED_TERMS_ID,
+		   RESOLVED_DATA_TYPE, RESOLVED_DATA_LEN, RESOLVE_REASON,
+		   CHANGE_USER_ID, CHANGE_DT)
+		VALUES
+		  (#{dmId, jdbcType=VARCHAR}, #{objOwner, jdbcType=VARCHAR},
+		   #{objNm, jdbcType=VARCHAR}, #{attrNm, jdbcType=VARCHAR},
+		   #{inputKrNm}, #{resolvedKrNm, jdbcType=VARCHAR},
+		   #{resolvedEnNm, jdbcType=VARCHAR}, #{resolvedTermsId, jdbcType=VARCHAR},
+		   #{resolvedDataType, jdbcType=VARCHAR}, #{resolvedDataLen, jdbcType=BIGINT},
+		   #{resolveReason, jdbcType=VARCHAR},
+		   #{changeUserId}, #{changeDt})
+	</insert>
+
+	<!-- 변환 이력 조회. 관리자: 전체 / 사용자: 본인 것만. 다양한 필터 지원. -->
+	<select id="selectList" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT history_seq        as "historySeq",
+		       dm_id              as "dmId",
+		       obj_owner          as "objOwner",
+		       obj_nm             as "objNm",
+		       attr_nm            as "attrNm",
+		       input_kr_nm        as "inputKrNm",
+		       resolved_kr_nm     as "resolvedKrNm",
+		       resolved_en_nm     as "resolvedEnNm",
+		       resolved_terms_id  as "resolvedTermsId",
+		       resolved_data_type as "resolvedDataType",
+		       resolved_data_len  as "resolvedDataLen",
+		       resolve_reason     as "resolveReason",
+		       change_user_id     as "changeUserId",
+		       change_dt          as "changeDt"
+		  FROM TB_TERM_RESOLVE_HISTORY
+		 WHERE 1=1
+		<if test="isAdmin == null or isAdmin == false">
+		   AND change_user_id = #{currentUserId}
+		</if>
+		<if test="changeUserId != null and changeUserId != ''">
+		   AND change_user_id = #{changeUserId}
+		</if>
+		<if test="dmId != null and dmId != ''">
+		   AND dm_id = #{dmId}
+		</if>
+		<if test="inputKrNm != null and inputKrNm != ''">
+		   AND input_kr_nm LIKE '%' || #{inputKrNm} || '%'
+		</if>
+		<if test="resolvedKrNm != null and resolvedKrNm != ''">
+		   AND resolved_kr_nm LIKE '%' || #{resolvedKrNm} || '%'
+		</if>
+		<if test="fromDt != null and fromDt != ''">
+		   AND change_dt &gt;= #{fromDt}
+		</if>
+		<if test="toDt != null and toDt != ''">
+		   AND change_dt &lt;= #{toDt}
+		</if>
+		 ORDER BY history_seq DESC
+		 LIMIT 500
+	</select>
+
+</mapper>

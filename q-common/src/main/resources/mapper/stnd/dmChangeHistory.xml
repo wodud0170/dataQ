@@ -166,6 +166,33 @@
 		 WHERE CHANGE_SEQ = #{value}
 	</select>
 
+	<!-- 88번 §13 cascade reject — 부모 컬럼/테이블 반려 시 종속 PENDING 자식 자동 반려 -->
+
+	<!-- 부모 컬럼 (objNm.parentAttrNm) 을 FK_PARENT 로 참조하는 PENDING ATTR 정리 -->
+	<update id="cascadeRejectDependents" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt},
+		       APRV_COMMENT = #{aprvComment, jdbcType=VARCHAR}
+		 WHERE DM_ID = #{dmId}
+		   AND FK_PARENT_OBJ_NM = #{parentObjNm}
+		   AND FK_PARENT_ATTR_NM = #{parentAttrNm}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</update>
+
+	<!-- 부모 테이블 반려 시 그 테이블의 PENDING ATTR 들 정리 -->
+	<update id="cascadeRejectAttrsInObj" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt},
+		       APRV_COMMENT = #{aprvComment, jdbcType=VARCHAR}
+		 WHERE DM_ID = #{dmId}
+		   AND OBJ_NM = #{objNm}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</update>
+
 	<!-- 88번 — 승인/반려 시 실제 모델 row 의 aprv_status 동기화용 -->
 	<update id="syncAttrAprvStatus" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_ATTR

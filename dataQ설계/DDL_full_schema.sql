@@ -1703,6 +1703,47 @@ CREATE TABLE quality.tb_sys_info (
 
 
 --
+-- Name: tb_term_resolve_history; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_term_resolve_history (
+    history_seq bigint NOT NULL,
+    dm_id character varying(40),
+    obj_owner character varying(100),
+    obj_nm character varying(255),
+    attr_nm character varying(255),
+    input_kr_nm character varying(500) NOT NULL,
+    resolved_kr_nm character varying(500),
+    resolved_en_nm character varying(255),
+    resolved_terms_id character varying(40),
+    resolved_data_type character varying(50),
+    resolved_data_len bigint,
+    resolve_reason character varying(500),
+    change_user_id character varying(50),
+    change_dt character varying(14)
+);
+
+
+--
+-- Name: tb_term_resolve_history_history_seq_seq; Type: SEQUENCE; Schema: quality; Owner: -
+--
+
+CREATE SEQUENCE quality.tb_term_resolve_history_history_seq_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tb_term_resolve_history_history_seq_seq; Type: SEQUENCE OWNED BY; Schema: quality; Owner: -
+--
+
+ALTER SEQUENCE quality.tb_term_resolve_history_history_seq_seq OWNED BY quality.tb_term_resolve_history.history_seq;
+
+
+--
 -- Name: tb_terms; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -1859,6 +1900,13 @@ ALTER TABLE ONLY quality.tb_data_model_change_history ALTER COLUMN change_seq SE
 --
 
 ALTER TABLE ONLY quality.tb_diag_result ALTER COLUMN result_id SET DEFAULT nextval('quality.tb_diag_result_result_id_seq'::regclass);
+
+
+--
+-- Name: tb_term_resolve_history history_seq; Type: DEFAULT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_term_resolve_history ALTER COLUMN history_seq SET DEFAULT nextval('quality.tb_term_resolve_history_history_seq_seq'::regclass);
 
 
 --
@@ -2190,6 +2238,14 @@ ALTER TABLE ONLY quality.tb_sys_info
 
 
 --
+-- Name: tb_term_resolve_history tb_term_resolve_history_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_term_resolve_history
+    ADD CONSTRAINT tb_term_resolve_history_pkey PRIMARY KEY (history_seq);
+
+
+--
 -- Name: tb_terms tb_terms_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -2338,6 +2394,27 @@ CREATE INDEX ix_tb_dmch_user ON quality.tb_data_model_change_history USING btree
 --
 
 CREATE INDEX ix_tb_subj_area_parent ON quality.tb_subj_area USING btree (parent_id);
+
+
+--
+-- Name: ix_term_resolve_dt; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_term_resolve_dt ON quality.tb_term_resolve_history USING btree (change_dt DESC);
+
+
+--
+-- Name: ix_term_resolve_input; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_term_resolve_input ON quality.tb_term_resolve_history USING btree (input_kr_nm);
+
+
+--
+-- Name: ix_term_resolve_user; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_term_resolve_user ON quality.tb_term_resolve_history USING btree (change_user_id);
 
 
 --
