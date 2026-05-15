@@ -1,62 +1,63 @@
 <template>
   <v-main>
-    <v-sheet class="splitTopWrapper pt-4 pb-4"
-      v-bind:style="[isMobile ? { 'flex-direction': 'column' } : { 'flex-direction': 'row' }]">
-      <!-- 검색 -->
-      <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-        <v-row :style="{ alignItems: 'center', margin: '0px' }">
+    <v-sheet class="splitTopWrapper pt-4 pb-4" :style="{ 'flex-direction': 'column' }">
+      <!-- 검색 영역 - 2줄 -->
+      <v-sheet :style="{ padding: '0px 12px' }">
+        <!-- 1줄: 한글 검색 3개 -->
+        <v-row :style="{ alignItems: 'center', margin: '0px 0px 8px 0px' }">
           <span :style="{ fontSize: '.875rem' }">원래 입력 한글 (A)</span>
-          <v-text-field class="pr-4 pl-4" v-model="searchInput" v-on:keyup.enter="load"
+          <v-text-field class="pr-4 pl-2" v-model="searchInput" v-on:keyup.enter="load"
             clearable clear-icon="mdi-close-circle" color="ndColor"
-            single-line dense outlined hide-details :style="{ width: '180px' }" />
+            single-line dense outlined hide-details :style="{ width: '200px' }" />
 
           <span :style="{ fontSize: '.875rem' }">표준 매핑 한글 (B)</span>
-          <v-text-field class="pr-4 pl-4" v-model="searchResolvedKr" v-on:keyup.enter="load"
+          <v-text-field class="pr-4 pl-2" v-model="searchResolvedKr" v-on:keyup.enter="load"
             clearable clear-icon="mdi-close-circle" color="ndColor"
-            single-line dense outlined hide-details :style="{ width: '180px' }" />
+            single-line dense outlined hide-details :style="{ width: '200px' }" />
 
           <span :style="{ fontSize: '.875rem' }">표준 매핑 영문 (B)</span>
-          <v-text-field class="pr-4 pl-4" v-model="searchResolvedEn" v-on:keyup.enter="load"
+          <v-text-field class="pr-4 pl-2" v-model="searchResolvedEn" v-on:keyup.enter="load"
             @input="searchResolvedEn = (searchResolvedEn || '').toUpperCase()"
             clearable clear-icon="mdi-close-circle" color="ndColor"
-            single-line dense outlined hide-details :style="{ width: '180px' }" />
+            single-line dense outlined hide-details :style="{ width: '200px' }" />
+        </v-row>
 
-          <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">한글명 변경</span>
+        <!-- 2줄: 변경여부 / 사용자 / 변환일자 / 액션 -->
+        <v-row :style="{ alignItems: 'center', margin: '0px' }">
+          <span :style="{ fontSize: '.875rem' }">한글명 변경</span>
           <v-select class="pr-4 pl-2" v-model="searchChanged" :items="changedOptions"
             item-text="text" item-value="value"
-            dense outlined hide-details single-line :style="{ maxWidth: '110px' }" />
+            dense outlined hide-details single-line :style="{ width: '110px' }" />
 
           <template v-if="isAdmin">
             <span :style="{ fontSize: '.875rem' }">사용자</span>
-            <v-text-field class="pr-4 pl-4" v-model="searchUser" v-on:keyup.enter="load"
+            <v-text-field class="pr-4 pl-2" v-model="searchUser" v-on:keyup.enter="load"
               clearable clear-icon="mdi-close-circle" color="ndColor"
-              single-line dense outlined hide-details :style="{ width: '120px' }" />
+              single-line dense outlined hide-details :style="{ width: '140px' }" />
           </template>
 
-          <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">변환일자</span>
+          <span :style="{ fontSize: '.875rem' }">변환일자</span>
           <v-text-field class="pl-2" v-model="searchFromDt" type="date" dense outlined hide-details
-            color="ndColor" :style="{ width: '150px' }" />
+            color="ndColor" :style="{ width: '160px' }" />
           <span :style="{ fontSize: '.875rem' }" class="px-1">~</span>
           <v-text-field class="pr-4" v-model="searchToDt" type="date" dense outlined hide-details
-            color="ndColor" :style="{ width: '150px' }" />
+            color="ndColor" :style="{ width: '160px' }" />
 
           <v-btn class="gradient" title="검색" v-on:click="load"
-            :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }">
+            :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '8px' }">
             <v-icon>search</v-icon>
           </v-btn>
           <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
             :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }">
             <v-icon>restart_alt</v-icon>
           </v-btn>
-        </v-row>
-      </v-sheet>
 
-      <!-- 액션 -->
-      <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
-        class="d-flex flex-nowrap align-center" style="gap: 6px;">
-        <v-btn class="gradient" v-on:click="excelDownload" title="엑셀 다운로드">
-          <v-icon small left>mdi-file-excel</v-icon>엑셀 다운로드
-        </v-btn>
+          <v-spacer />
+
+          <v-btn class="gradient" v-on:click="excelDownload" title="엑셀 다운로드">
+            <v-icon small left>mdi-file-excel</v-icon>엑셀 다운로드
+          </v-btn>
+        </v-row>
       </v-sheet>
     </v-sheet>
 

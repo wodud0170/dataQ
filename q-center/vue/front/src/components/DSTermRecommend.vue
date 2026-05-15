@@ -129,6 +129,19 @@
             class="px-2"
             dense>
 
+            <!-- 88번 §16 — 입력 한글명 (A: 사용자가 처음 입력한 원본) -->
+            <template v-slot:[`item.originalInput`]="{ item }">
+              <span style="font-weight:500; color:#1A237E;">{{ item._originalInput || item.inputNm }}</span>
+            </template>
+
+            <!-- 88번 §16 — 등록 한글명 (B: 변환 후 실제 등록될 한글, 입력과 다르면 강조) -->
+            <template v-slot:[`item.inputNm`]="{ item }">
+              <span :style="{ color: isInputChanged(item) ? '#2E7D32' : '#37474F', fontWeight: isInputChanged(item) ? 600 : 400 }">
+                {{ item.inputNm }}
+              </span>
+              <v-chip v-if="isInputChanged(item)" x-small color="orange" text-color="white" class="ml-1" style="height:16px; font-size:.6rem;">변환</v-chip>
+            </template>
+
             <!-- Status chip -->
             <template v-slot:[`item.status`]="{ item }">
               <v-chip :color="statusColor(item.status)" x-small dark>{{ statusText(item.status) }}</v-chip>
@@ -417,13 +430,15 @@ export default {
       ],
 
       reviewHeaders: [
-        { text: '한글명', value: 'inputNm', width: '14%' },
+        // 88번 §16 — 입력 한글명 (A) 별도 컬럼 + 등록될 한글명 (B) 컬럼
+        { text: '입력 한글명', value: 'originalInput', width: '12%' },
+        { text: '등록 한글명', value: 'inputNm', width: '12%' },
         { text: '상태', value: 'status', width: '8%' },
-        { text: '구성단어', value: 'words', width: '17%', sortable: false, _toggle: true },
-        { text: '영문약어', value: 'recommendedEngAbrvNm', width: '14%', _toggle: true },
-        { text: '도메인', value: 'recommendedDomainNm', width: '13%', _toggle: true },
-        { text: '타입/길이', value: 'typeLen', width: '10%', sortable: false, _toggle: true },
-        { text: '액션', value: 'action', width: '24%', sortable: false, align: 'center' },
+        { text: '구성단어', value: 'words', width: '16%', sortable: false, _toggle: true },
+        { text: '영문약어', value: 'recommendedEngAbrvNm', width: '12%', _toggle: true },
+        { text: '도메인', value: 'recommendedDomainNm', width: '12%', _toggle: true },
+        { text: '타입/길이', value: 'typeLen', width: '8%', sortable: false, _toggle: true },
+        { text: '액션', value: 'action', width: '20%', sortable: false, align: 'center' },
       ],
     };
   },
@@ -615,6 +630,12 @@ export default {
     },
     countPost: function(status) {
       return this.analysisResults.filter(function(r) { return r._postStatus === status; }).length;
+    },
+    // 88번 §16 — 입력 한글 vs 등록 한글 변환 여부
+    isInputChanged: function(item) {
+      var a = (item._originalInput || '').trim();
+      var b = (item.inputNm || '').trim();
+      return a && b && a !== b;
     },
     statusColor: function(status) {
       var map = { 'REGISTERED': 'grey', 'AUTO': 'green', 'PARTIAL': 'orange', 'FAILED': 'red' };
