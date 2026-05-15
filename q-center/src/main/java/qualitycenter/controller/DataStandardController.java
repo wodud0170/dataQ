@@ -2276,14 +2276,19 @@ public class DataStandardController {
 					throw new RuntimeException("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
 				}
 
-				// 도메인 유효성 체크
+				// 도메인 유효성 체크 + 88번 §16 — 도메인의 dataType/dataLen 를 변환 이력 기록에 사용
+				String domainDataType = null;
+				Long  domainDataLen   = 0L;
 				if (domainNm != null && !domainNm.trim().isEmpty()) {
-					Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", domainNm.trim());
+					com.ndata.quality.model.std.StdDomainVo domainCheck =
+						session.selectOne("domain.selectDomainInfoByNm", domainNm.trim());
 					if (domainCheck == null) {
 						throw new RuntimeException("등록되지 않은 도메인입니다: " + domainNm);
 					}
+					domainDataType = domainCheck.getDataType();
+					domainDataLen  = domainCheck.getDataLen();
 				} else {
-					domainNm = null; // 빈 문자열을 null로 변환하여 FK 에러 방지
+					domainNm = null;
 				}
 
 				// 용어 등록
@@ -2350,8 +2355,8 @@ public class DataStandardController {
 					r.put("resolvedKrNm", termsNm);
 					r.put("resolvedEnNm", termsEngAbrvNm);
 					r.put("resolvedTermsId", termsId);
-					r.put("resolvedDataType", null);
-					r.put("resolvedDataLen", 0L);
+					r.put("resolvedDataType", domainDataType);
+					r.put("resolvedDataLen", domainDataLen == null ? 0L : domainDataLen);
 					r.put("resolveReason",
 						originalInput.equals(termsNm) ? "용어 등록 (입력 그대로)" : "수정 모달에서 변환 후 등록");
 					r.put("changeUserId", userId == null ? "system" : userId);
