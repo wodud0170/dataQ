@@ -42,6 +42,53 @@ public class ExcelDownloadService {
 	@Autowired
 	private ExcelExportHandler excelExportHandler;
 	
+    // 88번 §16 — 한글 변환 이력 (매핑 정의서)
+    public void getTermResolveHistoryExcel(Map<String, Object> filter, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        List<Map<String, Object>> rows = sqlSessionTemplate.selectList("termResolve.selectList", filter);
+        List<String[]> headers = Arrays.asList(
+            new String[]{"No","6","RIGHT"},
+            new String[]{"원래 입력 한글 (A)","30","LEFT"},
+            new String[]{"표준 매핑 한글 (B)","30","LEFT"},
+            new String[]{"표준 매핑 영문 (B)","25","LEFT"},
+            new String[]{"한글명 변경","12","CENTER"},
+            new String[]{"데이터타입","15","CENTER"},
+            new String[]{"길이","8","RIGHT"},
+            new String[]{"모델 ID","30","LEFT"},
+            new String[]{"오너","15","LEFT"},
+            new String[]{"테이블","25","LEFT"},
+            new String[]{"컬럼","25","LEFT"},
+            new String[]{"변환 사유","40","LEFT"},
+            new String[]{"사용자","15","CENTER"},
+            new String[]{"변환 시각","20","CENTER"}
+        );
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            Map<String, Object> r = rows.get(i);
+            String input = String.valueOf(r.getOrDefault("inputKrNm", ""));
+            String resolvedKr = r.get("resolvedKrNm") == null ? "" : String.valueOf(r.get("resolvedKrNm"));
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("HEADER1",  i + 1);
+            m.put("HEADER2",  input);
+            m.put("HEADER3",  resolvedKr);
+            m.put("HEADER4",  r.get("resolvedEnNm"));
+            m.put("HEADER5",  input.equals(resolvedKr) ? "유지" : "변경");
+            m.put("HEADER6",  r.get("resolvedDataType"));
+            m.put("HEADER7",  r.get("resolvedDataLen"));
+            m.put("HEADER8",  r.get("dmId"));
+            m.put("HEADER9",  r.get("objOwner"));
+            m.put("HEADER10", r.get("objNm"));
+            m.put("HEADER11", r.get("attrNm"));
+            m.put("HEADER12", r.get("resolveReason"));
+            m.put("HEADER13", r.get("changeUserId"));
+            m.put("HEADER14", r.get("changeDt"));
+            list.add(m);
+        }
+        String fileName = "한글변환이력_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
     //단어
     public void getWordsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
         // 엑셀에 저장할 데이터를 조회

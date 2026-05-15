@@ -56,6 +56,12 @@
 		<if test="resolvedEnNm != null and resolvedEnNm != ''">
 		   AND resolved_en_nm ILIKE '%' || #{resolvedEnNm} || '%'
 		</if>
+		<if test='"Y".equals(nmChangedYn)'>
+		   AND COALESCE(resolved_kr_nm,'') != COALESCE(input_kr_nm,'')
+		</if>
+		<if test='"N".equals(nmChangedYn)'>
+		   AND COALESCE(resolved_kr_nm,'') = COALESCE(input_kr_nm,'')
+		</if>
 		<if test="fromDt != null and fromDt != ''">
 		   AND change_dt &gt;= #{fromDt}
 		</if>
