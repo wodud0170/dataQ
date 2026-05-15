@@ -2337,6 +2337,31 @@ public class DataStandardController {
 				registeredTerms++;
 				registeredWords += newWordCount;
 
+				// 88번 §16 — 변환 이력 기록 (사용자 원본 입력 → 등록된 표준 용어)
+				String originalInput = (String) item.get("originalInput");
+				if (originalInput == null || originalInput.isEmpty()) originalInput = termsNm;
+				try {
+					Map<String, Object> r = new HashMap<>();
+					r.put("dmId", null);
+					r.put("objOwner", null);
+					r.put("objNm", null);
+					r.put("attrNm", null);
+					r.put("inputKrNm", originalInput);
+					r.put("resolvedKrNm", termsNm);
+					r.put("resolvedEnNm", termsEngAbrvNm);
+					r.put("resolvedTermsId", termsId);
+					r.put("resolvedDataType", null);
+					r.put("resolvedDataLen", 0L);
+					r.put("resolveReason",
+						originalInput.equals(termsNm) ? "용어 등록 (입력 그대로)" : "수정 모달에서 변환 후 등록");
+					r.put("changeUserId", userId == null ? "system" : userId);
+					r.put("changeDt", java.time.LocalDateTime.now()
+						.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
+					sqlSessionTemplate.insert("termResolve.insert", r);
+				} catch (Exception ex) {
+					log.warn(">> termResolve insert failed: {}", ex.getMessage());
+				}
+
 				Map<String, Object> detail = new HashMap<>();
 				detail.put("termsNm", termsNm);
 				detail.put("status", "SUCCESS");

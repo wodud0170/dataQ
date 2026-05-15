@@ -13,12 +13,13 @@
         </v-btn>
       </v-row>
 
-      <!-- 필터 -->
+      <!-- 필터 (한글 / 영문 분리) -->
       <v-row no-gutters style="gap:8px;" class="mb-2">
-        <v-text-field v-model="filter.inputKrNm" label="원래 입력 (A)" dense outlined hide-details style="max-width:200px;" />
-        <v-text-field v-model="filter.resolvedKrNm" label="표준 매핑 (B)" dense outlined hide-details style="max-width:200px;" />
+        <v-text-field v-model="filter.inputKrNm"    label="원래 입력 한글 (A)" dense outlined hide-details style="max-width:180px;" />
+        <v-text-field v-model="filter.resolvedKrNm" label="표준 매핑 한글 (B)" dense outlined hide-details style="max-width:180px;" />
+        <v-text-field v-model="filter.resolvedEnNm" label="표준 매핑 영문 (B)" dense outlined hide-details style="max-width:180px;" />
         <v-text-field v-model="filter.changeUserId" label="사용자" dense outlined hide-details style="max-width:140px;" v-if="isAdmin" />
-        <v-text-field v-model="filter.dmId" label="모델 ID" dense outlined hide-details style="max-width:200px;" />
+        <v-text-field v-model="filter.dmId"         label="모델 ID" dense outlined hide-details style="max-width:160px;" />
         <v-btn small color="primary" v-on:click="load">조회</v-btn>
       </v-row>
 
@@ -52,7 +53,7 @@ export default {
   data: () => ({
     items: [],
     isAdmin: false,
-    filter: { inputKrNm: '', resolvedKrNm: '', changeUserId: '', dmId: '' },
+    filter: { inputKrNm: '', resolvedKrNm: '', resolvedEnNm: '', changeUserId: '', dmId: '' },
     headers: [
       { text: '#', value: 'historySeq', width: '80px' },
       { text: '변환 매핑 (A → B)', value: 'mapping', sortable: false },

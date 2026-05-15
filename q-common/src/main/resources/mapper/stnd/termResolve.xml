@@ -53,6 +53,9 @@
 		<if test="resolvedKrNm != null and resolvedKrNm != ''">
 		   AND resolved_kr_nm LIKE '%' || #{resolvedKrNm} || '%'
 		</if>
+		<if test="resolvedEnNm != null and resolvedEnNm != ''">
+		   AND resolved_en_nm ILIKE '%' || #{resolvedEnNm} || '%'
+		</if>
 		<if test="fromDt != null and fromDt != ''">
 		   AND change_dt &gt;= #{fromDt}
 		</if>

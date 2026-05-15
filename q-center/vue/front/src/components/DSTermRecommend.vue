@@ -597,6 +597,10 @@ export default {
       }).then(function(res) {
         if (res.data) {
           self.analysisResults = res.data;
+          // 88번 §16 — 사용자가 처음 입력한 한글을 _originalInput 에 보존 (이후 단어 교체로 inputNm 갱신돼도 원본 유지)
+          self.analysisResults.forEach(function(r, idx) {
+            r._originalInput = self.parsedNames[idx] || r.inputNm;
+          });
         }
         self.currentStep = 3;
       }).catch(function(err) {
@@ -1154,7 +1158,9 @@ export default {
         termsDesc: r.inputNm,
         domainNm: r.recommendedDomainNm || '',
         words: wordIds,
-        newWords: newWords
+        newWords: newWords,
+        // 88번 §16 — 변환 이력용: 사용자가 처음 입력한 원본 한글 (단어 교체 전)
+        originalInput: r._originalInput || r.inputNm
       };
     },
     /**
