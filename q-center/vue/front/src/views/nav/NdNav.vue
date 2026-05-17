@@ -590,6 +590,9 @@ export default {
 }
 
 .wsLogViewer {
+    /* 2026-05-17 — 알림 로그 패널 임시 숨김. 미완성 상태(TEST 로그/오타)라 정리 전까지 가림.
+       복원하려면 아래 display:none 한 줄만 제거. logTextWrap DOM 은 유지되어 main.js 참조 안전. */
+    display: none;
     position: absolute;
     bottom: calc((-100vh + 64px) / 3);
     width: 100%;

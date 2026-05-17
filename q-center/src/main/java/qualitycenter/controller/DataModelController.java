@@ -358,8 +358,8 @@ public class DataModelController {
 	@RequestMapping(value = "/getDataModelObjListByClctId", method = RequestMethod.GET)
 	public List<StdDataModelObjVo> getDataModelObjListByClctId(String clctId) {
 		List<StdDataModelObjVo> all = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", clctId);
-		// 88번 거버넌스 — 관리자=전체 / 사용자=APPROVED + 본인 신청만
-		if (sessionService.isAdmin()) return all;
+		// 88번 거버넌스 — 전원 'APPROVED + 본인 미승인'만. 관리자도 남의 미승인(DRAFT/SUBMITTED)은
+		// 테이블 메뉴에 노출 안 됨 — 승인 화면에서만 본다.
 		String currentUser = sessionService.getUserId();
 		return all.stream()
 			.filter(o -> o.getAprvStatus() == null
@@ -407,8 +407,8 @@ public class DataModelController {
 	@RequestMapping(value = "/getDataModelAttrListByClctId", method = RequestMethod.GET)
 	public List<StdDataModelAttrVo> getDataModelAttrListByClctId(String clctId) {
 		List<StdDataModelAttrVo> all = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", clctId);
-		// 88번 거버넌스 — 관리자=전체 / 사용자=APPROVED + 본인 신청만
-		if (sessionService.isAdmin()) return all;
+		// 88번 거버넌스 — 전원 'APPROVED + 본인 미승인'만. 관리자도 남의 미승인(DRAFT/SUBMITTED)은
+		// 컬럼 메뉴에 노출 안 됨 — 승인 화면에서만 본다.
 		String currentUser = sessionService.getUserId();
 		return all.stream()
 			.filter(a -> a.getAprvStatus() == null
@@ -1500,6 +1500,10 @@ public class DataModelController {
 			objVo.setObjNmKr(objNmKr);
 			objVo.setObjOwner(ownerChange ? origOwner : objOwner);  // 일단 OLD owner 로 매칭
 			objVo.setObjDesc(objDesc);
+			// 88번 §15 — 테이블스페이스(물리)/업무영역(논리)/주제영역 수정 반영
+			objVo.setTablespaceNm((String) body.get("tablespaceNm"));
+			objVo.setBizAreaId((String) body.get("bizAreaId"));
+			objVo.setSubjAreaId((String) body.get("subjAreaId"));
 			sqlSessionTemplate.update("datamodel.updateDataModelObj", objVo);
 			if (ownerChange) {
 				// OBJ 의 OWNER 자체를 OLD → NEW 로 변경 (PK 일부)

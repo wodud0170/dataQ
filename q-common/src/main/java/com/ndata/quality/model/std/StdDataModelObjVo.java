@@ -37,5 +37,6 @@ public class StdDataModelObjVo {
 	private String submissionId;
 	private String tablespaceNm;        // 물리 — DDL `TABLESPACE xxx` 절
 	private String bizAreaId;           // 논리 분류 (FK → TB_BIZ_AREA)
+	private String bizAreaNm;           // 업무영역명 (조회용 — tb_biz_area JOIN)
 	private String subjAreaId;          // 물리 분류 (FK → TB_SUBJ_AREA)
 }

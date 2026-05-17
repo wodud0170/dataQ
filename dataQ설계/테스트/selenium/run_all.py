@@ -90,6 +90,12 @@ GROUPS = [
     ("진단 제외 관리 (79번)", [
         "test_diag_target_imsi.py",
     ]),
+    ("88번 거버넌스 / 메타 확장 (§15)", [
+        "test_88_governance_smoke.py",
+        "test_88_governance_e2e.py",
+        "test_88_tablespace_bizarea.py",
+        "test_88_collect_tablespace.py",
+    ]),
     ("데이터 품질 진단 재설계 (83번 Step 1~7)", [
         "test_qual_lock.py",            # Step 1 — Lock + Throttle + stale (13 phase)
         "test_qual_catalog.py",         # Step 2 — 시드 + CRUD + fork + 권한 (16 phase)

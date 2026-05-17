@@ -30,6 +30,15 @@
           prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
           single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
         </v-text-field>
+        <!-- 88번 §15 — 테이블스페이스(물리) / 업무영역(논리) 검색 -->
+        <span class="filterLabel">테이블스페이스</span>
+        <v-select v-model="searchTablespaceMode" :items="searchModeOptions" item-text="label" item-value="value"
+          dense outlined hide-details :style="{ width: '90px' }" />
+        <v-text-field v-model="searchTablespace" clearable clear-icon="mdi-close-circle" color="ndColor"
+          single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }" />
+        <span class="filterLabel">업무영역</span>
+        <v-select v-model="searchBizAreaId" :items="bizAreaOptions" item-text="bizAreaNm" item-value="bizAreaId"
+          clearable dense outlined hide-details class="filterInput" :style="{ width: '140px' }" placeholder="전체" />
         <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
         <v-btn color="primary" :disabled="!selectedModelId" v-on:click="openAddObjDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">테이블 추가</v-btn>
         <!-- 86번 #11 — 엑셀 드롭다운 (업로드/양식/다운로드) -->
@@ -120,15 +129,12 @@
           <v-text-field v-model="objForm.objNmKr" label="테이블 한글명 (논리)" outlined dense />
           <v-text-field v-model="objForm.objOwner" label="소유자 (스키마)" outlined dense />
           <v-text-field v-model="objForm.objDesc" label="테이블 설명" outlined dense />
-          <!-- 88번 §15 — 테이블스페이스 (물리) + 업무영역 (논리) + 주제영역 (물리) -->
+          <!-- 88번 §15 — 테이블스페이스 (물리) + 업무영역 (논리) -->
           <v-text-field v-model="objForm.tablespaceNm" label="테이블스페이스 (선택, 물리)" outlined dense
             class="hdr-physical-bg" persistent-hint hint="DDL 출력 시 TABLESPACE 절 자동 포함" />
           <v-select v-model="objForm.bizAreaId" :items="bizAreaOptions" item-text="bizAreaNm" item-value="bizAreaId"
             label="업무영역 (논리, 선택)" outlined dense clearable
             class="hdr-logical-bg" />
-          <v-select v-model="objForm.subjAreaId" :items="subjAreaOptions" item-text="subjAreaNm" item-value="subjAreaId"
-            label="주제영역 (물리, 선택)" outlined dense clearable
-            class="hdr-physical-bg" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -154,9 +160,13 @@
     <v-data-table id="dmTable_table" :headers="dmTabledetaileHeaders" :items="dmTableItems"
       :page.sync="page" :items-per-page="itemsPerPage" hide-default-footer
       item-key="_rowKey" class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요."
-      multi-sort :sort-by="['objOwner', 'objNm']" :sort-desc="[false, false]">
+      multi-sort :sort-by="['objOwner', 'objNm']" :sort-desc="[false, false]"
+      :item-class="row => row.aprvStatus === 'REJECTED' ? 'row-rejected' : ((row.aprvStatus === 'DRAFT' || row.aprvStatus === 'SUBMITTED') ? 'row-draft' : '')">
       <template #[`item.objNm`]="{ item }">
         <a class="ndColor--text" style="cursor:pointer; text-decoration:underline;" @click="goToColumn(item)">{{ item.objNm }}</a>
+        <v-chip v-if="govLabel(item)" x-small label class="ml-1" :color="govColor(item)" text-color="white">
+          {{ govLabel(item) }}
+        </v-chip>
       </template>
       <template #[`item.actions`]="{ item }">
         <v-btn icon small :disabled="!selectedModelId" @click="openEditObjDialog(item)" title="수정">
@@ -210,6 +220,9 @@ export default {
     searchTableMode: 'contains',
     searchTableKr: '',
     searchTableKrMode: 'contains',
+    searchTablespace: '',
+    searchTablespaceMode: 'contains',
+    searchBizAreaId: null,
     searchModeOptions: [
       { value: 'contains', label: '포함' },
       { value: 'exact',    label: '완전 일치' },
@@ -227,14 +240,15 @@ export default {
       { text: '테이블 한글명 (논리)', sortable: true, align: 'center', value: 'objNmKr' },
       { text: '컬럼개수', sortable: true, align: 'center', value: 'objAttrCnt' },
       { text: '테이블 설명', sortable: false, align: 'center', value: 'objDesc' },
+      { text: '테이블스페이스 (물리)', sortable: true, align: 'center', value: 'tablespaceNm', width: '140px' },
+      { text: '업무영역 (논리)', sortable: true, align: 'center', value: 'bizAreaNm', width: '130px' },
       { text: '편집', align: 'center', sortable: false, value: 'actions', width: '100px' },
     ],
     objDialog: false,
     objDialogMode: 'add',
-    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null, subjAreaId: null },
-    // 88번 §15 — 영역 옵션
+    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null },
+    // 88번 §15 — 업무영역 옵션
     bizAreaOptions: [],
-    subjAreaOptions: [],
     // 엑셀 업로드
     uploadDialog: false,
     uploadFile: null,
@@ -261,15 +275,27 @@ export default {
           this._matchName(item.objOwner, this.searchOwner,   this.searchOwnerMode)
           && this._matchName(item.objNm,    this.searchTable,   this.searchTableMode)
           && this._matchName(item.objNmKr,  this.searchTableKr, this.searchTableKrMode)
+          && this._matchName(item.tablespaceNm, this.searchTablespace, this.searchTablespaceMode)
+          && (!this.searchBizAreaId || item.bizAreaId === this.searchBizAreaId)
         )
         .map(item => ({ ...item, _rowKey: (item.objOwner || '') + '' + item.objNm }));
     },
   },
   methods: {
+    // 88번 거버넌스 — 미승인 상태 칩 라벨/색 (DRAFT/SUBMITTED/REJECTED)
+    govLabel(item) {
+      const s = item && item.aprvStatus;
+      if (s === 'DRAFT') return '미승인';
+      if (s === 'SUBMITTED') return '승인대기';
+      if (s === 'REJECTED') return '반려';
+      return '';
+    },
+    govColor(item) {
+      return (item && item.aprvStatus === 'REJECTED') ? 'error' : 'warning';
+    },
     // 88번 §15 — 영역 옵션 로드
     loadAreaOptions() {
       axios.post(this.$APIURL.base + 'api/area/biz/list', {}).then(r => { this.bizAreaOptions = r.data || []; }).catch(() => {});
-      axios.post(this.$APIURL.base + 'api/area/subj/list', {}).then(r => { this.subjAreaOptions = r.data || []; }).catch(() => {});
     },
     /** 86번 #11 — 검색 모드 매칭: contains/exact/start/end */
     _matchName(value, keyword, mode) {
@@ -380,7 +406,7 @@ export default {
     },
     openAddObjDialog() {
       this.objDialogMode = 'add';
-      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null, subjAreaId: null };
+      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null };
       this.loadAreaOptions();
       this.objDialog = true;
     },
@@ -392,7 +418,6 @@ export default {
         origObjNm: item.objNm, origObjOwner: item.objOwner || '',
         tablespaceNm: item.tablespaceNm || '',
         bizAreaId: item.bizAreaId || null,
-        subjAreaId: item.subjAreaId || null,
       };
       this.loadAreaOptions();
       this.objDialog = true;
@@ -583,6 +608,7 @@ export default {
   },
   created() {
     this.getModelList();
+    this.loadAreaOptions();
   },
   mounted() {
     this.$resizableGrid();
@@ -608,4 +634,7 @@ export default {
 .row-upload-error > td { background-color: #FFEBEE !important; }
 .row-upload-skip > td { background-color: #FFF8E1 !important; }
 .preview-grid { border: 1px solid #E0E0E0; }
+/* 88번 거버넌스 — 미승인(DRAFT/SUBMITTED) 노란 배경, 반려 빨간 배경 */
+.row-draft > td { background-color: #FFF8E1 !important; }
+.row-rejected > td { background-color: #FFEBEE !important; }
 </style>

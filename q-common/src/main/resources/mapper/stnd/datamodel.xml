@@ -243,7 +243,8 @@
 				,TABLESPACE_NM       as tablespaceNm
 				,BIZ_AREA_ID         as bizAreaId
 				,SUBJ_AREA_ID        as subjAreaId
-			from TB_DATA_MODEL_OBJ
+				,(SELECT biz_area_nm FROM tb_biz_area WHERE biz_area_id = o.BIZ_AREA_ID) as bizAreaNm
+			from TB_DATA_MODEL_OBJ o
 			where DM_ID = #{clctId} AND USE_YN = 'Y'
 			order by OBJ_NM
 	</select>
@@ -985,6 +986,9 @@
 			 OBJ_NM_KR = #{objNmKr, jdbcType=VARCHAR}
 			,OBJ_OWNER = #{objOwner, jdbcType=VARCHAR}
 			,OBJ_DESC  = #{objDesc, jdbcType=VARCHAR}
+			,TABLESPACE_NM = #{tablespaceNm, jdbcType=VARCHAR}
+			,BIZ_AREA_ID   = #{bizAreaId, jdbcType=VARCHAR}
+			,SUBJ_AREA_ID  = #{subjAreaId, jdbcType=VARCHAR}
 		WHERE DM_ID = #{dataModelId}
 		  AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
 		  AND OBJ_NM = #{objNm}

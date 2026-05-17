@@ -157,6 +157,7 @@ public class DataModelService implements Runnable {
 					stdDataModelObjVo.setObjAttrCnt(rs.getShort("objAttrCnt"));
 					stdDataModelObjVo.setObjCretDt(rs.getString("objCretDt"));
 					stdDataModelObjVo.setObjUpdtDt(rs.getString("objUpdtDt"));
+					stdDataModelObjVo.setTablespaceNm(rs.getString("tablespaceNm"));
 					session.insert("datamodel.insertDataModelObj", stdDataModelObjVo);
 					collectedObjNames.add(stdDataModelObjVo.getObjNm());
 					totalObjCnt++;

@@ -96,6 +96,7 @@ export default {
       { text: '인덱스 타입', sortable: true, align: 'center', value: 'indexType' },
       { text: '유니크', sortable: true, align: 'center', value: 'uniqueness' },
       { text: '정렬', sortable: false, align: 'center', value: 'sortOrder' },
+      { text: '테이블스페이스', sortable: true, align: 'center', value: 'tablespaceNm' },
     ],
   }),
   computed: {

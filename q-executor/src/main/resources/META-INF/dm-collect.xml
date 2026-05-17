@@ -51,6 +51,7 @@
                     ,count(B.ATTR_NAME)	   AS objAttrCnt
                     ,''                    AS objCretDt
                     ,''                    AS objUpdtDt
+                    ,''                    AS tablespaceNm
                 FROM DB_CLASS A, DB_ATTRIBUTE B
                 WHERE A.CLASS_NAME = B.CLASS_NAME
                 AND UPPER(A.OWNER_NAME) = :owner
@@ -150,7 +151,8 @@
                           WHERE OWNER = S1.OWNER AND TABLE_NAME = S1.TABLE_NAME)     as objAttrCnt --테이블컬럼개수
                         ,to_char(S3.CREATED,'YYYYMMDDHH24MISS')        as objCretDt     --등록일자
                         ,to_char(S3.LAST_DDL_TIME,'YYYYMMDDHH24MISS')  as objUpdtDt     --수정일자
-                FROM   ALL_TABLES S1 
+                        ,S1.TABLESPACE_NAME        as tablespaceNm  --테이블스페이스
+                FROM   ALL_TABLES S1
                       ,ALL_TAB_COMMENTS S2
                       ,ALL_OBJECTS S3
                 WHERE   1=1
@@ -279,6 +281,7 @@
                     ,	count(S2.COLUMN_NAME) over(partition by S1.TABLE_SCHEMA, S1.TABLE_NAME) as objAttrCnt #테이블컬럼개수
                     ,	to_char(S1.CREATE_TIME,'YYYYMMDDHH24MISS')   as objCretDt     #생성일자
                     ,	to_char(S1.UPDATE_TIME,'YYYYMMDDHH24MISS')   as objUpdtDt     #수정일자
+                    ,	''   as tablespaceNm
                 FROM	information_schema.TABLES S1, information_schema.COLUMNS S2
                 WHERE 	S1.TABLE_SCHEMA = S2.TABLE_SCHEMA AND S1.TABLE_NAME = S2.TABLE_NAME
                     AND upper(S1.TABLE_SCHEMA) = :owner 
