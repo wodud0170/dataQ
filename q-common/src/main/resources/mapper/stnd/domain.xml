@@ -62,6 +62,9 @@
 			<if test="schAprvYn != null">
 				AND APRV_YN = #{schAprvYn}
 			</if>
+			<if test="schCommStndYn != null and schCommStndYn != ''">
+				AND COMM_STND_YN = #{schCommStndYn}
+			</if>
 			<if test="schDomainGrpNm != null">
 				AND DOMAIN_GRP_NM ILIKE '%' || #{schDomainGrpNm} || '%'
 			</if>

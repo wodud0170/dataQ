@@ -7,7 +7,8 @@
           v-bind:style="[isMobile ? { 'flex-direction': 'column' } : { 'flex-direction': 'row' }]">
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-            <v-row :style="{ alignItems: 'center', margin: '0px' }">
+            <!-- 검색 1줄: 용어명 / 용어영문약어명 / 도메인명 -->
+            <v-row :style="{ alignItems: 'center', margin: '0px', flexWrap: 'wrap', rowGap: '10px' }" class="mb-2">
               <!-- 용어명 검색 -->
               <span :style="{ fontSize: '.875rem' }">용어명</span>
               <v-select v-model="searchTermMode" :items="searchModeOptions" item-text="label" item-value="value"
@@ -27,13 +28,22 @@
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
 
-               <!-- 도메인명 검색 타이틀 -->
+              <!-- 도메인명 검색 -->
               <span :style="{ fontSize: '.875rem' }">도메인명</span>
-              <!-- 도메인명 입력 필드 -->
-              <v-text-field class="pr-4 pl-4" v-model="searchDomain" v-on:keyup.enter="getTermData"
+              <v-text-field class="pr-4 pl-2" v-model="searchDomain" v-on:keyup.enter="getTermData"
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '200px' }">
               </v-text-field>
+            </v-row>
+
+            <!-- 검색 2줄: 공통표준 / 등록일자 / 승인여부 + 검색·초기화 -->
+            <v-row :style="{ alignItems: 'center', margin: '0px', flexWrap: 'wrap', rowGap: '10px' }">
+              <!-- 공통표준 여부 필터 -->
+              <span :style="{ fontSize: '.875rem' }">공통표준</span>
+              <v-select class="pl-2 mr-4" v-model="searchCommStndYn" :items="commStndYnOptions"
+                item-text="text" item-value="value"
+                dense outlined hide-details single-line :style="{ width: '110px', flexGrow: 0 }">
+              </v-select>
 
               <!-- 등록일자 (범위) -->
               <span :style="{ fontSize: '.875rem' }">등록일자</span>
@@ -43,12 +53,14 @@
               <v-text-field class="pr-4" v-model="searchToDt" type="date" dense outlined hide-details
                 color="ndColor" :style="{ width: '160px' }" />
 
-              <!-- 승인 여부 추가 -->
+              <!-- 승인 여부 -->
               <v-checkbox class="tarmSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
+
+              <v-spacer />
               <!-- 검색 버튼 -->
               <v-btn class="gradient" title="검색" v-on:click="getTermData"
-                :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>search</v-icon></v-btn>
+                :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '8px' }"><v-icon>search</v-icon></v-btn>
               <!-- 초기화 버튼 -->
               <v-btn class="gradient" title="초기화" v-on:click="resetSearch"
                 :style="{ width: '40px', padding: '0 5px', minWidth: '45px', marginRight: '16px' }"><v-icon>restart_alt</v-icon></v-btn>
@@ -549,261 +561,141 @@
           <!--  -->
           <v-container fluid>
             <v-form ref="form">
-              <v-stepper v-model="updateModalStep" vertical :style="{ boxShadow: 'none !important' }">
-                <v-stepper-step :complete="updateModalStep > 1" step="1" color="ndColor" v-on:click="updateModalStep = 1">
-                  용어명 입력
-                  <!-- <small>Summarize if needed</small> -->
-                </v-stepper-step>
+              <!-- 88번 — 수정 모달은 정보 입력 전용 (용어명/단어 구성은 확정, 변경 불가).
+                   용어명은 헤더에 표시. 영문약어는 단어 구성에서 합성된 값이라 readonly.
+                   용어명·단어 자체를 바꾸려면 삭제 후 재등록 (정책 a). -->
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader class="reqText">용어 영문 약어명</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-text-field v-model="updateTerm_termEngAbrvNm" required dense color="ndColor" readonly
+                    filled></v-text-field>
+                </v-col>
+              </v-row>
 
-                <v-stepper-content step="1">
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader class="reqText">용어명</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-text-field v-model="updateTerm_termNm" ref="updateTerm_termNm"
-                        :rules="[() => !!updateTerm_termNm || '용어명은 필수 입력값입니다.']" clearable required dense
-                        placeholder="가동개시일자" color="ndColor" v-on:keyup.enter="updateNextStep(1)"></v-text-field>
-                    </v-col>
-                  </v-row>
+              <v-row v-if="updateTerm_lastWordIsCode">
+                <v-col cols="4">
+                  <v-subheader class="reqText">도메인 유형</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-radio-group v-model="updateTerm_domainType" row dense hide-details class="mt-0"
+                    @change="onUpdateDomainTypeChange">
+                    <v-radio color="ndColor" label="일반 도메인" value="domain"></v-radio>
+                    <v-radio color="ndColor" label="코드" value="code"></v-radio>
+                  </v-radio-group>
+                </v-col>
+              </v-row>
 
-                  <v-col class="text-right">
-                    <v-btn class="white--text" color="ndColor" @click="updateNextStep(1)"
-                      :style="{ width: '80px !important', height: '30px !important' }">
-                      다음
-                    </v-btn>
+              <v-row v-if="updateTerm_domainType === 'domain'">
+                <v-col cols="4">
+                  <v-subheader class="reqText">도메인명</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-autocomplete dense required color="ndColor" v-model="updateTerm_domainNm" :placeholder="'선택'"
+                    ref="updateTerm_domainNm" :items="updateTerm_domainNmItems"
+                    :rules="[v => !!v || '도메인명은 필수 입력값입니다.']" :menu-props="{ top: false, offsetY: true }">
+                    <template v-slot:no-data>
+                      <v-list-item>
+                        <v-list-item-title>
+                        </v-list-item-title>
+                      </v-list-item>
+                    </template>
+                  </v-autocomplete>
+                </v-col>
+              </v-row>
+
+              <v-row v-if="updateTerm_domainType === 'code' && updateTerm_lastWordIsCode">
+                <v-col cols="4">
+                  <v-subheader class="reqText">코드 선택</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-autocomplete dense required color="ndColor" v-model="updateTerm_selectedCode"
+                    :items="updateTerm_codeInfoList" item-text="codeNm" return-object
+                    :placeholder="'코드 검색'" :menu-props="{ top: false, offsetY: true }"
+                    @change="onUpdateCodeSelected">
+                    <template v-slot:item="{ item }">
+                      <span>{{ item.codeNm }} <span class="caption grey--text">[{{ item.codeGrp }}] ({{ item.domainNm || '-' }})</span></span>
+                    </template>
+                    <template v-slot:selection="{ item }">
+                      {{ item.codeNm }} [{{ item.codeGrp }}]
+                    </template>
+                  </v-autocomplete>
+                  <div v-if="updateTerm_selectedCode && updateTerm_selectedCode.domainNm" class="caption grey--text mt-1">
+                    도메인: {{ updateTerm_selectedCode.domainNm }} / 타입: {{ updateTerm_selectedCode.dataType || '-' }} / 길이: {{ updateTerm_selectedCode.dataLen || '-' }}
+                  </div>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader class="reqText">용어 설명</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-textarea clearable dense color="ndColor" rows="1" v-model="updateTerm_termDesc"
+                    ref="updateTerm_termDesc" placeholder="사람이나 기계 등이 움직이거나 행동을 시작한 날짜"
+                    :rules="[() => !!updateTerm_termDesc || '용어 설명은 필수 입력값입니다.']"></v-textarea>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>이음동의어 목록</v-subheader>
+                </v-col>
+
+                <v-col cols="8">
+                  <v-col class="colInBtnWrap" v-for="updateTerm_allophSynm in updateTerm_allophSynmLst_arr"
+                    :key="updateTerm_allophSynm.id">
+                    <v-text-field :for="updateTerm_allophSynmLst_arr.value" v-model="updateTerm_allophSynm.value"
+                      dense color="ndColor" ref="updateTerm_allophSynmLst_arr" placeholder=""
+                      hide-details></v-text-field>
+                    <v-btn class="gradient colInBtn" v-show="updateTerm_allophSynm.addBtnView"
+                      v-on:click="addAllophSynmLst()" title="추가">추가</v-btn>
+                    <v-btn class="colInBtn white--text" color="gray" v-show="updateTerm_allophSynm.removeBtnView"
+                      v-on:click="removeAllophSynmLst(updateTerm_allophSynm.id)" title="삭제">삭제</v-btn>
                   </v-col>
-                </v-stepper-content>
+                </v-col>
+              </v-row>
 
-                <v-stepper-step :complete="updateModalStep > 2" step="2" color="ndColor" v-on:click="updateNextStep(1)">
-                  단어 목록 선택
-                </v-stepper-step>
+              <v-row v-if="updateTerm_domainType !== 'code'">
+                <v-col cols="4">
+                  <v-subheader>코드그룹</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-text-field v-model="updateTerm_codeGrp" dense color="ndColor" placeholder=""
+                    @input="updateTerm_codeGrp = (updateTerm_codeGrp || '').toUpperCase()"></v-text-field>
+                </v-col>
+              </v-row>
 
-                <v-stepper-content step="2">
-                  <v-row v-for="(item, index) in updateTerm_wordListArr" :key="index"
-                    :style="{ margin: '0px 0px 20px 0px' }">
-                    <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}
-                      <v-chip v-if="item.wordLst && item.wordLst.length > 0" x-small color="green" text-color="white" class="ml-2">등록됨</v-chip>
-                      <v-chip v-else x-small color="red" text-color="white" class="ml-2">미등록</v-chip>
-                    </h3>
-                    <v-col cols="12" :style="{ padding: '0px' }">
-                      <v-data-table v-if="item.wordLst && item.wordLst.length > 0"
-                        id="updateTerm_wordList_table" class="px-4 pb-3" :headers="wordListHeader"
-                        :items="item.wordLst" item-key="index" v-model="updateTerm_selected_word_list[index]"
-                        :value="updateTerm_selected_word_list[index]" hide-default-footer show-select>
-                      </v-data-table>
-                      <v-sheet v-else outlined rounded class="pa-3 mx-4">
-                        <v-row dense>
-                          <v-col cols="3">
-                            <v-text-field v-model="item.inlineWordNm" dense outlined hide-details
-                              label="단어 한글명" :placeholder="item.wordNm" />
-                          </v-col>
-                          <v-col cols="3">
-                            <v-text-field v-model="item.inlineWordEngAbrvNm" dense outlined hide-details
-                              label="영문약어" @input="item.inlineWordEngAbrvNm = (item.inlineWordEngAbrvNm || '').toUpperCase()" />
-                          </v-col>
-                          <v-col cols="3">
-                            <v-text-field v-model="item.inlineWordEngNm" dense outlined hide-details
-                              label="영문명" @input="item.inlineWordEngNm = (item.inlineWordEngNm || '').toUpperCase()" />
-                          </v-col>
-                          <v-col cols="3" class="d-flex align-center">
-                            <v-btn small color="primary" :loading="item.inlineSaving"
-                              @click="inlineRegisterWord(index)">단어 등록</v-btn>
-                          </v-col>
-                        </v-row>
-                      </v-sheet>
-                    </v-col>
-                  </v-row>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>담당기관명</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-text-field v-model="updateTerm_chrgOrg" dense color="ndColor" placeholder=""></v-text-field>
+                </v-col>
+              </v-row>
 
-                  <!-- 버튼 -->
-                  <v-col class="text-right">
-                    <v-btn text class="gray white--text" @click="updateModalStep = 1"
-                      :style="{ width: '80px !important', height: '30px !important' }">
-                      이전
-                    </v-btn>
-                    <v-btn class="white--text" color="ndColor" v-on:click="updateNextStep(2)"
-                      :style="{ width: '80px !important', height: '30px !important' }">
-                      다음
-                    </v-btn>
-                  </v-col>
-                </v-stepper-content>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>공통표준여부</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-radio-group v-model="updateTerm_commStndYn" row mandatory dense hide-details>
+                    <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                    <v-radio color="ndColor" label="N" value="N"></v-radio>
+                  </v-radio-group>
+                </v-col>
+              </v-row>
 
-                <v-stepper-step :complete="updateModalStep > 3" step="3" color="ndColor">
-                  용어 정보 입력
-                </v-stepper-step>
-
-                <v-stepper-content step="3" color="ndColor">
-
-                  <!-- 단어 순서 변경 -->
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader>단어 순서 변경</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-list>
-                        <v-list-item v-for="(item, index) in updateTerm_wordList" :key="index" class="liStyle">
-                          <span class="indexStyle">{{ index + 1 }}</span>
-                          <span :style="{ width: 'calc(100% - 60px)' }">
-                            {{ item.wordNm }}
-                          </span>
-                          <div :style="{ width: '60px' }">
-                            <v-icon :class="{ 'iconShow': index !== 0, 'iconHide': index === 0 }" title="위로 이동"
-                              :style="{ transform: 'rotate(180deg)' }"
-                              @click="moveItemUp(index, 'update')">arrow_drop_down_circle</v-icon>
-                            <v-icon
-                              :class="{ 'iconShow': updateTerm_wordList.length - 1 !== index, 'iconHide': updateTerm_wordList.length - 1 === index }"
-                              title="아래로 이동" @click="moveItemDown(index, 'update')">arrow_drop_down_circle</v-icon>
-                          </div>
-                        </v-list-item>
-                      </v-list>
-                    </v-col>
-                  </v-row>
-                  <!--  -->
-                  <v-divider :style="{ margin: '25px 0' }"></v-divider>
-                  <!--  -->
-
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader class="reqText">용어 영문 약어명</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-text-field v-model="updateTerm_termEngAbrvNm" required dense color="ndColor" readonly
-                        filled></v-text-field>
-                    </v-col>
-                  </v-row>
-
-                  <v-row v-if="updateTerm_lastWordIsCode">
-                    <v-col cols="4">
-                      <v-subheader class="reqText">도메인 유형</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-radio-group v-model="updateTerm_domainType" row dense hide-details class="mt-0"
-                        @change="onUpdateDomainTypeChange">
-                        <v-radio color="ndColor" label="일반 도메인" value="domain"></v-radio>
-                        <v-radio color="ndColor" label="코드" value="code"></v-radio>
-                      </v-radio-group>
-                    </v-col>
-                  </v-row>
-
-                  <v-row v-if="updateTerm_domainType === 'domain'">
-                    <v-col cols="4">
-                      <v-subheader class="reqText">도메인명</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-autocomplete dense required color="ndColor" v-model="updateTerm_domainNm" :placeholder="'선택'"
-                        ref="updateTerm_domainNm" :items="updateTerm_domainNmItems"
-                        :rules="[v => !!v || '도메인명은 필수 입력값입니다.']" :menu-props="{ top: false, offsetY: true }">
-                        <template v-slot:no-data>
-                          <v-list-item>
-                            <v-list-item-title>
-                            </v-list-item-title>
-                          </v-list-item>
-                        </template>
-                      </v-autocomplete>
-                    </v-col>
-                  </v-row>
-
-                  <v-row v-if="updateTerm_domainType === 'code' && updateTerm_lastWordIsCode">
-                    <v-col cols="4">
-                      <v-subheader class="reqText">코드 선택</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-autocomplete dense required color="ndColor" v-model="updateTerm_selectedCode"
-                        :items="updateTerm_codeInfoList" item-text="codeNm" return-object
-                        :placeholder="'코드 검색'" :menu-props="{ top: false, offsetY: true }"
-                        @change="onUpdateCodeSelected">
-                        <template v-slot:item="{ item }">
-                          <span>{{ item.codeNm }} <span class="caption grey--text">[{{ item.codeGrp }}] ({{ item.domainNm || '-' }})</span></span>
-                        </template>
-                        <template v-slot:selection="{ item }">
-                          {{ item.codeNm }} [{{ item.codeGrp }}]
-                        </template>
-                      </v-autocomplete>
-                      <div v-if="updateTerm_selectedCode && updateTerm_selectedCode.domainNm" class="caption grey--text mt-1">
-                        도메인: {{ updateTerm_selectedCode.domainNm }} / 타입: {{ updateTerm_selectedCode.dataType || '-' }} / 길이: {{ updateTerm_selectedCode.dataLen || '-' }}
-                      </div>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader class="reqText">용어 설명</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-textarea clearable dense color="ndColor" rows="1" v-model="updateTerm_termDesc"
-                        ref="updateTerm_termDesc" placeholder="사람이나 기계 등이 움직이거나 행동을 시작한 날짜"
-                        :rules="[() => !!updateTerm_termDesc || '용어 설명은 필수 입력값입니다.']"></v-textarea>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader>이음동의어 목록</v-subheader>
-                    </v-col>
-
-                    <v-col cols="8">
-                      <v-col class="colInBtnWrap" v-for="updateTerm_allophSynm in updateTerm_allophSynmLst_arr"
-                        :key="updateTerm_allophSynm.id">
-                        <v-text-field :for="updateTerm_allophSynmLst_arr.value" v-model="updateTerm_allophSynm.value"
-                          dense color="ndColor" ref="updateTerm_allophSynmLst_arr" placeholder=""
-                          hide-details></v-text-field>
-                        <v-btn class="gradient colInBtn" v-show="updateTerm_allophSynm.addBtnView"
-                          v-on:click="addAllophSynmLst()" title="추가">추가</v-btn>
-                        <v-btn class="colInBtn white--text" color="gray" v-show="updateTerm_allophSynm.removeBtnView"
-                          v-on:click="removeAllophSynmLst(updateTerm_allophSynm.id)" title="삭제">삭제</v-btn>
-                      </v-col>
-                    </v-col>
-                  </v-row>
-
-                  <v-row v-if="updateTerm_domainType !== 'code'">
-                    <v-col cols="4">
-                      <v-subheader>코드그룹</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-text-field v-model="updateTerm_codeGrp" dense color="ndColor" placeholder=""
-                        @input="updateTerm_codeGrp = (updateTerm_codeGrp || '').toUpperCase()"></v-text-field>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader>담당기관명</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-text-field v-model="updateTerm_chrgOrg" dense color="ndColor" placeholder=""></v-text-field>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader>공통표준여부</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-radio-group v-model="updateTerm_commStndYn" row mandatory dense hide-details>
-                        <v-radio color="ndColor" label="Y" value="Y"></v-radio>
-                        <v-radio color="ndColor" label="N" value="N"></v-radio>
-                      </v-radio-group>
-                    </v-col>
-                  </v-row>
-
-                  <v-row>
-                    <v-col cols="4">
-                      <v-subheader>제정차수</v-subheader>
-                    </v-col>
-                    <v-col cols="8">
-                      <v-text-field v-model="updateTerm_magntdOrd" dense color="ndColor" placeholder="1차"></v-text-field>
-                    </v-col>
-                  </v-row>
-
-                  
-                  <v-col class="text-right">
-                    <v-btn text class="gray white--text" @click="updateModalStep = 2"
-                      :style="{ width: '80px !important', height: '30px !important' }">
-                      이전
-                    </v-btn>
-                  </v-col>
-                </v-stepper-content>
-              </v-stepper>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>제정차수</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-text-field v-model="updateTerm_magntdOrd" dense color="ndColor" placeholder="1차"></v-text-field>
+                </v-col>
+              </v-row>
             </v-form>
           </v-container>
         </template>
@@ -977,8 +869,14 @@ export default {
     searchEngTermMode: 'contains',
     //검색 도메인명
     searchDomain: '',
+    //검색 공통표준여부 (''=전체)
+    searchCommStndYn: '',
+    commStndYnOptions: [
+      { text: '전체', value: '' },
+      { text: 'Y', value: 'Y' },
+      { text: 'N', value: 'N' }
+    ],
 
-    
     // 관리자 여부
     isAdmin: false,
     // 검색 승인 여부
@@ -1206,6 +1104,7 @@ export default {
       this.searchEngTerm = '';
       this.searchEngTermMode = 'contains';
       this.searchDomain = '';
+      this.searchCommStndYn = '';
       this.searchFromDt = '';
       this.searchToDt = '';
       this.searchApproval = true;
@@ -1308,6 +1207,7 @@ export default {
           'searchEngTermMode': this.searchEngTermMode,
           'searchDomain': searchDomain,
           'schAprvYn': schAprvYn,
+          'schCommStndYn': this.searchCommStndYn || null,
           'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
           'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null
         }).then((res) => {
@@ -1557,8 +1457,11 @@ export default {
         // 용어 등록 도메인명 리스트 바인드
         // this.getDomainData();
       } else if (value === 'update') {
-        // this.getDomainData();
+        // 수정 모달은 단어 선택 단계가 없어 createTermEngAbrvNm(단어 watch) 의 도메인 로딩이
+        // 트리거되지 않음 → 모달 열 때 그 용어의 단어 구성을 로드해 마지막 형식단어 분류에
+        // 맞는 도메인만 노출 (등록 모달과 동일 정책).
         this.updateModalInit();
+        this.loadUpdateDomainList(this.updateTerm_id);
         this.updateTermModalShow = true;
       }
     },
@@ -2141,6 +2044,22 @@ export default {
         // 용어 수정 시에 필요한 단어 구성 배열
         this.updateTerm_wordList = this.createAddWordList(sortedArr);
       }
+    },
+    /**
+     * 수정 모달 — 그 용어의 단어 구성을 로드해 마지막 형식단어(domainClsfNm)에 맞는
+     * 도메인만 도메인명 드롭다운에 노출. 분류가 없으면 전체 도메인.
+     */
+    loadUpdateDomainList(termsId) {
+      if (!termsId) { this.getDomainData(); return; }
+      axios.get(this.$APIURL.base + 'api/std/getTermsWordInfoList', { params: { termsId: termsId } })
+        .then((res) => {
+          var words = res.data || [];
+          var last = words.length ? words[words.length - 1] : null;
+          var clsf = last ? last.domainClsfNm : null;
+          if (clsf) this.getDomainInfoByClsfNm(clsf);
+          else this.getDomainData();
+        })
+        .catch(() => { this.getDomainData(); });
     },
     getWordItemsListByTermsId(id) {
       let _termId = id;
@@ -2970,7 +2889,8 @@ export default {
 }
 
 #term_table {
-  height: calc(100% - 210px);
+  /* 검색 2줄 (용어명·영문약어·도메인 / 공통표준·등록일자·승인) 높이 반영 — 페이징 가림 방지 */
+  height: calc(100% - 268px);
   overflow-y: overlay;
   overflow-x: hidden;
 }

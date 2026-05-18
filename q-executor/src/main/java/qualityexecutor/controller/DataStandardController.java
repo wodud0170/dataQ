@@ -46,7 +46,7 @@ public class DataStandardController extends DataControllerBase {
     	log.info(">> uploadWords started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadWords", userId, socketSessionId, multiPart));
+			startService(new DataStandardService("uploadWords", userId, socketSessionId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadWords failed : " + e.getMessage());
@@ -66,7 +66,7 @@ public class DataStandardController extends DataControllerBase {
     	log.info(">> uploadTermsList started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadTermsList", userId, socketSessionId, multiPart));
+			startService(new DataStandardService("uploadTermsList", userId, socketSessionId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -84,7 +84,7 @@ public class DataStandardController extends DataControllerBase {
     	log.info(">> uploadCodeInfoList started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadCodeInfoList", userId, socketSessionId, multiPart));
+			startService(new DataStandardService("uploadCodeInfoList", userId, socketSessionId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadCodeInfoList failed : " + e.getMessage());
@@ -103,7 +103,7 @@ public class DataStandardController extends DataControllerBase {
     	log.info(">> uploadCodeDataList started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadCodeDataList", userId, socketSessionId, multiPart));
+			startService(new DataStandardService("uploadCodeDataList", userId, socketSessionId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadCodeDataList failed : " + e.getMessage());
@@ -123,7 +123,7 @@ public class DataStandardController extends DataControllerBase {
     	log.info(">> uploadDomains started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadDomains", userId, socketSessionId, multiPart));
+			startService(new DataStandardService("uploadDomains", userId, socketSessionId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadDomains failed : " + e.getMessage());
@@ -140,7 +140,7 @@ public class DataStandardController extends DataControllerBase {
     	Response result = new Response();
     	log.info(">> uploadDomainGroups started : {}", multiPart.getOriginalFilename());
     	try {
-			startService(new DataStandardService("uploadDomainGroups", userId, socketSessionId, multiPart));
+			startService(new DataStandardService("uploadDomainGroups", userId, socketSessionId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -155,7 +155,7 @@ public class DataStandardController extends DataControllerBase {
     	Response result = new Response();
     	log.info(">> uploadDomainClsfs started : {}", multiPart.getOriginalFilename());
     	try {
-			startService(new DataStandardService("uploadDomainClsfs", userId, socketSessionId, multiPart));
+			startService(new DataStandardService("uploadDomainClsfs", userId, socketSessionId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());

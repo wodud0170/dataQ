@@ -88,6 +88,9 @@
 			<if test="wordClsfYn != null and wordClsfYn != ''">
 				AND A.WORD_CLSF_YN = #{wordClsfYn}
 			</if>
+			<if test="schCommStndYn != null and schCommStndYn != ''">
+				AND A.COMM_STND_YN = #{schCommStndYn}
+			</if>
 			<if test="from != null and from != ''">
 				AND A.CRET_DT_RAW &gt;= #{from}
 			</if>

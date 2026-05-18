@@ -2614,7 +2614,9 @@ public class DataModelController {
 	// 53번 Phase 5: 엑셀 업로드 (테이블·컬럼)
 	// ===================================================================
 
-	private static final String[] TABLE_HEADERS = { "소유자", "테이블명(영문)", "테이블명(한글)", "설명" };
+	// 테이블 화면 헤더 순서와 통일 (소유자/업무영역/한글명/영문명/테이블스페이스/설명).
+	// 양식 다운로드(uploadTemplate)·파싱(parseTableWorkbook) 둘 다 이 배열을 사용.
+	private static final String[] TABLE_HEADERS = { "소유자", "업무영역", "테이블명(한글)", "테이블명(영문)", "테이블스페이스", "설명" };
 	// 86번 #11 — 업로드/다운로드 양식 통일. 다운로드한 파일 그대로 백업·재업로드 가능.
 	private static final String[] ATTR_HEADERS = {
 		"소유자", "테이블명(영문)", "테이블명(한글)", "컬럼명(영문)", "컬럼명(한글)",
@@ -2664,6 +2666,8 @@ public class DataModelController {
 						vo.setObjOwner(str(r.get("objOwner")));
 						vo.setObjNmKr(str(r.get("objNmKr")));
 						vo.setObjDesc(str(r.get("objDesc")));
+						vo.setTablespaceNm(str(r.get("tablespaceNm")));
+						vo.setBizAreaId(str(r.get("bizAreaId")));
 						// 86번 #9 — 영문명 입력했으면 그대로, 비어있으면 TMP_TBL_N 자동
 						String enNm = str(r.get("objNm"));
 						if (isBlank(enNm)) {
@@ -2893,10 +2897,19 @@ public class DataModelController {
 			if (header == null) throw new IllegalArgumentException("시트가 비어있습니다.");
 			Map<String, Integer> hIdx = mapHeaders(header, TABLE_HEADERS);
 			for (String h : TABLE_HEADERS) {
-				// 영문명/설명은 옵션, 소유자/한글명은 필수
-				if (h.equals("설명") || h.equals("테이블명(영문)")) continue;
+				// 소유자·테이블명(한글) 만 필수. 영문명/설명/업무영역/테이블스페이스는 옵션
+				if (h.equals("설명") || h.equals("테이블명(영문)")
+						|| h.equals("업무영역") || h.equals("테이블스페이스")) continue;
 				if (!hIdx.containsKey(h))
 					throw new IllegalArgumentException("필수 헤더 누락: " + h);
+			}
+
+			// 업무영역명 → biz_area_id 매핑 테이블 (엑셀엔 업무영역 '명' 을 적음)
+			Map<String, String> bizAreaNmToId = new HashMap<>();
+			List<Map<String, Object>> bizAreas = sqlSessionTemplate.selectList("area.selectBizAreas");
+			for (Map<String, Object> ba : bizAreas) {
+				String nm = str(ba.get("bizAreaNm"));
+				if (nm != null && !nm.isEmpty()) bizAreaNmToId.put(nm.trim(), str(ba.get("bizAreaId")));
 			}
 
 			Set<String> seenKr = new HashSet<>();
@@ -2913,12 +2926,25 @@ public class DataModelController {
 				String enNm = hIdx.containsKey("테이블명(영문)") ? getStr(row, hIdx.get("테이블명(영문)")) : null;
 				String krNm = getStr(row, hIdx.get("테이블명(한글)"));
 				String desc = hIdx.containsKey("설명") ? getStr(row, hIdx.get("설명")) : null;
+				String bizAreaNm = hIdx.containsKey("업무영역") ? getStr(row, hIdx.get("업무영역")) : null;
+				String tablespace = hIdx.containsKey("테이블스페이스") ? getStr(row, hIdx.get("테이블스페이스")) : null;
+				// 업무영역명 → id 매핑. 입력값이 등록된 업무영역과 안 맞으면 무시(null) + 경고
+				String bizAreaId = null;
+				if (bizAreaNm != null && !bizAreaNm.trim().isEmpty()) {
+					bizAreaId = bizAreaNmToId.get(bizAreaNm.trim());
+					if (bizAreaId == null) {
+						warnings.add(warnRow(r + 1, "업무영역 '" + bizAreaNm + "' 미등록 — 무시됨"));
+					}
+				}
 				Map<String, Object> m = new HashMap<>();
 				m.put("row", r + 1);
 				m.put("objOwner", owner);
 				m.put("objNm", enNm);     // 영문명 — 비어있으면 commit 시 TMP_TBL_N 자동
 				m.put("objNmKr", krNm);
 				m.put("objDesc", desc);
+				m.put("bizAreaNm", bizAreaNm);
+				m.put("bizAreaId", bizAreaId);
+				m.put("tablespaceNm", tablespace);
 				if (isBlank(owner) || isBlank(krNm)) {
 					m.put("_action", "ERROR");
 					m.put("_msg", "소유자·테이블명(한글) 필수");

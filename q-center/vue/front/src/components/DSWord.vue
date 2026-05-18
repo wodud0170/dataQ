@@ -29,6 +29,13 @@
                 dense outlined hide-details single-line
                 :style="{ maxWidth: '120px' }">
               </v-select>
+              <!-- 공통표준 여부 필터 -->
+              <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">공통표준</span>
+              <v-select class="pr-4 pl-2" v-model="searchCommStndYn" :items="commStndYnOptions"
+                item-text="text" item-value="value"
+                dense outlined hide-details single-line
+                :style="{ maxWidth: '110px' }">
+              </v-select>
               <!-- 등록일자 (범위) -->
               <span :style="{ fontSize: '.875rem', marginLeft: '8px' }">등록일자</span>
               <v-text-field class="pl-2" v-model="searchFromDt" type="date" dense outlined hide-details
@@ -634,6 +641,7 @@ export default {
     searchApproval: true,
     // 형식단어 여부 필터
     searchWordClsfYn: '',
+    searchCommStndYn: '',
     // 검색 등록일자 (범위, YYYY-MM-DD)
     searchFromDt: '',
     searchToDt: '',
@@ -641,6 +649,11 @@ export default {
       { text: '전체', value: '' },
       { text: '형식단어', value: 'Y' },
       { text: '일반어', value: 'N' }
+    ],
+    commStndYnOptions: [
+      { text: '전체', value: '' },
+      { text: 'Y', value: 'Y' },
+      { text: 'N', value: 'N' }
     ],
     // 등록 모달 보이기
     addWordModalShow: false,
@@ -753,6 +766,7 @@ export default {
       this.searchEngWord = '';
       this.searchApproval = true;
       this.searchWordClsfYn = '';
+      this.searchCommStndYn = '';
       this.searchFromDt = '';
       this.searchToDt = '';
     },
@@ -1213,6 +1227,7 @@ export default {
               'searchEngWord': searchEngWord,
               'schAprvYn': schAprvYn,
               'wordClsfYn': this.searchWordClsfYn || null,
+              'schCommStndYn': this.searchCommStndYn || null,
               'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
               'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null
             }).then(result => {

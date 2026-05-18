@@ -28,6 +28,12 @@
                 clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
                 color="ndColor" single-line dense outlined hide-details :style="{ width: '100px' }">
               </v-text-field>
+              <!-- 공통표준 여부 필터 -->
+              <span :style="{ fontSize: '.875rem' }">공통표준</span>
+              <v-select class="pr-4 pl-2" v-model="searchCommStndYn" :items="commStndYnOptions"
+                item-text="text" item-value="value"
+                dense outlined hide-details single-line :style="{ maxWidth: '110px' }">
+              </v-select>
               <!-- 승인 여부 추가 -->
               <v-checkbox class="domainSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
@@ -600,6 +606,13 @@ export default {
     searchDomainGrpNm: '',
     searchDataType: '',
     searchDataLen: '',
+    // 검색 공통표준여부 (''=전체)
+    searchCommStndYn: '',
+    commStndYnOptions: [
+      { text: '전체', value: '' },
+      { text: 'Y', value: 'Y' },
+      { text: 'N', value: 'N' }
+    ],
     // 관리자 여부
     isAdmin: false,
     // 검색 승인 여부
@@ -732,6 +745,7 @@ export default {
       this.searchDomainGrpNm = '';
       this.searchDataType = '';
       this.searchDataLen = '';
+      this.searchCommStndYn = '';
       this.searchApproval = true;
     },
     getSystemList() {
@@ -857,7 +871,8 @@ export default {
           'schAprvYn': schAprvYn,
           'schDomainGrpNm': this.searchDomainGrpNm !== '' ? this.searchDomainGrpNm : null,
           'schDataType': this.searchDataType !== '' ? this.searchDataType : null,
-          'schDataLen': this.searchDataLen !== '' ? this.searchDataLen : null
+          'schDataLen': this.searchDataLen !== '' ? this.searchDataLen : null,
+          'schCommStndYn': this.searchCommStndYn || null
         }).then(result => {
           let _data = result.data;
           // console.log(_data);
