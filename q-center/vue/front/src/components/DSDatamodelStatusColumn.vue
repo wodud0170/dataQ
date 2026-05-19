@@ -135,6 +135,10 @@
           <v-icon small left>mdi-content-save-outline</v-icon>
           저장 <span v-if="newRows.length + pendingDeletes.length + dirtyCount > 0" class="ml-1">({{ newRows.length + pendingDeletes.length + dirtyCount }})</span>
         </v-btn>
+        <v-btn class="tb-btn ml-2" color="primary" outlined v-on:click="submitModalShow = true"
+          title="저장한 변경(DRAFT)을 관리자에게 신청">
+          <v-icon small left>mdi-send-clock-outline</v-icon>내 변경 신청
+        </v-btn>
       </v-row>
 
       <!-- 표준화 액션 줄 — 한글명 기준 / 영문명 기준 (다음 줄로 분리) -->
@@ -485,6 +489,9 @@
         </template>
       </NdModal>
     </v-dialog>
+
+    <!-- 88번 거버넌스 — 내 변경 신청 모달 (DRAFT 일괄 → SUBMITTED) -->
+    <DMSubmitModal v-model="submitModalShow" @submitted="load" />
   </v-main>
 </template>
 
@@ -492,11 +499,12 @@
 import axios from 'axios';
 import { eventBus } from '../eventBus';
 import NdModal from "./../views/modal/NdModal.vue"
+import DMSubmitModal from './DMSubmitModal.vue';
 
 export default {
   name: 'DSDatamodelStatusColumn',
   props: ['isMobile'],
-  components: { NdModal },
+  components: { NdModal, DMSubmitModal },
   watch: {
     mergedItems() {
       this.pageCount = Math.ceil(this.mergedItems.length / this.itemsPerPage);
@@ -522,6 +530,7 @@ export default {
   },
   data: () => ({
     modelList: [],
+    submitModalShow: false,
     dmColumnAllItems: [],
     selectedModelId: null,
     // 86번 #11 — 검색 필드 (소유자, 테이블 한글명 추가, 모든 모드 셀렉트)

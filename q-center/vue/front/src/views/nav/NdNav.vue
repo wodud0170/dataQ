@@ -402,6 +402,21 @@
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>요청 현황</v-list-item-title>
                     </v-list-item>
+
+                    <!-- 88번 거버넌스 — 일반: 내 변경 신청 / 관리자: 데이터 모델 변경 승인 -->
+                    <v-list-item v-if="!isAdmin" link id="nav_mypage_dm_changes" href="#tab_my_dm_changes"
+                        active-class="ndColor--text" title="내 변경 신청"
+                        v-on:click.stop="addTabItem('내 변경 신청', 'myDmChanges');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>내 변경 신청</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item v-if="isAdmin" link id="nav_mypage_dm_approval" href="#tab_dm_approval"
+                        active-class="ndColor--text" title="데이터 모델 변경 승인"
+                        v-on:click.stop="addTabItem('데이터 모델 변경 승인', 'dmApproval');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>데이터 모델 변경 승인</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
                 <!-- 관리 (관리자만) -->

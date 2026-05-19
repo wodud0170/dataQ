@@ -64,6 +64,10 @@
             </v-list-item>
           </v-list>
         </v-menu>
+        <v-btn class="gradient" v-on:click="submitModalShow = true" :style="{ marginLeft: '8px' }"
+          title="저장한 변경(DRAFT)을 관리자에게 신청">
+          <v-icon small left>mdi-send-clock-outline</v-icon>내 변경 신청
+        </v-btn>
         <input ref="uploadTablesInput" type="file" accept=".xlsx" style="display:none" @change="onTableFileSelected" />
       </v-row>
     </v-sheet>
@@ -191,15 +195,20 @@
           next-icon="mdi-menu-right" color="ndColor" :total-visible="10"></v-pagination>
       </div>
     </v-sheet>
+
+    <!-- 88번 거버넌스 — 내 변경 신청 모달 (DRAFT 일괄 → SUBMITTED) -->
+    <DMSubmitModal v-model="submitModalShow" @submitted="load" />
   </v-main>
 </template>
 
 <script>
 import axios from 'axios';
 import { eventBus } from '../eventBus';
+import DMSubmitModal from './DMSubmitModal.vue';
 
 export default {
   name: 'DSDatamodelStatusTable',
+  components: { DMSubmitModal },
   props: ['isMobile'],
   watch: {
     dmTableItems() {
@@ -213,6 +222,7 @@ export default {
     modelList: [],
     dmTableAllItems: [],
     selectedModelId: null,
+    submitModalShow: false,
     // 86번 #11 — 검색 필드 (소유자 추가, 한·영 모두 모드 셀렉트)
     searchOwner: '',
     searchOwnerMode: 'contains',
