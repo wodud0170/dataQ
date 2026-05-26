@@ -1,0 +1,556 @@
+영문약어	빈도	사전등록	사전단어명	한글후보_단일컬럼	샘플컬럼
+ID	969	Y	아이디	아이디(1)	comtecopseq.next_id; j_attachfile.file_id
+CD	882	Y	코드		object_taget_data.prdctn_sys_cd; object_taget_data.trdv_cd
+NM	491	Y	명		comtecopseq.tbl_nm; j_attachfile.file_nm
+DT	458	Y	일시		object_taget_data.prdctn_dt; object_taget_data.crt_dt
+FILE	376	Y	파일		j_attachfile.file_id; j_attachfile.file_seq
+YN	372	Y	여부		j_attachfile.del_yn; object_taget_data.drc_yn
+RCTR	368	Y	기록관		object_taget_data.rctr_id; rcfolderlist.rctr_id
+REG	302	Y	등록		j_attachfile.reg_date; object_taget_data.prdctn_reg_no
+FLS	254	Y	기록물철		object_taget_data.fls_id; object_taget_data.fls_clsf_no
+TRDV	248	Y	처리과		object_taget_data.trdv_cd; object_taget_data.doc_no_trdv_nm
+YMD	247	Y	일자		j_attachfile.dwnld_expry_ymd; object_taget_data.enfc_ymd
+ACPTN	247	Y	인수		object_taget_data.acptn_year; object_taget_data.acptn_year_seq
+NO	241	Y	번호		object_taget_data.prdctn_reg_no; object_taget_data.sprt_reg_no
+SE	239	Y	구분	구분(1)	object_taget_data.clsf_schm_se_cd; object_taget_data.pbrc_reg_se_cd
+TYPE	229	Y	유형	유형(1)	object_taget_data.pbrc_dtl_type_cd; object_taget_data.adr_type
+STTS	215	Y	상태		object_taget_data.neob_cnvr_stts; object_taget_data.dflp_cnvr_stts
+YEAR	208	Y	년도		object_taget_data.acptn_year; object_taget_data.acptn_year_seq
+SEQ	207	Y	순번	순번(23)	j_attachfile.file_seq; object_taget_data.acptn_year_seq
+PRDCTN	188	Y	생산		object_taget_data.prdctn_sys_cd; object_taget_data.prdctn_year
+TRNSF	186	Y	이관		object_taget_data.trnsf_neob_cnvr_stts; tb_adarchivalobj.trnsf_prgrs_stts
+RITM	175	Y	기록물건		object_taget_data.ritm_id; object_taget_data.ritm_sz
+CNT	163	Y	수	수(1)	j_attachfile.dwnld_cnt; j_attachfile.dwnld_lmt_cnt
+RSN	155	Y	사유		object_taget_data.secu_clsf_rsn; object_taget_data.pdc_rsn
+PRSR	152	Y	보존		object_taget_data.old_pbrc_prsr_pd; object_taget_data.prsr_pstn
+PBRC	144	Y	기록물		object_taget_data.pbrc_reg_se_cd; object_taget_data.pbrc_dtl_type_cd
+RLS	135	Y	공개		object_taget_data.rls_grd; object_taget_data.rls_lmt_part
+CLSF	134	Y	분류		object_taget_data.clsf_schm_se_cd; object_taget_data.clsf_schm_id
+PRCS	132	Y	처리		tb_crntfctnfolder.pdst_ntfctn_prcs_stts; tb_crntfctnfolder.pdst_ntfctn_prcs_rslt_stts
+PD	129	Y	기간		object_taget_data.old_pbrc_prsr_pd; object_taget_data.sret_prot_pd
+JOB	126	Y	작업		object_taget_data.pdf_job_id; object_taget_data.neob_cnvr_dmnd_job_id
+INST	125	Y	기관		object_taget_data.prdctn_inst_reg_no; object_taget_data.old_pbrc_prdctn_inst_nm
+RCPT	123	Y	접수		object_taget_data.prdctn_rcpt_se_cd; tb_crattachfile.ritm_rcpt_sn
+ERR	119	Y	오류		object_taget_data.scnn_err_se_cd; object_taget_data.scnn_err_cn
+OPNN	113	Y	의견		tb_adarchivalobjdscd.prdctn_trdv_opnn; tb_adarchivalobjdscd.splst_srng_opnn
+MNG	109	Y	관리		object_taget_data.acptn_mng_no; object_taget_data.rls_mng_cmptn_yn
+VIRS	103	Y	바이러스		tb_mgattachfile.virs_exst_yn; tb_mgattachfile.virs_mdtr_rslt
+DSCD	98	Y	폐기		tb_adarchivalobj.dscd_yn; tb_adarchivalobj.dscd_pbanc_no
+PRSL	95	Y	열람		object_taget_data.prsl_scpe; object_taget_data.prsl_scpe_mng_cmptn_yn
+SN	93	Y	일련번호		rcfolderlist.fls_reg_sn; tb_adarchival_dst.adaf_dst_sn
+CN	90	Y	내용	내용(1)	object_taget_data.adr_cn_smmr; object_taget_data.scnn_err_cn
+LIST	84	Y	목록		object_taget_data.rls_list_stng_cd; object_taget_data.list_rls_yn
+TASK	82	Y	업무		object_taget_data.task_pic_nm; object_taget_data.task_mng_ritm_se_cd
+DEPT	82	Y	부서		object_taget_data.rgtr_dept_id; object_taget_data.rgtr_dept_nm
+USER	78	Y	사용자		object_taget_data.sret_clgn_user_dept_nm; object_taget_data.sret_clgn_user_jbps_jbgd
+SYS	75	Y	시스템		object_taget_data.prdctn_sys_cd; object_taget_data.prdctn_sys_ritm_id
+DOC	75	Y	문서		object_taget_data.old_pbrc_doc_no; object_taget_data.doc_no
+SCHM	73	Y	체계		object_taget_data.clsf_schm_se_cd; object_taget_data.clsf_schm_id
+CLGN	72	Y	재분류		object_taget_data.last_rls_clgn_year; object_taget_data.rls_clgn_prgrs_stts
+BFCH	71	Y	변경전		tb_crfolderchghist.bfch_ttl; tb_crfolderchghist.bfch_fls_type_se_cd
+END	69	Y	종료		object_taget_data.ritm_end_page; object_taget_data.prtn_pd_end_ymd
+CNVR	67	Y	변환		object_taget_data.neob_cnvr_stts; object_taget_data.dflp_cnvr_stts
+AFCH	65	Y	변경후		tb_crfolderchghist.afch_ttl; tb_crfolderchghist.afch_fls_type_se_cd
+RVW	65	Y	검토		tb_rcmissingmemo.rvw_opnn; tb_rdfoldercreat.rvw_opnn
+STRG	64	Y	저장		tb_adarchivalattachfile.strg_path; tb_adarchivalattachfile.strg_file_nm
+TKOV	64	Y	인수인계		tb_crfolder.tkov_se_cd; tb_crfolder.tkov_trdv_cd
+HNDV	63	Y	인계		tb_adarchivalobj.trnsf_hndv_trdv; tb_crfoldertakov.hndv_untk_card_id
+PIC	62	Y	담당자		object_taget_data.task_pic_nm; tb_bkcrrc.crrc_pic
+RGTR	62	Y	등록자		object_taget_data.rgtr_id; object_taget_data.rgtr_dept_id
+NTFCTN	62	Y	통보		tb_adarchivalobj.pdst_ntfctn_yn; tb_crfolder.pdst_ntfctn_yn
+TRGT	62	Y	대상	대상(1)	tb_batchworkhist.job_trgt_file_nm; tb_batchworkqueue.job_trgt_file_nm
+DMND	59	Y	요청		object_taget_data.neob_cnvr_dmnd_job_id; tb_dfrcpttransflist.trnsf_aprv_dmnd_ntfctn_yn
+CHG	59	Y	변경		tb_crfolderchghist.chg_hstry_no; tb_crfolderchghist.chg_ymd
+RSLT	58	Y	결과		object_taget_data.dlbr_rslt; tb_crfolder.igi_rslt_cd
+BGNG	57	Y	시작		object_taget_data.ritm_bgng_page; object_taget_data.prtn_pd_bgng_ymd
+UNIT	57	Y	단위		tb_rsrvdoc.unit_task_se_fnct; tb_transfdetailinfostathist.trnsf_trgt_unit_asmt_card_cnt
+CMPTN	56	Y	완료		object_taget_data.scnn_cmptn_yn; object_taget_data.scan_insp_cmptn_yn
+EVL	55	Y	평가		tb_adarchivalobjdscd.evl_dlcn_opnn; tb_dfdscddlbr.evl_dlbdc_no
+APLY	55	Y	신청		tb_rdfolderprsldtl.prsl_aply_no; tb_rdfolderprsldtl.prsl_aply_prgrs_stts_cd
+RPT	53	Y	보고		tb_adarchivalobj.adaf_pdst_rpt_stts; tb_adarchivalobj.pdst_rpt_ymd
+BKSH	53	Y	서가		tb_adarchivalobj.bksh_id; tb_adarchivalobj.bksh_pstn
+SZ	51	Y	크기		j_attachfile.file_sz; object_taget_data.ritm_sz
+ORGD	51	Y	원문		object_taget_data.orgd_id; tb_dftkovrecordlist.orgd_id
+SPCL	50	Y	특수		object_taget_data.spcl_pbrc_type; object_taget_data.spcl_pbrc_info
+JBPS	49	Y	직위		object_taget_data.autzr_jbps_jbgd_nm; object_taget_data.rgtr_jbps_jbgd_nm
+ATCH	48	Y	첨부		object_taget_data.atch_cnt; tb_adarchivalattachfile.atch_file_seq
+NEOB	47	Y	NEO		object_taget_data.neob_cnvr_stts; object_taget_data.neob_cnvr_dmnd_job_id
+PATH	47	Y	경로		tb_adarchivalattachfile.strg_path; tb_adarchivalobjimg.img_file_path
+IGI	47	Y	검수		tb_crfolder.igi_rslt_cd; tb_crfolder.igi_cn
+PDST	46	Y	생산현황		tb_adarchivalobj.adaf_pdst_rpt_stts; tb_adarchivalobj.pdst_rpt_ymd
+CHCK	46	Y	점검		tb_mgbksh.last_chck_year; tb_mgfolder.last_chck_year
+STK	45	Y	서고		tb_adarchivalobj.stk_id; tb_gvrnprdl.stk_id
+MDTR	45	Y	치료		tb_mgattachfile.virs_mdtr_rslt; tb_rdattachfile.virs_mdtr_yn
+CRT	44	Y	생성		object_taget_data.crt_dt; tb_adarchivalobj.pdst_rpt_file_crt_yn
+JBGD	43	Y	직급		object_taget_data.autzr_jbps_jbgd_nm; object_taget_data.rgtr_jbps_jbgd_nm
+DLBR	41	Y	심의		object_taget_data.rls_dlbr_prgrs_stts; object_taget_data.dlbr_rslt
+PRGRS	40	Y	진행		object_taget_data.rls_clgn_prgrs_stts; object_taget_data.rls_dlbr_prgrs_stts
+GROUP	40	Y	그룹		tb_crfolder.group_prsr_pd_cd; tb_dfdscdopnn.group_dsgn_yn
+RQSTR	40	Y	요청자		tb_rcmissingmemo.rqstr_opnn; tb_rdrlsclgnopnnexcel.rqstr_id
+TTL	39	Y	제목	제목(1)	object_taget_data.crrc_ttl; tb_crdistr.dlry_ttl
+RJCT	39	Y	반려		object_taget_data.rjct_yn; tb_crfolder.rjct_yn
+LMT	38	Y	제한		j_attachfile.dwnld_lmt_cnt; object_taget_data.rls_lmt_part
+DEL	38	Y	삭제		j_attachfile.del_yn; tb_dfdscdopnn.elct_file_del_pic_id
+TTLE	38	Y	표제		object_taget_data.orgnl_ttle; object_taget_data.ofcl_ttle
+MD	37	Y	매체		object_taget_data.md_rmt; tb_crfolder.md_rmt
+LINK	35	Y	연계		tb_batchworkhist.link_srvr_ipadr; tb_batchworkhist.link_srvr_potno
+ORGNL	34	Y	원본		object_taget_data.orgnl_ttle; object_taget_data.orgnl_mnsc_yn
+DTL	33	Y	상세		object_taget_data.pbrc_dtl_type_cd; tb_adarchivalobj.acptn_dtl
+DRC	33	Y	전자기록물		object_taget_data.drc_yn; tb_crfolder.drc_yn
+STMD	32	Y	저장매체	저장매체(8)	object_taget_data.stmd; tb_crfolder.stmd
+ACS	32	Y	접근		object_taget_data.acs_se_cd; object_taget_data.acs_stng_rsn
+SRVR	32	Y	서버		tb_batchworkhist.link_srvr_ipadr; tb_batchworkhist.link_srvr_potno
+PFMR	32	Y	행위자		tb_rcmissingmemo.pfmr_type_cd; tb_rcmissingmemo.pfmr_seq
+RMT	31	Y	포맷		object_taget_data.md_rmt; tb_crfolder.md_rmt
+OLD	31	Y	구		object_taget_data.old_pbrc_prdctn_inst_nm; object_taget_data.old_pbrc_doc_no
+MDFCN	31	Y	수정		object_taget_data.mdfcn_ver_no; object_taget_data.mdfcn_yn
+HOLD	31	Y	보유		tb_adarchivalobj.frst_hold_ecnt; tb_adarchivalobj.now_hold_ecnt
+OPRTR	30	Y	작업자		tb_dftransfhist.oprtr_id; tb_mgbkshdpos.oprtr_id
+PAGE	29	Y	쪽		object_taget_data.ritm_bgng_page; object_taget_data.ritm_end_page
+RMRK	29	Y	비고	비고(28)	tb_adarchivalobj.rmrk; tb_adarchivalobjdscd.rmrk
+RPRS	29	Y	대표		tb_crntfctnrcptresult.rprs_inst_cd; tb_crntfctnacptnresult.rprs_inst_cd
+OFCL	28	Y	공식		object_taget_data.ofcl_ttle; rcfolderlist.ofcl_ttle
+INFO	28	Y	정보		object_taget_data.spcl_pbrc_info; object_taget_data.spcl_pbrc_info_two
+OPDS	28	Y	광디스크		tb_dfdscdopnn.opds_stts_idnty_yn; tb_mgfolder.opds_strg_stts_cd
+APLCN	28	Y	적용		tb_mgfolder.aplcn_clsf_schm_id; tb_rdattachfile.virs_mdtr_aplcn_yn
+PSTN	26	Y	위치		object_taget_data.prsr_pstn; object_taget_data.sret_rmv_pbrc_prsr_pstn
+EXPLN	26	Y	설명	설명(3)	tb_adarchivalobj.etc_form_expln; tb_adarchivalobj.etc_qomt_expln
+PART	25	Y	부분		object_taget_data.rls_lmt_part; tb_crrecord.rls_lmt_part
+ACPTR	25	Y	인수자		tb_adarchivalobj.trnsf_acptr_nm; tb_crdistr.acptr_nm
+SLCTN	25	Y	선정		tb_adarchivalobj.trnsf_slctn_se; tb_adarchivalobj.trnsf_slctn_ymd
+SPLST	25	Y	전문요원		tb_adarchivalobjdscd.splst_srng_opnn; tb_dfdscdopnn.splst_dscd_evl_opnn_se_cd
+FNCT	25	Y	기능		tb_crfolder.fnct_clsf_schm; tb_mgfolder.fnct_clsf_schm
+HSTRY	25	Y	이력		tb_crfolderchghist.chg_hstry_no; tb_crrecordchghist.chg_hstry_no
+APRV	25	Y	승인		tb_dfrcpttransflist.cfmtn_trnsf_aprv_year; tb_dfrcpttransflist.cfmtn_aprv_ymd
+CRTR	25	Y	기준		tb_rsrvdoc.ofdc_prsr_pd_clsf_crtr; tb_streqclgnopnnfdgrp.dmnd_clgn_rvw_opnn_crtr_id
+FRNS	24	Y	비치		tb_adarchivalobj.frns_yn; tb_adarchivalobj.frns_rsn
+DPOS	24	Y	배치		tb_mgbkshdpos.bksh_dpos_id; tb_mgbkshdpos.dpos_year
+OTP	23	Y	공개구분	공개구분(1)	object_taget_data.otp_cd; tb_adarchivalobj.otp_cd
+DLCN	23	Y	심의회		tb_adarchivalobjdscd.evl_dlcn_opnn; tb_dfdscdhist.dlcn_evl_se_cd
+CARD	23	Y	카드		tb_crfoldertakov.hndv_untk_card_id; tb_crfoldertakov.hndv_untk_card_nm
+RCPTN	23	Y	수신		tb_rcmissingmemo.rcptn_type; tb_rdrecordcreat.rcptn_type
+AUTZR	22	Y	승인자		object_taget_data.autzr_jbps_jbgd_nm; tb_crntfctnrecord.autzr_jbps_jbgd_nm
+STNG	22	Y	설정		object_taget_data.acs_stng_rsn; object_taget_data.rls_list_stng_cd
+PRPS	22	Y	목적		tb_crfolder.prdctn_prps; tb_crfolder.prps_clsf_schm
+CFMTN	22	Y	확정		tb_dfdscdopnn.trdv_rslt_cfmtn_se_cd; tb_dfdscdopnn.dscd_evl_last_rslt_cfmtn_cd
+MENU	22	Y	메뉴		tb_rdrlsclgnopnnexcel.menu_id; tb_stcalendar.menu_id
+CRRC	21	Y	정정		object_taget_data.crrc_ttl; tb_bkcrrc.crrc_dt
+LAST	21	Y	최종		object_taget_data.last_rls_clgn_year; object_taget_data.last_prsl_clgn_year
+SRET	21	Y	비밀		object_taget_data.sret_clsf; object_taget_data.sret_prot_pd
+NOELCT	21	Y	비전자		object_taget_data.noelct_reg_dt; tb_dforgacptn.noelct_pbrc_acptr_nm
+BKNO	21	Y	권호수	권호수(14)	rcfolderlist.bkno; tb_crfolder.bkno
+PHBT	21	Y	금지		tb_dfdscdphbt.dscd_phbt_type; tb_dfdscdphbt.dscd_phbt_day
+USE	21	Y	사용		tb_rcmissingmemo.use_yn; tb_rffixreder.use_stts
+ETC	20	Y	기타		object_taget_data.etc_ttle; tb_adarchivalobj.etc_form_expln
+PHND	20	Y	인계자		tb_adarchivalobj.trnsf_phnd_nm; tb_crreport.phnd_nm
+SCNN	19	Y	스캐닝		object_taget_data.scnn_cmptn_yn; object_taget_data.scnn_insp_se_cd
+CPCT	19	Y	용량		tb_dftransfstoremst.strg_md_cpct; tb_dftransfstoreprttnlist.prttn_md_cpct
+HASH	19	Y	해쉬		tb_rcmissingmemo.trsm_file_hash; tb_stattachfile.file_hash_vl
+SECU	18	Y	보안		object_taget_data.secu_clsf_cd; object_taget_data.secu_clsf_rsn
+SCPE	18	Y	범위		object_taget_data.prsl_scpe; object_taget_data.prsl_scpe_mng_cmptn_yn
+VER	18	Y	버전	버전(8)	object_taget_data.mdfcn_ver_no; rms_history.rmst_ver
+DFLP	18	Y	문서보존포맷		object_taget_data.dflp_cnvr_stts; tb_mgfolder.dflp_cnvr_stts
+PLAN	18	Y	계획		object_taget_data.prtn_plan; tb_mgbkshdpos.plan_ymd
+DATA	18	Y	자료		tb_crntfctnrcptresult.trsm_file_data_se; tb_dftransfprcsrcptresult.trsm_file_data_se
+CYCL	18	Y	차수		tb_gvrnprdl.pblc_cycl; tb_mgfolderkwrd.indx_cycl
+RULE	18	Y	규칙		tb_mgfolder.stk_mng_no_grnt_rule; tb_rdfolder.stk_mng_no_grnt_rule
+SHPGOT	18	Y	반출		tb_mgfolder.shpgot_yn; tb_rdfolder.shpgot_yn
+PGNO	17	Y	쪽수		object_taget_data.ritm_pgno; tb_crattachfile.atch_file_pgno
+GRD	17	Y	등급		object_taget_data.rls_grd; tb_adarchivalobj.rls_grd
+PHTG	17	Y	촬영		object_taget_data.phtg_ymd; object_taget_data.phtg_plc
+REL	17	Y	관계		tb_adarchivalobj.adaf_rel_no; tb_rdattachfile.rel_file_key
+MTHD	17	Y	방법		tb_crfolder.prsr_mthd_alct_cd; tb_dfdscdopnn.dscd_mthd_cd
+TRSM	17	Y	전송		tb_crntfctnrcptresult.trsm_file_data_se; tb_crntfctnrcptresult.trsm_se
+REVL	17	Y	재평가		tb_dfrevlevl.revl_sn; tb_dfrevlhist.revl_sn
+VL	17	Y	값		tb_dftransferrorprcshist.afch_vl; tb_dftransferrorprcshist.bfch_vl
+CHNRG	16	Y	변경자		tb_crfolderchghist.chnrg_nm; tb_crrecordchghist.chnrg_nm
+BFR	16	Y	이전		tb_crreport.bfr_stts_se_cd; tb_dfdscdhist.reap_bfr_prsr_pd
+BOX	16	Y	상자		tb_mgbksh.mxmm_acpt_prsr_box_cnt; tb_mgbksh.hold_prsr_box_cnt
+SMMR	15	Y	요약		object_taget_data.adr_cn_smmr; object_taget_data.ritm_cn_smmr
+ENFC	15	Y	시행		object_taget_data.enfc_ymd; object_taget_data.enfc_doc_no
+TWO	15	Y	2		object_taget_data.spcl_pbrc_info_two; tb_crspcllist.two_spcl_list
+ECNT	15	Y	개수		tb_adarchivalobj.frst_hold_ecnt; tb_adarchivalobj.now_hold_ecnt
+ELCT	15	Y	전자		tb_crfolder.elct_file_ecnt; tb_dfdscdopnn.elct_file_del_pic_id
+TCNT	15	Y	총개수	총수(1)	tb_dfacptnplan.fls_tcnt; tb_dfacptnplan.ritm_tcnt
+EXST	15	Y	존재		tb_mgattachfile.virs_exst_yn; tb_rdattachfile.virs_exst_yn
+INFC	15	Y	감염		tb_rdattachfile.virs_infc_cn; tb_storgdfile.virs_infc_cn
+AUTHRT	15	Y	권한		tb_stgrantgrp.authrt_group_cd; tb_stgrantgrp.authrt_group_nm
+PDC	14	Y	부분공개		object_taget_data.pdc_rsn; tb_adarchivalobj.pdc_rsn
+NEW	14	Y	신규		object_taget_data.new_pbrc_se_cd; tb_crfolder.new_pbrc_se_cd
+POTNO	14	Y	포트번호		tb_batchworkhist.link_srvr_potno; tb_batchworkqueue.link_srvr_potno
+UNTK	14	Y	단위과제		tb_crfoldertakov.hndv_untk_card_id; tb_crfoldertakov.hndv_untk_card_nm
+RSRV	14	Y	보류		tb_dfdscdhist.rsrv_dtl_cd; tb_dfdscdopnn.now_rsrv_pd_cd
+PRTTN	14	Y	분할		tb_dftransfstorefld.prttn_md_seq; tb_dftransfstorercd.prttn_md_seq
+LGN	14	Y	로그인		tb_rcmissingmemo.lgn_id; tb_rddscdphbtappoint.dscd_phbt_dsgn_lgn_id
+SRCH	14	Y	검색		tb_rdfolder.rls_srch_list_pvsn_yn; tb_rdsrchprslrankng.srch_ymd
+CRYN	14	Y	반입		tb_rftemptoti.cryn_yn; tb_rftemptoti.cryn_ymd
+BM	14	Y	기능분류		tb_zzfnctclsf.bm_cd; tb_zzfnctclsf.bm_nm
+SPRT	13	Y	지원		object_taget_data.sprt_reg_no; tb_crntfctnrecord.sprt_reg_no
+PLC	13	Y	장소		object_taget_data.phtg_plc; tb_adarchivalobj.prsr_plc
+ARNGMT	13	Y	정리		object_taget_data.arngmt_desc; tb_dftkovfolderlist.arngmt_yn
+IPADR	13	Y	IP주소		tb_batchworkhist.link_srvr_ipadr; tb_batchworkqueue.link_srvr_ipadr
+APRTN	13	Y	책정		tb_crfolder.prsr_pd_aprtn_rsn; tb_dfdscdhist.prsr_pd_r_aprtn_ymd
+ONE	13	Y	1		tb_crspcllist.one_spcl_list; tb_gvrnprdl.dst_rsn_one
+THRE	13	Y	3		tb_crspcllist.thre_spcl_list; tb_gvrnprdl.dst_rsn_thre
+MBRC	13	Y	위원		tb_dfdscdevl.dlbr_mbrc_id; tb_dfdscdevl.dlbr_mbrc_evl_se_cd
+MF	13	Y	MF		tb_dfdscdopnn.mf_stts_idnty_yn; tb_mgfolder.mf_phtg_stts_cd
+DSGN	13	Y	지정		tb_dfdscdopnn.group_dsgn_yn; tb_rcacptnfolderlist.hold_trdv_dsgn_yn
+RM	13	Y	기록관리		tb_dfdscdopnn.ntn_rm_cmit_evl_opnn_cd; tb_dfdscdopnn.ntn_rm_cmit_rsrv_pd_cd
+DMG	13	Y	훼손		tb_mgfolder.dmg_yn; tb_mgfolder.dmg_cn
+TMPR	13	Y	임시		tb_rsrvdoc.tmpr_se_no; tb_rsrvdoc.tmpr_frst_se
+API	13	Y	API		tb_stconfig.link_api_srvr_ip; tb_stconfig.link_api_srvr_potno
+MMT	12	Y	시기		object_taget_data.rls_mmt; tb_crrecord.rls_mmt
+EXCSS	12	Y	부설		object_taget_data.excss_yn; tb_dfexcursus.excss_seq
+ADAF	12	Y	행정박물		tb_adarchival_dst.adaf_id; tb_adarchival_dst.adaf_dst_sn
+NOW	12	Y	현재		tb_adarchivalobj.now_hold_ecnt; tb_dfdscdopnn.now_prsr_pd_cd
+HGHRK	12	Y	최상위		tb_crntfctnfile.hghrk_rctr_yn; tb_stdept.hghrk_ognz_cd
+COLM	12	Y	열		tb_mgbksh.bksh_colm_cnt; tb_mgbkshdposdtl.bksh_colm_no
+RDR	12	Y	열람자		tb_rdotherprslreq.rdr_id; tb_rdotherprslreq.rdr_nm
+TAG	12	Y	태그		tb_rftabpub.tag_id; tb_rftabpub.tag_issu_trdv_cd
+UP	12	Y	상위		tb_stdept.up_ognz_cd; tb_stmenu.up_menu_id
+RCVR	11	Y	수신자	수신자(5)	object_taget_data.rcvr; tb_crrecord.rcvr
+RMV	11	Y	해제		object_taget_data.sret_rmv_pbrc_prsr_pstn; tb_rddscdphbtappoint.dscd_phbt_rmv_pic_dept_nm
+OFDC	11	Y	공문서		tb_rsrvdoc.ofdc_prsr_pd_clsf_crtr; tb_rsrvdoc.ofdc_prsr_pd_prmn_thea
+MTG	11	Y	회의		tb_rdrecordmeeting.mtg_nm; tb_rdrecordmeeting.mtg_plc
+PSTG	11	Y	게시		tb_stattachfile.pstg_seq; tb_stattachfile.pstg_se
+LEV	11	Y	레벨		tb_stdept.inst_lev_cycl; tb_stmenu.menu_authrt_lev
+CTFE	11	Y	인증서	인증서(2)	tb_stformatpki.ctfe; tb_stformatpki.ctfe_usg
+FNPR	11	Y	비치기록물		tb_zzfnctclsf.fnpr_dcdt; tb_zzsendunit.fnpr_trnsf_mmt
+ADR	10	Y	시청각기록물		object_taget_data.adr_type; object_taget_data.adr_cn_smmr
+SNDPTY	10	Y	발신자	발신자(5)	object_taget_data.sndpty; tb_crrecord.sndpty
+R	10	Y	재		object_taget_data.fls_neob_r_cnvr_job_id; object_taget_data.fls_neob_r_cnvr_stts
+QLIN	10	Y	품질검사		object_taget_data.qlin_stts_cd; tb_dforgtkovlist.qlin_yn
+EXPC	10	Y	예상		tb_dfdscdhist.bfch_expc_dscd_year; tb_dfrevlhist.bfch_expc_dscd_year
+REAP	10	Y	재책정		tb_dfdscdhist.reap_bfr_prsr_pd; tb_dfdscdhist.reap_aftr_prsr_pd
+MEMO	10	Y	메모		tb_dftransferrorprcshist.memo_cn; tb_streqclgnopnnfolder.trdv_rvw_opnn_memo
+KEY	10	Y	키		tb_dftransfprcsrcpterror.ritm_key; tb_dftransfacptnresultdtl.ritm_key
+PBLC	10	Y	발간		tb_gvrnprdl.pblc_id; tb_gvrnprdl.pblc_reg_sn
+NARS	10	Y	국가기록원		tb_gvrnprdl.nars_posc_yn; tb_zzprsrtermhist.nars_prsr_pd_cd
+ACNT	10	Y	계정		tb_rcmissingmemo.acnt_id; tb_rddscdphbtappoint.dscd_phbt_dsgn_acnt_id
+LNKG	10	Y	연결		tb_rdrecord_nonelect.lnkg_chnrg; tb_stbefrlslist.file_lnkg_path
+INSTL	10	Y	설치		tb_rffixreder.instl_usg; tb_rffixreder.instl_pstn
+DWNLD	9	Y	다운로드		j_attachfile.dwnld_cnt; j_attachfile.dwnld_expry_ymd
+DLRY	9	Y	배부		object_taget_data.dcdv_dlry_no; tb_crdistr.dlry_ldgr_id
+INSP	9	Y	검사		object_taget_data.scnn_insp_se_cd; object_taget_data.scan_insp_cmptn_yn
+DESC	9	Y	기술		object_taget_data.arngmt_desc; tb_adarchivalobj.dscd_pbanc_desc
+INPT	9	Y	입력		object_taget_data.trnstn_inpt_yn; object_taget_data.vrms_inpt_yn
+CRLTN	9	Y	배포		object_taget_data.crltn_no; object_taget_data.crltn_dt
+LDGR	9	Y	대장		tb_crdistr.dlry_ldgr_id; tb_rdprsldoc.prsl_ldgr_sn
+LINE	9	Y	라인		tb_crntfctnrcptresult.list_line_no; tb_dftransfprcsrcpterror.list_line_no
+PBLCN	9	Y	발행		tb_gvrnprdl.pblcn_ymd; tb_rftabpub.tag_pblcn_type
+SORT	9	Y	정렬	정렬(1)	tb_mainstatistics.sort; tb_stmenu.menu_sort_seq
+MULTI	9	Y	다중		tb_rdmultiaprovcreat.multi_aprv_ritm_id; tb_rdmultiaprovdoc.multi_aprv_ritm_id
+ADDR	9	Y	주소	주소(3)	tb_stdownipmng.user_ip_addr; tb_stformatsrvrinfo.srvr_ip_addr
+DATE	8	Y	날짜		j_attachfile.reg_date; tb_streqresult.job_bgng_date
+MNSC	8	Y	사본		object_taget_data.orgnl_mnsc_yn; tb_crrecord.orgnl_mnsc_yn
+PRTN	8	Y	추진		object_taget_data.prtn_pd_bgng_ymd; object_taget_data.prtn_pd_end_ymd
+PRVT	8	Y	비공개		object_taget_data.list_prvt_grds; object_taget_data.list_prvt_rsn
+GRDS	8	Y	근거		object_taget_data.list_prvt_grds; tb_dfexcursus.excss_grds
+CPYR	8	Y	저작권		object_taget_data.cpyr_type; tb_gvrnprdl.cpyr_agre_type
+DST	8	Y	파기		tb_adarchival_dst.adaf_dst_sn; tb_adarchival_dst.adaf_dst_rsn
+ALCT	8	Y	할당		tb_crfolder.prsr_mthd_alct_cd; tb_mgfolder.prsr_mthd_alct_cd
+LOG	8	Y	로그		tb_crreport.rcpt_log_file_nm; tb_sterrorlog.err_log_seq
+PRMN	8	Y	영구		tb_crreporthist.prmn_inst_nm; tb_crreporthist.prmn_inst_pic_nm
+DLBDC	8	Y	심의서		tb_dfdscddlbr.evl_dlbdc_no; tb_dfdscddlbrdoc.dscd_dlbdc_sn
+SCHDL	8	Y	일정		tb_dfdscdopnn.schdl_seq; tb_rdrlsclgnopnn.schdl_seq
+PRDL	8	Y	간행물		tb_gvrnprdl.gvrn_prdl_id; tb_gvrnprdl.prdl_pblc_reg_grnt_trgt_yn
+GRNT	8	Y	부여		tb_gvrnprdl.prdl_pblc_reg_grnt_trgt_yn; tb_mgfolder.stk_mng_no_grnt_rule
+SRWD	8	Y	검색어	검색어(8)	tb_mgfolderkwrd.srwd; tb_mgrecordkwrd.srwd
+ADD	8	Y	추가		tb_oprlsgroup.ritm_add_cnt; tb_rdrecordcreat.dmnd_add_opnn
+SFCT	8	Y	소기능		tb_tkfoldermng.cd_sfct; tb_zzorgcomstnd.brm_sfct_nm
+CHCKR	8	Y	검수자		tb_tkorgacptnplan.chckr_id; tb_tkorgacptnplan.chckr_nm
+COMM	8	Y	공통		tb_zzcomcd.comm_type_cd; tb_zzcomcd.comm_cd
+ACTN	7	Y	조치		object_taget_data.prot_actn_need_yn; tb_rdrecord.prot_actn_need_yn
+DRET	7	Y	지시		object_taget_data.dret_cause; tb_rdrecord.dret_cause
+FLFMT	7	Y	수행		object_taget_data.flfmt_stts; object_taget_data.flfmt_prblm
+CMIT	7	Y	위원회		tb_dfdscdopnn.ntn_rm_cmit_evl_opnn_cd; tb_dfdscdopnn.ntn_rm_cmit_rsrv_pd_cd
+AUTO	7	Y	자동		tb_dfacptnplan.auto_insp_yn; tb_rdrlsclgnauto.auto_otp_cd
+DSCTN	7	Y	내역		tb_dftransfprcsrcpterror.trnsf_rcpt_err_dsctn; tb_dftransfprcsrcptresult.trnsf_rcpt_err_dsctn
+RSTR	7	Y	복원		tb_mgfolder.rstr_prcs_ymd; tb_mgfolder.rstr_prcr_info
+PVSN	7	Y	제공		tb_oprlsgroup.list_pvsn_yn; tb_oprlsgroup.list_pvsn_dt
+OGNZ	7	Y	조직		tb_rdfolderaccs.acs_ognz_cd; tb_rdrecordaccs.acs_ognz_cd
+IMPR	7	Y	불가		tb_rdotherprslreq.prsl_impr_pbrc_aply_stts_cd; tb_rdotherprslreq.prsl_impr_pbrc_aply_rsn
+PRFMNC	7	Y	실적		tb_rdrecordcreat.prfmnc_reg_ymd; tb_rdrecordcreat.prfmnc_reg_cn
+SRVC	7	Y	서비스		tb_stbefrlslist.pre_orgd_srvc_type; tb_sterrorlog.srvc_se
+MNIT	7	Y	모니터링		tb_stlinktrgt.mnit_potno; tb_tkmonitor.mnit_id
+MID	7	Y	중		tb_zzorgcomstnd.brm_mid_fnct_nm; tb_zzsendunit.mid_fnct_cd
+APPL	7	Y	출원		tb_zzorgunitworkhist.appl_crtr_ymd; tb_zzunitchgreq.appl_crtr_ymd
+MAIN	6	Y	주요		object_taget_data.main_prsn_flnm; tb_rdrecord.main_prsn_flnm
+LANG	6	Y	언어	언어(4)	object_taget_data.lang; tb_rdattachfile.lang
+AGND	6	Y	안건		object_taget_data.agnd_clsf; object_taget_data.agnd_dt
+QY	6	Y	수량	수량(1)	tb_adarchivalobj.qy; tb_srmfcopy.rprd_qy
+FRST	6	Y	최초		tb_adarchivalobj.frst_hold_ecnt; tb_gvrnprdl.frst_hold_ecnt
+IMG	6	Y	이미지		tb_adarchivalobjimg.img_reg_seq; tb_adarchivalobjimg.img_file_nm
+ASMT	6	Y	과제		tb_crfolder.fls_asmt_se_cd; tb_mgfolder.fls_asmt_se_cd
+IDNTY	6	Y	확인		tb_dfdscdopnn.mf_stts_idnty_yn; tb_dfdscdopnn.opds_stts_idnty_yn
+NTN	6	Y	국가		tb_dfdscdopnn.ntn_rm_cmit_evl_opnn_cd; tb_dfdscdopnn.ntn_rm_cmit_rsrv_pd_cd
+EDIT	6	Y	편집		tb_dftransferrorprcshist.edit_col_nm; tb_dftransferrorprcshist.edit_col_type
+IDTF	6	Y	식별자		tb_dftransfprcsrcpterror.fls_idtf; tb_dftransfreqerrorlist.fls_idtf
+LWPR	6	Y	하위		tb_rsrvdoc.lwpr_symb_tbl; tb_rdattachfile.doc_type_lwpr_seq
+PSWD	6	Y	비밀번호		tb_rdmachinecheckresult.pswd_yn; tb_stconfig.link_api_srvr_cntn_pswd
+ETL	6	Y	외부		tb_rdotherfolderprsldtl.etl_inst_rctr_id; tb_rdotherprslreq.etl_inst_rctr_id
+HR	6	Y	시간		tb_rdrecordrel.rslt_prsl_hr; tb_sterrorlog.log_crt_hr
+RPRD	6	Y	복제		tb_srmfcopy.rprd_seq; tb_srmfcopy.rprd_ymd
+PRDCT	6	Y	제품		tb_srmfphtg.prdct_nm; tb_stcompuequip.prdct_nm
+IP	6	Y	IP		tb_stconfig.link_api_srvr_ip; tb_stdownipmng.user_ip_addr
+CNTN	6	Y	접속		tb_stconfig.link_api_cntn_user_id; tb_stconfig.link_api_srvr_cntn_pswd
+RSPNS	6	Y	응답		tb_stformat_file.rmt_cnvr_bgng_rspns_dt; tb_stformat_file.rmt_cnvr_end_rspns_dt
+SNDNG	6	Y	발송		tb_tkorgacptnplan.sndng_dt; tb_tkorgacptnplanpre.sndng_dt
+LRG	6	Y	대		tb_zzsendunit.lrg_fnct_cd; tb_zzsendunit.lrg_fnct_nm
+CHS	6	Y	추적		tb_zztrace.chs_ymd; tb_zztrace.chs_seq
+CHWH	6	Y	변경사유		tb_zzunit.prsr_pd_chwh_cd; tb_zzunitchgreq.prsr_pd_cd_chwh
+ASNM	6	Y	가명		tb_zzunit.tmpr_unit_task_asnm; tb_zzunitchgreq.bfch_unit_task_asnm
+DCDV	5	Y	문서과		object_taget_data.dcdv_dlry_no; tb_crrecord.dcdv_dlry_no
+TRNSTN	5	Y	전환		object_taget_data.trnstn_inpt_yn; tb_mgfolder.trnstn_inpt_yn
+PDF	5	Y	PDF		object_taget_data.pdf_job_id; tb_rdrecord.pdf_job_id
+WRT	5	Y	작성		tb_dfdscddlbrdoc.dlbdc_wrt_rsn; tb_rcmissingmemo.wrt_inst_id
+AFTR	5	Y	이후		tb_dfdscdhist.reap_aftr_prsr_pd; tb_dfdscdhist.reap_aftr_prsr_pd_rsn
+EXCEL	5	Y	엑셀		tb_dfdscdopnn.excel_dwnld_yn; tb_dfdscdopnn.ntn_rm_cmit_excel_dwnld_yn
+COL	5	Y	컬럼		tb_dftransferrorprcshist.edit_col_nm; tb_dftransferrorprcshist.edit_col_type
+NOFL	5	Y	층수		tb_mgbksh.bksh_nofl; tb_mgfolder.bksh_nofl
+FLR	5	Y	층		tb_mgbkshdposdtl.bksh_flr_no; tb_srbkshdposdtl.bksh_flr_no
+INDX	5	Y	색인		tb_mgfolderkwrd.indx_cycl; tb_mgrecordkwrd.indx_cycl
+FOUR	5	Y	4		tb_minutes.cn_four; tb_stformat_hist.prcs_stts_four
+YY	5	Y	년		tb_rsrvdoc.ofdc_prsr_pd_ten_yy; tb_rsrvdoc.ofdc_prsr_pd_five_yy
+FIVE	5	Y	5		tb_rsrvdoc.ofdc_prsr_pd_five_yy; tb_stformat_hist.prcs_stts_five
+SIX	5	Y	6		tb_rsrvdoc.ofdc_prsr_pd_six_mts; tb_stformat_hist.prcs_stts_six
+FQ	5	Y	빈도		tb_rdfolder.prsl_fq; tb_zzsendunit.prsl_expc_fq
+CEA	5	Y	정수점검		tb_srcntchck.cea_id; tb_srcntchckdtl.cea_id
+CUT	5	Y	컷		tb_srmfphtg.cut_cnt; tb_srmfphtg.chc_cut_cnt
+ORD	5	Y	서열	서열(4)	tb_stdept.ord; tb_storg.ord
+ABL	5	Y	폐지		tb_stdept.abl_yn; tb_storg.abl_yn
+VLD	5	Y	유효		tb_stformatpki.vld_pd_bgng_dt; tb_stformatpki.vld_pd_end_dt
+ANCMNT	5	Y	고시		tb_stnoti.ancmnt_cn; tb_zzrecordclsfancmnt.ancmnt_year
+TELNO	5	Y	전화번호	전화번호(5)	tb_strecordcenter.telno; tb_strecordchrgr.telno
+PROT	4	Y	보호		object_taget_data.sret_prot_pd; object_taget_data.prot_actn_need_yn
+DESCN	4	Y	의결		object_taget_data.descn_cnd; object_taget_data.descn_nmpr_cnt
+TERM	4	Y	기한		object_taget_data.dlbr_term_se; object_taget_data.dlbr_term
+SPRVSN	4	Y	주관		object_taget_data.sprvsn_dept_id; object_taget_data.sprvsn_dept_nm
+RMST	4	Y	기록관리시스템		rms_history.rmst_ver; tb_streqclgnopnnfolder.prmn_rmst_fls_id
+FORM	4	Y	형태	형태(1)	tb_adarchivalobj.form; tb_adarchivalobj.etc_form_expln
+PBANC	4	Y	공고		tb_adarchivalobj.dscd_pbanc_no; tb_adarchivalobj.dscd_pbanc_desc
+GIFT	4	Y	선물		tb_adarchivalobj.gift_recp; tb_adarchivalobj.gift_cbpr
+ANNN	4	Y	통보자		tb_crfolder.pdst_annn_id; tb_crfolder.pdst_annn_nm
+MXMM	4	Y	최대		tb_mgbksh.mxmm_acpt_prsr_box_cnt; tb_srbksh.mxmm_acpt_prsr_box_cnt
+PRCR	4	Y	처리자		tb_mgfolder.rstr_prcr_info; tb_rdfolder.rstr_prcr_info
+MNTS	4	Y	회의록		tb_minutes.mnts_no; tb_minutes.mnts_year
+BEHV	4	Y	행위		tb_rcmissingmemo.job_behv_dt; tb_rdfoldercreat.job_behv_dt
+MSG	4	Y	메시지		tb_rcmissingmemoerror.err_msg; tb_rdrlsclgnopnnexcel.rslt_msg
+WRTR	4	Y	작성자		tb_rdfoldercreat.wrtr_trdv_cd; tb_rdfoldercreat.wrtr_trdv_nm
+MCHN	4	Y	기계		tb_rdmachinecheckresult.mchn_igi_id; tb_rdmachinecheckresult.mchn_igi_dt
+SRC	4	Y	출처		tb_rdrecordinfosrc.info_src_type_cd; tb_rdrecordinfosrc.info_src_seq
+SPLMRC	4	Y	부기		tb_rdrecordsplmrccrrchist.splmrc_crrc_year; tb_rdrecordsplmrccrrchist.splmrc_crrc_user_id
+FIX	4	Y	고정		tb_rffixreder.fix_redr_id; tb_rffixreder.fix_redr_ipadr
+REDR	4	Y	리더기		tb_rffixreder.fix_redr_id; tb_rffixreder.fix_redr_ipadr
+RC	4	Y	기록		tb_rftabpub.rc_se; tb_rftemptoti.rc_se
+FILM	4	Y	필름		tb_srmfbksh.mxmm_dpos_film_cnt; tb_srmfbksh.now_dpos_film_cnt
+PRE	4	Y	사전		tb_stbefrlslist.pre_orgd_srvc_type; tb_stformat_hist.pre_pdf_job_id
+ABRV	4	Y	약어		tb_stdept.ognz_abrv_nm; tb_storg.trdv_abrv_nm
+EXTN	4	Y	확장자		tb_stfileextmng.file_extn; tb_stfileextmng.file_extn_nm
+SQL	4	Y	질의		tb_stfolderquery.fls_sql_id; tb_stfolderquery.fls_sql_nm
+VLM	4	Y	권		tb_stmedium.vlm_id; tb_stvolm.vlm_id
+ONNARA	4	Y	온나라		tb_storgdfile.onnara_file_id; tb_stuser.onnara_user_id
+CLBN	4	Y	공동		tb_tkmonitor.trnsf_trgt_clbn_atrz_doc_ldgr_cnt; tb_tkmonitorinfo.trnsf_trgt_clbn_atrz_doc_ldgr_cnt
+ATRZ	4	Y	결재		tb_tkmonitor.trnsf_trgt_clbn_atrz_doc_ldgr_cnt; tb_tkmonitorinfo.trnsf_trgt_clbn_atrz_doc_ldgr_cnt
+LAOR	4	Y	법령		tb_zzfnctclsf.laor_grds; tb_zzfnctclsfhist.laor_grds
+EXPRY	3	Y	만료		j_attachfile.dwnld_expry_ymd; tb_stuser_sync.ctfe_expry_dt
+VRMS	3	Y	VRMS		object_taget_data.vrms_inpt_yn; tb_rdfolder.vrms_inpt_yn
+SCAN	3	Y	스캔		object_taget_data.scan_insp_cmptn_yn; tb_mgfolder.scan_stts
+NMPR	3	Y	인원		object_taget_data.descn_nmpr_cnt; tb_rdrecord.descn_nmpr_cnt
+ADPRV	3	Y	찬반		object_taget_data.adprv_rls_yn; tb_rdrecord.adprv_rls_yn
+TPGNO	3	Y	총쪽수		tb_crfolder.ritm_tpgno; tb_mgfolder.ritm_tpgno
+TRMN	3	Y	종결		tb_crfolder.frns_trmn_dt; tb_mgfolder.frns_trmn_dt
+ACCUM	3	Y	누적		tb_crntfctnfolder.prdctn_user_nm_accum; tb_crntfctnrecord.task_pic_nm_accum
+TMPLT	3	Y	서식		tb_crntfctnform.ntfctn_tmplt_type_cd; tb_crsendreport.pdst_ntfctn_tmplt_rpt_year
+RFLT	3	Y	반영		tb_dfdscddlbrdoc.rslt_rflt_yn; tb_streqcnvr.stts_rflt_yn
+DSPS	3	Y	처분		tb_dfdscdhist.dlcn_dscd_dsps_ymd; tb_dfdscdhist.dscd_dsps_ymd
+ENNC	3	Y	유무		tb_dforgtkovlist.qlin_err_ennc; tb_dforgtkovlist.igi_err_ennc
+CLR	3	Y	접수자		tb_dftransflistrcptresult.clr_ogdp_inst_nm; tb_dftransflistrcptresult.clr_jbgd_nm
+OGDP	3	Y	소속		tb_dftransflistrcptresult.clr_ogdp_inst_nm; tb_srcryn.cryn_user_ogdp_inst_nm
+META	3	Y	메타		tb_dftransfstorefld.fls_meta_file_sz; tb_dftransfstorercd.ritm_meta_file_sz
+TCPCT	3	Y	총용량	총용량(2)	tb_dftransfstoremst.strg_md_tcpct; tb_sroptidisk.tcpct
+AGRE	3	Y	동의		tb_gvrnprdl.cpyr_agre_type; tb_streqclgnopnnfolder.trdv_rvw_opnn_agre_yn
+MTTR	3	Y	사항		tb_gvrnprdl.form_mttr; tb_transfdetailinfostathist.trnsf_trgt_dret_mttr_cnt
+SYMB	3	Y	기호		tb_rsrvdoc.lwpr_symb_tbl; tb_sroptidisk.prsr_pd_se_symb
+MM	3	Y	월		tb_rcmissingmemo.crt_mm; tb_rcmissingmemoerror.crt_mm
+NTC	3	Y	공지		tb_rdfolder.trnsf_ntc; tb_rdrecordmeetingopnn.pbrc_rply_ntc
+DSPTCH	3	Y	발신		tb_rdrecordcreat.rcpt_doc_dsptch_inst_nm; tb_rdrecordcreat.rcpt_doc_dsptch_ofclnm
+USG	3	Y	용도		tb_rffixreder.instl_usg; tb_stformatpki.ctfe_usg
+EQPMNT	3	Y	장비		tb_stcompuequip.eqpmnt_nm; tb_stprsrequip.eqpmnt_clsf_cd
+SLR	3	Y	소독		tb_stdisinf.slr_ymd; tb_stdisinf.slr_trgt_cd
+FAIL	3	Y	실패		tb_sterrorlog.scs_fail_yn; tb_sthomeduty.fail_cnt
+DETL	3	Y	세부		tb_sterrorlog.err_detl_dsctn; tb_zzfnctclsf.rls_detl_crtr
+INQ	3	Y	조회		tb_stnoti.inq_cnt; tb_stqna.inq_cnt
+CLOUD	3	Y	클라우드		tb_storgdfile_cloud.cloud_mgr; tb_storgdpage_cloud.cloud_mgr
+MGR	3	Y	마이그레이션		tb_storgdfile_cloud.cloud_mgr; tb_storgdpage_cloud.cloud_mgr
+OPER	3	Y	운영		tb_strecordcenter.oper_dept_nm; tb_strecordcenter.oper_pic_nm
+CRST	3	Y	현황		tb_strecordcenter.nmpr_dpos_crst; tb_streportrslt.rctr_crst_rpt_rcpt_year
+BRM	3	Y	BRM		tb_strecordcenter.brm_type; tb_zzorgcomstnd.brm_mid_fnct_nm
+ARSM	3	Y	자료관		tb_strecordcenter.arsm_prdct_nm; tb_strecordcenter.arsm_use_bgng_ymd
+EML	3	Y	이메일	이메일(3)	tb_strecordchrgr.eml; tb_stuser.eml
+MKR	3	Y	제조사		tb_streqfile.orgd_stmd_mkr; tb_streqresult.trgt_stmd_mkr
+PARM	3	Y	파라메터		tb_streqcnvr.parm_xml; tb_streqcnvr.rm_sys_parm_xml
+XML	3	Y	XML		tb_streqcnvr.parm_xml; tb_streqcnvr.rm_sys_parm_xml
+WORK	3	Y	근무		tb_stuser.work_yn; tb_stuser_sync.work_yn
+SSO	3	Y	SSO		tb_stuser.sso_yn; tb_stuser.sso_key
+FLUP	3	Y	후속		tb_stworkhist.flup_actn_se_cd; tb_stworkhist.flup_actn_rsn
+PLCY	3	Y	정책		tb_zzfnctclsf.plcy_impl; tb_zzfnctclsf.plcy_stng
+RGN	3	Y	지역		tb_zzfnctclsf.rgn_nm; tb_zzunitchgreq.bfch_prsr_rgn_cd
+THON	3	Y	제1		tb_zzunitchgreq.bfch_thon_spcl_list; tb_zzunitchgreq.afch_thon_spcl_list
+THTW	3	Y	제2		tb_zzunitchgreq.bfch_thtw_spcl_list; tb_zzunitchgreq.afch_thtw_spcl_list
+THTH	3	Y	제3		tb_zzunitchgreq.bfch_thth_spcl_list; tb_zzunitchgreq.afch_thth_spcl_list
+TBL	2	Y	테이블		comtecopseq.tbl_nm; tb_rsrvdoc.lwpr_symb_tbl
+PRSN	2	Y	인물		object_taget_data.main_prsn_flnm; tb_rdrecord.main_prsn_flnm
+FLNM	2	Y	성명		object_taget_data.main_prsn_flnm; tb_rdrecord.main_prsn_flnm
+CESE	2	Y	중단		object_taget_data.cese_doc_se_cd; tb_rdrecord.cese_doc_se_cd
+RTRVL	2	Y	회수		object_taget_data.rtrvl_type_cd; tb_rdrecord.rtrvl_type_cd
+NEED	2	Y	필요		object_taget_data.prot_actn_need_yn; tb_rdrecord.prot_actn_need_yn
+CND	2	Y	조건		object_taget_data.descn_cnd; tb_rdrecord.descn_cnd
+CAUSE	2	Y	계기		object_taget_data.dret_cause; tb_rdrecord.dret_cause
+PRBLM	2	Y	문제		object_taget_data.flfmt_prblm; tb_rdrecord.flfmt_prblm
+DB	2	Y	DB		rms_history.db_ver; tb_storgdpage_cloud.db_use
+QOMT	2	Y	재질	재질(1)	tb_adarchivalobj.qomt; tb_adarchivalobj.etc_qomt_expln
+OBTN	2	Y	입수		tb_adarchivalobj.obtn_ymd; tb_adarchivalobj.obtn_crcm
+CRCM	2	Y	경위		tb_adarchivalobj.obtn_crcm; tb_adarchivalobj.gift_rece_crcm
+CBPR	2	Y	기증자	기증자(1)	tb_adarchivalobj.cbpr; tb_adarchivalobj.gift_cbpr
+RECE	2	Y	수령		tb_adarchivalobj.gift_rece_dt; tb_adarchivalobj.gift_rece_crcm
+CNSLTN	2	Y	협의		tb_adarchivalobj.trnsf_cnsltn_cn; tb_rdrecordsplmrccrrchist.cnsltn_cn
+SRNG	2	Y	심사		tb_adarchivalobjdscd.splst_srng_opnn; tb_rdrecordprslscpe.splst_srng_opnn_reg_ymd
+NMTM	2	Y	횟수		tb_crreporthist.file_crt_nmtm; tb_dforgtkov.file_crt_nmtm
+DAY	2	Y	일		tb_dfdscdphbt.dscd_phbt_day; tb_zzunitreq.aprv_aply_day
+HOPE	2	Y	희망		tb_dfrcpttransflist.trnsf_hope_year; tb_dftransfhist.trnsf_hope_year
+TSTMP	2	Y	타임스탬프		tb_dftkovplan.hndv_tstmp; tb_zztmpbkshexcel.excel_uld_tstmp
+NEO	2	Y	네오		tb_dftransfstorercd.ritm_neo_file_nm; tb_dftransfstorercd.ritm_neo_trsm_file_nm
+SPCFCT	2	Y	규격		tb_dftransfwork.trnsf_spcfct_se; tb_srmfphtg.film_spcfct
+GVRN	2	Y	정부		tb_gvrnprdl.gvrn_prdl_id; tb_gvrnprdl_file.gvrn_prdl_id
+ACPT	2	Y	수용		tb_mgbksh.mxmm_acpt_prsr_box_cnt; tb_srbksh.mxmm_acpt_prsr_box_cnt
+KND	2	Y	종류		tb_minutes.mnts_knd; tb_srmfphtg.film_knd_cd
+ALTMNT	2	Y	배정		tb_rdfolder.prsr_box_altmnt_yn; tb_rdfolder.prsr_box_altmnt_cn
+DCDT	2	Y	건		tb_rdftrkwrdtemp.fls_dcdt_se; tb_zzfnctclsf.fnpr_dcdt
+RPLY	2	Y	회신		tb_rdrecordmeetingopnn.pbrc_rply_ntc; tb_rdrecordmeetingopnn.pbrc_rply_dt
+GOVDEPT	2	Y	부처		tb_rdtkovrplan.acptn_hndv_govdept_cd; tb_rdtkovrplan.tkov_govdept_nm
+OPRTNG	2	Y	가동		tb_rffixreder.oprtng_stts; tb_rffixreder.oprtng_stts_chg_rsn
+LTBR	2	Y	경광등		tb_rffixreder.ltbr_ipadr; tb_rffixreder.ltbr_potno
+TPRT	2	Y	태그발행기		tb_rftabprint.tprt_id; tb_rftabpubhist.tprt_id
+ISPR	2	Y	발급자	발급자(1)	tb_rftabpub.tag_ispr_cd; tb_stformatpki.ispr
+ISR	2	Y	발행자		tb_rftabpub.tag_isr_cd; tb_rftabpubhist.tag_isr_cd
+PRNMNT	2	Y	예정		tb_srmfphtg.phtg_prnmnt_ymd; tb_srout.rtn_prnmnt_ymd
+TOQY	2	Y	총수량		tb_sroptidisk_cntchckdtl.prttn_toqy; tb_sroptidisk_mst.prttn_toqy
+INCT	2	Y	도입		tb_stcompuequip.inct_ymd; tb_stprsrequip.inct_ymd
+CLASS	2	Y	CLASS		tb_stconfig.link_api_srvr_cntn_class; tb_stlinktrgt.link_api_srvr_class
+IMPLC	2	Y	구현		tb_stconfig.link_api_srvr_implc_lang; tb_stlinktrgt.link_api_srvr_implc_lang
+SCS	2	Y	성공		tb_sterrorlog.scs_fail_yn; tb_stlogmonitor.scs_fail_yn
+PSBLTY	2	Y	가능		tb_stfileextmng.file_cnvr_psblty_yn; tb_stuser.prsl_psblty_dmnd_alm_yn
+UPDT	2	Y	갱신		tb_stfolderneofile.updt_seq; tb_storgdneofile.updt_seq
+TOP	2	Y	상단		tb_stmenulink.lnkg_img_top_on; tb_stmenulink.lnkg_img_top_off
+RT	2	Y	비율		tb_ststkinfo.pssn_rt; tb_stwflbrcrate.rctr_dtrb_rt
+RRNO	2	Y	주민등록번호	주민등록번호(2)	tb_stuser.rrno; tb_stuserhist.rrno
+UID	2	Y	고유식별자		tb_stuser_sync.ctfe_uid; tb_stuserpki.ctfe_uid
+NEIS	2	Y	NEIS		tb_stuser_sync.neis_dept_cd; tb_stuser_sync.neis_brdt
+FNTY	2	Y	기능유형	기능유형(2)	tb_zzfnctclsf.fnty; tb_zzfnctclsfhist.fnty
+APRP	2	Y	충당		tb_zzfnctclsf.prsr_pd_aprp_ymd; tb_zzfnctclsfhist.prsr_pd_aprp_ymd
+MBY	2	Y	주체		tb_zzfnctclsf.flfmt_mby; tb_zzfnctclsf.ecnm_mby
+RNG	2	Y	영역		tb_zzfnctclsf.assc_rng_nm; tb_zzfnctclsf.core_rng
+ARTCL	2	Y	항목		tb_zzfnctclsfchg.chg_artcl_cd; tb_zzunitchghist.chg_artcl_cd
+ATCL	2	Y	조항		tb_zzfnctclsfrellaw.atcl_no; tb_zzfnctclsfrellaw.lwpr_atcl_no
+AJMT	2	Y	조정		tb_zzprsrrcptrslt.prsr_pd_ajmt_dmnd_year; tb_zzunit.prsr_pd_r_ajmt_stts
+NEXT	1	Y	다음		comtecopseq.next_id
+MASK	1	Y	MASK		j_attachfile.file_mask
+PATCH	1	Y	패치		rms_history.patch_cn
+RECP	1	Y	수령인		tb_adarchivalobj.gift_recp
+VRTC	1	Y	세로		tb_adarchivalobj.vrtc_sz
+WDTH	1	Y	가로		tb_adarchivalobj.wdth_sz
+HG	1	Y	높이		tb_adarchivalobj.hg_sz
+ATPCL	1	Y	비정형		tb_adarchivalobj.atpcl_sz
+OFCLSL	1	N			tb_adarchivalobj.ofclsl_dscd_pbanc_yn
+THMNL	1	Y	썸네일		tb_adarchivalobjimg.thmnl_path
+CLCT	1	Y	수집		tb_dfrcpttransflist.clct_se_cd
+SCRN	1	Y	화면		tb_dfrcpttransflist.neob_cnvr_dmnd_scrn_se
+RECR	1	Y	재생성		tb_dftransfstorefld.recr_yn
+RETRNSF	1	Y	재이관		tb_dftransfstorefld.retrnsf_yn
+POSC	1	Y	납본		tb_gvrnprdl.nars_posc_yn
+DSCT	1	Y	폐간		tb_gvrnprdl.dsct_yn
+SRPB	1	Y	연속간행물		tb_gvrnprdl.srpb_pblc_yn
+SND	1	Y	2차		tb_rsrvdoc.tmpr_snd_se
+THD	1	Y	3차		tb_rsrvdoc.tmpr_thd_se
+FTH	1	Y	4차		tb_rsrvdoc.tmpr_fth_se
+THEA	1	Y	갑		tb_rsrvdoc.ofdc_prsr_pd_prmn_thea
+THEB	1	Y	을		tb_rsrvdoc.ofdc_prsr_pd_prmn_theb
+SMPM	1	Y	준영구		tb_rsrvdoc.ofdc_prsr_pd_smpm
+TEN	1	Y	10		tb_rsrvdoc.ofdc_prsr_pd_ten_yy
+MTS	1	Y	개월		tb_rsrvdoc.ofdc_prsr_pd_six_mts
+MDFR	1	Y	수정자		tb_rsrvdoc.last_mdfr_id
+EXCL	1	Y	제외		tb_oprlsgroup.ritm_excl_cnt
+LBL	1	Y	라벨		tb_rdfolder.lbl_prnt_yn
+PRNT	1	Y	인쇄		tb_rdfolder.lbl_prnt_yn
+EXTR	1	Y	추출		tb_rdfolder.extr_sys_cd
+FTR	1	Y	전문검색		tb_rdftrkwrdtemp.ftr_iwd_sn
+IWD	1	Y	색인어		tb_rdftrkwrdtemp.ftr_iwd_sn
+DRM	1	Y	DRM		tb_rdmachinecheckresult.drm_yn
+VRFC	1	Y	검증		tb_rdmachinecheckresult.vrfc_yn
+DCRD	1	Y	불일치		tb_rdmachinecheckresult.dcrd_yn
+OFCLNM	1	N			tb_rdrecordcreat.rcpt_doc_dsptch_ofclnm
+BDT	1	Y	본문		tb_rdrecordcreat.bdt_ver
+KKR	1	Y	KKR		tb_rfrecordcenter.kkr_trdv_cd
+ISSU	1	Y	발급		tb_rftabpub.tag_issu_trdv_cd
+ABNR	1	Y	이상		tb_srcntchckdtl.abnr_ennc
+CHC	1	Y	선택		tb_srmfphtg.chc_cut_cnt
+CAMERA	1	Y	카메라		tb_srmfphtg.camera_nm
+RDRT	1	Y	축소율	축소율(1)	tb_srmfphtg.rdrt
+SPVR	1	Y	감독관		tb_srmfphtg.spvr_nm
+RFRNC	1	Y	참조		tb_sroptidisk_cntchckdtl.rfrnc_doc
+INTR	1	Y	검사자		tb_sroptidisk_mst.intr_id
+RTN	1	Y	반납		tb_srout.rtn_prnmnt_ymd
+DCF	1	Y	철		tb_srprsrbox.dpos_rc_dcf_ecnt
+CALENDAR	1	Y	달력		tb_stcalendar.calendar_seq
+COLOR	1	Y	색상	색상(1)	tb_stcalendar.color
+MNGR	1	Y	관리자		tb_stcenteradmin.multi_mngr_id
+GENR	1	Y	일반		tb_stconfig.genr_mng_no_grnt_rule
+SAME	1	Y	동일		tb_stconfig.link_api_srvr_same_sys_yn
+MDCN	1	Y	약품		tb_stdisinf.mdcn_nm
+JVM	1	Y	JVM		tb_stdownipmng.jvm_instl_yn
+YR	1	Y	연도		tb_sthomeduty.task_yr
+REQ	1	Y	소요		tb_stlogmonitor.req_hr
+BSC	1	Y	기본		tb_stmenuahthrtgrp.bsc_authrt_se
+CERT	1	Y	인증		tb_stmenuahthrtgrp.cert_cd(auth_cd)
+CD(AUTH	1	N			tb_stmenuahthrtgrp.cert_cd(auth_cd)
+CD)	1	N			tb_stmenuahthrtgrp.cert_cd(auth_cd)
+ON	1	Y	ON		tb_stmenulink.lnkg_img_top_on
+OFF	1	Y	OFF		tb_stmenulink.lnkg_img_top_off
+LEFT	1	Y	좌측		tb_stmenulink.lnkg_img_left
+URL	1	Y	URL		tb_stmenulink.lnkg_url
+CSS	1	Y	CSS		tb_stmenulink.lnkg_css
+HELP	1	Y	도움말		tb_stmenulink.help_file_nm
+ORC	1	Y	공개재분류		tb_strlslist.orc_dt
+ESTB	1	Y	제정		tb_strecordcenter.oper_rule_estb_yn
+PYEONG	1	Y	평		tb_strecordcenter.stk_pyeong_cnt
+SEPFN	1	Y	분장		tb_strecordchrgr.task_sepfn
+AREA	1	Y	면적	면적(1)	tb_ststkinfo.area
+PSSN	1	Y	점유		tb_ststkinfo.pssn_rt
+ENCPT	1	Y	암호화		tb_stuser.encpt_type
+CIPHER	1	Y	암호		tb_stuser.cipher_chg_yn
+ALM	1	Y	알람		tb_stuser.prsl_psblty_dmnd_alm_yn
+BRTH	1	Y	출생		tb_stuser_sync.brth_ymd
+BRDT	1	Y	생년월일		tb_stuser_sync.neis_brdt
+DTRB	1	Y	분배		tb_stwflbrcrate.rctr_dtrb_rt
+SOLTN	1	Y	해결		tb_stworkhist.err_soltn_mthd
+MASS	1	Y	대용량		tb_tkattachfile.mass_yn
+RERCPT	1	Y	재접수		tb_tkfoldermng.rercpt_yn
+RECFMTN	1	Y	재확정		tb_zzfnctclsf.recfmtn_yn
+AGE	1	Y	연령	연령(1)	tb_zzfnctclsf.age
+ECNM	1	Y	경제		tb_zzfnctclsf.ecnm_mby
+CHRC	1	Y	특성		tb_zzfnctclsf.etc_chrc
+ASSC	1	Y	연관		tb_zzfnctclsf.assc_rng_nm
+CORE	1	Y	핵심		tb_zzfnctclsf.core_rng
+WAY	1	Y	방식		tb_zzfnctclsf.pvsn_way
+IMPL	1	Y	집행		tb_zzfnctclsf.plcy_impl
+RGLT	1	Y	준칙	준칙(1)	tb_zzprsrtermrule.rglt
+ULD	1	Y	업로드		tb_zztmpbkshexcel.excel_uld_tstmp
+PBADMS	1	Y	행정		tb_zzunitnewreq.pbadms_task_refr_pd_cd
+REFR	1	Y	참고		tb_zzunitnewreq.pbadms_task_refr_pd_cd
+PRUF	1	Y	증빙		tb_zzunitnewreq.pruf_data_vld_pd_cd
+HSMT	1	Y	사료		tb_zzunitnewreq.hsmt_wrth_prsr_pd_yn
+WRTH	1	Y	가치		tb_zzunitnewreq.hsmt_wrth_prsr_pd_yn
+DUTY	1	Y	의무		tb_zzunitnewreq.rel_laor_duty_pd
+APLCNT	1	Y	신청자	신청자(1)	tb_zzunitreq.aplcnt
+ONLN	1	Y	온라인		tb_zzunitreq.onln_aply_yn

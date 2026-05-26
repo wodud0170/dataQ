@@ -1,0 +1,468 @@
+구분	RAMP영문약어	RAMP단어명	MOIS영문약어	MOIS단어명	조치
+영문약어동일_단어명다름	SNGL	단일	SNGL	단독	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	IS	국제표준	IS	할부	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	ELCT	전자	ELCT	전자계약	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	NMPR	인원	NMPR	국가유공자	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	RULE	규칙	RULE	규정	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	DSTR	재난	DSTR	재해	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SLR	소독	SLR	판매자	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	FAX	FAX	FAX	팩스	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SCHM	체계	SCHM	스키마	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	PRSR	보존	PRSR	압력	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SEQ	순번	SEQ	순서	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	FORM	형태	FORM	양식	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	INTR	검사자	INTR	도입	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	APRS	신청결과	APRS	감정	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	RSRV	보류	RSRV	예비	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	OTP	공개구분	OTP	OTP	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	CHNL	중국어	CHNL	채널	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SQL	질의	SQL	SQL	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	DRCT	디렉토리	DRCT	직접	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	GNRL	종합	GNRL	일반	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SPVR	감독관	SPVR	감리원	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SND	2차	SND	파견	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	MSTR	다중세션전송	MSTR	석사	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	DUTY	의무	DUTY	직무	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	ELPS	종사자	ELPS	경과	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	PRST	증정	PRST	현황	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	ENTRY	응모자	ENTRY	응모	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SPS	후원자	SPS	배우자	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	RDRT	축소율	RDRT	감소율	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SHR	공유	SHR	지분	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	DPRT	배치율	DPRT	감가상각률	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SHT	시트	SHT	촬영	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	PRNT	인쇄	PRNT	부모	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	PKG	일괄	PKG	패키지	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SPVS	감독	SPVS	감리	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	TRTM	취급	TRTM	대우	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	MMS	자기매체서고	MMS	MMS	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	FCTR	요소	FCTR	요인	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	STSF	만족	STSF	충족	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	EXP	보내기	EXP	수출	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	PSTP	연기	PSTP	유예	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	RECR	재생성	RECR	정격전류	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	RVVL	재생	RVVL	회생	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	FNCT	기능	FNCT	작동	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	ISBN	ISBN	ISBN	국제표준도서번호	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	LT	길이	LT	로트	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	CTRB	기증	CTRB	출연	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	PRCP	관계자	PRCP	강수	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	DGR	전자화기록물	DGR	학위	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	PRTN	추진	PRTN	단백질	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	FTR	전문검색	FTR	꼬리말	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	ACPT	수용	ACPT	수락	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	EXCH	교체	EXCH	교환	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	ISSN	ISSN	ISSN	국제표준연속간행물번호	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	RMT	포맷	RMT	송금	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SPT	현장	SPT	부양	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	DB	DB	DB	데이터베이스	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	DRV	드라이브	DRV	구동	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	OPIN	의견조회	OPIN	소견	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	INTG	정수	INTG	통합	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	PBLC	발간	PBLC	간행물	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	OUTL	개요	OUTL	개략	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	OATH	원저자	OATH	서약	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	CCTV	폐쇄회로감시장치	CCTV	CCTV	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	ATTR	속성	ATTR	자동이체	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	COPY	복본	COPY	복사	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	TMPS	예비(임시)서고	TMPS	일시정지	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	CALL	호출	CALL	통화	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	SMPL	샘플	SMPL	제출처	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	AGNC	대리	AGNC	대리점	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	MD	매체	MD	중간	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	CMD	커맨드	CMD	명령	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	COMM	공통	COMM	통신	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	RSTR	복원	RSTR	복구	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	LOSS	손망실	LOSS	손실	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	ACT	액션	ACT	행위	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+영문약어동일_단어명다름	CLNO	순번호	CLNO	청구기호	RAMP 단어명→MOIS로 변경 또는 영문약어 변경
+단어명동일_영문약어다름	CALENDAR	달력	CLDR	달력	RAMP 영문약어 CALENDAR→CLDR 로 변경
+단어명동일_영문약어다름	ANNN	통보자	ANCR	통보자	RAMP 영문약어 ANNN→ANCR 로 변경
+단어명동일_영문약어다름	LTWK	저작물	CPRWRK	저작물	RAMP 영문약어 LTWK→CPRWRK 로 변경
+단어명동일_영문약어다름	RCMM	상신	RTSO	상신	RAMP 영문약어 RCMM→RTSO 로 변경
+단어명동일_영문약어다름	PHTG	촬영	SHT	촬영	RAMP 영문약어 PHTG→SHT 로 변경
+단어명동일_영문약어다름	RMT	포맷	FRMAT	포맷	RAMP 영문약어 RMT→FRMAT 로 변경
+단어명동일_영문약어다름	FORM	형태	SHP	형태	RAMP 영문약어 FORM→SHP 로 변경
+단어명동일_영문약어다름	FLUP	후속	FLWUP	후속	RAMP 영문약어 FLUP→FLWUP 로 변경
+단어명동일_영문약어다름	MBY	주체	MNBD	주체	RAMP 영문약어 MBY→MNBD 로 변경
+단어명동일_영문약어다름	CTNT	목차	TOC	목차	RAMP 영문약어 CTNT→TOC 로 변경
+단어명동일_영문약어다름	EXCH	교체	RPLC	교체	RAMP 영문약어 EXCH→RPLC 로 변경
+단어명동일_영문약어다름	CBPR	기증자	DNR	기증자	RAMP 영문약어 CBPR→DNR 로 변경
+단어명동일_영문약어다름	BDT	본문	MTXT	본문	RAMP 영문약어 BDT→MTXT 로 변경
+단어명동일_영문약어다름	CONV	소집	CNVC	소집	RAMP 영문약어 CONV→CNVC 로 변경
+단어명동일_영문약어다름	CMPS	구성	CPST	구성	RAMP 영문약어 CMPS→CPST 로 변경
+단어명동일_영문약어다름	OUTL	개요	OTLN	개요	RAMP 영문약어 OUTL→OTLN 로 변경
+단어명동일_영문약어다름	CRST	현황	PRST	현황	RAMP 영문약어 CRST→PRST 로 변경
+단어명동일_영문약어다름	CLBN	공동	JNT	공동	RAMP 영문약어 CLBN→JNT 로 변경
+단어명동일_영문약어다름	DESCN	의결	DCS	의결	RAMP 영문약어 DESCN→DCS 로 변경
+단어명동일_영문약어다름	ALCT	할당	ALOT	할당	RAMP 영문약어 ALCT→ALOT 로 변경
+단어명동일_영문약어다름	IDTF	식별자	IDNTFR	식별자	RAMP 영문약어 IDTF→IDNTFR 로 변경
+단어명동일_영문약어다름	REPR	수선	MNDG	수선	RAMP 영문약어 REPR→MNDG 로 변경
+단어명동일_영문약어다름	ELPS	종사자	PRCTR	종사자	RAMP 영문약어 ELPS→PRCTR 로 변경
+단어명동일_영문약어다름	CMIT	위원회	CMT	위원회	RAMP 영문약어 CMIT→CMT 로 변경
+단어명동일_영문약어다름	DUTY	의무	OBLG	의무	RAMP 영문약어 DUTY→OBLG 로 변경
+단어명동일_영문약어다름	MD	매체	MEDIA	매체	RAMP 영문약어 MD→MEDIA 로 변경
+단어명동일_영문약어다름	FRNS	비치	FRNSH	비치	RAMP 영문약어 FRNS→FRNSH 로 변경
+단어명동일_영문약어다름	SCM	스키마	SCHM	스키마	RAMP 영문약어 SCM→SCHM 로 변경
+단어명동일_영문약어다름	HOLD	보유	HLD	보유	RAMP 영문약어 HOLD→HLD 로 변경
+단어명동일_영문약어다름	PBLC	발간	PBLS	발간	RAMP 영문약어 PBLC→PBLS 로 변경
+단어명동일_영문약어다름	ACCUM	누적	ACML	누적	RAMP 영문약어 ACCUM→ACML 로 변경
+단어명동일_영문약어다름	ATPT	시도	CTPV	시도	RAMP 영문약어 ATPT→CTPV 로 변경
+단어명동일_영문약어다름	LEFT	좌측	LFSD	좌측	RAMP 영문약어 LEFT→LFSD 로 변경
+단어명동일_영문약어다름	HD	습도	HUM	습도	RAMP 영문약어 HD→HUM 로 변경
+단어명동일_영문약어다름	SRWD	검색어	SRWRD	검색어	RAMP 영문약어 SRWD→SRWRD 로 변경
+단어명동일_영문약어다름	RC	기록	RCD	기록	RAMP 영문약어 RC→RCD 로 변경
+단어명동일_영문약어다름	DRET	지시	DRCTN	지시	RAMP 영문약어 DRET→DRCTN 로 변경
+단어명동일_영문약어다름	OTPW	OTP	OTP	OTP	RAMP 영문약어 OTPW→OTP 로 변경
+단어명동일_영문약어다름	MNSC	사본	CPY	사본	RAMP 영문약어 MNSC→CPY 로 변경
+단어명동일_영문약어다름	LQ	대량	LQTY	대량	RAMP 영문약어 LQ→LQTY 로 변경
+단어명동일_영문약어다름	PRSR	보존	PRSV	보존	RAMP 영문약어 PRSR→PRSV 로 변경
+단어명동일_영문약어다름	MNIT	모니터링	MNTR	모니터링	RAMP 영문약어 MNIT→MNTR 로 변경
+단어명동일_영문약어다름	RECE	수령	RCV	수령	RAMP 영문약어 RECE→RCV 로 변경
+단어명동일_영문약어다름	DSPY	전시	EXHB	전시	RAMP 영문약어 DSPY→EXHB 로 변경
+단어명동일_영문약어다름	COMT	통신	COMM	통신	RAMP 영문약어 COMT→COMM 로 변경
+단어명동일_영문약어다름	ACPT	수용	ACTC	수용	RAMP 영문약어 ACPT→ACTC 로 변경
+단어명동일_영문약어다름	CTST	공모	PBCNTS	공모	RAMP 영문약어 CTST→PBCNTS 로 변경
+단어명동일_영문약어다름	BCRN	배경	BCKG	배경	RAMP 영문약어 BCRN→BCKG 로 변경
+단어명동일_영문약어다름	ETL	외부	OTSD	외부	RAMP 영문약어 ETL→OTSD 로 변경
+단어명동일_영문약어다름	PRTN	추진	PRPL	추진	RAMP 영문약어 PRTN→PRPL 로 변경
+단어명동일_영문약어다름	REFR	참고	REF	참고	RAMP 영문약어 REFR→REF 로 변경
+단어명동일_영문약어다름	BADN	불량	BAD	불량	RAMP 영문약어 BADN→BAD 로 변경
+단어명동일_영문약어다름	TKO	취임	INGR	취임	RAMP 영문약어 TKO→INGR 로 변경
+단어명동일_영문약어다름	VE	속도	SPD	속도	RAMP 영문약어 VE→SPD 로 변경
+단어명동일_영문약어다름	PBRC	기록물	RCDS	기록물	RAMP 영문약어 PBRC→RCDS 로 변경
+단어명동일_영문약어다름	SOLTN	해결	SLTN	해결	RAMP 영문약어 SOLTN→SLTN 로 변경
+단어명동일_영문약어다름	PRCT	응용	APLC	응용	RAMP 영문약어 PRCT→APLC 로 변경
+단어명동일_영문약어다름	ONSL	자체	ITSLF	자체	RAMP 영문약어 ONSL→ITSLF 로 변경
+단어명동일_영문약어다름	ATPR	참석자	ATD	참석자	RAMP 영문약어 ATPR→ATD 로 변경
+단어명동일_영문약어다름	PD	기간	PRD	기간	RAMP 영문약어 PD→PRD 로 변경
+단어명동일_영문약어다름	DEV	개발	DVLP	개발	RAMP 영문약어 DEV→DVLP 로 변경
+단어명동일_영문약어다름	IMPR	불가	IMPS	불가	RAMP 영문약어 IMPR→IMPS 로 변경
+단어명동일_영문약어다름	RULE	규칙	RUL	규칙	RAMP 영문약어 RULE→RUL 로 변경
+단어명동일_영문약어다름	FQ	빈도	FREQ	빈도	RAMP 영문약어 FQ→FREQ 로 변경
+단어명동일_영문약어다름	TOP	상단	UPEND	상단	RAMP 영문약어 TOP→UPEND 로 변경
+단어명동일_영문약어다름	ORGD	원문	ORGTXT	원문	RAMP 영문약어 ORGD→ORGTXT 로 변경
+단어명동일_영문약어다름	DAGR	비동의	DSAG	비동의	RAMP 영문약어 DAGR→DSAG 로 변경
+단어명동일_영문약어다름	SLR	소독	DSNF	소독	RAMP 영문약어 SLR→DSNF 로 변경
+단어명동일_영문약어다름	SCPE	범위	SCP	범위	RAMP 영문약어 SCPE→SCP 로 변경
+단어명동일_영문약어다름	HLPDSK	문의처	INQPL	문의처	RAMP 영문약어 HLPDSK→INQPL 로 변경
+단어명동일_영문약어다름	PREP	예비	RSRV	예비	RAMP 영문약어 PREP→RSRV 로 변경
+단어명동일_영문약어다름	TARC	송수신	TRRC	송수신	RAMP 영문약어 TARC→TRRC 로 변경
+단어명동일_영문약어다름	PRSS	출판	PBLSG	출판	RAMP 영문약어 PRSS→PBLSG 로 변경
+단어명동일_영문약어다름	CHAR	문자	LTR	문자	RAMP 영문약어 CHAR→LTR 로 변경
+단어명동일_영문약어다름	MBRC	위원	MBCMT	위원	RAMP 영문약어 MBRC→MBCMT 로 변경
+단어명동일_영문약어다름	STSF	만족	STFC	만족	RAMP 영문약어 STSF→STFC 로 변경
+단어명동일_영문약어다름	RINSP	재검사	RNSP	재검사	RAMP 영문약어 RINSP→RNSP 로 변경
+단어명동일_영문약어다름	COLOR	색상	COLR	색상	RAMP 영문약어 COLOR→COLR 로 변경
+단어명동일_영문약어다름	SYNCZTN	동기화	SYNC	동기화	RAMP 영문약어 SYNCZTN→SYNC 로 변경
+단어명동일_영문약어다름	DRC	전자기록물	ERCDS	전자기록물	RAMP 영문약어 DRC→ERCDS 로 변경
+단어명동일_영문약어다름	OVRS	누락	OMSN	누락	RAMP 영문약어 OVRS→OMSN 로 변경
+단어명동일_영문약어다름	MDTR	치료	MDTRT	치료	RAMP 영문약어 MDTR→MDTRT 로 변경
+단어명동일_영문약어다름	AGNC	대리	SBT	대리	RAMP 영문약어 AGNC→SBT 로 변경
+단어명동일_영문약어다름	DESC	기술	TECH	기술	RAMP 영문약어 DESC→TECH 로 변경
+단어명동일_영문약어다름	MMT	시기	TMNG	시기	RAMP 영문약어 MMT→TMNG 로 변경
+단어명동일_영문약어다름	GNRL	종합	SNTHS	종합	RAMP 영문약어 GNRL→SNTHS 로 변경
+단어명동일_영문약어다름	SMMR	요약	SMRY	요약	RAMP 영문약어 SMMR→SMRY 로 변경
+단어명동일_영문약어다름	INLD	기관장	INLDR	기관장	RAMP 영문약어 INLD→INLDR 로 변경
+단어명동일_영문약어다름	UAPV	미승인	UNAPRV	미승인	RAMP 영문약어 UAPV→UNAPRV 로 변경
+단어명동일_영문약어다름	WAY	방식	MTH	방식	RAMP 영문약어 WAY→MTH 로 변경
+단어명동일_영문약어다름	COMP	압축	CMPRS	압축	RAMP 영문약어 COMP→CMPRS 로 변경
+단어명동일_영문약어다름	RANK	순위	RNK	순위	RAMP 영문약어 RANK→RNK 로 변경
+단어명동일_영문약어다름	THRG	경유	VIA	경유	RAMP 영문약어 THRG→VIA 로 변경
+단어명동일_영문약어다름	SCLE	규모	SCL	규모	RAMP 영문약어 SCLE→SCL 로 변경
+단어명동일_영문약어다름	CESE	중단	ITRP	중단	RAMP 영문약어 CESE→ITRP 로 변경
+단어명동일_영문약어다름	RSTR	복원	RSTRT	복원	RAMP 영문약어 RSTR→RSTRT 로 변경
+단어명동일_영문약어다름	NMPR	인원	PRSNL	인원	RAMP 영문약어 NMPR→PRSNL 로 변경
+단어명동일_영문약어다름	HG	높이	HGT	높이	RAMP 영문약어 HG→HGT 로 변경
+단어명동일_영문약어다름	DLRY	배부	HNDT	배부	RAMP 영문약어 DLRY→HNDT 로 변경
+단어명동일_영문약어다름	SECU	보안	SCRTY	보안	RAMP 영문약어 SECU→SCRTY 로 변경
+단어명동일_영문약어다름	NSF	불만족	DSTF	불만족	RAMP 영문약어 NSF→DSTF 로 변경
+단어명동일_영문약어다름	DCRD	불일치	NCNSN	불일치	RAMP 영문약어 DCRD→NCNSN 로 변경
+단어명동일_영문약어다름	RSK	위험	RISK	위험	RAMP 영문약어 RSK→RISK 로 변경
+단어명동일_영문약어다름	INTR	검사자	TSTR	검사자	RAMP 영문약어 INTR→TSTR 로 변경
+단어명동일_영문약어다름	EX	예시	EXM	예시	RAMP 영문약어 EX→EXM 로 변경
+단어명동일_영문약어다름	KWRD	키워드	KYWD	키워드	RAMP 영문약어 KWRD→KYWD 로 변경
+단어명동일_영문약어다름	TRTM	취급	HNDL	취급	RAMP 영문약어 TRTM→HNDL 로 변경
+단어명동일_영문약어다름	DTPC	전산	EDP	전산	RAMP 영문약어 DTPC→EDP 로 변경
+단어명동일_영문약어다름	PRDL	간행물	PBLC	간행물	RAMP 영문약어 PRDL→PBLC 로 변경
+단어명동일_영문약어다름	PAGN	공공기관	PBNST	공공기관	RAMP 영문약어 PAGN→PBNST 로 변경
+단어명동일_영문약어다름	PHND	인계자	HVPRSN	인계자	RAMP 영문약어 PHND→HVPRSN 로 변경
+단어명동일_영문약어다름	CALL	호출	CLOT	호출	RAMP 영문약어 CALL→CLOT 로 변경
+단어명동일_영문약어다름	ALM	알람	ALRM	알람	RAMP 영문약어 ALM→ALRM 로 변경
+단어명동일_영문약어다름	JBGP	직군	JGRP	직군	RAMP 영문약어 JBGP→JGRP 로 변경
+단어명동일_영문약어다름	INCT	도입	INTR	도입	RAMP 영문약어 INCT→INTR 로 변경
+단어명동일_영문약어다름	STEP	단계	STP	단계	RAMP 영문약어 STEP→STP 로 변경
+단어명동일_영문약어다름	CARR	경력	CRR	경력	RAMP 영문약어 CARR→CRR 로 변경
+단어명동일_영문약어다름	ACPL	계획서	PLDOC	계획서	RAMP 영문약어 ACPL→PLDOC 로 변경
+단어명동일_영문약어다름	PHBT	금지	PRHB	금지	RAMP 영문약어 PHBT→PRHB 로 변경
+단어명동일_영문약어다름	PBSV	공무원	PBOFC	공무원	RAMP 영문약어 PBSV→PBOFC 로 변경
+단어명동일_영문약어다름	SPK	발표자	PRSNTR	발표자	RAMP 영문약어 SPK→PRSNTR 로 변경
+단어명동일_영문약어다름	CPYR	저작권	CPRGT	저작권	RAMP 영문약어 CPYR→CPRGT 로 변경
+단어명동일_영문약어다름	COMM	공통	COM	공통	RAMP 영문약어 COMM→COM 로 변경
+단어명동일_영문약어다름	QOMT	재질	MTPRPT	재질	RAMP 영문약어 QOMT→MTPRPT 로 변경
+단어명동일_영문약어다름	OXI	산화	OXDTN	산화	RAMP 영문약어 OXI→OXDTN 로 변경
+단어명동일_영문약어다름	MULTI	다중	MLT	다중	RAMP 영문약어 MULTI→MLT 로 변경
+단어명동일_영문약어다름	GDNC	안내	GD	안내	RAMP 영문약어 GDNC→GD 로 변경
+단어명동일_영문약어다름	PFMR	행위자	ACTR	행위자	RAMP 영문약어 PFMR→ACTR 로 변경
+단어명동일_영문약어다름	BEHV	행위	ACT	행위	RAMP 영문약어 BEHV→ACT 로 변경
+단어명동일_영문약어다름	OVSS	해외	OVSEA	해외	RAMP 영문약어 OVSS→OVSEA 로 변경
+단어명동일_영문약어다름	PRUF	증빙	EVDNC	증빙	RAMP 영문약어 PRUF→EVDNC 로 변경
+단어명동일_영문약어다름	CTFE	인증서	CRTF	인증서	RAMP 영문약어 CTFE→CRTF 로 변경
+단어명동일_영문약어다름	PSTP	연기	PSTPN	연기	RAMP 영문약어 PSTP→PSTPN 로 변경
+단어명동일_영문약어다름	AVRG	평균	AVG	평균	RAMP 영문약어 AVRG→AVG 로 변경
+단어명동일_영문약어다름	ABRV	약어	ABBR	약어	RAMP 영문약어 ABRV→ABBR 로 변경
+단어명동일_영문약어다름	NOSL	지질	GEOFT	지질	RAMP 영문약어 NOSL→GEOFT 로 변경
+단어명동일_영문약어다름	FGGG	외국어	FRLAN	외국어	RAMP 영문약어 FGGG→FRLAN 로 변경
+단어명동일_영문약어다름	TRNSTN	전환	SWTC	전환	RAMP 영문약어 TRNSTN→SWTC 로 변경
+단어명동일_영문약어다름	LNTR	장기	LTRM	장기	RAMP 영문약어 LNTR→LTRM 로 변경
+단어명동일_영문약어다름	GENR	일반	GNRL	일반	RAMP 영문약어 GENR→GNRL 로 변경
+단어명동일_영문약어다름	LWPR	하위	LWR	하위	RAMP 영문약어 LWPR→LWR 로 변경
+단어명동일_영문약어다름	ESTB	제정	ENCT	제정	RAMP 영문약어 ESTB→ENCT 로 변경
+단어명동일_영문약어다름	GRDS	근거	BSS	근거	RAMP 영문약어 GRDS→BSS 로 변경
+단어명동일_영문약어다름	CNVR	변환	TRSF	변환	RAMP 영문약어 CNVR→TRSF 로 변경
+단어명동일_영문약어다름	HNDV	인계	HNOV	인계	RAMP 영문약어 HNDV→HNOV 로 변경
+단어명동일_영문약어다름	LEV	레벨	LV	레벨	RAMP 영문약어 LEV→LV 로 변경
+단어명동일_영문약어다름	MXMM	최대	MAX	최대	RAMP 영문약어 MXMM→MAX 로 변경
+단어명동일_영문약어다름	PCRT	처리율	PRSRT	처리율	RAMP 영문약어 PCRT→PRSRT 로 변경
+단어명동일_영문약어다름	DPOS	배치	BTCH	배치	RAMP 영문약어 DPOS→BTCH 로 변경
+단어명동일_영문약어다름	THMNL	썸네일	THMB	썸네일	RAMP 영문약어 THMNL→THMB 로 변경
+단어명동일_영문약어다름	FLS	기록물철	RCDSF	기록물철	RAMP 영문약어 FLS→RCDSF 로 변경
+단어명동일_영문약어다름	QY	수량	QTY	수량	RAMP 영문약어 QY→QTY 로 변경
+단어명동일_영문약어다름	SPAB	특기	SPCLT	특기	RAMP 영문약어 SPAB→SPCLT 로 변경
+단어명동일_영문약어다름	PRE	사전	BFHD	사전	RAMP 영문약어 PRE→BFHD 로 변경
+단어명동일_영문약어다름	LOCK	잠금	LCK	잠금	RAMP 영문약어 LOCK→LCK 로 변경
+단어명동일_영문약어다름	JBLN	직렬	JBSRS	직렬	RAMP 영문약어 JBLN→JBSRS 로 변경
+단어명동일_영문약어다름	RSRM	자료실	RPSTR	자료실	RAMP 영문약어 RSRM→RPSTR 로 변경
+단어명동일_영문약어다름	APLD	신청서	APFR	신청서	RAMP 영문약어 APLD→APFR 로 변경
+단어명동일_영문약어다름	EXTS	연장	PRLG	연장	RAMP 영문약어 EXTS→PRLG 로 변경
+단어명동일_영문약어다름	GOVDEPT	부처	MAO	부처	RAMP 영문약어 GOVDEPT→MAO 로 변경
+단어명동일_영문약어다름	LAOR	법령	STT	법령	RAMP 영문약어 LAOR→STT 로 변경
+단어명동일_영문약어다름	GVRN	정부	GOV	정부	RAMP 영문약어 GVRN→GOV 로 변경
+단어명동일_영문약어다름	SFTW	소프트웨어	SW	소프트웨어	RAMP 영문약어 SFTW→SW 로 변경
+단어명동일_영문약어다름	HELP	도움말	HLP	도움말	RAMP 영문약어 HELP→HLP 로 변경
+단어명동일_영문약어다름	FRGN	외국	FRCN	외국	RAMP 영문약어 FRGN→FRCN 로 변경
+단어명동일_영문약어다름	ENNC	유무	EN	유무	RAMP 영문약어 ENNC→EN 로 변경
+단어명동일_영문약어다름	VIRS	바이러스	VRS	바이러스	RAMP 영문약어 VIRS→VRS 로 변경
+단어명동일_영문약어다름	SCHM	체계	SYSTEM	체계	RAMP 영문약어 SCHM→SYSTEM 로 변경
+단어명동일_영문약어다름	LT	길이	LEN	길이	RAMP 영문약어 LT→LEN 로 변경
+단어명동일_영문약어다름	RES	해상도	RSL	해상도	RAMP 영문약어 RES→RSL 로 변경
+단어명동일_영문약어다름	RSRV	보류	HLDOF	보류	RAMP 영문약어 RSRV→HLDOF 로 변경
+단어명동일_영문약어다름	REPTN	반복	REPT	반복	RAMP 영문약어 REPTN→REPT 로 변경
+단어명동일_영문약어다름	ADMC	행정기관	ADMNST	행정기관	RAMP 영문약어 ADMC→ADMNST 로 변경
+단어명동일_영문약어다름	TMPT	온도	TP	온도	RAMP 영문약어 TMPT→TP 로 변경
+단어명동일_영문약어다름	PRCP	관계자	RLPR	관계자	RAMP 영문약어 PRCP→RLPR 로 변경
+단어명동일_영문약어다름	CHCE	채택	ADPT	채택	RAMP 영문약어 CHCE→ADPT 로 변경
+단어명동일_영문약어다름	PAMT	가액	EQVL	가액	RAMP 영문약어 PAMT→EQVL 로 변경
+단어명동일_영문약어다름	RETR	재전송	RTRSM	재전송	RAMP 영문약어 RETR→RTRSM 로 변경
+단어명동일_영문약어다름	PRNT	인쇄	PRINT	인쇄	RAMP 영문약어 PRNT→PRINT 로 변경
+단어명동일_영문약어다름	SGGT	건의	SGST	건의	RAMP 영문약어 SGGT→SGST 로 변경
+단어명동일_영문약어다름	FCTR	요소	ELMN	요소	RAMP 영문약어 FCTR→ELMN 로 변경
+단어명동일_영문약어다름	CSTD	보관	KPNG	보관	RAMP 영문약어 CSTD→KPNG 로 변경
+단어명동일_영문약어다름	FNCT	기능	FWK	기능	RAMP 영문약어 FNCT→FWK 로 변경
+단어명동일_영문약어다름	SYMB	기호	SYMBL	기호	RAMP 영문약어 SYMB→SYMBL 로 변경
+단어명동일_영문약어다름	MDLE	모듈	MDUL	모듈	RAMP 영문약어 MDLE→MDUL 로 변경
+단어명동일_영문약어다름	RNG	영역	RLM	영역	RAMP 영문약어 RNG→RLM 로 변경
+단어명동일_영문약어다름	RERCPT	재접수	RRQST	재접수	RAMP 영문약어 RERCPT→RRQST 로 변경
+단어명동일_영문약어다름	PRUS	전용	EXUS	전용	RAMP 영문약어 PRUS→EXUS 로 변경
+단어명동일_영문약어다름	INET	인터넷	ITNT	인터넷	RAMP 영문약어 INET→ITNT 로 변경
+단어명동일_영문약어다름	THMA	주제	TPC	주제	RAMP 영문약어 THMA→TPC 로 변경
+단어명동일_영문약어다름	ICSN	포함	INCL	포함	RAMP 영문약어 ICSN→INCL 로 변경
+단어명동일_영문약어다름	SHR	공유	SHRN	공유	RAMP 영문약어 SHR→SHRN 로 변경
+단어명동일_영문약어다름	SSSN	세션	SSN	세션	RAMP 영문약어 SSSN→SSN 로 변경
+단어명동일_영문약어다름	RDEX	감면	RDCT	감면	RAMP 영문약어 RDEX→RDCT 로 변경
+단어명동일_영문약어다름	PROT	보호	PRTC	보호	RAMP 영문약어 PROT→PRTC 로 변경
+단어명동일_영문약어다름	AOS	관인	OCSL	관인	RAMP 영문약어 AOS→OCSL 로 변경
+단어명동일_영문약어다름	SPT	현장	GRNDS	현장	RAMP 영문약어 SPT→GRNDS 로 변경
+단어명동일_영문약어다름	PKG	일괄	EBLC	일괄	RAMP 영문약어 PKG→EBLC 로 변경
+단어명동일_영문약어다름	COPY	복본	DPLC	복본	RAMP 영문약어 COPY→DPLC 로 변경
+단어명동일_영문약어다름	CAUS	원인	CS	원인	RAMP 영문약어 CAUS→CS 로 변경
+단어명동일_영문약어다름	UNTY	통합	INTG	통합	RAMP 영문약어 UNTY→INTG 로 변경
+단어명동일_영문약어다름	DST	파기	DSTRC	파기	RAMP 영문약어 DST→DSTRC 로 변경
+단어명동일_영문약어다름	DSTR	재난	CLMTY	재난	RAMP 영문약어 DSTR→CLMTY 로 변경
+단어명동일_영문약어다름	ATTR	속성	ATRB	속성	RAMP 영문약어 ATTR→ATRB 로 변경
+완전일치	ABL	폐지	ABL	폐지	유지
+완전일치	ACBG	학력	ACBG	학력	유지
+완전일치	ACDNT	사고	ACDNT	사고	유지
+완전일치	ACNT	계정	ACNT	계정	유지
+완전일치	ACNTG	회계	ACNTG	회계	유지
+완전일치	ACNTL	계정과목	ACNTL	계정과목	유지
+완전일치	ACPTN	인수	ACPTN	인수	유지
+완전일치	ACPTR	인수자	ACPTR	인수자	유지
+완전일치	ACQS	취득	ACQS	취득	유지
+완전일치	ACS	접근	ACS	접근	유지
+완전일치	ACTL	실제	ACTL	실제	유지
+완전일치	ACTN	조치	ACTN	조치	유지
+완전일치	ACTNO	계좌번호	ACTNO	계좌번호	유지
+완전일치	ACTRSF	계좌이체	ACTRSF	계좌이체	유지
+완전일치	ACTVTN	활성	ACTVTN	활성	유지
+완전일치	ADD	추가	ADD	추가	유지
+완전일치	ADDR	주소	ADDR	주소	유지
+완전일치	ADDRSE	수취인	ADDRSE	수취인	유지
+완전일치	ADDTX	가산세	ADDTX	가산세	유지
+완전일치	ADMDSP	행정처분	ADMDSP	행정처분	유지
+완전일치	ADMDST	행정구역	ADMDST	행정구역	유지
+완전일치	ADTN	가산	ADTN	가산	유지
+완전일치	AFTR	이후	AFTR	이후	유지
+완전일치	AGE	연령	AGE	연령	유지
+완전일치	AGND	안건	AGND	안건	유지
+완전일치	AGRE	동의	AGRE	동의	유지
+완전일치	AGT	대리인	AGT	대리인	유지
+완전일치	AJMT	조정	AJMT	조정	유지
+완전일치	ALCTN	배당	ALCTN	배당	유지
+완전일치	ALTMNT	배정	ALTMNT	배정	유지
+완전일치	AMT	금액	AMT	금액	유지
+완전일치	ANCMNT	고시	ANCMNT	고시	유지
+완전일치	ANLS	분석	ANLS	분석	유지
+완전일치	ANS	답변	ANS	답변	유지
+완전일치	ANSWR	답변자	ANSWR	답변자	유지
+완전일치	ANX	부속	ANX	부속	유지
+완전일치	AOCR	토지이동	AOCR	토지이동	유지
+완전일치	API	API	API	API	유지
+완전일치	APLCN	적용	APLCN	적용	유지
+완전일치	APLCNT	신청자	APLCNT	신청자	유지
+완전일치	APLY	신청	APLY	신청	유지
+완전일치	APNTMN	임용	APNTMN	임용	유지
+완전일치	APPL	출원	APPL	출원	유지
+완전일치	APRP	충당	APRP	충당	유지
+완전일치	APRV	승인	APRV	승인	유지
+완전일치	APRVR	결재자	APRVR	결재자	유지
+완전일치	APT	아파트	APT	아파트	유지
+완전일치	APTCPX	공동주택	APTCPX	공동주택	유지
+완전일치	ARCH	건축	ARCH	건축	유지
+완전일치	AREA	면적	AREA	면적	유지
+완전일치	ARNGMT	정리	ARNGMT	정리	유지
+완전일치	ARTCL	항목	ARTCL	항목	유지
+완전일치	ARVL	도착	ARVL	도착	유지
+완전일치	ASMT	과제	ASMT	과제	유지
+완전일치	AST	자산	AST	자산	유지
+완전일치	ATCH	첨부	ATCH	첨부	유지
+완전일치	ATLFCS	간선시설	ATLFCS	간선시설	유지
+완전일치	ATND	참석	ATND	참석	유지
+완전일치	ATNT	요주의	ATNT	요주의	유지
+완전일치	ATRZ	결재	ATRZ	결재	유지
+완전일치	AUT	저자	AUT	저자	유지
+완전일치	AUTHRT	권한	AUTHRT	권한	유지
+완전일치	AUTO	자동	AUTO	자동	유지
+완전일치	AUTZR	승인자	AUTZR	승인자	유지
+완전일치	AVTSMT	통지	AVTSMT	통지	유지
+완전일치	BACNT	계좌	BACNT	계좌	유지
+완전일치	BANK	은행	BANK	은행	유지
+완전일치	BBS	게시판	BBS	게시판	유지
+완전일치	BDAR	건축면적	BDAR	건축면적	유지
+완전일치	BDCVRT	건폐율	BDCVRT	건폐율	유지
+완전일치	BDRG	건축물대장	BDRG	건축물대장	유지
+완전일치	BDST	건축물	BDST	건축물	유지
+완전일치	BFR	이전	BFR	이전	유지
+완전일치	BGNCST	착공	BGNCST	착공	유지
+완전일치	BGNG	시작	BGNG	시작	유지
+완전일치	BGT	예산	BGT	예산	유지
+완전일치	BID	입찰	BID	입찰	유지
+완전일치	BIZ	사업	BIZ	사업	유지
+완전일치	BKSH	서가	BKSH	서가	유지
+완전일치	BLCK	블록	BLCK	블록	유지
+완전일치	BLDG	건물	BLDG	건물	유지
+완전일치	BLDR	시공자	BLDR	시공자	유지
+완전일치	BLN	귀속	BLN	귀속	유지
+완전일치	BLNC	잔액	BLNC	잔액	유지
+완전일치	BMNO	건물본번	BMNO	건물본번	유지
+완전일치	BNO	건물번호	BNO	건물번호	유지
+완전일치	BOOK	도서	BOOK	도서	유지
+완전일치	BPLC	사업장	BPLC	사업장	유지
+완전일치	BRDT	생년월일	BRDT	생년월일	유지
+완전일치	BRNCH	지점	BRNCH	지점	유지
+완전일치	BRNO	사업자등록번호	BRNO	사업자등록번호	유지
+완전일치	BROF	지사	BROF	지사	유지
+완전일치	BRTH	출생	BRTH	출생	유지
+완전일치	BSC	기본	BSC	기본	유지
+완전일치	BSNO	건물부번	BSNO	건물부번	유지
+완전일치	BULK	다량	BULK	다량	유지
+완전일치	BYLT	외필지	BYLT	외필지	유지
+완전일치	BYNG	매수	BYNG	매수	유지
+완전일치	BZENT	사업체	BZENT	사업체	유지
+완전일치	BZENTY	업체	BZENTY	업체	유지
+완전일치	BZMN	사업자	BZMN	사업자	유지
+완전일치	BZSTAT	업태	BZSTAT	업태	유지
+완전일치	CARD	카드	CARD	카드	유지
+완전일치	CARMDL	차종	CARMDL	차종	유지
+완전일치	CD	코드	CD	코드	유지
+완전일치	CERT	인증	CERT	인증	유지
+완전일치	CFMTN	확정	CFMTN	확정	유지
+완전일치	CHBTN	동거	CHBTN	동거	유지
+완전일치	CHC	선택	CHC	선택	유지
+완전일치	CHCK	점검	CHCK	점검	유지
+완전일치	CHCKR	검수자	CHCKR	검수자	유지
+완전일치	CHG	변경	CHG	변경	유지
+완전일치	CHNRG	변경자	CHNRG	변경자	유지
+완전일치	CHRC	특성	CHRC	특성	유지
+완전일치	CLCLN	정산	CLCLN	정산	유지
+완전일치	CLCT	수집	CLCT	수집	유지
+완전일치	CLM	청구	CLM	청구	유지
+완전일치	CLN	청소	CLN	청소	유지
+완전일치	CLNT	클라이언트	CLNT	클라이언트	유지
+완전일치	CLR	접수자	CLR	접수자	유지
+완전일치	CLS	종목	CLS	종목	유지
+완전일치	CLSBIZ	폐업	CLSBIZ	폐업	유지
+완전일치	CLSF	분류	CLSF	분류	유지
+완전일치	CLSG	폐쇄	CLSG	폐쇄	유지
+완전일치	CLTPTY	문화재	CLTPTY	문화재	유지
+완전일치	CMAR	공용면적	CMAR	공용면적	유지
+완전일치	CMCN	준공	CMCN	준공	유지
+완전일치	CMDTY	물품	CMDTY	물품	유지
+완전일치	CMNT	댓글	CMNT	댓글	유지
+완전일치	CMPTN	완료	CMPTN	완료	유지
+완전일치	CMPTNC	관할	CMPTNC	관할	유지
+완전일치	CMPTTN	산정	CMPTTN	산정	유지
+완전일치	CMS	CMS	CMS	CMS	유지
+완전일치	CN	내용	CN	내용	유지
+완전일치	CNBD	집합건물	CNBD	집합건물	유지
+완전일치	CNCLTN	해지	CNCLTN	해지	유지
+완전일치	CND	조건	CND	조건	유지
+완전일치	CNPT	거래처	CNPT	거래처	유지
+완전일치	CNSLTN	협의	CNSLTN	협의	유지
+완전일치	CNT	수	CNT	수	유지
+완전일치	CNTN	접속	CNTN	접속	유지
+완전일치	CNTOM	대수	CNTOM	대수	유지
+완전일치	CNTR	센터	CNTR	센터	유지
+완전일치	CNTRL	통제	CNTRL	통제	유지
+완전일치	CO	회사	CO	회사	유지
+완전일치	COL	컬럼	COL	컬럼	유지
+완전일치	CONM	상호	CONM	상호	유지
+완전일치	CONTS	콘텐츠	CONTS	콘텐츠	유지
+완전일치	CORE	핵심	CORE	핵심	유지
+완전일치	CORP	법인	CORP	법인	유지
+완전일치	CPCT	용량	CPCT	용량	유지
+완전일치	CPTL	자본금	CPTL	자본금	유지
+완전일치	CR	직업	CR	직업	유지
+완전일치	CRCD	신용카드	CRCD	신용카드	유지
+완전일치	CRCLM	교육과정	CRCLM	교육과정	유지
+완전일치	CRCM	경위	CRCM	경위	유지
+완전일치	CRDN	단속	CRDN	단속	유지
+완전일치	CRDTR	채권자	CRDTR	채권자	유지
+완전일치	CREATR	생성자	CREATR	생성자	유지
+완전일치	CRLTN	배포	CRLTN	배포	유지
+완전일치	CRNO	법인등록번호	CRNO	법인등록번호	유지
+완전일치	CRS	과정	CRS	과정	유지
+완전일치	CRT	생성	CRT	생성	유지
+완전일치	CRTFCT	자격증	CRTFCT	자격증	유지
+완전일치	CRTR	기준	CRTR	기준	유지
+완전일치	CRYN	반입	CRYN	반입	유지
+완전일치	CSTRN	공사	CSTRN	공사	유지
+완전일치	CT	법원	CT	법원	유지
+완전일치	CTGRY	범주	CTGRY	범주	유지
+완전일치	CTPV	시도	CTPV	시도	유지
+완전일치	CTRT	계약	CTRT	계약	유지
+완전일치	CTY	도시	CTY	도시	유지
+완전일치	CUST	고객	CUST	고객	유지
+완전일치	CVLCPT	민원	CVLCPT	민원	유지
+완전일치	CVLPR	민원인	CVLPR	민원인	유지
+완전일치	CYCL	차수	CYCL	차수	유지
+완전일치	DADDR	상세주소	DADDR	상세주소	유지
+완전일치	DATA	자료	DATA	자료	유지
+완전일치	DAY	일	DAY	일	유지
+완전일치	DBTR	채무자	DBTR	채무자	유지
+완전일치	DCL	신고자	DCL	신고자	유지
+완전일치	DCLR	신고	DCLR	신고	유지
+완전일치	DCLSF	세분류	DCLSF	세분류	유지
+완전일치	DCMNT	서류	DCMNT	서류	유지
+완전일치	DCSD	사망자	DCSD	사망자	유지
+완전일치	DCSN	결정	DCSN	결정	유지

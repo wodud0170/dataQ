@@ -239,6 +239,11 @@ export default {
           var list = res.data.list || [];
           this.totalCount = res.data.totalCount || 0;
           this.pageCount = Math.ceil(this.totalCount / this.itemsPerPage);
+          // 검색·필터로 페이지수 축소 시 빈 페이지 표시 방지 — page 보정 (watch 가 loadList 재호출)
+          if (this.page > this.pageCount && this.pageCount > 0) {
+            this.page = this.pageCount;
+            return; // watch 가 다시 loadList 호출하므로 여기서 종료
+          }
           // 순번 부여 (우선노출은 핀 아이콘, 나머지는 역순 번호)
           var offset = (this.page - 1) * this.itemsPerPage;
           for (var i = 0; i < list.length; i++) {

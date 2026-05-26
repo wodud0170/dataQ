@@ -1118,14 +1118,17 @@ export default {
     setListPage() {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.codeItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     setCodeValListPage() {
       // 페이지네이션 버튼 개수
       this.codeValPageCount = Math.ceil(this.codeValItems.length / this.codeValitemsPerPage);
+      if (this.codeValPage > this.codeValPageCount) this.codeValPage = Math.max(1, this.codeValPageCount);
     },
     setCodeDataListPage() {
       // 페이지네이션 버튼 개수
       this.codeDataPageCount = Math.ceil(this.codeDataItems.length / this.codeDataitemsPerPage);
+      if (this.codeDataPage > this.codeDataPageCount) this.codeDataPage = Math.max(1, this.codeDataPageCount);
     },
     getSystemList() {
       // 시스템 리스트 가지고 오기

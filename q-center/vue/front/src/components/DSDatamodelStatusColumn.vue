@@ -413,7 +413,8 @@
     </v-sheet>
 
     <!-- 엑셀 업로드 미리보기 다이얼로그 -->
-    <v-dialog v-model="uploadDialog" max-width="1200" persistent>
+    <!-- 모달 콘텐츠가 길어져도 footer(버튼)·pagination 이 잘리지 않도록 v-card-text 내부 스크롤 -->
+    <v-dialog v-model="uploadDialog" max-width="1200" persistent scrollable>
       <v-card>
         <v-card-title>
           컬럼 엑셀 업로드 미리보기
@@ -422,7 +423,7 @@
             총 {{ uploadSummary.total }} / 등록 예정 {{ uploadSummary.toInsertAttrs }} (FK {{ uploadSummary.toInsertFks }}) / 중복 스킵 {{ uploadSummary.skipped || 0 }} / 오류 {{ (uploadErrors || []).length }}
           </span>
         </v-card-title>
-        <v-card-text>
+        <v-card-text style="max-height: 70vh; overflow-y: auto;">
           <v-alert v-if="uploadErrors && uploadErrors.length > 0" type="error" dense text>
             오류 {{ uploadErrors.length }}건 — 수정 후 다시 업로드하세요.
             <div v-for="(e, i) in uploadErrors.slice(0, 5)" :key="'e' + i" style="font-size:.8rem;">
@@ -508,9 +509,11 @@ export default {
   watch: {
     mergedItems() {
       this.pageCount = Math.ceil(this.mergedItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     itemsPerPage() {
       this.pageCount = Math.ceil(this.mergedItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     addTargetKey(newVal, oldVal) {
       if (this.addTargetLocked && newVal !== oldVal && oldVal != null) {

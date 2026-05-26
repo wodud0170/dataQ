@@ -1,0 +1,101 @@
+# dataQ 전체 스택
+#   - dataq-db: 현재 데이터 스냅샷 박힌 PostgreSQL 13 + TimescaleDB
+#   - q-center: Spring Boot 웹 + Vue (포트 28090/28091)
+#   - q-executor: 백그라운드 워커 (포트 28098)
+#
+# 사용 순서:
+#   1) JAR 사전 빌드:  mvn package -DskipTests -T 1C  (루트)
+#   2) PGDATA 스냅샷:  docker/dataq-db/pgdata/ 디렉토리 준비 (extract-pgdata 절차 참고)
+#   3) docker compose build
+#   4) docker compose up -d
+
+services:
+
+  dataq-db:
+    build:
+      context: ./docker/dataq-db
+    image: dataq-db:snapshot
+    container_name: dataq-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin!123
+      POSTGRES_DB: postgres
+      TZ: Asia/Seoul
+    ports:
+      - "25433:5432"
+    volumes:
+      # 첫 기동 시 이미지의 PGDATA(/var/lib/postgresql/dataq) 가 named volume 으로
+      # 자동 복사됨. 이후엔 volume 이 우선 → 데이터 영속화.
+      # 다른 PC 로 이관 후 데이터 갱신 받고 싶으면 `docker compose down -v` 로 volume 삭제.
+      - dataq-db-data:/var/lib/postgresql/dataq
+    networks:
+      - dataq-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  q-center:
+    build:
+      context: .
+      dockerfile: docker/q-center/Dockerfile
+    image: dataq-center:latest
+    container_name: dataq-center
+    depends_on:
+      dataq-db:
+        condition: service_healthy
+    environment:
+      # application.properties 의 하드코딩(localhost:25433) override
+      SPRING_DATASOURCE_HIKARI_JDBC_URL: jdbc:postgresql://dataq-db:5432/postgres?currentSchema=quality
+      SPRING_DATASOURCE_HIKARI_USERNAME: admin
+      SPRING_DATASOURCE_HIKARI_PASSWORD: admin!123
+      # log.path override (Windows 경로 c:/temp/logs → 컨테이너 /app/logs)
+      LOG_PATH: /app/logs
+      TZ: Asia/Seoul
+    ports:
+      - "28090:28090"
+      - "28091:28091"
+    volumes:
+      - dataq-center-logs:/app/logs
+    networks:
+      - dataq-net
+    restart: unless-stopped
+
+  q-executor:
+    build:
+      context: .
+      dockerfile: docker/q-executor/Dockerfile
+    image: dataq-executor:latest
+    container_name: dataq-executor
+    depends_on:
+      dataq-db:
+        condition: service_healthy
+      q-center:
+        condition: service_started
+    environment:
+      # application.properties 의 하드코딩 override
+      SPRING_DATASOURCE_HIKARI_JDBC_URL: jdbc:postgresql://dataq-db:5432/postgres?currentSchema=quality
+      SPRING_DATASOURCE_HIKARI_USERNAME: admin
+      # 원래 ENC(...) 였지만 jasypt 키 미상이라 평문으로 override (A 안)
+      SPRING_DATASOURCE_HIKARI_PASSWORD: admin!123
+      # stomp.broker.url 의 localhost → q-center 컨테이너명으로
+      STOMP_BROKER_URL: ws://q-center:28091
+      TZ: Asia/Seoul
+    ports:
+      - "28098:28098"
+    volumes:
+      - dataq-executor-logs:/home/nd_suite/q-executor/logs
+    networks:
+      - dataq-net
+    restart: unless-stopped
+
+networks:
+  dataq-net:
+    driver: bridge
+
+volumes:
+  dataq-db-data:
+  dataq-center-logs:
+  dataq-executor-logs:

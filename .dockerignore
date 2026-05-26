@@ -1,0 +1,22 @@
+# build context 최소화 (q-center/q-executor Dockerfile 의 context = 프로젝트 루트)
+.git/
+.idea/
+.vscode/
+.claude/
+node_modules/
+**/node_modules/
+**/target/classes/
+**/target/generated-sources/
+**/target/maven-status/
+**/target/maven-archiver/
+**/target/test-classes/
+**/target/site/
+dataQ설계/
+docker/dataq-db/pgdata/
+docker/dataq-db/initdb/
+CAMS표준화/
+*.log
+logs/
+c:/temp/
+.DS_Store
+Thumbs.db

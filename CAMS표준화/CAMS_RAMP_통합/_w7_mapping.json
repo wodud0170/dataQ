@@ -1,0 +1,7303 @@
+{
+  "folder": {
+    "cams": "RG_DOCUMENT",
+    "ramp": "tb_rdfolder",
+    "rows": [
+      {
+        "cams": {
+          "en": "BSID",
+          "cmt": "기본목록SID",
+          "dt": "VARCHAR2",
+          "dl": 12,
+          "pk": true
+        },
+        "ramp": {
+          "en": "fls_id",
+          "kr": "기록물철아이디",
+          "desc": "기록물철ID",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": true
+        },
+        "signal": "S6",
+        "conf": "A",
+        "note": "사용자 확정"
+      },
+      {
+        "cams": {
+          "en": "PRODSYSDIV",
+          "cmt": "생산시스템구분(RG053)",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "KIKWANCODE",
+          "cmt": "처리기관코드",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OLDPRODKIKWAN",
+          "cmt": "구기록물생산기관명",
+          "dt": "VARCHAR2",
+          "dl": 180,
+          "pk": false
+        },
+        "ramp": {
+          "en": "old_pbrc_prdctn_inst_nm",
+          "kr": "구기록물생산기관명",
+          "desc": "구기록물-생산기관명",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PRODYEAR",
+          "cmt": "생산년도",
+          "dt": "VARCHAR2",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prdctn_year",
+          "kr": "생산년도",
+          "desc": "생산년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "CLSS_ID",
+          "cmt": "분류체계ID",
+          "dt": "VARCHAR2",
+          "dl": 35,
+          "pk": false
+        },
+        "ramp": {
+          "en": "clsf_schm_id",
+          "kr": "분류체계아이디",
+          "desc": "분류체계ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DOCYEARNO",
+          "cmt": "기록물철등록일련번호",
+          "dt": "VARCHAR2",
+          "dl": 35,
+          "pk": false
+        },
+        "ramp": {
+          "en": "fls_reg_sn",
+          "kr": "기록물철등록일련번호",
+          "desc": "기록물철등록일련번호",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "VOLNO",
+          "cmt": "권호수",
+          "dt": "NUMBER",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": {
+          "en": "bkno",
+          "kr": "권호수",
+          "desc": "권호수",
+          "dt": "STRING",
+          "dl": 3,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "BND_TTL",
+          "cmt": "기록물철제목",
+          "dt": "VARCHAR2",
+          "dl": 750,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DOCTYPE",
+          "cmt": "기록물형태_RG001(A:문서대장 , B도면, C사진/필름, D녹음/동영상, E카드, G국무회의록)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ENDYEAR",
+          "cmt": "종료년도",
+          "dt": "VARCHAR2",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": {
+          "en": "end_year",
+          "kr": "종료년도",
+          "desc": "종료년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "KIKAN",
+          "cmt": "보존기간",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prsr_pd_cd",
+          "kr": "보존기간코드",
+          "desc": "보존기간. 01: 1년, 03: 3년, 05: 5년, 10: 10년 20: 20년, 30: 준영구, 40: 영구",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "METHOD",
+          "cmt": "보존방법(1:병행보존 2:매체보존 3:원본보존)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prsr_mthd_alct_cd",
+          "kr": "보존방법할당코드",
+          "desc": "보존방법-할당값 :1 : 원본과 보존매체를 함께 보존하는 방법 2 : 원본은 폐기하고 보존매체만 보존하는 방법 3 : 원본을 그대로 보존하는 방법",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PLACE",
+          "cmt": "보존장소(1:자료관, 2:전문관리기관)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prsr_plc_cd",
+          "kr": "보존장소코드",
+          "desc": "보존장소-1 : 기록관2 : 전문관리기관 기록물을 보존하여야 하는장소",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ENDDATE",
+          "cmt": "비치종결일자",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ENDSAYU",
+          "cmt": "비치사유",
+          "dt": "VARCHAR2",
+          "dl": 100,
+          "pk": false
+        },
+        "ramp": {
+          "en": "frns_rsn",
+          "kr": "비치사유",
+          "desc": "비치사유 (비치하게 된 과정이나 사유 입력",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DAMDANG",
+          "cmt": "업무담당자",
+          "dt": "VARCHAR2",
+          "dl": 1000,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prsr_task_pic_nm",
+          "kr": "보존업무담당자명",
+          "desc": "보존업무담당자명",
+          "dt": "STRING",
+          "dl": 40,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OLDBUNRYUNO",
+          "cmt": "구기록물철분류번호",
+          "dt": "VARCHAR2",
+          "dl": 35,
+          "pk": false
+        },
+        "ramp": {
+          "en": "acptn_mng_no",
+          "kr": "인수관리번호",
+          "desc": "인수관리번호",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OLDGUBUN",
+          "cmt": "신구기록물구분",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "trnsf_err_se",
+          "kr": "이관오류구분",
+          "desc": "이관오류구분(0:이관, 1:접수오류)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ISUPDATE",
+          "cmt": "수정여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "mdfcn_yn",
+          "kr": "수정여부",
+          "desc": "수정여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DETQTY",
+          "cmt": "등록건수",
+          "dt": "NUMBER",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PAGE",
+          "cmt": "쪽수",
+          "dt": "NUMBER",
+          "dl": 6,
+          "pk": false
+        },
+        "ramp": {
+          "en": "ritm_tpgno",
+          "kr": "기록물건총쪽수",
+          "desc": "철내 포함된 본문/첨부를 포함하는 기록물 건의 총 페이지수",
+          "dt": "STRING",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ELECFILENO",
+          "cmt": "전자파일갯수",
+          "dt": "NUMBER",
+          "dl": 6,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INSUGUBUN",
+          "cmt": "인수인계_구분",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "tkov_se_cd",
+          "kr": "인수인계구분코드",
+          "desc": "인수인계구분코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "INSUKIKWANCODE",
+          "cmt": "인수인계_처리기관코드",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INSUDANWICODE",
+          "cmt": "인수인계_단위업무코드",
+          "dt": "VARCHAR2",
+          "dl": 35,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INSUPRODDATE",
+          "cmt": "인수인계_생산년도",
+          "dt": "VARCHAR2",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": {
+          "en": "tkov_prdctn_year",
+          "kr": "인수인계생산년도",
+          "desc": "인수인계생산년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "INSUDOCYEARNO",
+          "cmt": "인수인계_기록물철등록일련번호",
+          "dt": "VARCHAR2",
+          "dl": 35,
+          "pk": false
+        },
+        "ramp": {
+          "en": "tkov_fls_reg_sn",
+          "kr": "인수인계기록물철등록일련번호",
+          "desc": "인수인계기록물철등록일련번호",
+          "dt": "STRING",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "INSUVOLNO",
+          "cmt": "인수인계_권호수",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": {
+          "en": "tkov_bkno",
+          "kr": "인수인계권호수",
+          "desc": "인수인계권호수",
+          "dt": "STRING",
+          "dl": 3,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "POSITION",
+          "cmt": "기록물위치 (RG007)",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BND_STAT",
+          "cmt": "기록물철상태(0:확인 2:의뢰 3:반려 4:인수 5:스케줄링 6:반출 7:반입)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "dflp_cnvr_stts",
+          "kr": "문서보존포맷변환상태",
+          "desc": "문서보존포맷변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "MNGNO",
+          "cmt": "기록물관리번호",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DHOUSECODE",
+          "cmt": "자료관코드",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ORGTYPE",
+          "cmt": "기록물유형(RG008: Z=파일(사진/필름류) 추가",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "KYUKYUK",
+          "cmt": "규격",
+          "dt": "VARCHAR2",
+          "dl": 16,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "COUNTRYNAME",
+          "cmt": "생산국명",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SUJIPCHEO",
+          "cmt": "수집처",
+          "dt": "VARCHAR2",
+          "dl": 60,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PRODKIKWANNAME",
+          "cmt": "생산기관명",
+          "dt": "VARCHAR2",
+          "dl": 60,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "WONBONGUBUN",
+          "cmt": "원본사본여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "dmg_yn",
+          "kr": "훼손여부",
+          "desc": "훼손여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PANBONGGUBUN",
+          "cmt": "판본구분",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DOCQTY",
+          "cmt": "권수(행정박물-점수, 시청각-수량)",
+          "dt": "NUMBER",
+          "dl": 5,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "USECHAR",
+          "cmt": "사용문자",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JAEJIL",
+          "cmt": "재질",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BOKWANBOXNO",
+          "cmt": "보관상자번호",
+          "dt": "VARCHAR2",
+          "dl": 21,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "FST_REG_DT",
+          "cmt": "최초등록일시",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": {
+          "en": "reg_dt",
+          "kr": "등록일시",
+          "desc": "등록일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "FST_REGR_ID",
+          "cmt": "최초등록자ID",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": {
+          "en": "rgtr_id",
+          "kr": "등록자아이디",
+          "desc": "등록자ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DOCBUNRYUNO",
+          "cmt": "기록물철분류번호",
+          "dt": "VARCHAR2",
+          "dl": 86,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "CARDNAMECODE",
+          "cmt": "카드명코드",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DOMYUNCODE",
+          "cmt": "도면규격코드",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "new_pbrc_se_cd",
+          "kr": "신규기록물구분코드",
+          "desc": "신구기록물구분코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "REMARK",
+          "cmt": "비고",
+          "dt": "VARCHAR2",
+          "dl": 4000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OLDDOCNO",
+          "cmt": "구기록물문서번호",
+          "dt": "VARCHAR2",
+          "dl": 75,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SGMNGNO",
+          "cmt": "서고관리번호",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": {
+          "en": "stk_mng_no",
+          "kr": "서고관리번호",
+          "desc": "서고관리번호",
+          "dt": "STRING",
+          "dl": 25,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ARCH_PLACE",
+          "cmt": "보존시설 : A=서울, B=부산, C=대전, D=성남",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OPN_YN",
+          "cmt": "공개구분(1:공개, 2:부분공개, 3:비공개)",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "otp_cd",
+          "kr": "공개구분코드",
+          "desc": "공개구분코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "FRCHASU",
+          "cmt": "시작회차(국무회의록 전용)",
+          "dt": "NUMBER",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "TOCHASU",
+          "cmt": "종료회차(국무회의록 전용)",
+          "dt": "NUMBER",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OLDKIKWANCODE",
+          "cmt": "구기록물처리과코드",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": {
+          "en": "trdv_cd",
+          "kr": "처리과코드",
+          "desc": "처리과코드",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ARCAVETYPE",
+          "cmt": "기록물구분(01=일반문서,02=시청각,04=총독부,05=정부간행물,06=해외기록물,07=역사기록물,08=행정박물)",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ARCAVEPRODTYPE",
+          "cmt": "기록물등록형태",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OLDSOJANGCHEO",
+          "cmt": "구소장처",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "UHEUNG",
+          "cmt": "유형",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": {
+          "en": "fls_type_se_cd",
+          "kr": "기록물철유형구분코드",
+          "desc": "유형구분-기록물 형태를 명시, 할당값  1: 일반문서 2: 도면류 3: 사진·필름류 시청각기록물   4: 녹음·동영상류 시청각기록물 5: 카드류 6: 기타",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "GIGIL",
+          "cmt": "지질",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JIGI",
+          "cmt": "지기",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "KIJUNGJA",
+          "cmt": "기증자",
+          "dt": "VARCHAR2",
+          "dl": 90,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INSUKIKWAN",
+          "cmt": "이관기관",
+          "dt": "VARCHAR2",
+          "dl": 15,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ACQDATE",
+          "cmt": "입수일자",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": {
+          "en": "tkov_ymd",
+          "kr": "인수인계일자",
+          "desc": "인수인계일자",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "INSUDATE",
+          "cmt": "인수일자",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": {
+          "en": "dscd_ymd",
+          "kr": "폐기일자",
+          "desc": "폐기일자",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "FILESNO_ORI",
+          "cmt": "구문서번호(도면번호), 원문서번호",
+          "dt": "VARCHAR2",
+          "dl": 100,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "MFSNO",
+          "cmt": "구M/F 번호",
+          "dt": "NUMBER",
+          "dl": 7,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "LANGUAGE",
+          "cmt": "언어",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "NATIONCODE",
+          "cmt": "생산국가",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ORI_JEMOK",
+          "cmt": "원어명",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "TITLE_COL",
+          "cmt": "콜렉션명",
+          "dt": "VARCHAR2",
+          "dl": 180,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "TAKEOVER_NM",
+          "cmt": "인계자",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INSUJA",
+          "cmt": "인수자",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PREZ_CD",
+          "cmt": "대통령명코드",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "scnn_prgrs_stts_cd",
+          "kr": "스캐닝진행상태코드",
+          "desc": "스캐닝진행상태코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PREZ_NM",
+          "cmt": "대통령명",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INSUYEAR",
+          "cmt": "수집년도",
+          "dt": "VARCHAR2",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": {
+          "en": "acptn_year",
+          "kr": "인수년도",
+          "desc": "인수년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "CHULCHEUGUBUN",
+          "cmt": "출처구분",
+          "dt": "VARCHAR2",
+          "dl": 18,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BOXWSIZE",
+          "cmt": "상자가로",
+          "dt": "NUMBER",
+          "dl": 5,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BOXLSIZE",
+          "cmt": "상자세로",
+          "dt": "NUMBER",
+          "dl": 5,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BOXHSIZE",
+          "cmt": "상자높이",
+          "dt": "NUMBER",
+          "dl": 5,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BOXWEIGHT",
+          "cmt": "상자무게",
+          "dt": "NUMBER",
+          "dl": "10,3",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ENVELOPE_STANDARD",
+          "cmt": "보존봉투규격",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ENVELOPE_CNT",
+          "cmt": "보존봉투수량",
+          "dt": "NUMBER",
+          "dl": 5,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "HANGJONG_USERSERVICE",
+          "cmt": "행정박물 사용용도",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "HANGJONG_TYPEGUBUN",
+          "cmt": "행정박물 유형구분",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DISPLAYGUBUN",
+          "cmt": "전시여부",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "COLLECT_STATUS",
+          "cmt": "수집상태",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "neob_cnvr_stts",
+          "kr": "NEO변환상태",
+          "desc": "영구보존포맷변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "CLSS_DIV_ID",
+          "cmt": "분류체계구분ID",
+          "dt": "VARCHAR2",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "CLSS_NM",
+          "cmt": "분류체계명",
+          "dt": "VARCHAR2",
+          "dl": 200,
+          "pk": false
+        },
+        "ramp": {
+          "en": "clsf_schm_nm",
+          "kr": "분류체계명",
+          "desc": "분류체계명",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PRIORITY_TAKEOUT",
+          "cmt": "기록물반출우선순위",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SCAN_FSH",
+          "cmt": "스캐닝완료여부(Y:완료)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "bksh_dpos_yn",
+          "kr": "서가배치여부",
+          "desc": "서가배치여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DISUSE_COND_CD",
+          "cmt": "폐기상태코드",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "dscd_stts_cd",
+          "kr": "폐기상태코드",
+          "desc": "폐기상태코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "MF_FSH",
+          "cmt": "M/F촬영완료여부(1:완료)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "revl_prgrs_yn",
+          "kr": "재평가진행여부",
+          "desc": "재평가진행여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PRESERVE_END_YEAR",
+          "cmt": "보존기간만료년도",
+          "dt": "VARCHAR2",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": {
+          "en": "expc_dscd_year",
+          "kr": "예상폐기년도",
+          "desc": "예상폐기년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "RECLASS_YEAR",
+          "cmt": "공개재분류년도",
+          "dt": "VARCHAR2",
+          "dl": 4,
+          "pk": false
+        },
+        "ramp": {
+          "en": "expc_trnsf_year",
+          "kr": "예상이관년도",
+          "desc": "예상이관년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "MEDIUMTYPE",
+          "cmt": "기록매체",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "RECORD_CENTER_FLAG",
+          "cmt": "영구보존포맷변환여부",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "noelct_orgnl_dscd_yn",
+          "kr": "비전자원본폐기여부",
+          "desc": "비전자원본폐기여부(0:정상 1:원본폐기)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "BISPJT_DIV_CD",
+          "cmt": "과제구분코드",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "fls_asmt_se_cd",
+          "kr": "기록물철과제구분코드",
+          "desc": "기록물철_과제구분코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "BIS_CLSS_PATH_NM",
+          "cmt": "기능별분류체계경로명",
+          "dt": "VARCHAR2",
+          "dl": 1000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PJT_CLSS_PATH_NM",
+          "cmt": "목적별분류체계경로명",
+          "dt": "VARCHAR2",
+          "dl": 1000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SUB_TTL",
+          "cmt": "부제목",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": {
+          "en": "crrc_ttl",
+          "kr": "정정제목",
+          "desc": "정정제목",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "UP_TTL",
+          "cmt": "정정제목",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ETC_DOC_TYPE",
+          "cmt": "기타기록물유형코드",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prdctn_sys_cd",
+          "kr": "생산시스템코드",
+          "desc": "생산시스템코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "KIKAN_FIX_RSN",
+          "cmt": "보존기간책정사유명",
+          "dt": "VARCHAR2",
+          "dl": 200,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prsr_pd_aprtn_rsn",
+          "kr": "보존기간책정사유",
+          "desc": "보전기간책정사유",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "SECU_CLSS_CD",
+          "cmt": "보안분류코드(RM정보->01:일반, 02:대외비, 03:3급비밀,  04:2급비밀, 05:1급비밀)",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "secu_clsf_cd",
+          "kr": "보안분류코드",
+          "desc": "보안분류-보안요구사항에 다른 보안 등급. 할당값 : 일반, 대외비, 3급비밀, 2급비밀, 1급비밀",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "SECU_CLSS_RSN",
+          "cmt": "보안분류사유(RM정보)",
+          "dt": "VARCHAR2",
+          "dl": 200,
+          "pk": false
+        },
+        "ramp": {
+          "en": "secu_clsf_rsn",
+          "kr": "보안분류사유",
+          "desc": "보안분류사유",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "READ_RANGE",
+          "cmt": "열람범위",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prsl_scpe",
+          "kr": "열람범위",
+          "desc": "열람범위",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "INSUPROD_DT",
+          "cmt": "인수인계일자",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": {
+          "en": "trnsf_ymd",
+          "kr": "이관일자",
+          "desc": "이관일자",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DANWICODE",
+          "cmt": "단위업무코드-삭제대상",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DOC_DANWI",
+          "cmt": "기록물단위",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "LST_UPDR_ID",
+          "cmt": "최종수정자ID",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "LST_UPD_DT",
+          "cmt": "최종수정일시",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": {
+          "en": "mdfcn_dt",
+          "kr": "수정일시",
+          "desc": "수정일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DESC_CLASS_ID",
+          "cmt": "기술분류ID",
+          "dt": "VARCHAR2",
+          "dl": 12,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DESC_LST_UPDR_ID",
+          "cmt": "기술분류최종수정자ID",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DESC_LST_UPD_DT",
+          "cmt": "기술분류최종수정일시",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BOX_TYPE",
+          "cmt": "상자구분(1:보존상자(소), 2:보존상상(대), 3:제작상자)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PNT_SBJ",
+          "cmt": "주기사항",
+          "dt": "VARCHAR2",
+          "dl": 200,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "LIST_OPEN_DIV",
+          "cmt": "목록공개",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "THIRTY_YN",
+          "cmt": "30년재분류여부",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "CHOICE_DIV",
+          "cmt": "민간기록물-선정구분(01:지정기록물,02:위탁기록물)",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OD_MNGNO",
+          "cmt": "보존매체관리번호",
+          "dt": "VARCHAR2",
+          "dl": 12,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DIGITAZED_FSH",
+          "cmt": "디지털화작업 완료여부(Y/N)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "dscd_evl_prgrs_yn",
+          "kr": "폐기평가진행여부",
+          "desc": "폐기평가진행여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "EQ_TTL",
+          "cmt": "대등제목",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ETC_TTL",
+          "cmt": "기타제목",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "TMP_TTL",
+          "cmt": "제목(띄어쓰기)",
+          "dt": "VARCHAR2",
+          "dl": 1000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "REGISTRY_FSH",
+          "cmt": "정부간행물 전용 등록완료여부(Y/N)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "arngmt_yn",
+          "kr": "정리여부",
+          "desc": "정리여부 (0:미정리, 1:정리) - default:0",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "REG_SEQ_NO",
+          "cmt": "구술기록등록일련번호",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "MEDIA_SEQ_NO",
+          "cmt": "매체등록일련번호",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "MAXDIAMETER",
+          "cmt": "행정박물최대지름",
+          "dt": "NUMBER",
+          "dl": 5,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SERVICE_BND_TTL",
+          "cmt": "서비스용제목(기통검)",
+          "dt": "VARCHAR2",
+          "dl": 750,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ISSERVICE",
+          "cmt": "서비스제목적용여부(1:적용)",
+          "dt": "CHAR",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SVC_LST_UPD_DT",
+          "cmt": "서비스제목최종수정일자",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SVC_LST_UPDR_ID",
+          "cmt": "서비스제목최종수정자ID",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "MFILMNO",
+          "cmt": "M/F번호(색인대장)",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PRODKIKAN",
+          "cmt": "제공기관",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PRIVILAGE",
+          "cmt": "사용권한",
+          "dt": "VARCHAR2",
+          "dl": 130,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DEL_YN",
+          "cmt": "삭제여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "elct_file_del_yn",
+          "kr": "전자파일삭제여부",
+          "desc": "전자파일삭제여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "BOX_CLASS_SEQ_NO",
+          "cmt": "상자분류일련번호",
+          "dt": "NUMBER",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "FORGTYPE",
+          "cmt": "FORG유형",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ERRORBOJON",
+          "cmt": "보존분류오류여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "shpgot_yn",
+          "kr": "반출여부",
+          "desc": "반출여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ERRORTUKSU",
+          "cmt": "특수목록에러여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "drc_yn",
+          "kr": "전자기록물여부",
+          "desc": "전자기록물여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ERRORETC",
+          "cmt": "기타오류여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "inst_acptn_err_yn",
+          "kr": "기관인수오류여부",
+          "desc": " 기관간인수오류여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ERRORLIST",
+          "cmt": "오류내역",
+          "dt": "VARCHAR2",
+          "dl": 1000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "HP_SERVICE_YN",
+          "cmt": "포탈 홈페이지 서비스제공 대상여부(null, Y: 대상, N: 대상제외)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "virs_exst_yn",
+          "kr": "바이러스존재여부",
+          "desc": "바이러스유무",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "CONTEXTMEMO",
+          "cmt": "내용요약",
+          "dt": "CLOB",
+          "dl": 4000,
+          "pk": false
+        },
+        "ramp": {
+          "en": "cn_smmr",
+          "kr": "내용요약",
+          "desc": "내용",
+          "dt": "STRING",
+          "dl": 1073741823,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DISCRIPTION",
+          "cmt": "내용요약정보",
+          "dt": "CLOB",
+          "dl": 4000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "LANGUAGE_INFO",
+          "cmt": "기록언어명",
+          "dt": "VARCHAR2",
+          "dl": 300,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "MEDIA_INFO",
+          "cmt": "추가보관매체정보",
+          "dt": "VARCHAR2",
+          "dl": 300,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PRODYEAR_UNKW_YN",
+          "cmt": "생산년도미상여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "trnstn_inpt_yn",
+          "kr": "전환입력여부",
+          "desc": "전환입력여부(0:접수,1:등록완료,9:접수완료)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ENDYEAR_UNKW_YN",
+          "cmt": "종료년도미상여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "lbl_prnt_yn",
+          "kr": "라벨인쇄여부",
+          "desc": "라벨인쇄여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ASSETID",
+          "cmt": "MAM철ID",
+          "dt": "NUMBER",
+          "dl": 16,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BON_DIGT_YN",
+          "cmt": "BONDIGITAL철여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "vrms_inpt_yn",
+          "kr": "VRMS입력여부",
+          "desc": "VRMS입력구분 : 0-해당없음, 1-VRMS입력",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "UNI_ORG_SCT",
+          "cmt": "통합기관코드구분(CM081 => 1, NULL:행정표준기관(CM_GOV_ORGAN), 2:구기록물기관것(CM_OLDGOV_ORGAN), 3:GCC미등록기관(CM_SELF_ORGAN), 4:총독부기관, 5:공공기관, 6:해외기관, 7:민간)",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INSUJA_SOSOK",
+          "cmt": "인수자소속",
+          "dt": "VARCHAR2",
+          "dl": 100,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INSUJA_JIKWI",
+          "cmt": "인수자직위",
+          "dt": "VARCHAR2",
+          "dl": 30,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "TAKEOVER_SOSOK",
+          "cmt": "인계자소속",
+          "dt": "VARCHAR2",
+          "dl": 100,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "TAKEOVER_JIKWI",
+          "cmt": "인계자직위",
+          "dt": "VARCHAR2",
+          "dl": 30,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SYNC_GUBUN",
+          "cmt": "SYNC구분",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rctr_id",
+          "kr": "기록관아이디",
+          "desc": "기록관ID",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acptn_year_seq",
+          "kr": "인수년도순번",
+          "desc": "인수년도별순번",
+          "dt": "NUMERIC",
+          "dl": 10,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "clsf_schm_se_cd",
+          "kr": "분류체계구분코드",
+          "desc": "분류체계구분코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "new_clsf_schm_se_cd",
+          "kr": "신규분류체계구분코드",
+          "desc": "신규분류체계구분코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "new_clsf_schm_id",
+          "kr": "신규분류체계아이디",
+          "desc": "신규분류체계ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "new_clsf_schm_nm",
+          "kr": "신규분류체계명",
+          "desc": "신규분류체계명",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "orgnl_ttle",
+          "kr": "원본표제",
+          "desc": "원표제",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ofcl_ttle",
+          "kr": "공식표제",
+          "desc": "공식표제",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "etc_ttle",
+          "kr": "기타표제",
+          "desc": "기타표제",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "etc_fls_type",
+          "kr": "기타기록물철유형",
+          "desc": "기타유형",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_dtl_type_cd",
+          "kr": "기록물철상세유형코드",
+          "desc": "기록물철상세유형코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prdctn_prps",
+          "kr": "생산목적",
+          "desc": "요약정보1 - 내용및취지",
+          "dt": "STRING",
+          "dl": 4000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "md_rmt",
+          "kr": "매체포맷",
+          "desc": "매체포맷",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "stmd",
+          "kr": "저장매체",
+          "desc": "저장매체",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_sz",
+          "kr": "기록물철크기",
+          "desc": "Bytes 단위(철내 등록된 기록물건의 첨부파일(본문포함)들의 총 용량)",
+          "dt": "NUMERIC",
+          "dl": 13,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_reg_cnt",
+          "kr": "기록물건등록수",
+          "desc": "철내 등록된 기록물건수",
+          "dt": "STRING",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "elct_file_ecnt",
+          "kr": "전자파일개수",
+          "desc": "전자파일갯수-철내 포함된 전자파일의 갯수(본문파일 + 첨부파일)임",
+          "dt": "STRING",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "old_pbrc_clsf_no",
+          "kr": "구기록물분류번호",
+          "desc": "구기록물-분류번호",
+          "dt": "STRING",
+          "dl": 5,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fnct_clsf_schm",
+          "kr": "기능분류체계",
+          "desc": "기능별분류체계",
+          "dt": "STRING",
+          "dl": 1000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prps_clsf_schm",
+          "kr": "목적분류체계",
+          "desc": "목적별분류체계",
+          "dt": "STRING",
+          "dl": 1000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_bgng_dt",
+          "kr": "기록물철시작일시",
+          "desc": "기록물철시작일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_end_dt",
+          "kr": "기록물철종료일시",
+          "desc": "기록물철종료일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "frns_trmn_dt",
+          "kr": "비치종결일시",
+          "desc": "비치종결일자",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsr_pstn",
+          "kr": "보존위치",
+          "desc": "보존위치-기록물이 배치된 실제 위치정보로 서고, 서가 등의 정보",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "tkov_trdv_cd",
+          "kr": "인수인계처리과코드",
+          "desc": "인수인계처리과코드: 인수인계부서가 여러개일때 콤마(,)로 구분하여 연결하여 넣음",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "tkov_clsf_schm_id",
+          "kr": "인수인계분류체계아이디",
+          "desc": "인수인계분류체계ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rgtr_nm",
+          "kr": "등록자명",
+          "desc": "등록자명",
+          "dt": "STRING",
+          "dl": 40,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rgtr_dept_id",
+          "kr": "등록자부서아이디",
+          "desc": "등록자부서ID",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rgtr_dept_nm",
+          "kr": "등록자부서명",
+          "desc": "등록자부서명",
+          "dt": "STRING",
+          "dl": 256,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rgtr_jbps_jbgd_nm",
+          "kr": "등록자직위직급명",
+          "desc": "등록자직위직급명",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "crt_dt",
+          "kr": "생성일시",
+          "desc": "등록일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prdctn_sys_fls_id",
+          "kr": "생산시스템기록물철아이디",
+          "desc": "생산시스템_기록물철ID ( 업무관리시스템:ID+년도, 전자문서시스템: 처리과+단위업무+생산년도+철등록일련번호+권호수 )",
+          "dt": "STRING",
+          "dl": 50,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "old_prsr_pd_cd",
+          "kr": "구보존기간코드",
+          "desc": "구보존기간코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsl_fq",
+          "kr": "열람빈도",
+          "desc": "열람빈도",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acs_se_cd",
+          "kr": "접근구분코드",
+          "desc": "접근구분코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_neob_file_id",
+          "kr": "기록물철NEO파일아이디",
+          "desc": "기록물철영구보존포맷파일ID",
+          "dt": "STRING",
+          "dl": 19,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_neob_cnvr_stts",
+          "kr": "기록물건NEO변환상태",
+          "desc": "기록물건구보존포맷변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dmg_cn",
+          "kr": "훼손내용",
+          "desc": "훼손내용",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dmg_prcs_mthd_cd",
+          "kr": "훼손처리방법코드",
+          "desc": "훼손처리방안코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dmg_prcs_rslt",
+          "kr": "훼손처리결과",
+          "desc": "훼손처리결과",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "scnn_dmnd_type_cd",
+          "kr": "스캐닝요청유형코드",
+          "desc": "스캐닝요청유형코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "stk_mng_no_se_cd",
+          "kr": "서고관리번호구분코드",
+          "desc": "서고관리번호구분코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "stk_mng_no_grnt_rule",
+          "kr": "서고관리번호부여규칙",
+          "desc": "서고관리번호부여규칙",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsr_box_id",
+          "kr": "보존상자아이디",
+          "desc": "보존상자ID",
+          "dt": "STRING",
+          "dl": 19,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "now_hold_trdv_cd",
+          "kr": "현재보유처리과코드",
+          "desc": "현보유처리과코드",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "aplcn_clsf_schm_id",
+          "kr": "적용분류체계아이디",
+          "desc": "적용분류체계ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_hold_stts_cd",
+          "kr": "기록물철보유상태코드",
+          "desc": "기록물철보유상태코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "revl_stts_cd",
+          "kr": "재평가상태코드",
+          "desc": "재평가상태코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_stts_cd",
+          "kr": "이관상태코드",
+          "desc": "이관상태코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "last_chck_year",
+          "kr": "최종점검년도",
+          "desc": "최종점검년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "opds_strg_stts_cd",
+          "kr": "광디스크저장상태코드",
+          "desc": "광디스크수록상태코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "mf_phtg_stts_cd",
+          "kr": "MF촬영상태코드",
+          "desc": "M/F촬영상태코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "arngmt_desc",
+          "kr": "정리기술",
+          "desc": "정리기술",
+          "dt": "STRING",
+          "dl": 1000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "arngmt_dt",
+          "kr": "정리일시",
+          "desc": "정리일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_autzr_id",
+          "kr": "이관승인자아이디",
+          "desc": "이관승인자ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_autzr_nm",
+          "kr": "이관승인자명",
+          "desc": "이관승인자명",
+          "dt": "STRING",
+          "dl": 40,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_aprv_dt",
+          "kr": "이관승인일시",
+          "desc": "이관승인일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acs_stng_rsn",
+          "kr": "접근설정사유",
+          "desc": "접근설정사유",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rstr_prcs_ymd",
+          "kr": "복원처리일자",
+          "desc": "복원처리일자",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rstr_prcr_info",
+          "kr": "복원처리자정보",
+          "desc": "복원처리자정보",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "hndv_rctr_id",
+          "kr": "인계기록관아이디",
+          "desc": "인계기록관ID",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "inst_acptn_year",
+          "kr": "기관인수년도",
+          "desc": "기관간인수_인수년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "inst_acptn_seq",
+          "kr": "기관인수순번",
+          "desc": "기관간인수 인수순번",
+          "dt": "NUMERIC",
+          "dl": 3,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "inst_acptn_igi_rslt_cd",
+          "kr": "기관인수검수결과코드",
+          "desc": " 기관간인수검수결과코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "inst_acptn_igi_cn",
+          "kr": "기관인수검수내용",
+          "desc": " 기관간인수검수내용",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "virs_chck_dt",
+          "kr": "바이러스점검일시",
+          "desc": "바이러스체크일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "group_prsr_pd_cd",
+          "kr": "그룹보존기간코드",
+          "desc": "전자문서시스템보존기간코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_acptn_sn",
+          "kr": "기록물철인수일련번호",
+          "desc": "기록물철인수일련번호",
+          "dt": "STRING",
+          "dl": 19,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acptn_trdv_cd",
+          "kr": "인수처리과코드",
+          "desc": "인수처리과코드",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "extr_sys_cd",
+          "kr": "추출시스템코드",
+          "desc": "추출시스템 01-업무관리, 02-전자문서, 03-기록관리",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rls_list_stng_cd",
+          "kr": "공개목록설정코드",
+          "desc": "공개목록설정여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rls_srch_list_pvsn_yn",
+          "kr": "공개검색목록제공여부",
+          "desc": "기통검제공여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trdv_dsgn_yn",
+          "kr": "처리과지정여부",
+          "desc": "부서지정여부 기관간인수인계 후 소관부서지정여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_pd_stng_bgng_ymd",
+          "kr": "이관기간설정시작일자",
+          "desc": "이관기간설정일자_FROM",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_pd_stng_end_ymd",
+          "kr": "이관기간설정종료일자",
+          "desc": "이관기간설정일자_TO",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "neob_cnvr_dmnd_job_id",
+          "kr": "NEO변환요청작업아이디",
+          "desc": "NEO 변환요청 JOBID",
+          "dt": "STRING",
+          "dl": 25,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsl_scpe_mng_cmptn_yn",
+          "kr": "열람범위관리완료여부",
+          "desc": "열람범위관리완료여부(1:완료)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsl_scpe_clgn_stts_cd",
+          "kr": "열람범위재분류상태코드",
+          "desc": "열람범위재분류상태코드(RD69 사용)",
+          "dt": "CHAR",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "last_dscd_evl_year",
+          "kr": "최종폐기평가년도",
+          "desc": "최종폐기평가년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dscd_rsrv_pd_cd",
+          "kr": "폐기보류기간코드",
+          "desc": "보류기간코드(DF07, 1:1년 2:2년 3:3년 4:4년)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dscd_evl_opnn_se_cd",
+          "kr": "폐기평가의견구분코드",
+          "desc": "폐기평가의견(DF02, 1:폐기 2:보류 3:재책정)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsr_form_cd",
+          "kr": "보존형태코드",
+          "desc": "대체보존형태(RD85, 0:정상 1:M/F촬영 2:M/F촬영+스캔)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "opds_neob_strg_stts_cd",
+          "kr": "광디스크NEO저장상태코드",
+          "desc": "광디스크[NEO]수록상태코드(RD84, 1:대상선정 2:목록생성 3:파일생성 4:검사 5:서가배치)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "opds_noelct_strg_stts_cd",
+          "kr": "광디스크비전자저장상태코드",
+          "desc": "광디스크[비전자]수록상태코드(RD84, 1:대상선정 2:목록생성 3:파일생성 4:검사 5:서가배치)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "mf_phtg_dmnd_type_cd",
+          "kr": "MF촬영요청유형코드",
+          "desc": "M/F촬영요청유형코드(RD87, 0:정상 3:대체보존추가)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "bfr_hold_trdv_cd",
+          "kr": "이전보유처리과코드",
+          "desc": "이전보유처리과코드",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "elct_file_del_cd",
+          "kr": "전자파일삭제코드",
+          "desc": "전자파일삭제코드(RD90, 01:삭제요청, 02:삭제대기, 03:삭제, 04:오류)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_neob_r_cnvr_stts",
+          "kr": "기록물철NEO재변환상태",
+          "desc": "철장기보존재변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_neob_r_cnvr_job_id",
+          "kr": "기록물철NEO재변환작업아이디",
+          "desc": "철장기보존포맷재변환작업ID",
+          "dt": "STRING",
+          "dl": 25,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "qlin_stts_cd",
+          "kr": "품질검사상태코드",
+          "desc": "품질검사상태코드(0:미검사,1:검사중,2:검사완료)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_neob_r_cnvr_stts",
+          "kr": "기록물건NEO재변환상태",
+          "desc": "건장기보존포맷재변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsr_box_altmnt_yn",
+          "kr": "보존상자배정여부",
+          "desc": "보존상자편성여부(RD91, 0:미편성, 1:편성, 2:재편성)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_dt",
+          "kr": "이관일시",
+          "desc": "이관일시(업무관리시스템에서 이관승인자가 이관을 승인한 일시)",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rjct_trnsf_stts",
+          "kr": "반려이관상태",
+          "desc": "반려이관상태(RD99, 01:인수확정, 02:반려)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rjct_trnsf_year",
+          "kr": "반려이관년도",
+          "desc": "반려이관년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rjct_trnsf_group_seq",
+          "kr": "반려이관그룹순번",
+          "desc": "반려이관그룹순번",
+          "dt": "NUMERIC",
+          "dl": 3,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_rmv_pbrc_yn",
+          "kr": "비밀해제기록물여부",
+          "desc": "비밀해제기록포함여부(RD95, N:아니오, Y:예)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsr_box_altmnt_cn",
+          "kr": "보존상자배정내용",
+          "desc": "보존상자편성내용",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_bgng_cd",
+          "kr": "기록물철시작코드",
+          "desc": "기록물철시작코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "frns_yn",
+          "kr": "비치여부",
+          "desc": "비치여부 (0 : 미비치 1 : 비치)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "pfmr_id",
+          "kr": "행위자아이디",
+          "desc": "행위자ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acnt_id",
+          "kr": "계정아이디",
+          "desc": "계정아이디",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "lgn_id",
+          "kr": "로그인아이디",
+          "desc": "로그인아이디",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "pic_nm",
+          "kr": "담당자명",
+          "desc": "행위자명",
+          "dt": "STRING",
+          "dl": 50,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_ntc",
+          "kr": "이관공지",
+          "desc": "이관공지",
+          "dt": "STRING",
+          "dl": 4000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rcpt_igi_prcs_stts",
+          "kr": "접수검수처리상태",
+          "desc": "접수검수처리상태",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "pbrc_prcs_stts",
+          "kr": "기록물처리상태",
+          "desc": "기록물처리상태",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "orgd_fls_reg_seq",
+          "kr": "원문기록물철등록순번",
+          "desc": "원문기록물철등록순번",
+          "dt": "STRING",
+          "dl": 50,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "orgnl_fls_id",
+          "kr": "원본기록물철아이디",
+          "desc": "초기기록물철ID",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      }
+    ],
+    "stat": {
+      "A": 12,
+      "D": 208,
+      "B": 40,
+      "C": 9
+    }
+  },
+  "record": {
+    "cams": "RG_DETAIL",
+    "ramp": "tb_rdrecord",
+    "rows": [
+      {
+        "cams": {
+          "en": "BSID",
+          "cmt": "기본목록SID",
+          "dt": "VARCHAR2",
+          "dl": 12,
+          "pk": true
+        },
+        "ramp": {
+          "en": "fls_id",
+          "kr": "기록물철아이디",
+          "desc": "기록물철ID",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "S6",
+        "conf": "A",
+        "note": "사용자 확정"
+      },
+      {
+        "cams": {
+          "en": "DSID",
+          "cmt": "세부목록SID",
+          "dt": "VARCHAR2",
+          "dl": 12,
+          "pk": true
+        },
+        "ramp": {
+          "en": "ritm_id",
+          "kr": "기록물건아이디",
+          "desc": "기록물건 ID",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": true
+        },
+        "signal": "S6",
+        "conf": "A",
+        "note": "사용자 확정"
+      },
+      {
+        "cams": {
+          "en": "KIKWANCODE",
+          "cmt": "처리기관코드",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prtn_se_cd",
+          "kr": "추진구분코드",
+          "desc": "추진구분",
+          "dt": "STRING",
+          "dl": 20,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OLDPRODKIKWAN",
+          "cmt": "구기록물생산기관명",
+          "dt": "VARCHAR2",
+          "dl": 180,
+          "pk": false
+        },
+        "ramp": {
+          "en": "old_pbrc_prdctn_inst_nm",
+          "kr": "구기록물생산기관명",
+          "desc": "구기록물 생산기관명",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "REGGUBUN",
+          "cmt": "등록구분",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "pbrc_reg_se_cd",
+          "kr": "기록물등록구분코드",
+          "desc": "기록물등록구분코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PRODREGDATE",
+          "cmt": "생산등록일자",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PRODREGNO",
+          "cmt": "생산등록번호",
+          "dt": "VARCHAR2",
+          "dl": 35,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prdctn_reg_no",
+          "kr": "생산등록번호",
+          "desc": "생산등록번호",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OLDDOCNO",
+          "cmt": "구기록물문서번호",
+          "dt": "VARCHAR2",
+          "dl": 45,
+          "pk": false
+        },
+        "ramp": {
+          "en": "old_pbrc_doc_no",
+          "kr": "구기록물문서번호",
+          "desc": "구기록물 문서번호",
+          "dt": "STRING",
+          "dl": 30,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "APPENDNO",
+          "cmt": "분리등록번호(첨부번호)",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": {
+          "en": "sprt_reg_no",
+          "kr": "분리등록번호",
+          "desc": "분리등록번호",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "JEMOK",
+          "cmt": "제목",
+          "dt": "VARCHAR2",
+          "dl": 750,
+          "pk": false
+        },
+        "ramp": {
+          "en": "crrc_ttl",
+          "kr": "정정제목",
+          "desc": "정정제목",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PAGE",
+          "cmt": "쪽수",
+          "dt": "NUMBER",
+          "dl": 6,
+          "pk": false
+        },
+        "ramp": {
+          "en": "ritm_pgno",
+          "kr": "기록물건쪽수",
+          "desc": "기록물쪽수-본문/첨부를 포함하는 기록물 건의 페이지수",
+          "dt": "STRING",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ORDERNAME",
+          "cmt": "결제권자",
+          "dt": "VARCHAR2",
+          "dl": 60,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DAMDANG",
+          "cmt": "기안자(업무담당자)",
+          "dt": "VARCHAR2",
+          "dl": 1000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SIHANGDATE",
+          "cmt": "시행일자",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": {
+          "en": "enfc_ymd",
+          "kr": "시행일자",
+          "desc": "시행일자",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "SENDNAME",
+          "cmt": "수신자(발신자)",
+          "dt": "VARCHAR2",
+          "dl": 4000,
+          "pk": false
+        },
+        "ramp": {
+          "en": "rcvr",
+          "kr": "수신자",
+          "desc": "생산과정보 수신자-기록물을 받은 기관 또는 개인, 기록물등록대장 기본등록사항 수신자",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "RECEIPTNO",
+          "cmt": "문서과배부번호",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": {
+          "en": "dcdv_dlry_no",
+          "kr": "문서과배부번호",
+          "desc": "문서과배부번호",
+          "dt": "STRING",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PRODKIKWANREGNO",
+          "cmt": "생산기관등록번호",
+          "dt": "VARCHAR2",
+          "dl": 100,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prdctn_inst_reg_no",
+          "kr": "생산기관등록번호",
+          "desc": "생산기관등록번호",
+          "dt": "STRING",
+          "dl": 262,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ISELECTRONIC",
+          "cmt": "전자기록물여부(RG022)",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "drc_yn",
+          "kr": "전자기록물여부",
+          "desc": "전자기록물여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DOCBUNRYUNO",
+          "cmt": "기록물철분류번호",
+          "dt": "VARCHAR2",
+          "dl": 86,
+          "pk": false
+        },
+        "ramp": {
+          "en": "fls_clsf_no",
+          "kr": "기록물철분류번호",
+          "desc": "기록물철분류번호(전자문서는 28자리임)",
+          "dt": "STRING",
+          "dl": 90,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "TUKSUKIROK",
+          "cmt": "특수기록물",
+          "dt": "VARCHAR2",
+          "dl": 6,
+          "pk": false
+        },
+        "ramp": {
+          "en": "spcl_pbrc_type",
+          "kr": "특수기록물유형",
+          "desc": "특수기록물종류",
+          "dt": "STRING",
+          "dl": 5,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ISOPEN",
+          "cmt": "공개구분(1:공개, 2:부분공개, 3:비공개)",
+          "dt": "VARCHAR2",
+          "dl": 9,
+          "pk": false
+        },
+        "ramp": {
+          "en": "otp_cd",
+          "kr": "공개구분코드",
+          "desc": "공개구분코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OPENLIMIT",
+          "cmt": "공개제한부분표시",
+          "dt": "VARCHAR2",
+          "dl": 1500,
+          "pk": false
+        },
+        "ramp": {
+          "en": "rls_lmt_part",
+          "kr": "공개제한부분",
+          "desc": "공개제한부분",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OLDBOJONKIKAN",
+          "cmt": "구기록물보존기간",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "old_pbrc_prsr_pd",
+          "kr": "구기록물보존기간",
+          "desc": "구기록물 보존기간",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DOCTYPE",
+          "cmt": "기록물형태",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OLDGUBUN",
+          "cmt": "신구기록물구분",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "dlbr_term_se",
+          "kr": "심의기한구분",
+          "desc": "심의기한구분",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ISUPDATE",
+          "cmt": "수정여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "mdfcn_yn",
+          "kr": "수정여부",
+          "desc": "수정여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "MNGNO",
+          "cmt": "기록물관리번호",
+          "dt": "VARCHAR2",
+          "dl": 10,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DETNO",
+          "cmt": "건번호",
+          "dt": "NUMBER",
+          "dl": 9,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DETCONNNO",
+          "cmt": "건연결번호",
+          "dt": "NUMBER",
+          "dl": 5,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "APPENDGUBUN",
+          "cmt": "첨부물구분기호",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PYUNCHULNO",
+          "cmt": "편철순서",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BUNRYUNO",
+          "cmt": "기록물건등록번호",
+          "dt": "VARCHAR2",
+          "dl": 86,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "REGDATE",
+          "cmt": "등록일자",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SPAGE",
+          "cmt": "페이지시작",
+          "dt": "NUMBER",
+          "dl": 6,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "EPAGE",
+          "cmt": "페이지끝",
+          "dt": "NUMBER",
+          "dl": 6,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PROCDATE",
+          "cmt": "처리일자",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": {
+          "en": "phtg_ymd",
+          "kr": "촬영일자",
+          "desc": "촬영일자",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OLDDOCREG",
+          "cmt": "구기록물등록",
+          "dt": "VARCHAR2",
+          "dl": 30,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "CANCELDATE",
+          "cmt": "취소,반송일자",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "MUNSEONO",
+          "cmt": "문서번호(해외기록물: 원문서번호, 보상대장: 지가증권번호)",
+          "dt": "VARCHAR2",
+          "dl": 240,
+          "pk": false
+        },
+        "ramp": {
+          "en": "doc_no",
+          "kr": "문서번호",
+          "desc": "문서번호 문서관리카드의 관리정보 중 문서번호에 해당(문서년도+문서번호)",
+          "dt": "STRING",
+          "dl": 40,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ORGTYPE",
+          "cmt": "기록물유형",
+          "dt": "VARCHAR2",
+          "dl": 50,
+          "pk": false
+        },
+        "ramp": {
+          "en": "adr_type",
+          "kr": "시청각기록물유형",
+          "desc": "(기록물형태) 시청각기록물일 경우 세분화, 콤마로 구분하여 여러개 나열",
+          "dt": "STRING",
+          "dl": 50,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "RECEIPTCONFIRM",
+          "cmt": "접수확인",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "HUMNNAME",
+          "cmt": "인명",
+          "dt": "VARCHAR2",
+          "dl": 1000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JUMINNO1",
+          "cmt": "주민번호1",
+          "dt": "VARCHAR2",
+          "dl": 12,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JUMINNO2_BAK",
+          "cmt": "주민번호2",
+          "dt": "VARCHAR2",
+          "dl": 11,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OBJECTREGNO",
+          "cmt": "물건등록번호",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "AREAOFUNDER",
+          "cmt": "공사구간",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SDATE",
+          "cmt": "시작일자",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prtn_pd_bgng_ymd",
+          "kr": "추진기간시작일자",
+          "desc": "추진기간시작",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "EDATE",
+          "cmt": "종료일자",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prtn_pd_end_ymd",
+          "kr": "추진기간종료일자",
+          "desc": "추진기간종료",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OLDAREANAME",
+          "cmt": "옛날지명",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ADDRESS",
+          "cmt": "번지",
+          "dt": "VARCHAR2",
+          "dl": 750,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "KYUKYUK",
+          "cmt": "규격",
+          "dt": "VARCHAR2",
+          "dl": 16,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JAEJIL",
+          "cmt": "재질",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JAEJILCHULCHEO",
+          "cmt": "재질출처",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JOBNAME",
+          "cmt": "직업",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PANKYULDATE",
+          "cmt": "판결년월일",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "EVENT_NM",
+          "cmt": "사건명",
+          "dt": "VARCHAR2",
+          "dl": 350,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JIMOK",
+          "cmt": "총독부지목",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JIBUN",
+          "cmt": "총독부지번",
+          "dt": "VARCHAR2",
+          "dl": 200,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "BUNHALJIBUN",
+          "cmt": "분할지번",
+          "dt": "VARCHAR2",
+          "dl": 200,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "OWNERADDRESS",
+          "cmt": "소유자주소",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "INPUTWONDO",
+          "cmt": "입력원도",
+          "dt": "VARCHAR2",
+          "dl": 40,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "REMARK",
+          "cmt": "비고",
+          "dt": "VARCHAR2",
+          "dl": 4000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "COMFIRM",
+          "cmt": "결재여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "orgnl_mnsc_yn",
+          "kr": "원본사본여부",
+          "desc": "원본/사본여부-기록물건에 대한 원본, 사본여부를 명시",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "WONBONGUBUN",
+          "cmt": "원본사본여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "rjct_yn",
+          "kr": "반려여부",
+          "desc": "반려여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "COLLECT_STATUS",
+          "cmt": "수집상태",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "neob_cnvr_stts",
+          "kr": "NEO변환상태",
+          "desc": "영구보존포맷변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "BALSIN",
+          "cmt": "발신자",
+          "dt": "VARCHAR2",
+          "dl": 130,
+          "pk": false
+        },
+        "ramp": {
+          "en": "sndpty",
+          "kr": "발신자",
+          "desc": "생산과정보 발신자-기록물을 받은 기관 또는 개인, 기록물등록대장 기본등록사항 수신자",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ORI_JEMOK",
+          "cmt": "원어명",
+          "dt": "VARCHAR2",
+          "dl": 750,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ATTDATA",
+          "cmt": "첨부파일명칭",
+          "dt": "VARCHAR2",
+          "dl": 750,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "FILEDOCID",
+          "cmt": "파일연결연번호",
+          "dt": "VARCHAR2",
+          "dl": 32,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "FILE_SIZE",
+          "cmt": "파일크기",
+          "dt": "NUMBER",
+          "dl": 13,
+          "pk": false
+        },
+        "ramp": {
+          "en": "ritm_sz",
+          "kr": "기록물건크기",
+          "desc": "기록물건의 크기 (Bytes 단위)",
+          "dt": "NUMERIC",
+          "dl": 13,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "FILEJONGRYU",
+          "cmt": "파일확장자",
+          "dt": "VARCHAR2",
+          "dl": 3,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ISCHECK",
+          "cmt": "검사여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "scnn_cmptn_yn",
+          "kr": "스캐닝완료여부",
+          "desc": "스캐닝완료여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "RECORD_CENTER_FLAG",
+          "cmt": "영구보존포맷변환여부",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "scan_insp_cmptn_yn",
+          "kr": "스캔검사완료여부",
+          "desc": "스캔검사완료여부",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PDF_A1_TRANS_FLAG",
+          "cmt": "문서영구보존포맷변환여부",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DOCWIDTH",
+          "cmt": "기록물가로",
+          "dt": "NUMBER",
+          "dl": "9,1",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DOCLENGTH",
+          "cmt": "기록물세로",
+          "dt": "NUMBER",
+          "dl": "9,1",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DOCHEIGHT",
+          "cmt": "기록물높이",
+          "dt": "NUMBER",
+          "dl": "9,1",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "READ_RANGE",
+          "cmt": "열람범위",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prsl_scpe",
+          "kr": "열람범위",
+          "desc": "열람범위",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DUTY_BASIS_TYPE",
+          "cmt": "기록물건상세유형코드",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prdctn_sys_cd",
+          "kr": "생산시스템코드",
+          "desc": "생산시스템코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "SUB_TTL",
+          "cmt": "부제목",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "UP_TTL",
+          "cmt": "정정제목",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PART_OPEN_RSN",
+          "cmt": "부분공개사유",
+          "dt": "VARCHAR2",
+          "dl": 200,
+          "pk": false
+        },
+        "ramp": {
+          "en": "pdc_rsn",
+          "kr": "부분공개사유",
+          "desc": "부분공개사유",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "OPEN_EXPT_DT",
+          "cmt": "공개예정일시",
+          "dt": "VARCHAR2",
+          "dl": 14,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prdctn_dt",
+          "kr": "생산일시",
+          "desc": "생산일자",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "DETCONTEXTMEMO",
+          "cmt": "건내용정보",
+          "dt": "VARCHAR2",
+          "dl": 4000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "MEDIA_FORMAT_CD",
+          "cmt": "매체포맷",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "md_rmt",
+          "kr": "매체포맷",
+          "desc": "매체포맷",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "MEDIUM_CD",
+          "cmt": "저장매체",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "stmd",
+          "kr": "저장매체",
+          "desc": "저장매체",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "S1a",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ATTACH_CNT",
+          "cmt": "본문첨부화일수",
+          "dt": "VARCHAR2",
+          "dl": 6,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SECU_CLSS_CD",
+          "cmt": "보안분류코드",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "secu_clsf_cd",
+          "kr": "보안분류코드",
+          "desc": "보안분류-보안요구사항에 다른 보안 등급. 할당값 : 일반, 대외비, 3급비밀, 2급비밀, 1급비밀",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "SECU_CLSS_RSN",
+          "cmt": "보안분류사유",
+          "dt": "VARCHAR2",
+          "dl": 200,
+          "pk": false
+        },
+        "ramp": {
+          "en": "secu_clsf_rsn",
+          "kr": "보안분류사유",
+          "desc": "보안분류사유",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "S1a+S3",
+        "conf": "A",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "FST_REG_DT",
+          "cmt": "최초등록일시",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": {
+          "en": "reg_dt",
+          "kr": "등록일시",
+          "desc": "등록일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "FST_REGR_ID",
+          "cmt": "최초등록자ID",
+          "dt": "VARCHAR2",
+          "dl": 30,
+          "pk": false
+        },
+        "ramp": {
+          "en": "rgtr_id",
+          "kr": "등록자아이디",
+          "desc": "등록자ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "LST_UPD_DT",
+          "cmt": "최종수정일시",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "LST_UPDR_ID",
+          "cmt": "최종수정자ID",
+          "dt": "VARCHAR2",
+          "dl": 30,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "LIST_OPEN_DIV",
+          "cmt": "목록공개",
+          "dt": "VARCHAR2",
+          "dl": 2,
+          "pk": false
+        },
+        "ramp": {
+          "en": "list_rls_yn",
+          "kr": "목록공개여부",
+          "desc": "목록공개여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "LST_RECLASS_DT",
+          "cmt": "최종공개재분류일시",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "EQ_TTL",
+          "cmt": "대등제목",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ETC_TTL",
+          "cmt": "기타제목",
+          "dt": "VARCHAR2",
+          "dl": 500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "TMP_JEMOK",
+          "cmt": "제목(띄어쓰기)",
+          "dt": "VARCHAR2",
+          "dl": 1500,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SERVICE_JEMOK",
+          "cmt": "서비스용제목(기통검)",
+          "dt": "VARCHAR2",
+          "dl": 850,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ISSERVICE",
+          "cmt": "서비스제목적용여부(1:적용)",
+          "dt": "CHAR",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SVC_LST_UPD_DT",
+          "cmt": "서비스제목최종수정일자",
+          "dt": "DATE",
+          "dl": "",
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SVC_LST_UPDR_ID",
+          "cmt": "서비스제목최종수정자ID",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JUPSUDATE",
+          "cmt": "접수일자",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "SCALE",
+          "cmt": "축척",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "PRIVILAGE",
+          "cmt": "사용권한",
+          "dt": "VARCHAR2",
+          "dl": 130,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DEL_YN",
+          "cmt": "삭제여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "trnstn_inpt_yn",
+          "kr": "전환입력여부",
+          "desc": "전환입력여부(0:접수,1:등록완료,9:접수완료)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ISERROR",
+          "cmt": "보존분류오류여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "vrms_inpt_yn",
+          "kr": "VRMS입력여부",
+          "desc": "VRMS입력구분 : 0-해당없음, 1-VRMS입력",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "ERRORLIST",
+          "cmt": "오류내역",
+          "dt": "VARCHAR2",
+          "dl": 1000,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "ERRORNOACTUALOBJ",
+          "cmt": "비전자 실물없는오류",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "CHECKER_ID",
+          "cmt": "검수담당자ID",
+          "dt": "VARCHAR2",
+          "dl": 20,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "HP_SERVICE_YN",
+          "cmt": "HP서비스여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "rls_mng_cmptn_yn",
+          "kr": "공개관리완료여부",
+          "desc": "",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "CONTEXTMEMO",
+          "cmt": "내용요약",
+          "dt": "CLOB",
+          "dl": 4000,
+          "pk": false
+        },
+        "ramp": {
+          "en": "adr_cn_smmr",
+          "kr": "시청각기록물내용요약",
+          "desc": "시청각기록물내용요약",
+          "dt": "STRING",
+          "dl": 4000,
+          "pk": false
+        },
+        "signal": "S1b",
+        "conf": "C",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "PRODDT_UNKW_YN",
+          "cmt": "생산일자미상여부",
+          "dt": "VARCHAR2",
+          "dl": 1,
+          "pk": false
+        },
+        "ramp": {
+          "en": "prsl_scpe_mng_cmptn_yn",
+          "kr": "열람범위관리완료여부",
+          "desc": "열람범위관리완료여부(1:완료)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "S1b+S3",
+        "conf": "B",
+        "note": ""
+      },
+      {
+        "cams": {
+          "en": "UNKW_PRODDT",
+          "cmt": "미상생산일자",
+          "dt": "VARCHAR2",
+          "dl": 8,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "DET_ASSETID",
+          "cmt": "MAM건ID",
+          "dt": "NUMBER",
+          "dl": 16,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": {
+          "en": "JUMINNO2",
+          "cmt": "주민번호2",
+          "dt": "VARCHAR2",
+          "dl": 25,
+          "pk": false
+        },
+        "ramp": null,
+        "signal": "",
+        "conf": "D",
+        "note": "CAMS 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rctr_id",
+          "kr": "기록관아이디",
+          "desc": "기록관ID",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acptn_year",
+          "kr": "인수년도",
+          "desc": "인수년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acptn_year_seq",
+          "kr": "인수년도순번",
+          "desc": "인수년도별순번",
+          "dt": "NUMERIC",
+          "dl": 10,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trdv_cd",
+          "kr": "처리과코드",
+          "desc": "처리과코드",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prdctn_year",
+          "kr": "생산년도",
+          "desc": "생산년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "clsf_schm_se_cd",
+          "kr": "분류체계구분코드",
+          "desc": "분류체계구분코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "clsf_schm_id",
+          "kr": "분류체계아이디",
+          "desc": "분류체계ID",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "clsf_schm_nm",
+          "kr": "분류체계명",
+          "desc": "분류체계명",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "orgnl_ttle",
+          "kr": "원본표제",
+          "desc": "원표제",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ofcl_ttle",
+          "kr": "공식표제",
+          "desc": "공식표제",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "etc_ttle",
+          "kr": "기타표제",
+          "desc": "기타표제",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "pbrc_dtl_type_cd",
+          "kr": "기록물상세유형코드",
+          "desc": "기록물상세유형코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "atch_cnt",
+          "kr": "첨부수",
+          "desc": "본문_첨부수",
+          "dt": "NUMERIC",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_bgng_page",
+          "kr": "기록물건시작쪽",
+          "desc": "기록물건시작페이지",
+          "dt": "STRING",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_end_page",
+          "kr": "기록물건종료쪽",
+          "desc": "기록물건끝페이지",
+          "dt": "STRING",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "autzr_jbps_jbgd_nm",
+          "kr": "승인자직위직급명",
+          "desc": "결재권자직위직급명",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "task_pic_nm",
+          "kr": "업무담당자명",
+          "desc": "업무담당자명",
+          "dt": "STRING",
+          "dl": 256,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsr_pstn",
+          "kr": "보존위치",
+          "desc": "보존위치-기록물이 배치된 실제 위치정보로 서고, 서가 등의 정보",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rls_grd",
+          "kr": "공개등급",
+          "desc": "공개호수",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rls_mmt",
+          "kr": "공개시기",
+          "desc": "공개시기",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "mdfcn_ver_no",
+          "kr": "수정버전번호",
+          "desc": "수정버전번호",
+          "dt": "STRING",
+          "dl": 5,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "new_pbrc_se_cd",
+          "kr": "신규기록물구분코드",
+          "desc": "신구기록물구분코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "phtg_plc",
+          "kr": "촬영장소",
+          "desc": "촬영장소",
+          "dt": "STRING",
+          "dl": 50,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "main_prsn_flnm",
+          "kr": "주요인물성명",
+          "desc": "주요인물성명",
+          "dt": "STRING",
+          "dl": 40,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rgtr_dept_id",
+          "kr": "등록자부서아이디",
+          "desc": "등록자부서ID",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rgtr_dept_nm",
+          "kr": "등록자부서명",
+          "desc": "등록자부서명",
+          "dt": "STRING",
+          "dl": 256,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rgtr_jbps_jbgd_nm",
+          "kr": "등록자직위직급명",
+          "desc": "등록자직위직급명",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "crt_dt",
+          "kr": "생성일시",
+          "desc": "등록일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prdctn_sys_ritm_id",
+          "kr": "생산시스템기록물건아이디",
+          "desc": "생산시스템 기록물건ID (업무관리:ID+년도, 전자문서시스템:생산년도+생산등록번호+분리등록번호)",
+          "dt": "STRING",
+          "dl": 50,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acs_se_cd",
+          "kr": "접근구분코드",
+          "desc": "접근구분코드",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dflp_cnvr_stts",
+          "kr": "문서보존포맷변환상태",
+          "desc": "문서보존포맷변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "orgd_id",
+          "kr": "원문아이디",
+          "desc": "원문ID",
+          "dt": "STRING",
+          "dl": 19,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "last_rls_clgn_year",
+          "kr": "최종공개재분류년도",
+          "desc": "최종공개재분류년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rls_clgn_prgrs_stts",
+          "kr": "공개재분류진행상태",
+          "desc": "공개재분류진행상태",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rls_dlbr_prgrs_stts",
+          "kr": "공개심의진행상태",
+          "desc": "공개심의진행상태",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "scnn_insp_se_cd",
+          "kr": "스캐닝검사구분코드",
+          "desc": "스캐닝검사구분코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "scnn_err_se_cd",
+          "kr": "스캐닝오류구분코드",
+          "desc": "스캐닝오류구분코드",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "scnn_err_cn",
+          "kr": "스캐닝오류내용",
+          "desc": "스캐닝오류내용",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acs_stng_rsn",
+          "kr": "접근설정사유",
+          "desc": "접근설정사유",
+          "dt": "STRING",
+          "dl": 200,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "arngmt_desc",
+          "kr": "정리기술",
+          "desc": "정리기술",
+          "dt": "STRING",
+          "dl": 1000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_acptn_seq",
+          "kr": "기록물건인수순번",
+          "desc": "기록물건ID",
+          "dt": "STRING",
+          "dl": 19,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "enfc_doc_no",
+          "kr": "시행문서번호",
+          "desc": "시행문서번호-전자문서시스템기록물건등록번호(처리과기관코드)(7)+등록일련번호(6)",
+          "dt": "STRING",
+          "dl": 262,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "lang",
+          "kr": "언어",
+          "desc": "언어-KOR/ENG/CHN",
+          "dt": "STRING",
+          "dl": 3,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_seq",
+          "kr": "기록물건순번",
+          "desc": "건순번",
+          "dt": "NUMERIC",
+          "dl": 6,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_clsf",
+          "kr": "비밀분류",
+          "desc": "비밀분류",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_prot_pd",
+          "kr": "비밀보호기간",
+          "desc": "비밀보호기간",
+          "dt": "STRING",
+          "dl": 20,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rls_list_stng_cd",
+          "kr": "공개목록설정코드",
+          "desc": "공개목록설정여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rgtr_nm",
+          "kr": "등록자명",
+          "desc": "등록자명",
+          "dt": "STRING",
+          "dl": 40,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "acptn_mng_no",
+          "kr": "인수관리번호",
+          "desc": "인수관리번호",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prdctn_rcpt_se_cd",
+          "kr": "생산접수구분코드",
+          "desc": "생산접수구분",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "cese_doc_se_cd",
+          "kr": "중단문서구분코드",
+          "desc": "중단문서여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "crltn_no",
+          "kr": "배포번호",
+          "desc": "",
+          "dt": "STRING",
+          "dl": 11,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "crltn_dt",
+          "kr": "배포일시",
+          "desc": "",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rtrvl_type_cd",
+          "kr": "회수유형코드",
+          "desc": "",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "pdf_job_id",
+          "kr": "PDF작업아이디",
+          "desc": "",
+          "dt": "STRING",
+          "dl": 25,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "neob_cnvr_dmnd_job_id",
+          "kr": "NEO변환요청작업아이디",
+          "desc": "NEO 변환요청 JOBID",
+          "dt": "STRING",
+          "dl": 25,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_clsf_cd",
+          "kr": "기록물건분류코드",
+          "desc": "건분류코드",
+          "dt": "STRING",
+          "dl": 3,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "trnsf_neob_cnvr_stts",
+          "kr": "이관NEO변환상태",
+          "desc": "이관영구보존포맷변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prsl_scpe_clgn_prgrs_stts_cd",
+          "kr": "열람범위재분류진행상태코드",
+          "desc": "",
+          "dt": "CHAR",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "last_prsl_clgn_year",
+          "kr": "최종열람재분류년도",
+          "desc": "최종열람재분류년도",
+          "dt": "STRING",
+          "dl": 4,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "noelct_reg_dt",
+          "kr": "비전자등록일시",
+          "desc": "비전자등록일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_neob_r_cnvr_job_id",
+          "kr": "기록물철NEO재변환작업아이디",
+          "desc": "철장기보존포맷재변환작업ID",
+          "dt": "STRING",
+          "dl": 25,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "fls_neob_r_cnvr_stts",
+          "kr": "기록물철NEO재변환상태",
+          "desc": "철장기보존재변환상태",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "qlin_stts_cd",
+          "kr": "품질검사상태코드",
+          "desc": "품질검사상태코드(0:미검사,1:검사중,2:검사완료)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "doc_no_trdv_nm",
+          "kr": "문서번호처리과명",
+          "desc": "문서번호 처리과명",
+          "dt": "STRING",
+          "dl": 256,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "rls_lmt_dt",
+          "kr": "공개제한일시",
+          "desc": "공개제한일자 경과시 공개로 전환(YYYYMMDDHHMISS) - 시분초(235959 : 고정값) ex)20140416235959",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "task_mng_ritm_se_cd",
+          "kr": "업무관리기록물건구분코드",
+          "desc": "업무관리-기록물건 구분코드(RD93)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "task_mng_ritm_type_cd",
+          "kr": "업무관리기록물건유형코드",
+          "desc": "업무관리-기록물건 유형코드(RD94)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_clgn_type_cd",
+          "kr": "비밀재분류유형코드",
+          "desc": "비밀재분류유형(RD96, 01:일반문서로재분류, 02:생산30년경과, 03:보호기간만료)",
+          "dt": "STRING",
+          "dl": 2,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_clgn_dt",
+          "kr": "비밀재분류일시",
+          "desc": "비밀재분류일시",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_clgn_rsn",
+          "kr": "비밀재분류사유",
+          "desc": "비밀재분류사유",
+          "dt": "STRING",
+          "dl": 1000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_clgn_user_dept_nm",
+          "kr": "비밀재분류사용자부서명",
+          "desc": "비밀재분류자부서명",
+          "dt": "STRING",
+          "dl": 256,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_clgn_user_jbps_jbgd",
+          "kr": "비밀재분류사용자직위직급",
+          "desc": "비밀재분류자직위직급",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_clgn_user_nm",
+          "kr": "비밀재분류사용자명",
+          "desc": "비밀재분류자명",
+          "dt": "STRING",
+          "dl": 40,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_rmv_pbrc_prsr_pstn",
+          "kr": "비밀해제기록물보존위치",
+          "desc": "비밀해제문건보존위치",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prot_actn_need_yn",
+          "kr": "보호조치필요여부",
+          "desc": "보호조치필요여부(RD97, N:보호조치불필요, Y:보호조치필요)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sret_pbrc_yn",
+          "kr": "비밀기록물여부",
+          "desc": "비밀해제기록여부(RD98, N:아니오, Y:예)",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "ritm_cn_smmr",
+          "kr": "기록물건내용요약",
+          "desc": "기록물건내용요약",
+          "dt": "STRING",
+          "dl": 1073741823,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dlbr_rslt",
+          "kr": "심의결과",
+          "desc": "심의결과",
+          "dt": "STRING",
+          "dl": 5,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "descn_cnd",
+          "kr": "의결조건",
+          "desc": "의결조건",
+          "dt": "STRING",
+          "dl": 5,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "descn_nmpr_cnt",
+          "kr": "의결인원수",
+          "desc": "의결인원수",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dlbr_term",
+          "kr": "심의기한",
+          "desc": "심의기한",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "adprv_rls_yn",
+          "kr": "찬반공개여부",
+          "desc": "찬반공개여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sprvsn_dept_id",
+          "kr": "주관부서아이디",
+          "desc": "주관부서ID",
+          "dt": "STRING",
+          "dl": 7,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "sprvsn_dept_nm",
+          "kr": "주관부서명",
+          "desc": "주관부서명",
+          "dt": "STRING",
+          "dl": 256,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dret_cause",
+          "kr": "지시계기",
+          "desc": "지시계기",
+          "dt": "STRING",
+          "dl": 100,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "prtn_plan",
+          "kr": "추진계획",
+          "desc": "추진계획",
+          "dt": "STRING",
+          "dl": 4000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "agnd_clsf",
+          "kr": "안건분류",
+          "desc": "의안분류",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "dlbr_reg_no",
+          "kr": "심의등록번호",
+          "desc": "심의등록번호",
+          "dt": "STRING",
+          "dl": 60,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "agnd_dt",
+          "kr": "안건일시",
+          "desc": "의안일자",
+          "dt": "STRING",
+          "dl": 14,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "list_prvt_grds",
+          "kr": "목록비공개근거",
+          "desc": "목록비공개근거",
+          "dt": "STRING",
+          "dl": 8,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "list_prvt_rsn",
+          "kr": "목록비공개사유",
+          "desc": "목록비공개사유",
+          "dt": "STRING",
+          "dl": 500,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "excss_yn",
+          "kr": "부설여부",
+          "desc": "부설여부",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "crltn_scpe",
+          "kr": "배포범위",
+          "desc": "배포범위",
+          "dt": "STRING",
+          "dl": 35,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "flfmt_stts",
+          "kr": "수행상태",
+          "desc": "이행상태",
+          "dt": "STRING",
+          "dl": 5,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "flfmt_prblm",
+          "kr": "수행문제",
+          "desc": "이행문제",
+          "dt": "STRING",
+          "dl": 2000,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "spcl_pbrc_info",
+          "kr": "특수기록물정보",
+          "desc": "특수기록물정보",
+          "dt": "STRING",
+          "dl": 5,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "spcl_pbrc_info_two",
+          "kr": "특수기록물정보2",
+          "desc": "특수기록물정보",
+          "dt": "STRING",
+          "dl": 5,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      },
+      {
+        "cams": null,
+        "ramp": {
+          "en": "cpyr_type",
+          "kr": "저작권유형",
+          "desc": "저작권유형",
+          "dt": "STRING",
+          "dl": 1,
+          "pk": false
+        },
+        "signal": "",
+        "conf": "D",
+        "note": "RAMP 단방향"
+      }
+    ],
+    "stat": {
+      "A": 9,
+      "B": 31,
+      "C": 10,
+      "D": 165
+    }
+  }
+}

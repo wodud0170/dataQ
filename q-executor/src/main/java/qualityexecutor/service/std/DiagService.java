@@ -178,6 +178,15 @@ public class DiagService implements Runnable {
                 updateProgress(total, processCnt, 0);
                 updateStatus("STOPPED");
             } else {
+                // 진단 완료 — TB_DATA_MODEL_ATTR 의 TERMS_STND_YN / DOMAIN_STND_YN 동기화.
+                // TB_DIAG_RESULT 의 이슈 유무로 Y/N 자동 갱신. 그동안 수집·저장 시점에만 갱신돼 stale 하던 문제 해소.
+                try {
+                    int synced = sqlSessionTemplate.update("datamodel.syncAttrStndYnFromDiag", diagJobId);
+                    log.info(">> DiagService stnd_yn synced: jobId={}, rows={}", diagJobId, synced);
+                } catch (Exception syncErr) {
+                    // 동기화 실패해도 진단 자체는 성공으로 마감
+                    log.warn(">> DiagService stnd_yn sync failed: jobId={}, err={}", diagJobId, syncErr.getMessage());
+                }
                 updateProgress(total, processCnt, resultCnt);
                 updateStatus("DONE");
             }

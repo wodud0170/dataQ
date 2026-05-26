@@ -420,6 +420,7 @@ export default {
     setListPage() {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.dmStatusItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     downloadDdl(item, dbType) {
       if (!item || !item.dataModelId) return;
@@ -435,14 +436,17 @@ export default {
     tb_setListPage() {
       // 페이지네이션 버튼 개수
       this.tb_pageCount = Math.ceil(this.dmTableItems.length / this.tb_itemsPerPage);
+      if (this.tb_page > this.tb_pageCount) this.tb_page = Math.max(1, this.tb_pageCount);
     },
     cl_setListPage() {
       // 페이지네이션 버튼 개수
       this.cl_pageCount = Math.ceil(this.dmColumnItems.length / this.cl_itemsPerPage);
+      if (this.cl_page > this.cl_pageCount) this.cl_page = Math.max(1, this.cl_pageCount);
     },
     dmCdl_setListPage() {
       // 페이지네이션 버튼 개수
       this.dmCdl_pageCount = Math.ceil(this.dmCdlListItems.length / this.dmCdl_itemsPerPage);
+      if (this.dmCdl_page > this.dmCdl_pageCount) this.dmCdl_page = Math.max(1, this.dmCdl_pageCount);
     },
     addActiveDetail(name, index) {
       this.activeDetailTab = name;

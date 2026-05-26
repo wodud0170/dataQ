@@ -67,9 +67,11 @@ export default {
   watch: {
     filteredItems() {
       this.pageCount = Math.ceil(this.filteredItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     itemsPerPage() {
       this.pageCount = Math.ceil(this.filteredItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
   },
   data: () => ({

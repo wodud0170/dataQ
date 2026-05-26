@@ -1,0 +1,556 @@
+token	freq	sample_cols
+ID	969	comtecopseq.next_id; j_attachfile.file_id; object_taget_data.rctr_id
+CD	882	object_taget_data.prdctn_sys_cd; object_taget_data.trdv_cd; object_taget_data.clsf_schm_se_cd
+NM	491	comtecopseq.tbl_nm; j_attachfile.file_nm; object_taget_data.clsf_schm_nm
+DT	458	object_taget_data.prdctn_dt; object_taget_data.crt_dt; object_taget_data.reg_dt
+FILE	376	j_attachfile.file_id; j_attachfile.file_seq; j_attachfile.file_nm
+YN	372	j_attachfile.del_yn; object_taget_data.drc_yn; object_taget_data.orgnl_mnsc_yn
+RCTR	368	object_taget_data.rctr_id; rcfolderlist.rctr_id; tb_adarchival_dst.rctr_id
+REG	302	j_attachfile.reg_date; object_taget_data.prdctn_reg_no; object_taget_data.sprt_reg_no
+FLS	254	object_taget_data.fls_id; object_taget_data.fls_clsf_no; object_taget_data.fls_neob_r_cnvr_job_id
+TRDV	248	object_taget_data.trdv_cd; object_taget_data.doc_no_trdv_nm; rcfolderlist.trdv_cd
+YMD	247	j_attachfile.dwnld_expry_ymd; object_taget_data.enfc_ymd; object_taget_data.phtg_ymd
+ACPTN	247	object_taget_data.acptn_year; object_taget_data.acptn_year_seq; object_taget_data.ritm_acptn_seq
+NO	241	object_taget_data.prdctn_reg_no; object_taget_data.sprt_reg_no; object_taget_data.prdctn_inst_reg_no
+SE	239	object_taget_data.clsf_schm_se_cd; object_taget_data.pbrc_reg_se_cd; object_taget_data.new_pbrc_se_cd
+TYPE	229	object_taget_data.pbrc_dtl_type_cd; object_taget_data.adr_type; object_taget_data.spcl_pbrc_type
+STTS	215	object_taget_data.neob_cnvr_stts; object_taget_data.dflp_cnvr_stts; object_taget_data.rls_clgn_prgrs_stts
+YEAR	208	object_taget_data.acptn_year; object_taget_data.acptn_year_seq; object_taget_data.prdctn_year
+SEQ	207	j_attachfile.file_seq; object_taget_data.acptn_year_seq; object_taget_data.ritm_acptn_seq
+PRDCTN	188	object_taget_data.prdctn_sys_cd; object_taget_data.prdctn_year; object_taget_data.prdctn_dt
+TRNSF	186	object_taget_data.trnsf_neob_cnvr_stts; tb_adarchivalobj.trnsf_prgrs_stts; tb_adarchivalobj.trnsf_ymd
+RITM	175	object_taget_data.ritm_id; object_taget_data.ritm_sz; object_taget_data.ritm_pgno
+CNT	163	j_attachfile.dwnld_cnt; j_attachfile.dwnld_lmt_cnt; object_taget_data.atch_cnt
+RSN	155	object_taget_data.secu_clsf_rsn; object_taget_data.pdc_rsn; object_taget_data.acs_stng_rsn
+PRSR	152	object_taget_data.old_pbrc_prsr_pd; object_taget_data.prsr_pstn; object_taget_data.sret_rmv_pbrc_prsr_pstn
+PBRC	144	object_taget_data.pbrc_reg_se_cd; object_taget_data.pbrc_dtl_type_cd; object_taget_data.old_pbrc_prdctn_inst_nm
+RLS	135	object_taget_data.rls_grd; object_taget_data.rls_lmt_part; object_taget_data.rls_mmt
+CLSF	134	object_taget_data.clsf_schm_se_cd; object_taget_data.clsf_schm_id; object_taget_data.clsf_schm_nm
+PRCS	132	tb_crntfctnfolder.pdst_ntfctn_prcs_stts; tb_crntfctnfolder.pdst_ntfctn_prcs_rslt_stts; tb_dfdscdhist.prcs_inst_cd
+PD	129	object_taget_data.old_pbrc_prsr_pd; object_taget_data.sret_prot_pd; object_taget_data.prtn_pd_bgng_ymd
+JOB	126	object_taget_data.pdf_job_id; object_taget_data.neob_cnvr_dmnd_job_id; object_taget_data.fls_neob_r_cnvr_job_id
+INST	125	object_taget_data.prdctn_inst_reg_no; object_taget_data.old_pbrc_prdctn_inst_nm; tb_crdistr.rcpt_inst_cd
+RCPT	123	object_taget_data.prdctn_rcpt_se_cd; tb_crattachfile.ritm_rcpt_sn; tb_crdistr.rcpt_year
+ERR	119	object_taget_data.scnn_err_se_cd; object_taget_data.scnn_err_cn; tb_crfolder.err_yn
+OPNN	113	tb_adarchivalobjdscd.prdctn_trdv_opnn; tb_adarchivalobjdscd.splst_srng_opnn; tb_adarchivalobjdscd.evl_dlcn_opnn
+MNG	109	object_taget_data.acptn_mng_no; object_taget_data.rls_mng_cmptn_yn; object_taget_data.prsl_scpe_mng_cmptn_yn
+VIRS	103	tb_mgattachfile.virs_exst_yn; tb_mgattachfile.virs_mdtr_rslt; tb_rdattachfile.virs_exst_yn
+DSCD	98	tb_adarchivalobj.dscd_yn; tb_adarchivalobj.dscd_pbanc_no; tb_adarchivalobj.dscd_pbanc_desc
+PRSL	95	object_taget_data.prsl_scpe; object_taget_data.prsl_scpe_mng_cmptn_yn; object_taget_data.prsl_scpe_clgn_prgrs_stts_cd
+SN	93	rcfolderlist.fls_reg_sn; tb_adarchival_dst.adaf_dst_sn; tb_crattachfile.ritm_rcpt_sn
+CN	90	object_taget_data.adr_cn_smmr; object_taget_data.scnn_err_cn; object_taget_data.ritm_cn_smmr
+LIST	84	object_taget_data.rls_list_stng_cd; object_taget_data.list_rls_yn; object_taget_data.list_prvt_grds
+TASK	82	object_taget_data.task_pic_nm; object_taget_data.task_mng_ritm_se_cd; object_taget_data.task_mng_ritm_type_cd
+DEPT	82	object_taget_data.rgtr_dept_id; object_taget_data.rgtr_dept_nm; object_taget_data.sret_clgn_user_dept_nm
+USER	78	object_taget_data.sret_clgn_user_dept_nm; object_taget_data.sret_clgn_user_jbps_jbgd; object_taget_data.sret_clgn_user_nm
+SYS	75	object_taget_data.prdctn_sys_cd; object_taget_data.prdctn_sys_ritm_id; rcfolderlist.prdctn_sys_cd
+DOC	75	object_taget_data.old_pbrc_doc_no; object_taget_data.doc_no; object_taget_data.enfc_doc_no
+SCHM	73	object_taget_data.clsf_schm_se_cd; object_taget_data.clsf_schm_id; object_taget_data.clsf_schm_nm
+CLGN	72	object_taget_data.last_rls_clgn_year; object_taget_data.rls_clgn_prgrs_stts; object_taget_data.prsl_scpe_clgn_prgrs_stts_cd
+BFCH	71	tb_crfolderchghist.bfch_ttl; tb_crfolderchghist.bfch_fls_type_se_cd; tb_crrecordchghist.bfch_prdctn_reg_dt
+END	69	object_taget_data.ritm_end_page; object_taget_data.prtn_pd_end_ymd; tb_adarchivalobj.end_ymd
+CNVR	67	object_taget_data.neob_cnvr_stts; object_taget_data.dflp_cnvr_stts; object_taget_data.neob_cnvr_dmnd_job_id
+AFCH	65	tb_crfolderchghist.afch_ttl; tb_crfolderchghist.afch_fls_type_se_cd; tb_crrecordchghist.afch_prdctn_reg_dt
+RVW	65	tb_rcmissingmemo.rvw_opnn; tb_rdfoldercreat.rvw_opnn; tb_rdrlsclgnopnn.rvw_cpyr_type
+STRG	64	tb_adarchivalattachfile.strg_path; tb_adarchivalattachfile.strg_file_nm; tb_adarchivalobjimg.strg_file_nm
+TKOV	64	tb_crfolder.tkov_se_cd; tb_crfolder.tkov_trdv_cd; tb_crfolder.tkov_clsf_schm_id
+HNDV	63	tb_adarchivalobj.trnsf_hndv_trdv; tb_crfoldertakov.hndv_untk_card_id; tb_crfoldertakov.hndv_untk_card_nm
+PIC	62	object_taget_data.task_pic_nm; tb_bkcrrc.crrc_pic; tb_crfolder.prsr_task_pic_nm
+RGTR	62	object_taget_data.rgtr_id; object_taget_data.rgtr_dept_id; object_taget_data.rgtr_dept_nm
+NTFCTN	62	tb_adarchivalobj.pdst_ntfctn_yn; tb_crfolder.pdst_ntfctn_yn; tb_crfolder.pdst_ntfctn_year
+TRGT	62	tb_batchworkhist.job_trgt_file_nm; tb_batchworkqueue.job_trgt_file_nm; tb_batchworkqueuepre.job_trgt_file_nm
+DMND	59	object_taget_data.neob_cnvr_dmnd_job_id; tb_dfrcpttransflist.trnsf_aprv_dmnd_ntfctn_yn; tb_dfrcpttransflist.trnsf_aprv_dmnd_ntfctn_dt
+CHG	59	tb_crfolderchghist.chg_hstry_no; tb_crfolderchghist.chg_ymd; tb_crfolderchghist.chg_rsn
+RSLT	58	object_taget_data.dlbr_rslt; tb_crfolder.igi_rslt_cd; tb_crntfctnfolder.pdst_ntfctn_prcs_rslt_stts
+BGNG	57	object_taget_data.ritm_bgng_page; object_taget_data.prtn_pd_bgng_ymd; tb_batchworkhist.job_bgng_dt
+UNIT	57	tb_rsrvdoc.unit_task_se_fnct; tb_transfdetailinfostathist.trnsf_trgt_unit_asmt_card_cnt; tb_zzfnctclsf.unit_task_cd_cnvr_yn
+CMPTN	56	object_taget_data.scnn_cmptn_yn; object_taget_data.scan_insp_cmptn_yn; object_taget_data.rls_mng_cmptn_yn
+EVL	55	tb_adarchivalobjdscd.evl_dlcn_opnn; tb_dfdscddlbr.evl_dlbdc_no; tb_dfdscddlbr.evl_year
+APLY	55	tb_rdfolderprsldtl.prsl_aply_no; tb_rdfolderprsldtl.prsl_aply_prgrs_stts_cd; tb_rdfolderprsldtl.prsl_aply_type_cd
+RPT	53	tb_adarchivalobj.adaf_pdst_rpt_stts; tb_adarchivalobj.pdst_rpt_ymd; tb_adarchivalobj.pdst_rpt_file_crt_yn
+BKSH	53	tb_adarchivalobj.bksh_id; tb_adarchivalobj.bksh_pstn; tb_gvrnprdl.bksh_id
+SZ	51	j_attachfile.file_sz; object_taget_data.ritm_sz; tb_adarchivalattachfile.file_sz
+ORGD	51	object_taget_data.orgd_id; tb_dftkovrecordlist.orgd_id; tb_dftransfstorercd.orgd_id
+SPCL	50	object_taget_data.spcl_pbrc_type; object_taget_data.spcl_pbrc_info; object_taget_data.spcl_pbrc_info_two
+JBPS	49	object_taget_data.autzr_jbps_jbgd_nm; object_taget_data.rgtr_jbps_jbgd_nm; object_taget_data.sret_clgn_user_jbps_jbgd
+ATCH	48	object_taget_data.atch_cnt; tb_adarchivalattachfile.atch_file_seq; tb_adarchivalattachfile.atch_file_nm
+NEOB	47	object_taget_data.neob_cnvr_stts; object_taget_data.neob_cnvr_dmnd_job_id; object_taget_data.trnsf_neob_cnvr_stts
+PATH	47	tb_adarchivalattachfile.strg_path; tb_adarchivalobjimg.img_file_path; tb_adarchivalobjimg.thmnl_path
+IGI	47	tb_crfolder.igi_rslt_cd; tb_crfolder.igi_cn; tb_crrecord.igi_rslt_cd
+PDST	46	tb_adarchivalobj.adaf_pdst_rpt_stts; tb_adarchivalobj.pdst_rpt_ymd; tb_adarchivalobj.pdst_rpt_file_crt_yn
+CHCK	46	tb_mgbksh.last_chck_year; tb_mgfolder.last_chck_year; tb_rdattachfile.virs_chck_dt
+STK	45	tb_adarchivalobj.stk_id; tb_gvrnprdl.stk_id; tb_mgbksh.stk_id
+MDTR	45	tb_mgattachfile.virs_mdtr_rslt; tb_rdattachfile.virs_mdtr_yn; tb_rdattachfile.virs_mdtr_file_path
+CRT	44	object_taget_data.crt_dt; tb_adarchivalobj.pdst_rpt_file_crt_yn; tb_crfolder.crt_dt
+JBGD	43	object_taget_data.autzr_jbps_jbgd_nm; object_taget_data.rgtr_jbps_jbgd_nm; object_taget_data.sret_clgn_user_jbps_jbgd
+DLBR	41	object_taget_data.rls_dlbr_prgrs_stts; object_taget_data.dlbr_rslt; object_taget_data.dlbr_term_se
+PRGRS	40	object_taget_data.rls_clgn_prgrs_stts; object_taget_data.rls_dlbr_prgrs_stts; object_taget_data.prsl_scpe_clgn_prgrs_stts_cd
+GROUP	40	tb_crfolder.group_prsr_pd_cd; tb_dfdscdopnn.group_dsgn_yn; tb_dfrcpttransflist.trnsf_group_seq
+RQSTR	40	tb_rcmissingmemo.rqstr_opnn; tb_rdrlsclgnopnnexcel.rqstr_id; tb_rdrecord_restore.rqstr_inst_cd
+TTL	39	object_taget_data.crrc_ttl; tb_crdistr.dlry_ttl; tb_crfolderchghist.bfch_ttl
+RJCT	39	object_taget_data.rjct_yn; tb_crfolder.rjct_yn; tb_crfolder.rjct_cn
+LMT	38	j_attachfile.dwnld_lmt_cnt; object_taget_data.rls_lmt_part; object_taget_data.rls_lmt_dt
+DEL	38	j_attachfile.del_yn; tb_dfdscdopnn.elct_file_del_pic_id; tb_dfdscdopnn.elct_file_del_dt
+TTLE	38	object_taget_data.orgnl_ttle; object_taget_data.ofcl_ttle; object_taget_data.etc_ttle
+MD	37	object_taget_data.md_rmt; tb_crfolder.md_rmt; tb_crrecord.md_rmt
+LINK	35	tb_batchworkhist.link_srvr_ipadr; tb_batchworkhist.link_srvr_potno; tb_batchworkqueue.link_srvr_ipadr
+ORGNL	34	object_taget_data.orgnl_ttle; object_taget_data.orgnl_mnsc_yn; tb_bkcrrc.orgnl_file_id
+DTL	33	object_taget_data.pbrc_dtl_type_cd; tb_adarchivalobj.acptn_dtl; tb_crfolder.fls_dtl_type_cd
+DRC	33	object_taget_data.drc_yn; tb_crfolder.drc_yn; tb_crntfctnrecord.drc_yn
+STMD	32	object_taget_data.stmd; tb_crfolder.stmd; tb_crrecord.stmd
+ACS	32	object_taget_data.acs_se_cd; object_taget_data.acs_stng_rsn; tb_crntfctnrecord.acs_se_cd
+SRVR	32	tb_batchworkhist.link_srvr_ipadr; tb_batchworkhist.link_srvr_potno; tb_batchworkqueue.link_srvr_ipadr
+PFMR	32	tb_rcmissingmemo.pfmr_type_cd; tb_rcmissingmemo.pfmr_seq; tb_rcmissingmemo.pfmr_id
+RMT	31	object_taget_data.md_rmt; tb_crfolder.md_rmt; tb_crrecord.md_rmt
+OLD	31	object_taget_data.old_pbrc_prdctn_inst_nm; object_taget_data.old_pbrc_doc_no; object_taget_data.old_pbrc_prsr_pd
+MDFCN	31	object_taget_data.mdfcn_ver_no; object_taget_data.mdfcn_yn; tb_crfolder.mdfcn_yn
+HOLD	31	tb_adarchivalobj.frst_hold_ecnt; tb_adarchivalobj.now_hold_ecnt; tb_dfrcpttransflist.hold_yn
+OPRTR	30	tb_dftransfhist.oprtr_id; tb_mgbkshdpos.oprtr_id; tb_rftemptoti.oprtr_id
+PAGE	29	object_taget_data.ritm_bgng_page; object_taget_data.ritm_end_page; tb_gvrnprdl.page_cnt
+RMRK	29	tb_adarchivalobj.rmrk; tb_adarchivalobjdscd.rmrk; tb_dfrcpttransflist.rmrk
+RPRS	29	tb_crntfctnrcptresult.rprs_inst_cd; tb_crntfctnacptnresult.rprs_inst_cd; tb_dfacptnerror.acptn_rctr_rprs_inst_cd
+OFCL	28	object_taget_data.ofcl_ttle; rcfolderlist.ofcl_ttle; tb_crfolder.ofcl_ttle
+INFO	28	object_taget_data.spcl_pbrc_info; object_taget_data.spcl_pbrc_info_two; tb_dftransfprcsrcptresult.rcpt_file_info
+OPDS	28	tb_dfdscdopnn.opds_stts_idnty_yn; tb_mgfolder.opds_strg_stts_cd; tb_rdfolder.opds_strg_stts_cd
+APLCN	28	tb_mgfolder.aplcn_clsf_schm_id; tb_rdattachfile.virs_mdtr_aplcn_yn; tb_rdfolder.aplcn_clsf_schm_id
+PSTN	26	object_taget_data.prsr_pstn; object_taget_data.sret_rmv_pbrc_prsr_pstn; tb_adarchivalobj.bksh_pstn
+EXPLN	26	tb_adarchivalobj.etc_form_expln; tb_adarchivalobj.etc_qomt_expln; tb_dftransfprcsrcpterror.trnsf_rcpt_err_expln
+PART	25	object_taget_data.rls_lmt_part; tb_crrecord.rls_lmt_part; tb_mgfolder.rls_lmt_part
+ACPTR	25	tb_adarchivalobj.trnsf_acptr_nm; tb_crdistr.acptr_nm; tb_crreport.acptr_id
+SLCTN	25	tb_adarchivalobj.trnsf_slctn_se; tb_adarchivalobj.trnsf_slctn_ymd; tb_dfdscddlbrdoc.dscd_trgt_slctn_se
+SPLST	25	tb_adarchivalobjdscd.splst_srng_opnn; tb_dfdscdopnn.splst_dscd_evl_opnn_se_cd; tb_dfdscdopnn.splst_rsrv_pd_cd
+FNCT	25	tb_crfolder.fnct_clsf_schm; tb_mgfolder.fnct_clsf_schm; tb_rsrvdoc.unit_task_se_fnct
+HSTRY	25	tb_crfolderchghist.chg_hstry_no; tb_crrecordchghist.chg_hstry_no; tb_dfdscdopnnhist.chg_hstry_no
+APRV	25	tb_dfrcpttransflist.cfmtn_trnsf_aprv_year; tb_dfrcpttransflist.cfmtn_aprv_ymd; tb_dfrcpttransflist.trnsf_aprv_dmnd_ntfctn_yn
+CRTR	25	tb_rsrvdoc.ofdc_prsr_pd_clsf_crtr; tb_streqclgnopnnfdgrp.dmnd_clgn_rvw_opnn_crtr_id; tb_streqclgnopnncrtr.dmnd_clgn_rvw_opnn_crtr_id
+FRNS	24	tb_adarchivalobj.frns_yn; tb_adarchivalobj.frns_rsn; tb_adarchivalobj.frns_end_ymd
+DPOS	24	tb_mgbkshdpos.bksh_dpos_id; tb_mgbkshdpos.dpos_year; tb_mgbkshdpos.dpos_ymd
+OTP	23	object_taget_data.otp_cd; tb_adarchivalobj.otp_cd; tb_crntfctnrecord.otp_cd
+DLCN	23	tb_adarchivalobjdscd.evl_dlcn_opnn; tb_dfdscdhist.dlcn_evl_se_cd; tb_dfdscdhist.dlcn_evl_dtl_cd
+CARD	23	tb_crfoldertakov.hndv_untk_card_id; tb_crfoldertakov.hndv_untk_card_nm; tb_rdfoldertkov.hndv_untk_card_id
+RCPTN	23	tb_rcmissingmemo.rcptn_type; tb_rdrecordcreat.rcptn_type; tb_strecordquery.rcptn_sndpty
+AUTZR	22	object_taget_data.autzr_jbps_jbgd_nm; tb_crntfctnrecord.autzr_jbps_jbgd_nm; tb_crrecord.autzr_jbps_jbgd_nm
+STNG	22	object_taget_data.acs_stng_rsn; object_taget_data.rls_list_stng_cd; tb_mgfolder.acs_stng_rsn
+PRPS	22	tb_crfolder.prdctn_prps; tb_crfolder.prps_clsf_schm; tb_crntfctnfolder.prdctn_prps
+CFMTN	22	tb_dfdscdopnn.trdv_rslt_cfmtn_se_cd; tb_dfdscdopnn.dscd_evl_last_rslt_cfmtn_cd; tb_dfrcpttransflist.cfmtn_trnsf_se_cd
+MENU	22	tb_rdrlsclgnopnnexcel.menu_id; tb_stcalendar.menu_id; tb_stmenu.menu_id
+CRRC	21	object_taget_data.crrc_ttl; tb_bkcrrc.crrc_dt; tb_bkcrrc.crrc_cn
+LAST	21	object_taget_data.last_rls_clgn_year; object_taget_data.last_prsl_clgn_year; tb_dfdscdhist.last_dscd_evl_se_cd
+SRET	21	object_taget_data.sret_clsf; object_taget_data.sret_prot_pd; object_taget_data.sret_clgn_type_cd
+NOELCT	21	object_taget_data.noelct_reg_dt; tb_dforgacptn.noelct_pbrc_acptr_nm; tb_dforgacptn.noelct_pbrc_phnd_nm
+BKNO	21	rcfolderlist.bkno; tb_crfolder.bkno; tb_crfolder.tkov_bkno
+PHBT	21	tb_dfdscdphbt.dscd_phbt_type; tb_dfdscdphbt.dscd_phbt_day; tb_dfdscdphbt.dscd_phbt_rsn
+USE	21	tb_rcmissingmemo.use_yn; tb_rffixreder.use_stts; tb_rftabprint.use_yn
+ETC	20	object_taget_data.etc_ttle; tb_adarchivalobj.etc_form_expln; tb_adarchivalobj.etc_qomt_expln
+PHND	20	tb_adarchivalobj.trnsf_phnd_nm; tb_crreport.phnd_nm; tb_dforgacptn.drc_phnd_nm
+SCNN	19	object_taget_data.scnn_cmptn_yn; object_taget_data.scnn_insp_se_cd; object_taget_data.scnn_err_se_cd
+CPCT	19	tb_dftransfstoremst.strg_md_cpct; tb_dftransfstoreprttnlist.prttn_md_cpct; tb_rdattachfile.virs_mdtr_file_cpct
+HASH	19	tb_rcmissingmemo.trsm_file_hash; tb_stattachfile.file_hash_vl; tb_stfolderneofile.file_hash_vl
+SECU	18	object_taget_data.secu_clsf_cd; object_taget_data.secu_clsf_rsn; tb_crfolder.secu_clsf_cd
+SCPE	18	object_taget_data.prsl_scpe; object_taget_data.prsl_scpe_mng_cmptn_yn; object_taget_data.prsl_scpe_clgn_prgrs_stts_cd
+VER	18	object_taget_data.mdfcn_ver_no; rms_history.rmst_ver; rms_history.db_ver
+DFLP	18	object_taget_data.dflp_cnvr_stts; tb_mgfolder.dflp_cnvr_stts; tb_mgrecord.dflp_cnvr_stts
+PLAN	18	object_taget_data.prtn_plan; tb_mgbkshdpos.plan_ymd; tb_rdfolder_noelct.acptn_plan_year
+DATA	18	tb_crntfctnrcptresult.trsm_file_data_se; tb_dftransfprcsrcptresult.trsm_file_data_se; tb_mgattachfile.data_rmt_cd
+CYCL	18	tb_gvrnprdl.pblc_cycl; tb_mgfolderkwrd.indx_cycl; tb_mgrecordkwrd.indx_cycl
+RULE	18	tb_mgfolder.stk_mng_no_grnt_rule; tb_rdfolder.stk_mng_no_grnt_rule; tb_srprsrbox.prsr_box_id_grnt_rule
+SHPGOT	18	tb_mgfolder.shpgot_yn; tb_rdfolder.shpgot_yn; tb_rftemptoti.shpgot_yn
+PGNO	17	object_taget_data.ritm_pgno; tb_crattachfile.atch_file_pgno; tb_crrecord.ritm_pgno
+GRD	17	object_taget_data.rls_grd; tb_adarchivalobj.rls_grd; tb_crntfctnrecord.rls_grd
+PHTG	17	object_taget_data.phtg_ymd; object_taget_data.phtg_plc; tb_mgfolder.mf_phtg_stts_cd
+REL	17	tb_adarchivalobj.adaf_rel_no; tb_rdattachfile.rel_file_key; tb_rdfolderrel.rel_type_cd
+MTHD	17	tb_crfolder.prsr_mthd_alct_cd; tb_dfdscdopnn.dscd_mthd_cd; tb_mgfolder.prsr_mthd_alct_cd
+TRSM	17	tb_crntfctnrcptresult.trsm_file_data_se; tb_crntfctnrcptresult.trsm_se; tb_dftransfprcsrcpterror.trsm_se
+REVL	17	tb_dfrevlevl.revl_sn; tb_dfrevlhist.revl_sn; tb_dfrevlhist.revl_prcs_stts_cd
+VL	17	tb_dftransferrorprcshist.afch_vl; tb_dftransferrorprcshist.bfch_vl; tb_rdrecordcreat.dmnd_stts_doc_vl
+CHNRG	16	tb_crfolderchghist.chnrg_nm; tb_crrecordchghist.chnrg_nm; tb_mgfolderchghist.chnrg_nm
+BFR	16	tb_crreport.bfr_stts_se_cd; tb_dfdscdhist.reap_bfr_prsr_pd; tb_dfdscdhist.reap_bfr_prsr_pd_rsn
+BOX	16	tb_mgbksh.mxmm_acpt_prsr_box_cnt; tb_mgbksh.hold_prsr_box_cnt; tb_mgfolder.prsr_box_id
+SMMR	15	object_taget_data.adr_cn_smmr; object_taget_data.ritm_cn_smmr; tb_adarchivalobj.cn_smmr
+ENFC	15	object_taget_data.enfc_ymd; object_taget_data.enfc_doc_no; tb_crntfctnrecord.enfc_ymd
+TWO	15	object_taget_data.spcl_pbrc_info_two; tb_crspcllist.two_spcl_list; tb_gvrnprdl.dst_rsn_two
+ECNT	15	tb_adarchivalobj.frst_hold_ecnt; tb_adarchivalobj.now_hold_ecnt; tb_crfolder.elct_file_ecnt
+ELCT	15	tb_crfolder.elct_file_ecnt; tb_dfdscdopnn.elct_file_del_pic_id; tb_dfdscdopnn.elct_file_del_dt
+TCNT	15	tb_dfacptnplan.fls_tcnt; tb_dfacptnplan.ritm_tcnt; tb_srmfphtg.rprd_tcnt
+EXST	15	tb_mgattachfile.virs_exst_yn; tb_rdattachfile.virs_exst_yn; tb_rdfolder.virs_exst_yn
+INFC	15	tb_rdattachfile.virs_infc_cn; tb_storgdfile.virs_infc_cn; tb_storgdfile_cloud.virs_infc_cn
+AUTHRT	15	tb_stgrantgrp.authrt_group_cd; tb_stgrantgrp.authrt_group_nm; tb_stgrantgrp.authrt_group_expln
+PDC	14	object_taget_data.pdc_rsn; tb_adarchivalobj.pdc_rsn; tb_crrecord.pdc_rsn
+NEW	14	object_taget_data.new_pbrc_se_cd; tb_crfolder.new_pbrc_se_cd; tb_crrecord.new_pbrc_se_cd
+POTNO	14	tb_batchworkhist.link_srvr_potno; tb_batchworkqueue.link_srvr_potno; tb_batchworkqueuepre.link_srvr_potno
+UNTK	14	tb_crfoldertakov.hndv_untk_card_id; tb_crfoldertakov.hndv_untk_card_nm; tb_rdfoldertkov.hndv_untk_card_id
+RSRV	14	tb_dfdscdhist.rsrv_dtl_cd; tb_dfdscdopnn.now_rsrv_pd_cd; tb_dfdscdopnn.trdv_rsrv_pd_cd
+PRTTN	14	tb_dftransfstorefld.prttn_md_seq; tb_dftransfstorercd.prttn_md_seq; tb_dftransfstoreprttnlist.prttn_md_seq
+LGN	14	tb_rcmissingmemo.lgn_id; tb_rddscdphbtappoint.dscd_phbt_dsgn_lgn_id; tb_rddscdphbtappoint.dscd_phbt_rmv_lgn_id
+SRCH	14	tb_rdfolder.rls_srch_list_pvsn_yn; tb_rdsrchprslrankng.srch_ymd; tb_rdsrchprslrankng.srch_seq
+CRYN	14	tb_rftemptoti.cryn_yn; tb_rftemptoti.cryn_ymd; tb_srcryn.cryn_id
+BM	14	tb_zzfnctclsf.bm_cd; tb_zzfnctclsf.bm_nm; tb_zzfnctclsf.up_bm_id
+SPRT	13	object_taget_data.sprt_reg_no; tb_crntfctnrecord.sprt_reg_no; tb_crrecord.sprt_reg_no
+PLC	13	object_taget_data.phtg_plc; tb_adarchivalobj.prsr_plc; tb_crfolder.prsr_plc_cd
+ARNGMT	13	object_taget_data.arngmt_desc; tb_dftkovfolderlist.arngmt_yn; tb_mgfolder.arngmt_yn
+IPADR	13	tb_batchworkhist.link_srvr_ipadr; tb_batchworkqueue.link_srvr_ipadr; tb_batchworkqueuepre.link_srvr_ipadr
+APRTN	13	tb_crfolder.prsr_pd_aprtn_rsn; tb_dfdscdhist.prsr_pd_r_aprtn_ymd; tb_dfrevlhist.prsr_pd_r_aprtn_ymd
+ONE	13	tb_crspcllist.one_spcl_list; tb_gvrnprdl.dst_rsn_one; tb_minutes.cn_one
+THRE	13	tb_crspcllist.thre_spcl_list; tb_gvrnprdl.dst_rsn_thre; tb_minutes.cn_thre
+MBRC	13	tb_dfdscdevl.dlbr_mbrc_id; tb_dfdscdevl.dlbr_mbrc_evl_se_cd; tb_dfdscdevl.dlbr_mbrc_evl_dtl_cd
+MF	13	tb_dfdscdopnn.mf_stts_idnty_yn; tb_mgfolder.mf_phtg_stts_cd; tb_rdfolder.mf_phtg_stts_cd
+DSGN	13	tb_dfdscdopnn.group_dsgn_yn; tb_rcacptnfolderlist.hold_trdv_dsgn_yn; tb_rddscdphbtappoint.dscd_phbt_dsgn_pic_dept_nm
+RM	13	tb_dfdscdopnn.ntn_rm_cmit_evl_opnn_cd; tb_dfdscdopnn.ntn_rm_cmit_rsrv_pd_cd; tb_dfdscdopnn.ntn_rm_cmit_reap_prsr_pd
+DMG	13	tb_mgfolder.dmg_yn; tb_mgfolder.dmg_cn; tb_mgfolder.dmg_prcs_mthd_cd
+TMPR	13	tb_rsrvdoc.tmpr_se_no; tb_rsrvdoc.tmpr_frst_se; tb_rsrvdoc.tmpr_snd_se
+API	13	tb_stconfig.link_api_srvr_ip; tb_stconfig.link_api_srvr_potno; tb_stconfig.link_api_cntn_user_id
+MMT	12	object_taget_data.rls_mmt; tb_crrecord.rls_mmt; tb_mgfolder.rls_mmt
+EXCSS	12	object_taget_data.excss_yn; tb_dfexcursus.excss_seq; tb_dfexcursus.excss_stts
+ADAF	12	tb_adarchival_dst.adaf_id; tb_adarchival_dst.adaf_dst_sn; tb_adarchival_dst.adaf_dst_rsn
+NOW	12	tb_adarchivalobj.now_hold_ecnt; tb_dfdscdopnn.now_prsr_pd_cd; tb_dfdscdopnn.now_rsrv_pd_cd
+HGHRK	12	tb_crntfctnfile.hghrk_rctr_yn; tb_stdept.hghrk_ognz_cd; tb_storg.hghrk_inst_cd
+COLM	12	tb_mgbksh.bksh_colm_cnt; tb_mgbkshdposdtl.bksh_colm_no; tb_mgfolder.bksh_colm_cnt
+RDR	12	tb_rdotherprslreq.rdr_id; tb_rdotherprslreq.rdr_nm; tb_rdotherprslreq.rdr_dept_id
+TAG	12	tb_rftabpub.tag_id; tb_rftabpub.tag_issu_trdv_cd; tb_rftabpub.tag_ispr_cd
+UP	12	tb_stdept.up_ognz_cd; tb_stmenu.up_menu_id; tb_storg.up_inst_cd
+RCVR	11	object_taget_data.rcvr; tb_crrecord.rcvr; tb_crrecordchghist.bfch_rcvr
+RMV	11	object_taget_data.sret_rmv_pbrc_prsr_pstn; tb_rddscdphbtappoint.dscd_phbt_rmv_pic_dept_nm; tb_rddscdphbtappoint.dscd_phbt_rmv_pic_jbgd_nm
+OFDC	11	tb_rsrvdoc.ofdc_prsr_pd_clsf_crtr; tb_rsrvdoc.ofdc_prsr_pd_prmn_thea; tb_rsrvdoc.ofdc_prsr_pd_prmn_theb
+MTG	11	tb_rdrecordmeeting.mtg_nm; tb_rdrecordmeeting.mtg_plc; tb_rdrecordmeeting.mtg_ymd
+PSTG	11	tb_stattachfile.pstg_seq; tb_stattachfile.pstg_se; tb_stnoti.pstg_seq
+LEV	11	tb_stdept.inst_lev_cycl; tb_stmenu.menu_authrt_lev; tb_storg.inst_lev_cycl
+CTFE	11	tb_stformatpki.ctfe; tb_stformatpki.ctfe_usg; tb_stformatpkihist.ctfe
+FNPR	11	tb_zzfnctclsf.fnpr_dcdt; tb_zzsendunit.fnpr_trnsf_mmt; tb_zzunit.fnpr_trnsf_mmt
+ADR	10	object_taget_data.adr_type; object_taget_data.adr_cn_smmr; tb_crrecord.adr_type
+SNDPTY	10	object_taget_data.sndpty; tb_crrecord.sndpty; tb_mgrecord.sndpty
+R	10	object_taget_data.fls_neob_r_cnvr_job_id; object_taget_data.fls_neob_r_cnvr_stts; tb_dfdscdhist.prsr_pd_r_aprtn_ymd
+QLIN	10	object_taget_data.qlin_stts_cd; tb_dforgtkovlist.qlin_yn; tb_dforgtkovlist.qlin_err_ennc
+EXPC	10	tb_dfdscdhist.bfch_expc_dscd_year; tb_dfrevlhist.bfch_expc_dscd_year; tb_mgfolder.expc_dscd_year
+REAP	10	tb_dfdscdhist.reap_bfr_prsr_pd; tb_dfdscdhist.reap_aftr_prsr_pd; tb_dfdscdhist.reap_bfr_prsr_pd_rsn
+MEMO	10	tb_dftransferrorprcshist.memo_cn; tb_streqclgnopnnfolder.trdv_rvw_opnn_memo; tb_streqclgnopnncrtr.memo_cn
+KEY	10	tb_dftransfprcsrcpterror.ritm_key; tb_dftransfacptnresultdtl.ritm_key; tb_oprlslistchg.ritm_key
+PBLC	10	tb_gvrnprdl.pblc_id; tb_gvrnprdl.pblc_reg_sn; tb_gvrnprdl.prdl_pblc_reg_grnt_trgt_yn
+NARS	10	tb_gvrnprdl.nars_posc_yn; tb_zzprsrtermhist.nars_prsr_pd_cd; tb_zzprsrtermhist.nars_opnn
+ACNT	10	tb_rcmissingmemo.acnt_id; tb_rddscdphbtappoint.dscd_phbt_dsgn_acnt_id; tb_rddscdphbtappoint.dscd_phbt_rmv_acnt_id
+LNKG	10	tb_rdrecord_nonelect.lnkg_chnrg; tb_stbefrlslist.file_lnkg_path; tb_stmenu.menu_lnkg_seq
+INSTL	10	tb_rffixreder.instl_usg; tb_rffixreder.instl_pstn; tb_rftabprint.instl_pstn
+DWNLD	9	j_attachfile.dwnld_cnt; j_attachfile.dwnld_expry_ymd; j_attachfile.dwnld_lmt_cnt
+DLRY	9	object_taget_data.dcdv_dlry_no; tb_crdistr.dlry_ldgr_id; tb_crdistr.dlry_sn
+INSP	9	object_taget_data.scnn_insp_se_cd; object_taget_data.scan_insp_cmptn_yn; tb_dfacptnplan.auto_insp_yn
+DESC	9	object_taget_data.arngmt_desc; tb_adarchivalobj.dscd_pbanc_desc; tb_mgfolder.arngmt_desc
+INPT	9	object_taget_data.trnstn_inpt_yn; object_taget_data.vrms_inpt_yn; tb_mgfolder.trnstn_inpt_yn
+CRLTN	9	object_taget_data.crltn_no; object_taget_data.crltn_dt; object_taget_data.crltn_scpe
+LDGR	9	tb_crdistr.dlry_ldgr_id; tb_rdprsldoc.prsl_ldgr_sn; tb_rdprsldoc.prsl_ldgr_no
+LINE	9	tb_crntfctnrcptresult.list_line_no; tb_dftransfprcsrcpterror.list_line_no; tb_dftransfprcsrcptresult.list_line_no
+PBLCN	9	tb_gvrnprdl.pblcn_ymd; tb_rftabpub.tag_pblcn_type; tb_rftabpub.tag_pblcn_stts
+SORT	9	tb_mainstatistics.sort; tb_stmenu.menu_sort_seq; tb_stqna.pstg_sort_seq
+MULTI	9	tb_rdmultiaprovcreat.multi_aprv_ritm_id; tb_rdmultiaprovdoc.multi_aprv_ritm_id; tb_rdmultiaprovdoc.multi_aprv_acptn_seq
+ADDR	9	tb_stdownipmng.user_ip_addr; tb_stformatsrvrinfo.srvr_ip_addr; tb_stlogmonitor.ip_addr
+DATE	8	j_attachfile.reg_date; tb_streqresult.job_bgng_date; tb_streqresult.job_cmptn_date
+MNSC	8	object_taget_data.orgnl_mnsc_yn; tb_crrecord.orgnl_mnsc_yn; tb_mgrecord.orgnl_mnsc_yn
+PRTN	8	object_taget_data.prtn_pd_bgng_ymd; object_taget_data.prtn_pd_end_ymd; object_taget_data.prtn_plan
+PRVT	8	object_taget_data.list_prvt_grds; object_taget_data.list_prvt_rsn; tb_rdrecord.list_prvt_grds
+GRDS	8	object_taget_data.list_prvt_grds; tb_dfexcursus.excss_grds; tb_mgrecord.task_grds_type
+CPYR	8	object_taget_data.cpyr_type; tb_gvrnprdl.cpyr_agre_type; tb_rdrlshist.bfch_cpyr_type
+DST	8	tb_adarchival_dst.adaf_dst_sn; tb_adarchival_dst.adaf_dst_rsn; tb_adarchival_dst.dst_reg_ymd
+ALCT	8	tb_crfolder.prsr_mthd_alct_cd; tb_mgfolder.prsr_mthd_alct_cd; tb_rdfolder.prsr_mthd_alct_cd
+LOG	8	tb_crreport.rcpt_log_file_nm; tb_sterrorlog.err_log_seq; tb_sterrorlog.log_crt_hr
+PRMN	8	tb_crreporthist.prmn_inst_nm; tb_crreporthist.prmn_inst_pic_nm; tb_rsrvdoc.ofdc_prsr_pd_prmn_thea
+DLBDC	8	tb_dfdscddlbr.evl_dlbdc_no; tb_dfdscddlbrdoc.dscd_dlbdc_sn; tb_dfdscddlbrdoc.dlbdc_wrt_rsn
+SCHDL	8	tb_dfdscdopnn.schdl_seq; tb_rdrlsclgnopnn.schdl_seq; tb_sroptidisk_mst.schdl_seq
+PRDL	8	tb_gvrnprdl.gvrn_prdl_id; tb_gvrnprdl.prdl_pblc_reg_grnt_trgt_yn; tb_gvrnprdl.prdl_reg_id_type
+GRNT	8	tb_gvrnprdl.prdl_pblc_reg_grnt_trgt_yn; tb_mgfolder.stk_mng_no_grnt_rule; tb_rdfolder.stk_mng_no_grnt_rule
+SRWD	8	tb_mgfolderkwrd.srwd; tb_mgrecordkwrd.srwd; tb_rdfolderkwrd.srwd
+ADD	8	tb_oprlsgroup.ritm_add_cnt; tb_rdrecordcreat.dmnd_add_opnn; tb_rdrecordcreat.dmnd_add_dt
+SFCT	8	tb_tkfoldermng.cd_sfct; tb_zzorgcomstnd.brm_sfct_nm; tb_zzsendunit.cd_sfct
+CHCKR	8	tb_tkorgacptnplan.chckr_id; tb_tkorgacptnplan.chckr_nm; tb_tkorgacptnplan.chckr_nm_trdv
+COMM	8	tb_zzcomcd.comm_type_cd; tb_zzcomcd.comm_cd; tb_zzcomcd.comm_cd_nm
+ACTN	7	object_taget_data.prot_actn_need_yn; tb_rdrecord.prot_actn_need_yn; tb_srcntchckdtl.actn_rslt_cn
+DRET	7	object_taget_data.dret_cause; tb_rdrecord.dret_cause; tb_tkmonitor.dret_mng_card_cnt
+FLFMT	7	object_taget_data.flfmt_stts; object_taget_data.flfmt_prblm; tb_rdrecord.flfmt_stts
+CMIT	7	tb_dfdscdopnn.ntn_rm_cmit_evl_opnn_cd; tb_dfdscdopnn.ntn_rm_cmit_rsrv_pd_cd; tb_dfdscdopnn.ntn_rm_cmit_reap_prsr_pd
+AUTO	7	tb_dfacptnplan.auto_insp_yn; tb_rdrlsclgnauto.auto_otp_cd; tb_rdrlsclgnauto.auto_rls_grd
+DSCTN	7	tb_dftransfprcsrcpterror.trnsf_rcpt_err_dsctn; tb_dftransfprcsrcptresult.trnsf_rcpt_err_dsctn; tb_sterrorlog.err_detl_dsctn
+RSTR	7	tb_mgfolder.rstr_prcs_ymd; tb_mgfolder.rstr_prcr_info; tb_rdfolder.rstr_prcs_ymd
+PVSN	7	tb_oprlsgroup.list_pvsn_yn; tb_oprlsgroup.list_pvsn_dt; tb_rdfolder.rls_srch_list_pvsn_yn
+OGNZ	7	tb_rdfolderaccs.acs_ognz_cd; tb_rdrecordaccs.acs_ognz_cd; tb_rftabpubhist.pblcn_ognz_cd
+IMPR	7	tb_rdotherprslreq.prsl_impr_pbrc_aply_stts_cd; tb_rdotherprslreq.prsl_impr_pbrc_aply_rsn; tb_rdprslreq.prsl_impr_pbrc_aply_stts_cd
+PRFMNC	7	tb_rdrecordcreat.prfmnc_reg_ymd; tb_rdrecordcreat.prfmnc_reg_cn; tb_rdrecordcreat.prfmnc_reg_stts
+SRVC	7	tb_stbefrlslist.pre_orgd_srvc_type; tb_sterrorlog.srvc_se; tb_stlogmonitor.srvc_se
+MNIT	7	tb_stlinktrgt.mnit_potno; tb_tkmonitor.mnit_id; tb_tkmonitor.mnit_sys_cd
+MID	7	tb_zzorgcomstnd.brm_mid_fnct_nm; tb_zzsendunit.mid_fnct_cd; tb_zzsendunit.mid_fnct_nm
+APPL	7	tb_zzorgunitworkhist.appl_crtr_ymd; tb_zzunitchgreq.appl_crtr_ymd; tb_zzunitdelreq.appl_crtr_ymd
+MAIN	6	object_taget_data.main_prsn_flnm; tb_rdrecord.main_prsn_flnm; tb_zzsendunit.main_prsl_prps_cd
+LANG	6	object_taget_data.lang; tb_rdattachfile.lang; tb_rdrecord.lang
+AGND	6	object_taget_data.agnd_clsf; object_taget_data.agnd_dt; tb_rdrecord.agnd_clsf
+QY	6	tb_adarchivalobj.qy; tb_srmfcopy.rprd_qy; tb_stcompuequip.prdct_qy
+FRST	6	tb_adarchivalobj.frst_hold_ecnt; tb_gvrnprdl.frst_hold_ecnt; tb_rsrvdoc.tmpr_frst_se
+IMG	6	tb_adarchivalobjimg.img_reg_seq; tb_adarchivalobjimg.img_file_nm; tb_adarchivalobjimg.img_file_path
+ASMT	6	tb_crfolder.fls_asmt_se_cd; tb_mgfolder.fls_asmt_se_cd; tb_rdfolder.fls_asmt_se_cd
+IDNTY	6	tb_dfdscdopnn.mf_stts_idnty_yn; tb_dfdscdopnn.opds_stts_idnty_yn; tb_srmfphtgdtl.idnty_yn
+NTN	6	tb_dfdscdopnn.ntn_rm_cmit_evl_opnn_cd; tb_dfdscdopnn.ntn_rm_cmit_rsrv_pd_cd; tb_dfdscdopnn.ntn_rm_cmit_reap_prsr_pd
+EDIT	6	tb_dftransferrorprcshist.edit_col_nm; tb_dftransferrorprcshist.edit_col_type; tb_dftransferrorprcshist.edit_user_nm
+IDTF	6	tb_dftransfprcsrcpterror.fls_idtf; tb_dftransfreqerrorlist.fls_idtf; tb_dftransfacptnresult.fls_idtf
+LWPR	6	tb_rsrvdoc.lwpr_symb_tbl; tb_rdattachfile.doc_type_lwpr_seq; tb_tkattachfile.doc_type_lwpr_seq
+PSWD	6	tb_rdmachinecheckresult.pswd_yn; tb_stconfig.link_api_srvr_cntn_pswd; tb_stlinktrgt.link_api_srvr_pswd
+ETL	6	tb_rdotherfolderprsldtl.etl_inst_rctr_id; tb_rdotherprslreq.etl_inst_rctr_id; tb_rdotherrecordprsldtl.etl_inst_rctr_id
+HR	6	tb_rdrecordrel.rslt_prsl_hr; tb_sterrorlog.log_crt_hr; tb_stlogmonitor.log_crt_hr
+RPRD	6	tb_srmfcopy.rprd_seq; tb_srmfcopy.rprd_ymd; tb_srmfcopy.rprd_qy
+PRDCT	6	tb_srmfphtg.prdct_nm; tb_stcompuequip.prdct_nm; tb_stcompuequip.prdct_qy
+IP	6	tb_stconfig.link_api_srvr_ip; tb_stdownipmng.user_ip_addr; tb_stformatsrvrinfo.srvr_ip_addr
+CNTN	6	tb_stconfig.link_api_cntn_user_id; tb_stconfig.link_api_srvr_cntn_pswd; tb_stconfig.link_api_srvr_cntn_class
+RSPNS	6	tb_stformat_file.rmt_cnvr_bgng_rspns_dt; tb_stformat_file.rmt_cnvr_end_rspns_dt; tb_stformat_hist.rmt_cnvr_frst_bgng_rspns_dt
+SNDNG	6	tb_tkorgacptnplan.sndng_dt; tb_tkorgacptnplanpre.sndng_dt; tb_zzorgunitworkhist.sndng_dt
+LRG	6	tb_zzsendunit.lrg_fnct_cd; tb_zzsendunit.lrg_fnct_nm; tb_zzunit.lrg_fnct_cd
+CHS	6	tb_zztrace.chs_ymd; tb_zztrace.chs_seq; tb_zztracedochist.chs_doc_sn
+CHWH	6	tb_zzunit.prsr_pd_chwh_cd; tb_zzunitchgreq.prsr_pd_cd_chwh; tb_zzunitchgreq.prsr_mthd_cd_chwh
+ASNM	6	tb_zzunit.tmpr_unit_task_asnm; tb_zzunitchgreq.bfch_unit_task_asnm; tb_zzunitchgreq.afch_unit_task_asnm
+DCDV	5	object_taget_data.dcdv_dlry_no; tb_crrecord.dcdv_dlry_no; tb_mgrecord.dcdv_dlry_no
+TRNSTN	5	object_taget_data.trnstn_inpt_yn; tb_mgfolder.trnstn_inpt_yn; tb_mgrecord.trnstn_inpt_yn
+PDF	5	object_taget_data.pdf_job_id; tb_rdrecord.pdf_job_id; tb_stformat_hist.pre_pdf_job_id
+WRT	5	tb_dfdscddlbrdoc.dlbdc_wrt_rsn; tb_rcmissingmemo.wrt_inst_id; tb_rcmissingmemo.wrt_inst_nm
+AFTR	5	tb_dfdscdhist.reap_aftr_prsr_pd; tb_dfdscdhist.reap_aftr_prsr_pd_rsn; tb_dfdscdopnnhist.evl_aftr_prsr_pd_cd
+EXCEL	5	tb_dfdscdopnn.excel_dwnld_yn; tb_dfdscdopnn.ntn_rm_cmit_excel_dwnld_yn; tb_rdrlsclgnopnn.excel_dwnld_yn
+COL	5	tb_dftransferrorprcshist.edit_col_nm; tb_dftransferrorprcshist.edit_col_type; tb_rdfoldererrcheck.err_col
+NOFL	5	tb_mgbksh.bksh_nofl; tb_mgfolder.bksh_nofl; tb_srbksh.bksh_nofl
+FLR	5	tb_mgbkshdposdtl.bksh_flr_no; tb_srbkshdposdtl.bksh_flr_no; tb_srmfphtg.bksh_flr_no
+INDX	5	tb_mgfolderkwrd.indx_cycl; tb_mgrecordkwrd.indx_cycl; tb_rdfolderkwrd.indx_cycl
+FOUR	5	tb_minutes.cn_four; tb_stformat_hist.prcs_stts_four; tb_stformat_hist.prcs_stts_dt_four
+YY	5	tb_rsrvdoc.ofdc_prsr_pd_ten_yy; tb_rsrvdoc.ofdc_prsr_pd_five_yy; tb_rsrvdoc.ofdc_prsr_pd_thre_yy
+FIVE	5	tb_rsrvdoc.ofdc_prsr_pd_five_yy; tb_stformat_hist.prcs_stts_five; tb_stformat_hist.prcs_stts_dt_five
+SIX	5	tb_rsrvdoc.ofdc_prsr_pd_six_mts; tb_stformat_hist.prcs_stts_six; tb_stformat_hist.prcs_stts_dt_six
+FQ	5	tb_rdfolder.prsl_fq; tb_zzsendunit.prsl_expc_fq; tb_zzunit.prsl_expc_fq
+CEA	5	tb_srcntchck.cea_id; tb_srcntchckdtl.cea_id; tb_sroptidisk_cntchck.cea_id
+CUT	5	tb_srmfphtg.cut_cnt; tb_srmfphtg.chc_cut_cnt; tb_srmfphtgdtl.bgng_cut_pstn
+ORD	5	tb_stdept.ord; tb_storg.ord; tb_storg_sync.ord
+ABL	5	tb_stdept.abl_yn; tb_storg.abl_yn; tb_storg_sync.abl_yn
+VLD	5	tb_stformatpki.vld_pd_bgng_dt; tb_stformatpki.vld_pd_end_dt; tb_stformatpkihist.vld_pd_bgng_dt
+ANCMNT	5	tb_stnoti.ancmnt_cn; tb_zzrecordclsfancmnt.ancmnt_year; tb_zzrecordclsfancmnt.ancmnt_file_nm
+TELNO	5	tb_strecordcenter.telno; tb_strecordchrgr.telno; tb_stuser.telno
+PROT	4	object_taget_data.sret_prot_pd; object_taget_data.prot_actn_need_yn; tb_rdrecord.sret_prot_pd
+DESCN	4	object_taget_data.descn_cnd; object_taget_data.descn_nmpr_cnt; tb_rdrecord.descn_cnd
+TERM	4	object_taget_data.dlbr_term_se; object_taget_data.dlbr_term; tb_rdrecord.dlbr_term_se
+SPRVSN	4	object_taget_data.sprvsn_dept_id; object_taget_data.sprvsn_dept_nm; tb_rdrecord.sprvsn_dept_id
+RMST	4	rms_history.rmst_ver; tb_streqclgnopnnfolder.prmn_rmst_fls_id; tb_streqclgnopnnrecord.prmn_rmst_fls_id
+FORM	4	tb_adarchivalobj.form; tb_adarchivalobj.etc_form_expln; tb_gvrnprdl.form_mttr
+PBANC	4	tb_adarchivalobj.dscd_pbanc_no; tb_adarchivalobj.dscd_pbanc_desc; tb_adarchivalobj.ofclsl_dscd_pbanc_yn
+GIFT	4	tb_adarchivalobj.gift_recp; tb_adarchivalobj.gift_cbpr; tb_adarchivalobj.gift_rece_dt
+ANNN	4	tb_crfolder.pdst_annn_id; tb_crfolder.pdst_annn_nm; tb_crntfctnfolder.pdst_annn_id
+MXMM	4	tb_mgbksh.mxmm_acpt_prsr_box_cnt; tb_srbksh.mxmm_acpt_prsr_box_cnt; tb_srmfbksh.mxmm_dpos_film_cnt
+PRCR	4	tb_mgfolder.rstr_prcr_info; tb_rdfolder.rstr_prcr_info; tb_rdrecord_restore.rstr_prcr_info
+MNTS	4	tb_minutes.mnts_no; tb_minutes.mnts_year; tb_minutes.mnts_knd
+BEHV	4	tb_rcmissingmemo.job_behv_dt; tb_rdfoldercreat.job_behv_dt; tb_rdftrkwrdtemp.behv_type_cd
+MSG	4	tb_rcmissingmemoerror.err_msg; tb_rdrlsclgnopnnexcel.rslt_msg; tb_sterrorlog.err_msg
+WRTR	4	tb_rdfoldercreat.wrtr_trdv_cd; tb_rdfoldercreat.wrtr_trdv_nm; tb_rdrecordcreat.wrtr_trdv_cd
+MCHN	4	tb_rdmachinecheckresult.mchn_igi_id; tb_rdmachinecheckresult.mchn_igi_dt; tb_rdmachinecheckresult.mchn_igi_cnt
+SRC	4	tb_rdrecordinfosrc.info_src_type_cd; tb_rdrecordinfosrc.info_src_seq; tb_rdrecordinfosrc.info_src_ttl
+SPLMRC	4	tb_rdrecordsplmrccrrchist.splmrc_crrc_year; tb_rdrecordsplmrccrrchist.splmrc_crrc_user_id; tb_rdrecordsplmrccrrchist.splmrc_crrc_user_nm
+FIX	4	tb_rffixreder.fix_redr_id; tb_rffixreder.fix_redr_ipadr; tb_rffixreder.fix_redr_potno
+REDR	4	tb_rffixreder.fix_redr_id; tb_rffixreder.fix_redr_ipadr; tb_rffixreder.fix_redr_potno
+RC	4	tb_rftabpub.rc_se; tb_rftemptoti.rc_se; tb_srprsrbox.dpos_rc_dcf_ecnt
+FILM	4	tb_srmfbksh.mxmm_dpos_film_cnt; tb_srmfbksh.now_dpos_film_cnt; tb_srmfphtg.film_knd_cd
+PRE	4	tb_stbefrlslist.pre_orgd_srvc_type; tb_stformat_hist.pre_pdf_job_id; tb_stformat_queue.pre_pdf_job_id
+ABRV	4	tb_stdept.ognz_abrv_nm; tb_storg.trdv_abrv_nm; tb_storg_sync.trdv_abrv_nm
+EXTN	4	tb_stfileextmng.file_extn; tb_stfileextmng.file_extn_nm; tb_stfileextmng.file_extn_expln
+SQL	4	tb_stfolderquery.fls_sql_id; tb_stfolderquery.fls_sql_nm; tb_strecordquery.ritm_sql_id
+VLM	4	tb_stmedium.vlm_id; tb_stvolm.vlm_id; tb_stvolm.vlm_nm
+ONNARA	4	tb_storgdfile.onnara_file_id; tb_stuser.onnara_user_id; tb_tkattachfile.onnara_file_path
+CLBN	4	tb_tkmonitor.trnsf_trgt_clbn_atrz_doc_ldgr_cnt; tb_tkmonitorinfo.trnsf_trgt_clbn_atrz_doc_ldgr_cnt; tb_transfdetailinfostathist.trnsf_trgt_clbn_atrz_doc_ldgr_cnt
+ATRZ	4	tb_tkmonitor.trnsf_trgt_clbn_atrz_doc_ldgr_cnt; tb_tkmonitorinfo.trnsf_trgt_clbn_atrz_doc_ldgr_cnt; tb_transfdetailinfostathist.trnsf_trgt_clbn_atrz_doc_ldgr_cnt
+LAOR	4	tb_zzfnctclsf.laor_grds; tb_zzfnctclsfhist.laor_grds; tb_zzfnctclsfrellaw.laor_id
+EXPRY	3	j_attachfile.dwnld_expry_ymd; tb_stuser_sync.ctfe_expry_dt; tb_stuserpki.expry_dt
+VRMS	3	object_taget_data.vrms_inpt_yn; tb_rdfolder.vrms_inpt_yn; tb_rdrecord.vrms_inpt_yn
+SCAN	3	object_taget_data.scan_insp_cmptn_yn; tb_mgfolder.scan_stts; tb_rdrecord.scan_insp_cmptn_yn
+NMPR	3	object_taget_data.descn_nmpr_cnt; tb_rdrecord.descn_nmpr_cnt; tb_strecordcenter.nmpr_dpos_crst
+ADPRV	3	object_taget_data.adprv_rls_yn; tb_rdrecord.adprv_rls_yn; tb_rdrecordcreat.adprv_yn
+TPGNO	3	tb_crfolder.ritm_tpgno; tb_mgfolder.ritm_tpgno; tb_rdfolder.ritm_tpgno
+TRMN	3	tb_crfolder.frns_trmn_dt; tb_mgfolder.frns_trmn_dt; tb_rdfolder.frns_trmn_dt
+ACCUM	3	tb_crntfctnfolder.prdctn_user_nm_accum; tb_crntfctnrecord.task_pic_nm_accum; tb_sroptidisk.accum_sn
+TMPLT	3	tb_crntfctnform.ntfctn_tmplt_type_cd; tb_crsendreport.pdst_ntfctn_tmplt_rpt_year; tb_crsendreport.ntfctn_tmplt_no
+RFLT	3	tb_dfdscddlbrdoc.rslt_rflt_yn; tb_streqcnvr.stts_rflt_yn; tb_zzstndmng.rflt_yn
+DSPS	3	tb_dfdscdhist.dlcn_dscd_dsps_ymd; tb_dfdscdhist.dscd_dsps_ymd; tb_dfdscdopnn.dscd_dsps_ymd
+ENNC	3	tb_dforgtkovlist.qlin_err_ennc; tb_dforgtkovlist.igi_err_ennc; tb_srcntchckdtl.abnr_ennc
+CLR	3	tb_dftransflistrcptresult.clr_ogdp_inst_nm; tb_dftransflistrcptresult.clr_jbgd_nm; tb_dftransflistrcptresult.clr_nm
+OGDP	3	tb_dftransflistrcptresult.clr_ogdp_inst_nm; tb_srcryn.cryn_user_ogdp_inst_nm; tb_srout.shpgot_user_ogdp_inst_nm
+META	3	tb_dftransfstorefld.fls_meta_file_sz; tb_dftransfstorercd.ritm_meta_file_sz; tb_dftransfstoreprttnlist.prttn_meta_file_sz
+TCPCT	3	tb_dftransfstoremst.strg_md_tcpct; tb_sroptidisk.tcpct; tb_stmedium.tcpct
+AGRE	3	tb_gvrnprdl.cpyr_agre_type; tb_streqclgnopnnfolder.trdv_rvw_opnn_agre_yn; tb_streqrevlopnnfolder.trdv_rvw_opnn_agre_yn
+MTTR	3	tb_gvrnprdl.form_mttr; tb_transfdetailinfostathist.trnsf_trgt_dret_mttr_cnt; tb_transfinfostathist.trnsf_trgt_dret_mttr_tcnt
+SYMB	3	tb_rsrvdoc.lwpr_symb_tbl; tb_sroptidisk.prsr_pd_se_symb; tb_sroptidisk.rls_se_symb
+MM	3	tb_rcmissingmemo.crt_mm; tb_rcmissingmemoerror.crt_mm; tb_rcmissingmemoplan.crt_mm
+NTC	3	tb_rdfolder.trnsf_ntc; tb_rdrecordmeetingopnn.pbrc_rply_ntc; tb_tkorgrcpterror.prcs_ntc
+DSPTCH	3	tb_rdrecordcreat.rcpt_doc_dsptch_inst_nm; tb_rdrecordcreat.rcpt_doc_dsptch_ofclnm; tb_rdrecordcreat.dsptch_inst_nm
+USG	3	tb_rffixreder.instl_usg; tb_stformatpki.ctfe_usg; tb_stformatpkihist.ctfe_usg
+EQPMNT	3	tb_stcompuequip.eqpmnt_nm; tb_stprsrequip.eqpmnt_clsf_cd; tb_stprsrequip.eqpmnt_type
+SLR	3	tb_stdisinf.slr_ymd; tb_stdisinf.slr_trgt_cd; tb_stdisinf.slr_user_nm
+FAIL	3	tb_sterrorlog.scs_fail_yn; tb_sthomeduty.fail_cnt; tb_stlogmonitor.scs_fail_yn
+DETL	3	tb_sterrorlog.err_detl_dsctn; tb_zzfnctclsf.rls_detl_crtr; tb_zzfnctclsf.prsl_scpe_detl_crtr
+INQ	3	tb_stnoti.inq_cnt; tb_stqna.inq_cnt; tb_strefdata.inq_cnt
+CLOUD	3	tb_storgdfile_cloud.cloud_mgr; tb_storgdpage_cloud.cloud_mgr; tb_storgdpdfa1file_cloud.cloud_mgr
+MGR	3	tb_storgdfile_cloud.cloud_mgr; tb_storgdpage_cloud.cloud_mgr; tb_storgdpdfa1file_cloud.cloud_mgr
+OPER	3	tb_strecordcenter.oper_dept_nm; tb_strecordcenter.oper_pic_nm; tb_strecordcenter.oper_rule_estb_yn
+CRST	3	tb_strecordcenter.nmpr_dpos_crst; tb_streportrslt.rctr_crst_rpt_rcpt_year; tb_streportrslt.crst_rpt_rcpt_err_dsctn
+BRM	3	tb_strecordcenter.brm_type; tb_zzorgcomstnd.brm_mid_fnct_nm; tb_zzorgcomstnd.brm_sfct_nm
+ARSM	3	tb_strecordcenter.arsm_prdct_nm; tb_strecordcenter.arsm_use_bgng_ymd; tb_strecordcenter.arsm_use_end_ymd
+EML	3	tb_strecordchrgr.eml; tb_stuser.eml; tb_stuserhist.eml
+MKR	3	tb_streqfile.orgd_stmd_mkr; tb_streqresult.trgt_stmd_mkr; tb_streqcnvr.trgt_stmd_mkr
+PARM	3	tb_streqcnvr.parm_xml; tb_streqcnvr.rm_sys_parm_xml; tb_stschedule.job_parm
+XML	3	tb_streqcnvr.parm_xml; tb_streqcnvr.rm_sys_parm_xml; tb_tkorgacptnerror.xml_file_nm
+WORK	3	tb_stuser.work_yn; tb_stuser_sync.work_yn; tb_stuserhist.work_yn
+SSO	3	tb_stuser.sso_yn; tb_stuser.sso_key; tb_stuserhist.sso_yn
+FLUP	3	tb_stworkhist.flup_actn_se_cd; tb_stworkhist.flup_actn_rsn; tb_stworkhist.flup_actn_cmptn_yn
+PLCY	3	tb_zzfnctclsf.plcy_impl; tb_zzfnctclsf.plcy_stng; tb_zzfnctclsf.plcy_sprt
+RGN	3	tb_zzfnctclsf.rgn_nm; tb_zzunitchgreq.bfch_prsr_rgn_cd; tb_zzunitchgreq.afch_prsr_rgn_cd
+THON	3	tb_zzunitchgreq.bfch_thon_spcl_list; tb_zzunitchgreq.afch_thon_spcl_list; tb_zzunitchgreq.thon_spcl_list_chg_rsn
+THTW	3	tb_zzunitchgreq.bfch_thtw_spcl_list; tb_zzunitchgreq.afch_thtw_spcl_list; tb_zzunitchgreq.thtw_spcl_list_chg_rsn
+THTH	3	tb_zzunitchgreq.bfch_thth_spcl_list; tb_zzunitchgreq.afch_thth_spcl_list; tb_zzunitchgreq.thth_spcl_list_chg_rsn
+TBL	2	comtecopseq.tbl_nm; tb_rsrvdoc.lwpr_symb_tbl
+PRSN	2	object_taget_data.main_prsn_flnm; tb_rdrecord.main_prsn_flnm
+FLNM	2	object_taget_data.main_prsn_flnm; tb_rdrecord.main_prsn_flnm
+CESE	2	object_taget_data.cese_doc_se_cd; tb_rdrecord.cese_doc_se_cd
+RTRVL	2	object_taget_data.rtrvl_type_cd; tb_rdrecord.rtrvl_type_cd
+NEED	2	object_taget_data.prot_actn_need_yn; tb_rdrecord.prot_actn_need_yn
+CND	2	object_taget_data.descn_cnd; tb_rdrecord.descn_cnd
+CAUSE	2	object_taget_data.dret_cause; tb_rdrecord.dret_cause
+PRBLM	2	object_taget_data.flfmt_prblm; tb_rdrecord.flfmt_prblm
+DB	2	rms_history.db_ver; tb_storgdpage_cloud.db_use
+QOMT	2	tb_adarchivalobj.qomt; tb_adarchivalobj.etc_qomt_expln
+OBTN	2	tb_adarchivalobj.obtn_ymd; tb_adarchivalobj.obtn_crcm
+CRCM	2	tb_adarchivalobj.obtn_crcm; tb_adarchivalobj.gift_rece_crcm
+CBPR	2	tb_adarchivalobj.cbpr; tb_adarchivalobj.gift_cbpr
+RECE	2	tb_adarchivalobj.gift_rece_dt; tb_adarchivalobj.gift_rece_crcm
+CNSLTN	2	tb_adarchivalobj.trnsf_cnsltn_cn; tb_rdrecordsplmrccrrchist.cnsltn_cn
+SRNG	2	tb_adarchivalobjdscd.splst_srng_opnn; tb_rdrecordprslscpe.splst_srng_opnn_reg_ymd
+NMTM	2	tb_crreporthist.file_crt_nmtm; tb_dforgtkov.file_crt_nmtm
+DAY	2	tb_dfdscdphbt.dscd_phbt_day; tb_zzunitreq.aprv_aply_day
+HOPE	2	tb_dfrcpttransflist.trnsf_hope_year; tb_dftransfhist.trnsf_hope_year
+TSTMP	2	tb_dftkovplan.hndv_tstmp; tb_zztmpbkshexcel.excel_uld_tstmp
+NEO	2	tb_dftransfstorercd.ritm_neo_file_nm; tb_dftransfstorercd.ritm_neo_trsm_file_nm
+SPCFCT	2	tb_dftransfwork.trnsf_spcfct_se; tb_srmfphtg.film_spcfct
+GVRN	2	tb_gvrnprdl.gvrn_prdl_id; tb_gvrnprdl_file.gvrn_prdl_id
+ACPT	2	tb_mgbksh.mxmm_acpt_prsr_box_cnt; tb_srbksh.mxmm_acpt_prsr_box_cnt
+KND	2	tb_minutes.mnts_knd; tb_srmfphtg.film_knd_cd
+ALTMNT	2	tb_rdfolder.prsr_box_altmnt_yn; tb_rdfolder.prsr_box_altmnt_cn
+DCDT	2	tb_rdftrkwrdtemp.fls_dcdt_se; tb_zzfnctclsf.fnpr_dcdt
+RPLY	2	tb_rdrecordmeetingopnn.pbrc_rply_ntc; tb_rdrecordmeetingopnn.pbrc_rply_dt
+GOVDEPT	2	tb_rdtkovrplan.acptn_hndv_govdept_cd; tb_rdtkovrplan.tkov_govdept_nm
+OPRTNG	2	tb_rffixreder.oprtng_stts; tb_rffixreder.oprtng_stts_chg_rsn
+LTBR	2	tb_rffixreder.ltbr_ipadr; tb_rffixreder.ltbr_potno
+TPRT	2	tb_rftabprint.tprt_id; tb_rftabpubhist.tprt_id
+ISPR	2	tb_rftabpub.tag_ispr_cd; tb_stformatpki.ispr
+ISR	2	tb_rftabpub.tag_isr_cd; tb_rftabpubhist.tag_isr_cd
+PRNMNT	2	tb_srmfphtg.phtg_prnmnt_ymd; tb_srout.rtn_prnmnt_ymd
+TOQY	2	tb_sroptidisk_cntchckdtl.prttn_toqy; tb_sroptidisk_mst.prttn_toqy
+INCT	2	tb_stcompuequip.inct_ymd; tb_stprsrequip.inct_ymd
+CLASS	2	tb_stconfig.link_api_srvr_cntn_class; tb_stlinktrgt.link_api_srvr_class
+IMPLC	2	tb_stconfig.link_api_srvr_implc_lang; tb_stlinktrgt.link_api_srvr_implc_lang
+SCS	2	tb_sterrorlog.scs_fail_yn; tb_stlogmonitor.scs_fail_yn
+PSBLTY	2	tb_stfileextmng.file_cnvr_psblty_yn; tb_stuser.prsl_psblty_dmnd_alm_yn
+UPDT	2	tb_stfolderneofile.updt_seq; tb_storgdneofile.updt_seq
+TOP	2	tb_stmenulink.lnkg_img_top_on; tb_stmenulink.lnkg_img_top_off
+RT	2	tb_ststkinfo.pssn_rt; tb_stwflbrcrate.rctr_dtrb_rt
+RRNO	2	tb_stuser.rrno; tb_stuserhist.rrno
+UID	2	tb_stuser_sync.ctfe_uid; tb_stuserpki.ctfe_uid
+NEIS	2	tb_stuser_sync.neis_dept_cd; tb_stuser_sync.neis_brdt
+FNTY	2	tb_zzfnctclsf.fnty; tb_zzfnctclsfhist.fnty
+APRP	2	tb_zzfnctclsf.prsr_pd_aprp_ymd; tb_zzfnctclsfhist.prsr_pd_aprp_ymd
+MBY	2	tb_zzfnctclsf.flfmt_mby; tb_zzfnctclsf.ecnm_mby
+RNG	2	tb_zzfnctclsf.assc_rng_nm; tb_zzfnctclsf.core_rng
+ARTCL	2	tb_zzfnctclsfchg.chg_artcl_cd; tb_zzunitchghist.chg_artcl_cd
+ATCL	2	tb_zzfnctclsfrellaw.atcl_no; tb_zzfnctclsfrellaw.lwpr_atcl_no
+AJMT	2	tb_zzprsrrcptrslt.prsr_pd_ajmt_dmnd_year; tb_zzunit.prsr_pd_r_ajmt_stts
+NEXT	1	comtecopseq.next_id
+MASK	1	j_attachfile.file_mask
+PATCH	1	rms_history.patch_cn
+RECP	1	tb_adarchivalobj.gift_recp
+VRTC	1	tb_adarchivalobj.vrtc_sz
+WDTH	1	tb_adarchivalobj.wdth_sz
+HG	1	tb_adarchivalobj.hg_sz
+ATPCL	1	tb_adarchivalobj.atpcl_sz
+OFCLSL	1	tb_adarchivalobj.ofclsl_dscd_pbanc_yn
+THMNL	1	tb_adarchivalobjimg.thmnl_path
+CLCT	1	tb_dfrcpttransflist.clct_se_cd
+SCRN	1	tb_dfrcpttransflist.neob_cnvr_dmnd_scrn_se
+RECR	1	tb_dftransfstorefld.recr_yn
+RETRNSF	1	tb_dftransfstorefld.retrnsf_yn
+POSC	1	tb_gvrnprdl.nars_posc_yn
+DSCT	1	tb_gvrnprdl.dsct_yn
+SRPB	1	tb_gvrnprdl.srpb_pblc_yn
+SND	1	tb_rsrvdoc.tmpr_snd_se
+THD	1	tb_rsrvdoc.tmpr_thd_se
+FTH	1	tb_rsrvdoc.tmpr_fth_se
+THEA	1	tb_rsrvdoc.ofdc_prsr_pd_prmn_thea
+THEB	1	tb_rsrvdoc.ofdc_prsr_pd_prmn_theb
+SMPM	1	tb_rsrvdoc.ofdc_prsr_pd_smpm
+TEN	1	tb_rsrvdoc.ofdc_prsr_pd_ten_yy
+MTS	1	tb_rsrvdoc.ofdc_prsr_pd_six_mts
+MDFR	1	tb_rsrvdoc.last_mdfr_id
+EXCL	1	tb_oprlsgroup.ritm_excl_cnt
+LBL	1	tb_rdfolder.lbl_prnt_yn
+PRNT	1	tb_rdfolder.lbl_prnt_yn
+EXTR	1	tb_rdfolder.extr_sys_cd
+FTR	1	tb_rdftrkwrdtemp.ftr_iwd_sn
+IWD	1	tb_rdftrkwrdtemp.ftr_iwd_sn
+DRM	1	tb_rdmachinecheckresult.drm_yn
+VRFC	1	tb_rdmachinecheckresult.vrfc_yn
+DCRD	1	tb_rdmachinecheckresult.dcrd_yn
+OFCLNM	1	tb_rdrecordcreat.rcpt_doc_dsptch_ofclnm
+BDT	1	tb_rdrecordcreat.bdt_ver
+KKR	1	tb_rfrecordcenter.kkr_trdv_cd
+ISSU	1	tb_rftabpub.tag_issu_trdv_cd
+ABNR	1	tb_srcntchckdtl.abnr_ennc
+CHC	1	tb_srmfphtg.chc_cut_cnt
+CAMERA	1	tb_srmfphtg.camera_nm
+RDRT	1	tb_srmfphtg.rdrt
+SPVR	1	tb_srmfphtg.spvr_nm
+RFRNC	1	tb_sroptidisk_cntchckdtl.rfrnc_doc
+INTR	1	tb_sroptidisk_mst.intr_id
+RTN	1	tb_srout.rtn_prnmnt_ymd
+DCF	1	tb_srprsrbox.dpos_rc_dcf_ecnt
+CALENDAR	1	tb_stcalendar.calendar_seq
+COLOR	1	tb_stcalendar.color
+MNGR	1	tb_stcenteradmin.multi_mngr_id
+GENR	1	tb_stconfig.genr_mng_no_grnt_rule
+SAME	1	tb_stconfig.link_api_srvr_same_sys_yn
+MDCN	1	tb_stdisinf.mdcn_nm
+JVM	1	tb_stdownipmng.jvm_instl_yn
+YR	1	tb_sthomeduty.task_yr
+REQ	1	tb_stlogmonitor.req_hr
+BSC	1	tb_stmenuahthrtgrp.bsc_authrt_se
+CERT	1	tb_stmenuahthrtgrp.cert_cd(auth_cd)
+CD(AUTH	1	tb_stmenuahthrtgrp.cert_cd(auth_cd)
+CD)	1	tb_stmenuahthrtgrp.cert_cd(auth_cd)
+ON	1	tb_stmenulink.lnkg_img_top_on
+OFF	1	tb_stmenulink.lnkg_img_top_off
+LEFT	1	tb_stmenulink.lnkg_img_left
+URL	1	tb_stmenulink.lnkg_url
+CSS	1	tb_stmenulink.lnkg_css
+HELP	1	tb_stmenulink.help_file_nm
+ORC	1	tb_strlslist.orc_dt
+ESTB	1	tb_strecordcenter.oper_rule_estb_yn
+PYEONG	1	tb_strecordcenter.stk_pyeong_cnt
+SEPFN	1	tb_strecordchrgr.task_sepfn
+AREA	1	tb_ststkinfo.area
+PSSN	1	tb_ststkinfo.pssn_rt
+ENCPT	1	tb_stuser.encpt_type
+CIPHER	1	tb_stuser.cipher_chg_yn
+ALM	1	tb_stuser.prsl_psblty_dmnd_alm_yn
+BRTH	1	tb_stuser_sync.brth_ymd
+BRDT	1	tb_stuser_sync.neis_brdt
+DTRB	1	tb_stwflbrcrate.rctr_dtrb_rt
+SOLTN	1	tb_stworkhist.err_soltn_mthd
+MASS	1	tb_tkattachfile.mass_yn
+RERCPT	1	tb_tkfoldermng.rercpt_yn
+RECFMTN	1	tb_zzfnctclsf.recfmtn_yn
+AGE	1	tb_zzfnctclsf.age
+ECNM	1	tb_zzfnctclsf.ecnm_mby
+CHRC	1	tb_zzfnctclsf.etc_chrc
+ASSC	1	tb_zzfnctclsf.assc_rng_nm
+CORE	1	tb_zzfnctclsf.core_rng
+WAY	1	tb_zzfnctclsf.pvsn_way
+IMPL	1	tb_zzfnctclsf.plcy_impl
+RGLT	1	tb_zzprsrtermrule.rglt
+ULD	1	tb_zztmpbkshexcel.excel_uld_tstmp
+PBADMS	1	tb_zzunitnewreq.pbadms_task_refr_pd_cd
+REFR	1	tb_zzunitnewreq.pbadms_task_refr_pd_cd
+PRUF	1	tb_zzunitnewreq.pruf_data_vld_pd_cd
+HSMT	1	tb_zzunitnewreq.hsmt_wrth_prsr_pd_yn
+WRTH	1	tb_zzunitnewreq.hsmt_wrth_prsr_pd_yn
+DUTY	1	tb_zzunitnewreq.rel_laor_duty_pd
+APLCNT	1	tb_zzunitreq.aplcnt
+ONLN	1	tb_zzunitreq.onln_aply_yn

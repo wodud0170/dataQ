@@ -1,0 +1,79 @@
+# dataQ 배포용 compose — 이미지 load 만으로 기동
+#
+# 전제: 배포 PC 에서 `docker load -i dataq-stack.tar` 완료
+# 사용: docker compose -f docker-compose.deploy.yml up -d
+
+services:
+
+  dataq-db:
+    image: dataq-db:snapshot
+    container_name: dataq-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin!123
+      POSTGRES_DB: postgres
+      TZ: Asia/Seoul
+    ports:
+      - "25433:5432"
+    volumes:
+      - dataq-db-data:/var/lib/postgresql/dataq
+    networks:
+      - dataq-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  q-center:
+    image: dataq-center:latest
+    container_name: dataq-center
+    depends_on:
+      dataq-db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_HIKARI_JDBC_URL: jdbc:postgresql://dataq-db:5432/postgres?currentSchema=quality
+      SPRING_DATASOURCE_HIKARI_USERNAME: admin
+      SPRING_DATASOURCE_HIKARI_PASSWORD: admin!123
+      LOG_PATH: /app/logs
+      TZ: Asia/Seoul
+    ports:
+      - "28090:28090"
+      - "28091:28091"
+    volumes:
+      - dataq-center-logs:/app/logs
+    networks:
+      - dataq-net
+    restart: unless-stopped
+
+  q-executor:
+    image: dataq-executor:latest
+    container_name: dataq-executor
+    depends_on:
+      dataq-db:
+        condition: service_healthy
+      q-center:
+        condition: service_started
+    environment:
+      SPRING_DATASOURCE_HIKARI_JDBC_URL: jdbc:postgresql://dataq-db:5432/postgres?currentSchema=quality
+      SPRING_DATASOURCE_HIKARI_USERNAME: admin
+      SPRING_DATASOURCE_HIKARI_PASSWORD: admin!123
+      STOMP_BROKER_URL: ws://q-center:28091
+      TZ: Asia/Seoul
+    ports:
+      - "28098:28098"
+    volumes:
+      - dataq-executor-logs:/home/nd_suite/q-executor/logs
+    networks:
+      - dataq-net
+    restart: unless-stopped
+
+networks:
+  dataq-net:
+    driver: bridge
+
+volumes:
+  dataq-db-data:
+  dataq-center-logs:
+  dataq-executor-logs:

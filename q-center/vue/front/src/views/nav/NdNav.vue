@@ -172,6 +172,16 @@
                         <v-list-item-title>모델링 도구 임포트</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 데이터 모델 시각화 (ERD 자동 생성 + PNG/PDF export) -->
+                    <v-list-item link id="nav_datamodelVisualization" href="#tab_datamodelVisualization"
+                        active-class="ndColor--text" title="데이터 모델 시각화"
+                        v-on:click.stop="addTabItem('데이터 모델 시각화', 'datamodelVisualization');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>데이터 모델 시각화</v-list-item-title>
+                    </v-list-item>
+
                     <v-list-item link id="nav_diagTargetMgmt" href="#tab_diagTargetMgmt"
                         active-class="ndColor--text" title="진단 제외 관리"
                         v-on:click.stop="addTabItem('진단 제외 관리', 'diagTargetMgmt');">
@@ -397,10 +407,10 @@
                     </v-list-item>
 
                     <v-list-item link id="nav_myRequest" href="#tab_myRequest" active-class="ndColor--text"
-                        title="요청 현황"
-                        v-on:click.stop="addTabItem('요청 현황', 'myRequest');">
+                        title="표준 사전 변경 요청 현황"
+                        v-on:click.stop="addTabItem('표준 사전 변경 요청 현황', 'myRequest');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
-                        <v-list-item-title>요청 현황</v-list-item-title>
+                        <v-list-item-title>표준 사전 변경 요청 현황</v-list-item-title>
                     </v-list-item>
 
                     <!-- 88번 거버넌스 — 일반: 내 변경 신청 / 관리자: 데이터 모델 변경 승인 -->
@@ -444,12 +454,12 @@
                         <v-list-item-title>역할 및 권한</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_approval" href="#tab_approval" active-class="ndColor--text" title="승인"
-                        v-on:click.stop=" sendApprovalStatus(); addTabItem('승인', 'approval'); ">
+                    <v-list-item link id="nav_approval" href="#tab_approval" active-class="ndColor--text" title="표준 사전 변경 승인"
+                        v-on:click.stop=" sendApprovalStatus(); addTabItem('표준 사전 변경 승인', 'approval'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
-                        <v-list-item-title>승인</v-list-item-title>
+                        <v-list-item-title>표준 사전 변경 승인</v-list-item-title>
                     </v-list-item>
 
                     <!-- 88번 거버넌스 — 데이터 모델 변경 승인 (관리자 전용) -->

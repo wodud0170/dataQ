@@ -1100,6 +1100,43 @@
 		WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '') AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
 	</update>
 
+	<!--
+	  진단 종료 시점 flag 동기화 — TB_DIAG_RESULT 의 이슈 유무로 TERMS_STND_YN / DOMAIN_STND_YN 갱신.
+	  용어 일치 정의 = 영문명 매칭 + 한글명 일치 + 도메인(타입·길이) 일치 모두 충족.
+	  → 진단 4종(TERM_NOT_EXIST/TERM_KR_NM_MISMATCH/DATA_TYPE_MISMATCH/DATA_LEN_MISMATCH) 중
+	     어느 하나라도 있으면 용어 미일치 → 두 flag 모두 N.
+	  - 진단 대상 컬럼만 (STND_DIAG_TARGET_YN = 'Y') — 진단 제외 컬럼은 건드리지 않음
+	-->
+	<update id="syncAttrStndYnFromDiag" parameterType="String">
+		UPDATE TB_DATA_MODEL_ATTR a SET
+			 TERMS_STND_YN  = CASE
+				WHEN EXISTS (
+					SELECT 1 FROM TB_DIAG_RESULT r
+					WHERE r.DIAG_JOB_ID = #{diagJobId}
+					  AND r.OBJ_NM  = a.OBJ_NM
+					  AND r.ATTR_NM = a.ATTR_NM
+				) THEN 'N' ELSE 'Y'
+			 END
+			,DOMAIN_STND_YN = CASE
+				WHEN EXISTS (
+					SELECT 1 FROM TB_DIAG_RESULT r
+					WHERE r.DIAG_JOB_ID = #{diagJobId}
+					  AND r.OBJ_NM  = a.OBJ_NM
+					  AND r.ATTR_NM = a.ATTR_NM
+				) THEN 'N' ELSE 'Y'
+			 END
+		WHERE a.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
+		  AND a.USE_YN = 'Y'
+		  AND COALESCE(a.STND_DIAG_TARGET_YN, 'Y') = 'Y'
+		  AND EXISTS (
+			SELECT 1 FROM TB_DATA_MODEL_OBJ o
+			WHERE o.DM_ID = a.DM_ID
+			  AND COALESCE(o.OBJ_OWNER,'') = COALESCE(a.OBJ_OWNER,'')
+			  AND o.OBJ_NM = a.OBJ_NM
+			  AND COALESCE(o.STND_DIAG_TARGET_YN, 'Y') = 'Y'
+		  )
+	</update>
+
 	<!-- ===== 87-3: PK/FK 자동 생성·삭제 매퍼 (TB_DATA_MODEL_CONSTRAINT / TB_DATA_MODEL_INDEX) ===== -->
 
 	<!-- 같은 테이블에 PK constraint 가 이미 있는지 (PK 1개 제한) -->

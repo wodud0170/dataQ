@@ -134,6 +134,12 @@
                     <erwinImport :key="erwinImportKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'datamodelVisualization'" id="tab_datamodelVisualization" class="tab_contents"
+                :class="{ active: this.activeContent === 'datamodelVisualization' }">
+                <keep-alive>
+                    <datamodelVisualization :key="datamodelVisualizationKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'dataDiag'" id="tab_dataDiag" class="tab_contents"
                 :class="{ active: this.activeContent === 'dataDiag' }">
                 <keep-alive>
@@ -404,6 +410,7 @@ import DSTermRecommend from "../../components/DSTermRecommend.vue"
 import DSStructDiag from "../../components/DSStructDiag.vue"
 import DSStructDiagResult from "../../components/DSStructDiagResult.vue"
 import DSErwinImport from "../../components/DSErwinImport.vue"
+import DSDatamodelVisualization from "../../components/DSDatamodelVisualization.vue"
 import DSChangeHistory from "../../components/DSChangeHistory.vue"
 import DSGlobalSearch from "../../components/DSGlobalSearch.vue"
 import DSMyRequest from "../../components/DSMyRequest.vue"
@@ -487,6 +494,7 @@ export default {
             datamodelCollectionKey: this.createUUID(),
             datamodelHistoryKey: this.createUUID(),
             erwinImportKey: this.createUUID(),
+            datamodelVisualizationKey: this.createUUID(),
             dataDiagKey: this.createUUID(),
             dataDiagResultKey: this.createUUID(),
             termRecommendKey: this.createUUID(),
@@ -550,6 +558,7 @@ export default {
         "structDiag": DSStructDiag,
         "structDiagResult": DSStructDiagResult,
         "erwinImport": DSErwinImport,
+        "datamodelVisualization": DSDatamodelVisualization,
         "dqi": DQDQI,
         "ctq": DQCTQ,
         "dqbr": DQBR,
@@ -640,6 +649,9 @@ export default {
                     break;
                 case "erwinImport":
                     this.erwinImportKey = this.createUUID();
+                    break;
+                case "datamodelVisualization":
+                    this.datamodelVisualizationKey = this.createUUID();
                     break;
                 case "dataDiag":
                     this.dataDiagKey = this.createUUID();

@@ -1171,6 +1171,7 @@ export default {
     setListPage() {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.termItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     getTermData() {
       this.loadTable = true;

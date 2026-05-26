@@ -1187,6 +1187,7 @@ export default {
     setListPage() {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.wordItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     enterSelect() {
       // 단어명 클릭 시 하단에 보여지는 상세 보기를 체크 해제 시 초기화 해주기

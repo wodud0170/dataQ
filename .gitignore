@@ -61,3 +61,9 @@ cookies.txt
 
 # 잘못된 logback 경로로 생성되는 디브리 디렉터리
 **/LOG_PATH_IS_UNDEFINED/
+
+# Excel 임시 파일
+~$*
+
+# Playwright MCP 런타임 디렉터리
+.playwright-mcp/

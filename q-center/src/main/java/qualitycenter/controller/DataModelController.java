@@ -1566,6 +1566,77 @@ public class DataModelController {
 	}
 
 	/**
+	 * 테이블 다건 삭제 — 선택삭제/전체삭제 (모두 같은 흐름).
+	 * 각 테이블의 하위 컬럼·인덱스·제약조건 cascade 삭제 + 변경 이력 기록 (Tier 1).
+	 * 단일 트랜잭션 — 하나라도 실패하면 전체 롤백.
+	 *
+	 * 요청: { dataModelId, items: [ {objOwner, objNm}, ... ] }
+	 * 응답: { deleted: N, errors: [{objNm, message}] }
+	 */
+	@RequestMapping(value = "/deleteObjs", method = RequestMethod.POST)
+	@SuppressWarnings("unchecked")
+	public Mono<Response> deleteObjs(@RequestBody Map<String, Object> body) {
+		Response result = new Response();
+		SqlSession session = sqlSessionFactory.openSession();
+		try {
+			String dataModelId = (String) body.get("dataModelId");
+			Object rawItems = body.get("items");
+			if (dataModelId == null || dataModelId.trim().isEmpty())
+				throw new IllegalArgumentException("dataModelId 누락");
+			if (!(rawItems instanceof List))
+				throw new IllegalArgumentException("items 배열이 아닙니다.");
+			List<Map<String, Object>> items = (List<Map<String, Object>>) rawItems;
+			if (items.isEmpty())
+				throw new IllegalArgumentException("삭제 대상이 비어있습니다.");
+
+			int deleted = 0;
+			List<Map<String, Object>> errors = new ArrayList<>();
+			for (Map<String, Object> it : items) {
+				String objOwner = it.get("objOwner") == null ? "" : (String) it.get("objOwner");
+				String objNm    = (String) it.get("objNm");
+				if (objNm == null || objNm.trim().isEmpty()) {
+					Map<String, Object> e = new HashMap<>();
+					e.put("objNm", "(빈값)"); e.put("message", "objNm 누락"); errors.add(e);
+					continue;
+				}
+				try {
+					Map<String, Object> param = new HashMap<>();
+					param.put("dataModelId", dataModelId);
+					param.put("objOwner",    objOwner);
+					param.put("objNm",       objNm);
+					session.delete("datamodel.deleteDataModelAttrsByObj", param);
+					session.delete("datamodel.deleteDataModelObj", param);
+					String aprvStatus = changeHistory.resolveAprvStatusForUserChange();
+					changeHistory.record(session, dataModelId, "DEL_OBJ", "TIER1",
+							objOwner, objNm, null, null, null,
+							null, null,
+							changeHistory.generateDdlSnippet("DEL_OBJ", objOwner, objNm, null, null, null),
+							aprvStatus);
+					deleted++;
+				} catch (Exception inner) {
+					Map<String, Object> e = new HashMap<>();
+					e.put("objNm", objNm); e.put("message", inner.getMessage());
+					errors.add(e);
+					throw inner; // 트랜잭션 전체 롤백
+				}
+			}
+			session.commit();
+			Map<String, Object> data = new HashMap<>();
+			data.put("deleted", deleted);
+			data.put("errors", errors);
+			result.setResultInfo(RestResult.CODE_200);
+			result.setContents(new ObjectMapper().writeValueAsString(data));
+		} catch (Exception e) {
+			session.rollback();
+			log.error(">> deleteObjs failed : {}", e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		} finally {
+			session.close();
+		}
+		return Mono.just(result);
+	}
+
+	/**
 	 * 한글명으로 표준 용어 조회 → 영문약어명 + 도메인(타입/길이) 반환
 	 * 컬럼 추가 시 [표준 적용] 버튼에서 호출
 	 */
@@ -1871,13 +1942,15 @@ public class DataModelController {
 	public Mono<Response> updateAttr(@RequestBody StdDataModelAttrVo attrVo) {
 		Response result = new Response();
 		try {
-			boolean isStandard = !"N".equals(attrVo.getTermsStndYn());
-			if (isStandard) {
+			// 저장 시 표준 재평가 — 단어/용어/도메인 매칭이 끊긴 경우 자동 강등 (Y → N).
+			// 사용자 시나리오: 이전에 표준이었던 컬럼의 데이터 타입/길이를 변경해 도메인 불일치가 발생한 경우.
+			try {
 				validateAttrStandards(attrVo);
 				applyStandardFlags(attrVo);
-			} else {
+			} catch (Exception stdErr) {
 				attrVo.setTermsStndYn("N");
 				attrVo.setDomainStndYn("N");
+				log.info(">> updateAttr standard re-check downgraded: {}", stdErr.getMessage());
 			}
 			sqlSessionTemplate.update("datamodel.updateDataModelAttr", attrVo);
 			result.setResultInfo(RestResult.CODE_200);
@@ -2083,8 +2156,14 @@ public class DataModelController {
 						vo.setNullableYn("Y".equalsIgnoreCase(vo.getPkYn()) ? "N"
 								: (nullableYn == null || nullableYn.isEmpty() ? "Y" : nullableYn));
 						vo.setDefaultVal(str(row.get("defaultVal")));
-						vo.setTermsStndYn("N");
-						vo.setDomainStndYn("N");
+						// ADD 시 표준 재평가 — 영문명이 표준 용어와 매칭되고 도메인이 일치하면 Y/Y, 아니면 N/N
+						try {
+							validateAttrStandards(vo);
+							applyStandardFlags(vo);
+						} catch (Exception stdErr) {
+							vo.setTermsStndYn("N");
+							vo.setDomainStndYn("N");
+						}
 						// 88번 거버넌스 — 관리자=APPROVED 즉시, 사용자=DRAFT
 						String addAprvStatus = changeHistory.resolveAprvStatusForUserChange();
 						vo.setAprvStatus(addAprvStatus);
@@ -2552,7 +2631,8 @@ public class DataModelController {
 	}
 
 	/**
-	 * 컬럼 표준 검증 — 영문명 토큰은 모두 표준 단어에 존재하고, 도메인(타입/길이)은 TB_DOMAIN과 일치해야 함
+	 * 컬럼 표준 검증 — 영문명 토큰은 모두 표준 단어에 존재, 영문명 = 표준 용어, 한글명·도메인(타입/길이) 일치해야 함.
+	 * 진단(DiagService) 로직과 동일한 기준. 저장 시 호출돼 미준수 발견되면 throw → 호출측에서 catch 후 termsStndYn/domainStndYn='N' 으로 강등.
 	 * (테이블·인덱스·제약조건은 표준 검증 대상 아님 — 컬럼만 강제)
 	 */
 	private void validateAttrStandards(StdDataModelAttrVo attrVo) {
@@ -2567,6 +2647,54 @@ public class DataModelController {
 		if (attrVo.getDataType() == null || attrVo.getDataType().trim().isEmpty()) {
 			throw new IllegalArgumentException("데이터 타입은 필수입니다.");
 		}
+
+		// 영문명 기준 표준 용어 매칭 (TB_TERMS.TERMS_ENG_ABRV_NM = attrNm)
+		com.ndata.quality.model.std.StdTermsVo term =
+			sqlSessionTemplate.selectOne("terms.selectTermsByEngNm", attrNm.trim());
+		if (term == null) {
+			throw new IllegalStateException("표준 미준수: '" + attrNm + "' 에 해당하는 표준 용어가 등록되어있지 않습니다.");
+		}
+
+		// 한글명 일치 검증 — 표준 용어에 한글명이 있고, 입력 attrNmKr 가 있을 때만 비교
+		String stdKr = term.getTermsNm();
+		String inputKr = attrVo.getAttrNmKr();
+		if (stdKr != null && !stdKr.trim().isEmpty()
+				&& inputKr != null && !inputKr.trim().isEmpty()
+				&& !stdKr.trim().equals(inputKr.trim())) {
+			throw new IllegalStateException("표준 미준수: 한글명이 표준 용어와 다릅니다 (표준: " + stdKr + ", 입력: " + inputKr + ")");
+		}
+
+		// 도메인 타입/길이 일치 검증 (term 에 도메인이 지정된 경우만)
+		if (term.getDomainNm() != null && !term.getDomainNm().trim().isEmpty()) {
+			String stdType = term.getDataType();
+			long   stdLen  = term.getDataLen();
+			if (stdType != null && !isTypeEquivalent(stdType, attrVo.getDataType())) {
+				throw new IllegalStateException("표준 미준수: 데이터 타입이 표준 도메인과 다릅니다 (표준: " + stdType + ", 입력: " + attrVo.getDataType() + ")");
+			}
+			if (stdLen > 0 && attrVo.getDataLen() != stdLen) {
+				throw new IllegalStateException("표준 미준수: 데이터 길이가 표준 도메인과 다릅니다 (표준: " + stdLen + ", 입력: " + attrVo.getDataLen() + ")");
+			}
+		}
+	}
+
+	/** DBMS별 타입 동의어 비교 (DiagService.isTypeEquivalent 와 동일). */
+	private boolean isTypeEquivalent(String stdType, String actualType) {
+		if (stdType == null || actualType == null) return false;
+		if (stdType.equalsIgnoreCase(actualType)) return true;
+		String s = stdType.toUpperCase();
+		String a = actualType.toUpperCase();
+		if ((s.equals("DATE") && a.equals("DATETIME")) || (s.equals("DATETIME") && a.equals("DATE"))) return true;
+		if (isStringFamily(s) && isStringFamily(a)) return true;
+		if (isNumericFamily(s) && isNumericFamily(a)) return true;
+		return false;
+	}
+
+	private boolean isStringFamily(String type) {
+		return type.equals("CHAR") || type.equals("VARCHAR") || type.equals("VARCHAR2");
+	}
+
+	private boolean isNumericFamily(String type) {
+		return type.equals("NUMBER") || type.equals("NUMERIC") || type.equals("DECIMAL");
 	}
 
 	private List<String> splitTokens(String physicalName) {
@@ -2808,6 +2936,21 @@ public class DataModelController {
 						ref.put("deleteRule", r.get("deleteRule"));
 						fkRefs.add(ref);
 					}
+					// 영향 받은 (owner, objNm) DISTINCT 로 OBJ_ATTR_CNT 동기화 — 누락 시 테이블 화면에 0개로 표시되던 버그
+					Set<String> syncedObjs = new HashSet<>();
+					for (Map<String, Object> r : rows) {
+						if (!"INSERT".equals(r.get("_action"))) continue;
+						String owner = str(r.get("objOwner"));
+						String obj   = str(r.get("objNm"));
+						String key = (owner == null ? "" : owner) + "|" + obj;
+						if (syncedObjs.contains(key)) continue;
+						syncedObjs.add(key);
+						Map<String, Object> syncParam = new HashMap<>();
+						syncParam.put("dataModelId", dataModelId);
+						syncParam.put("objOwner",    owner == null ? "" : owner);
+						syncParam.put("objNm",       obj);
+						session.update("datamodel.syncDataModelObjAttrCnt", syncParam);
+					}
 					session.commit();
 					parsed.put("fkRefs", fkRefs);
 				} catch (Exception e) {
@@ -2945,14 +3088,15 @@ public class DataModelController {
 				m.put("bizAreaNm", bizAreaNm);
 				m.put("bizAreaId", bizAreaId);
 				m.put("tablespaceNm", tablespace);
-				if (isBlank(owner) || isBlank(krNm)) {
+				// 소유자 필수 + 영문/한글 중 하나는 필수 (둘 중 하나만 있어도 등록 가능)
+				if (isBlank(owner) || (isBlank(krNm) && isBlank(enNm))) {
 					m.put("_action", "ERROR");
-					m.put("_msg", "소유자·테이블명(한글) 필수");
-					errors.add(errRow(r + 1, "소유자·테이블명(한글) 필수"));
+					m.put("_msg", "소유자 필수 + 테이블명(영문/한글) 중 하나는 필수");
+					errors.add(errRow(r + 1, "소유자 필수 + 테이블명(영문/한글) 중 하나는 필수"));
 				} else {
-					String keyKr = owner + "|" + krNm;
+					String keyKr = isBlank(krNm) ? null : (owner + "|" + krNm);
 					String keyEn = isBlank(enNm) ? null : (owner + "|" + enNm);
-					if (seenKr.contains(keyKr)) {
+					if (keyKr != null && seenKr.contains(keyKr)) {
 						m.put("_action", "ERROR");
 						m.put("_msg", "파일 내 한글명 중복 (" + owner + ", " + krNm + ")");
 						errors.add(errRow(r + 1, "파일 내 한글명 중복"));
@@ -2960,7 +3104,7 @@ public class DataModelController {
 						m.put("_action", "ERROR");
 						m.put("_msg", "파일 내 영문명 중복 (" + owner + ", " + enNm + ")");
 						errors.add(errRow(r + 1, "파일 내 영문명 중복"));
-					} else if (existingKr.contains(keyKr)) {
+					} else if (keyKr != null && existingKr.contains(keyKr)) {
 						m.put("_action", "SKIP");
 						m.put("_msg", "이미 존재 (한글명) — 스킵");
 						warnings.add(warnRow(r + 1, "이미 존재하는 한글명 (" + owner + ", " + krNm + ") — 스킵"));
@@ -2970,7 +3114,7 @@ public class DataModelController {
 						warnings.add(warnRow(r + 1, "이미 존재하는 영문명 (" + owner + ", " + enNm + ") — 스킵"));
 					} else {
 						m.put("_action", "INSERT");
-						seenKr.add(keyKr);
+						if (keyKr != null) seenKr.add(keyKr);
 						if (keyEn != null) seenEn.add(keyEn);
 					}
 				}

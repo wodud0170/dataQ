@@ -163,6 +163,7 @@ export default {
   methods: {
     setListPage() {
       this.pageCount = Math.ceil(this.historyItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     onSystemChange() {
       this.selectedModel = null;

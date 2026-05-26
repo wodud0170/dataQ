@@ -73,7 +73,8 @@
     </v-sheet>
 
     <!-- 엑셀 업로드 미리보기 다이얼로그 -->
-    <v-dialog v-model="uploadDialog" max-width="1100" persistent>
+    <!-- 모달 콘텐츠가 길어져도 footer(버튼)·pagination 이 잘리지 않도록 v-card-text 내부 스크롤 -->
+    <v-dialog v-model="uploadDialog" max-width="1100" persistent scrollable>
       <v-card>
         <v-card-title>
           테이블 엑셀 업로드 미리보기
@@ -82,7 +83,7 @@
             총 {{ uploadSummary.total }} / 등록 예정 {{ uploadSummary.toInsert }} / 스킵 {{ uploadSummary.skipped }} / 오류 {{ (uploadErrors || []).length }}
           </span>
         </v-card-title>
-        <v-card-text>
+        <v-card-text style="max-height: 70vh; overflow-y: auto;">
           <v-alert v-if="uploadErrors && uploadErrors.length > 0" type="error" dense text>
             오류 {{ uploadErrors.length }}건 — 수정 후 다시 업로드하세요.
             <div v-for="(e, i) in uploadErrors.slice(0, 5)" :key="'e' + i" style="font-size:.8rem;">
@@ -159,12 +160,25 @@
       </v-sheet>
     </v-sheet>
 
+    <!-- 일괄 삭제 버튼 (선택 시 표시) — 검색결과 전체 삭제 옵션 별도 -->
+    <v-sheet class="px-4 pb-2" v-show="selectedModelId">
+      <v-btn small color="error" outlined :disabled="selectedRows.length === 0" @click="deleteSelected"
+        :style="{ marginRight: '8px' }">
+        <v-icon small left>mdi-delete-sweep</v-icon>선택 삭제 ({{ selectedRows.length }})
+      </v-btn>
+      <v-btn small color="error" :disabled="dmTableItems.length === 0" @click="deleteAllVisible">
+        <v-icon small left>mdi-delete-empty</v-icon>검색결과 전체 삭제 ({{ dmTableItems.length }})
+      </v-btn>
+      <span style="color:#888; font-size:.8rem; margin-left:12px;">선택 삭제 = 체크박스 / 전체 삭제 = 현재 검색·필터 조건의 모든 행</span>
+    </v-sheet>
+
     <!-- 테이블 목록 -->
     <!-- 86번 #11 — 같은 OBJ_NM 다른 OWNER 가능 → item-key 에 OWNER 포함, 기본 정렬도 OWNER 우선 -->
     <v-data-table id="dmTable_table" :headers="dmTabledetaileHeaders" :items="dmTableItems"
       :page.sync="page" :items-per-page="itemsPerPage" hide-default-footer
       item-key="_rowKey" class="px-4 pb-3" :loading="loadTable" loading-text="잠시만 기다려주세요."
       multi-sort :sort-by="['objOwner', 'objNm']" :sort-desc="[false, false]"
+      show-select v-model="selectedRows"
       :item-class="row => row.aprvStatus === 'REJECTED' ? 'row-rejected' : ((row.aprvStatus === 'DRAFT' || row.aprvStatus === 'SUBMITTED') ? 'row-draft' : '')">
       <template #[`item.objNm`]="{ item }">
         <a class="ndColor--text" style="cursor:pointer; text-decoration:underline;" @click="goToColumn(item)">{{ item.objNm }}</a>
@@ -213,15 +227,18 @@ export default {
   watch: {
     dmTableItems() {
       this.pageCount = Math.ceil(this.dmTableItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     itemsPerPage() {
       this.pageCount = Math.ceil(this.dmTableItems.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
   },
   data: () => ({
     modelList: [],
     dmTableAllItems: [],
     selectedModelId: null,
+    selectedRows: [],   // 체크박스로 선택된 행들 (일괄 삭제용)
     submitModalShow: false,
     // 86번 #11 — 검색 필드 (소유자 추가, 한·영 모두 모드 셀렉트)
     searchOwner: '',
@@ -606,7 +623,9 @@ export default {
       }).then((r) => {
         if (!r.isConfirmed) return;
         axios.post(this.$APIURL.base + "api/dm/deleteObj", {
-          dataModelId: this.selectedModelId, objNm: item.objNm,
+          dataModelId: this.selectedModelId,
+          objOwner: item.objOwner || '',
+          objNm: item.objNm,
         }).then((res) => {
           if (res.data && res.data.resultCode === 200) {
             this.$swal.fire({ title: '삭제되었습니다.', confirmButtonText: '확인', icon: 'success' });
@@ -614,6 +633,50 @@ export default {
           } else {
             this.$swal.fire({ title: '삭제 실패', text: (res.data && res.data.resultMessage) || '', confirmButtonText: '확인', icon: 'error' });
           }
+        });
+      });
+    },
+    // 선택 삭제 — 체크박스로 선택한 행들 일괄 삭제
+    deleteSelected() {
+      if (this.selectedRows.length === 0) return;
+      this._bulkDelete(this.selectedRows, `선택한 테이블 ${this.selectedRows.length}건`);
+    },
+    // 검색결과 전체 삭제 — 현재 필터링된 모든 행 삭제
+    deleteAllVisible() {
+      if (this.dmTableItems.length === 0) return;
+      this._bulkDelete(this.dmTableItems, `현재 검색결과 ${this.dmTableItems.length}건 전체`);
+    },
+    _bulkDelete(items, label) {
+      const sampleNames = items.slice(0, 5).map(i => i.objNm).join(', ');
+      const moreText = items.length > 5 ? ` 외 ${items.length - 5}건` : '';
+      this.$swal.fire({
+        title: `${label} 삭제`,
+        html: `<div style="text-align:left;">${label} 및 <b>하위 컬럼·인덱스·제약조건</b>이 함께 삭제됩니다.<br><br>` +
+              `<span style="color:#666;font-size:.85rem;">대상: ${sampleNames}${moreText}</span><br><br>` +
+              `<b style="color:#D32F2F;">이 작업은 되돌릴 수 없습니다.</b></div>`,
+        showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소', icon: 'warning',
+        confirmButtonColor: '#D32F2F',
+      }).then((r) => {
+        if (!r.isConfirmed) return;
+        const payload = {
+          dataModelId: this.selectedModelId,
+          items: items.map(i => ({ objOwner: i.objOwner || '', objNm: i.objNm })),
+        };
+        axios.post(this.$APIURL.base + "api/dm/deleteObjs", payload).then((res) => {
+          if (res.data && res.data.resultCode === 200) {
+            let deleted = items.length;
+            try {
+              const c = JSON.parse(res.data.contents || '{}');
+              if (typeof c.deleted === 'number') deleted = c.deleted;
+            } catch (e) { /* ignore */ }
+            this.$swal.fire({ title: `${deleted}건 삭제됨`, confirmButtonText: '확인', icon: 'success' });
+            this.selectedRows = [];
+            this.load();
+          } else {
+            this.$swal.fire({ title: '삭제 실패', text: (res.data && res.data.resultMessage) || '', confirmButtonText: '확인', icon: 'error' });
+          }
+        }).catch((e) => {
+          this.$swal.fire({ title: '삭제 실패', text: e.message, confirmButtonText: '확인', icon: 'error' });
         });
       });
     },

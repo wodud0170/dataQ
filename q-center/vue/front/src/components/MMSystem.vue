@@ -396,6 +396,7 @@ export default {
       this.pageCount = Math.ceil(
         this.datasourceItems.length / this.itemsPerPage
       );
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
     async itemClick(data, event) {
       let _dsNm = [];

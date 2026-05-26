@@ -1,0 +1,1578 @@
+구분	영문약어	단어명	스키마등장수	비고
+매칭	ABL	폐지	5	
+매칭	ABNR	이상	1	
+매칭	ABRV	약어	4	
+매칭	ACCUM	누적	3	
+매칭	ACNT	계정	10	
+매칭	ACPT	수용	2	
+매칭	ACPTN	인수	247	
+매칭	ACPTR	인수자	25	
+매칭	ACS	접근	32	
+매칭	ACTN	조치	7	
+매칭	ADAF	행정박물	12	
+매칭	ADD	추가	8	
+매칭	ADDR	주소	9	
+매칭	ADPRV	찬반	3	
+매칭	ADR	시청각기록물	10	
+매칭	AFCH	변경후	65	
+매칭	AFTR	이후	5	
+매칭	AGE	연령	1	
+매칭	AGND	안건	6	
+매칭	AGRE	동의	3	
+매칭	AJMT	조정	2	
+매칭	ALCT	할당	8	
+매칭	ALM	알람	1	
+매칭	ALTMNT	배정	2	
+매칭	ANCMNT	고시	5	
+매칭	ANNN	통보자	4	
+매칭	API	API	13	
+매칭	APLCN	적용	28	
+매칭	APLCNT	신청자	1	
+매칭	APLY	신청	55	
+매칭	APPL	출원	7	
+매칭	APRP	충당	2	
+매칭	APRTN	책정	13	
+매칭	APRV	승인	25	
+매칭	AREA	면적	1	
+매칭	ARNGMT	정리	13	
+매칭	ARSM	자료관	3	
+매칭	ARTCL	항목	2	
+매칭	ASMT	과제	6	
+매칭	ASNM	가명	6	
+매칭	ASSC	연관	1	
+매칭	ATCH	첨부	48	
+매칭	ATCL	조항	2	
+매칭	ATPCL	비정형	1	
+매칭	ATRZ	결재	4	
+매칭	AUTHRT	권한	15	
+매칭	AUTO	자동	7	
+매칭	AUTZR	승인자	22	
+매칭	BDT	본문	1	
+매칭	BEHV	행위	4	
+매칭	BFCH	변경전	71	
+매칭	BFR	이전	16	
+매칭	BGNG	시작	57	
+매칭	BKNO	권호수	21	
+매칭	BKSH	서가	53	
+매칭	BM	기능분류	14	
+매칭	BOX	상자	16	
+매칭	BRDT	생년월일	1	
+매칭	BRM	BRM	3	
+매칭	BRTH	출생	1	
+매칭	BSC	기본	1	
+매칭	CALENDAR	달력	1	
+매칭	CAMERA	카메라	1	
+매칭	CARD	카드	23	
+매칭	CAUSE	계기	2	
+매칭	CBPR	기증자	2	
+매칭	CD	코드	882	
+매칭	CEA	정수점검	5	
+매칭	CERT	인증	1	
+매칭	CESE	중단	2	
+매칭	CFMTN	확정	22	
+매칭	CHC	선택	1	
+매칭	CHCK	점검	46	
+매칭	CHCKR	검수자	8	
+매칭	CHG	변경	59	
+매칭	CHNRG	변경자	16	
+매칭	CHRC	특성	1	
+매칭	CHS	추적	6	
+매칭	CHWH	변경사유	6	
+매칭	CIPHER	암호	1	
+매칭	CLASS	CLASS	2	
+매칭	CLBN	공동	4	
+매칭	CLCT	수집	1	
+매칭	CLGN	재분류	72	
+매칭	CLOUD	클라우드	3	
+매칭	CLR	접수자	3	
+매칭	CLSF	분류	134	
+매칭	CMIT	위원회	7	
+매칭	CMPTN	완료	56	
+매칭	CN	내용	90	
+매칭	CND	조건	2	
+매칭	CNSLTN	협의	2	
+매칭	CNT	수	163	
+매칭	CNTN	접속	6	
+매칭	CNVR	변환	67	
+매칭	COL	컬럼	5	
+매칭	COLM	열	12	
+매칭	COLOR	색상	1	
+매칭	COMM	공통	8	
+매칭	CORE	핵심	1	
+매칭	CPCT	용량	19	
+매칭	CPYR	저작권	8	
+매칭	CRCM	경위	2	
+매칭	CRLTN	배포	9	
+매칭	CRRC	정정	21	
+매칭	CRST	현황	3	
+매칭	CRT	생성	44	
+매칭	CRTR	기준	25	
+매칭	CRYN	반입	14	
+매칭	CSS	CSS	1	
+매칭	CTFE	인증서	11	
+매칭	CUT	컷	5	
+매칭	CYCL	차수	18	
+매칭	DATA	자료	18	
+매칭	DATE	날짜	8	
+매칭	DAY	일	2	
+매칭	DB	DB	2	
+매칭	DCDT	건	2	
+매칭	DCDV	문서과	5	
+매칭	DCF	철	1	
+매칭	DCRD	불일치	1	
+매칭	DEL	삭제	38	
+매칭	DEPT	부서	82	
+매칭	DESC	기술	9	
+매칭	DESCN	의결	4	
+매칭	DETL	세부	3	
+매칭	DFLP	문서보존포맷	18	
+매칭	DLBDC	심의서	8	
+매칭	DLBR	심의	41	
+매칭	DLCN	심의회	23	
+매칭	DLRY	배부	9	
+매칭	DMG	훼손	13	
+매칭	DMND	요청	59	
+매칭	DOC	문서	75	
+매칭	DPOS	배치	24	
+매칭	DRC	전자기록물	33	
+매칭	DRET	지시	7	
+매칭	DRM	DRM	1	
+매칭	DSCD	폐기	98	
+매칭	DSCT	폐간	1	
+매칭	DSCTN	내역	7	
+매칭	DSGN	지정	13	
+매칭	DSPS	처분	3	
+매칭	DSPTCH	발신	3	
+매칭	DST	파기	8	
+매칭	DT	일시	458	
+매칭	DTL	상세	33	
+매칭	DTRB	분배	1	
+매칭	DUTY	의무	1	
+매칭	DWNLD	다운로드	9	
+매칭	ECNM	경제	1	
+매칭	ECNT	개수	15	
+매칭	EDIT	편집	6	
+매칭	ELCT	전자	15	
+매칭	EML	이메일	3	
+매칭	ENCPT	암호화	1	
+매칭	END	종료	69	
+매칭	ENFC	시행	15	
+매칭	ENNC	유무	3	
+매칭	EQPMNT	장비	3	
+매칭	ERR	오류	119	
+매칭	ESTB	제정	1	
+매칭	ETC	기타	20	
+매칭	ETL	외부	6	
+매칭	EVL	평가	55	
+매칭	EXCEL	엑셀	5	
+매칭	EXCL	제외	1	
+매칭	EXCSS	부설	12	
+매칭	EXPC	예상	10	
+매칭	EXPLN	설명	26	
+매칭	EXPRY	만료	3	
+매칭	EXST	존재	15	
+매칭	EXTN	확장자	4	
+매칭	EXTR	추출	1	
+매칭	FAIL	실패	3	
+매칭	FILE	파일	376	
+매칭	FILM	필름	4	
+매칭	FIVE	5	5	
+매칭	FIX	고정	4	
+매칭	FLFMT	수행	7	
+매칭	FLNM	성명	2	
+매칭	FLR	층	5	
+매칭	FLS	기록물철	254	
+매칭	FLUP	후속	3	
+매칭	FNCT	기능	25	
+매칭	FNPR	비치기록물	11	
+매칭	FNTY	기능유형	2	
+매칭	FORM	형태	4	
+매칭	FOUR	4	5	
+매칭	FQ	빈도	5	
+매칭	FRNS	비치	24	
+매칭	FRST	최초	6	
+매칭	FTH	4차	1	
+매칭	FTR	전문검색	1	
+매칭	GENR	일반	1	
+매칭	GIFT	선물	4	
+매칭	GOVDEPT	부처	2	
+매칭	GRD	등급	17	
+매칭	GRDS	근거	8	
+매칭	GRNT	부여	8	
+매칭	GROUP	그룹	40	
+매칭	GVRN	정부	2	
+매칭	HASH	해쉬	19	
+매칭	HELP	도움말	1	
+매칭	HG	높이	1	
+매칭	HGHRK	최상위	12	
+매칭	HNDV	인계	63	
+매칭	HOLD	보유	31	
+매칭	HOPE	희망	2	
+매칭	HR	시간	6	
+매칭	HSMT	사료	1	
+매칭	HSTRY	이력	25	
+매칭	ID	아이디	969	
+매칭	IDNTY	확인	6	
+매칭	IDTF	식별자	6	
+매칭	IGI	검수	47	
+매칭	IMG	이미지	6	
+매칭	IMPL	집행	1	
+매칭	IMPLC	구현	2	
+매칭	IMPR	불가	7	
+매칭	INCT	도입	2	
+매칭	INDX	색인	5	
+매칭	INFC	감염	15	
+매칭	INFO	정보	28	
+매칭	INPT	입력	9	
+매칭	INQ	조회	3	
+매칭	INSP	검사	9	
+매칭	INST	기관	125	
+매칭	INSTL	설치	10	
+매칭	INTR	검사자	1	
+매칭	IP	IP	6	
+매칭	IPADR	IP주소	13	
+매칭	ISPR	발급자	2	
+매칭	ISR	발행자	2	
+매칭	ISSU	발급	1	
+매칭	IWD	색인어	1	
+매칭	JBGD	직급	43	
+매칭	JBPS	직위	49	
+매칭	JOB	작업	126	
+매칭	JVM	JVM	1	
+매칭	KEY	키	10	
+매칭	KKR	KKR	1	
+매칭	KND	종류	2	
+매칭	LANG	언어	6	
+매칭	LAOR	법령	4	
+매칭	LAST	최종	21	
+매칭	LBL	라벨	1	
+매칭	LDGR	대장	9	
+매칭	LEFT	좌측	1	
+매칭	LEV	레벨	11	
+매칭	LGN	로그인	14	
+매칭	LINE	라인	9	
+매칭	LINK	연계	35	
+매칭	LIST	목록	84	
+매칭	LMT	제한	38	
+매칭	LNKG	연결	10	
+매칭	LOG	로그	8	
+매칭	LRG	대	6	
+매칭	LTBR	경광등	2	
+매칭	LWPR	하위	6	
+매칭	MAIN	주요	6	
+매칭	MASK	MASK	1	
+매칭	MASS	대용량	1	
+매칭	MBRC	위원	13	
+매칭	MBY	주체	2	
+매칭	MCHN	기계	4	
+매칭	MD	매체	37	
+매칭	MDCN	약품	1	
+매칭	MDFCN	수정	31	
+매칭	MDFR	수정자	1	
+매칭	MDTR	치료	45	
+매칭	MEMO	메모	10	
+매칭	MENU	메뉴	22	
+매칭	META	메타	3	
+매칭	MF	MF	13	
+매칭	MGR	마이그레이션	3	
+매칭	MID	중	7	
+매칭	MKR	제조사	3	
+매칭	MM	월	3	
+매칭	MMT	시기	12	
+매칭	MNG	관리	109	
+매칭	MNGR	관리자	1	
+매칭	MNIT	모니터링	7	
+매칭	MNSC	사본	8	
+매칭	MNTS	회의록	4	
+매칭	MSG	메시지	4	
+매칭	MTG	회의	11	
+매칭	MTHD	방법	17	
+매칭	MTS	개월	1	
+매칭	MTTR	사항	3	
+매칭	MULTI	다중	9	
+매칭	MXMM	최대	4	
+매칭	NARS	국가기록원	10	
+매칭	NEED	필요	2	
+매칭	NEIS	NEIS	2	
+매칭	NEO	네오	2	
+매칭	NEOB	NEO	47	
+매칭	NEW	신규	14	
+매칭	NEXT	다음	1	
+매칭	NM	명	491	
+매칭	NMPR	인원	3	
+매칭	NMTM	횟수	2	
+매칭	NO	번호	241	
+매칭	NOELCT	비전자	21	
+매칭	NOFL	층수	5	
+매칭	NOW	현재	12	
+매칭	NTC	공지	3	
+매칭	NTFCTN	통보	62	
+매칭	NTN	국가	6	
+매칭	OBTN	입수	2	
+매칭	OFCL	공식	28	
+매칭	OFDC	공문서	11	
+매칭	OFF	OFF	1	
+매칭	OGDP	소속	3	
+매칭	OGNZ	조직	7	
+매칭	OLD	구	31	
+매칭	ON	ON	1	
+매칭	ONE	1	13	
+매칭	ONLN	온라인	1	
+매칭	ONNARA	온나라	4	
+매칭	OPDS	광디스크	28	
+매칭	OPER	운영	3	
+매칭	OPNN	의견	113	
+매칭	OPRTNG	가동	2	
+매칭	OPRTR	작업자	30	
+매칭	ORC	공개재분류	1	
+매칭	ORD	서열	5	
+매칭	ORGD	원문	51	
+매칭	ORGNL	원본	34	
+매칭	OTP	공개구분	23	
+매칭	PAGE	쪽	29	
+매칭	PARM	파라메터	3	
+매칭	PART	부분	25	
+매칭	PATCH	패치	1	
+매칭	PATH	경로	47	
+매칭	PBADMS	행정	1	
+매칭	PBANC	공고	4	
+매칭	PBLC	발간	10	
+매칭	PBLCN	발행	9	
+매칭	PBRC	기록물	144	
+매칭	PD	기간	129	
+매칭	PDC	부분공개	14	
+매칭	PDF	PDF	5	
+매칭	PDST	생산현황	46	
+매칭	PFMR	행위자	32	
+매칭	PGNO	쪽수	17	
+매칭	PHBT	금지	21	
+매칭	PHND	인계자	20	
+매칭	PHTG	촬영	17	
+매칭	PIC	담당자	62	
+매칭	PLAN	계획	18	
+매칭	PLC	장소	13	
+매칭	PLCY	정책	3	
+매칭	POSC	납본	1	
+매칭	POTNO	포트번호	14	
+매칭	PRBLM	문제	2	
+매칭	PRCR	처리자	4	
+매칭	PRCS	처리	132	
+매칭	PRDCT	제품	6	
+매칭	PRDCTN	생산	188	
+매칭	PRDL	간행물	8	
+매칭	PRE	사전	4	
+매칭	PRFMNC	실적	7	
+매칭	PRGRS	진행	40	
+매칭	PRMN	영구	8	
+매칭	PRNMNT	예정	2	
+매칭	PRNT	인쇄	1	
+매칭	PROT	보호	4	
+매칭	PRPS	목적	22	
+매칭	PRSL	열람	95	
+매칭	PRSN	인물	2	
+매칭	PRSR	보존	152	
+매칭	PRTN	추진	8	
+매칭	PRTTN	분할	14	
+매칭	PRUF	증빙	1	
+매칭	PRVT	비공개	8	
+매칭	PSBLTY	가능	2	
+매칭	PSSN	점유	1	
+매칭	PSTG	게시	11	
+매칭	PSTN	위치	26	
+매칭	PSWD	비밀번호	6	
+매칭	PVSN	제공	7	
+매칭	PYEONG	평	1	
+매칭	QLIN	품질검사	10	
+매칭	QOMT	재질	2	
+매칭	QY	수량	6	
+매칭	R	재	10	
+매칭	RC	기록	4	
+매칭	RCPT	접수	123	
+매칭	RCPTN	수신	23	
+매칭	RCTR	기록관	368	
+매칭	RCVR	수신자	11	
+매칭	RDR	열람자	12	
+매칭	RDRT	축소율	1	
+매칭	REAP	재책정	10	
+매칭	RECE	수령	2	
+매칭	RECFMTN	재확정	1	
+매칭	RECP	수령인	1	
+매칭	RECR	재생성	1	
+매칭	REDR	리더기	4	
+매칭	REFR	참고	1	
+매칭	REG	등록	302	
+매칭	REL	관계	17	
+매칭	REQ	소요	1	
+매칭	RERCPT	재접수	1	
+매칭	RETRNSF	재이관	1	
+매칭	REVL	재평가	17	
+매칭	RFLT	반영	3	
+매칭	RFRNC	참조	1	
+매칭	RGLT	준칙	1	
+매칭	RGN	지역	3	
+매칭	RGTR	등록자	62	
+매칭	RITM	기록물건	175	
+매칭	RJCT	반려	39	
+매칭	RLS	공개	135	
+매칭	RM	기록관리	13	
+매칭	RMRK	비고	29	
+매칭	RMST	기록관리시스템	4	
+매칭	RMT	포맷	31	
+매칭	RMV	해제	11	
+매칭	RNG	영역	2	
+매칭	RPLY	회신	2	
+매칭	RPRD	복제	6	
+매칭	RPRS	대표	29	
+매칭	RPT	보고	53	
+매칭	RQSTR	요청자	40	
+매칭	RRNO	주민등록번호	2	
+매칭	RSLT	결과	58	
+매칭	RSN	사유	155	
+매칭	RSPNS	응답	6	
+매칭	RSRV	보류	14	
+매칭	RSTR	복원	7	
+매칭	RT	비율	2	
+매칭	RTN	반납	1	
+매칭	RTRVL	회수	2	
+매칭	RULE	규칙	18	
+매칭	RVW	검토	65	
+매칭	SAME	동일	1	
+매칭	SCAN	스캔	3	
+매칭	SCHDL	일정	8	
+매칭	SCHM	체계	73	
+매칭	SCNN	스캐닝	19	
+매칭	SCPE	범위	18	
+매칭	SCRN	화면	1	
+매칭	SCS	성공	2	
+매칭	SE	구분	239	
+매칭	SECU	보안	18	
+매칭	SEPFN	분장	1	
+매칭	SEQ	순번	207	
+매칭	SFCT	소기능	8	
+매칭	SHPGOT	반출	18	
+매칭	SIX	6	5	
+매칭	SLCTN	선정	25	
+매칭	SLR	소독	3	
+매칭	SMMR	요약	15	
+매칭	SMPM	준영구	1	
+매칭	SN	일련번호	93	
+매칭	SND	2차	1	
+매칭	SNDNG	발송	6	
+매칭	SNDPTY	발신자	10	
+매칭	SOLTN	해결	1	
+매칭	SORT	정렬	9	
+매칭	SPCFCT	규격	2	
+매칭	SPCL	특수	50	
+매칭	SPLMRC	부기	4	
+매칭	SPLST	전문요원	25	
+매칭	SPRT	지원	13	
+매칭	SPRVSN	주관	4	
+매칭	SPVR	감독관	1	
+매칭	SQL	질의	4	
+매칭	SRC	출처	4	
+매칭	SRCH	검색	14	
+매칭	SRET	비밀	21	
+매칭	SRNG	심사	2	
+매칭	SRPB	연속간행물	1	
+매칭	SRVC	서비스	7	
+매칭	SRVR	서버	32	
+매칭	SRWD	검색어	8	
+매칭	SSO	SSO	3	
+매칭	STK	서고	45	
+매칭	STMD	저장매체	32	
+매칭	STNG	설정	22	
+매칭	STRG	저장	64	
+매칭	STTS	상태	215	
+매칭	SYMB	기호	3	
+매칭	SYS	시스템	75	
+매칭	SZ	크기	51	
+매칭	TAG	태그	12	
+매칭	TASK	업무	82	
+매칭	TBL	테이블	2	
+매칭	TCNT	총개수	15	
+매칭	TCPCT	총용량	3	
+매칭	TELNO	전화번호	5	
+매칭	TEN	10	1	
+매칭	TERM	기한	4	
+매칭	THD	3차	1	
+매칭	THEA	갑	1	
+매칭	THEB	을	1	
+매칭	THMNL	썸네일	1	
+매칭	THON	제1	3	
+매칭	THRE	3	13	
+매칭	THTH	제3	3	
+매칭	THTW	제2	3	
+매칭	TKOV	인수인계	64	
+매칭	TMPLT	서식	3	
+매칭	TMPR	임시	13	
+매칭	TOP	상단	2	
+매칭	TOQY	총수량	2	
+매칭	TPGNO	총쪽수	3	
+매칭	TPRT	태그발행기	2	
+매칭	TRDV	처리과	248	
+매칭	TRGT	대상	62	
+매칭	TRMN	종결	3	
+매칭	TRNSF	이관	186	
+매칭	TRNSTN	전환	5	
+매칭	TRSM	전송	17	
+매칭	TSTMP	타임스탬프	2	
+매칭	TTL	제목	39	
+매칭	TTLE	표제	38	
+매칭	TWO	2	15	
+매칭	TYPE	유형	229	
+매칭	UID	고유식별자	2	
+매칭	ULD	업로드	1	
+매칭	UNIT	단위	57	
+매칭	UNTK	단위과제	14	
+매칭	UP	상위	12	
+매칭	UPDT	갱신	2	
+매칭	URL	URL	1	
+매칭	USE	사용	21	
+매칭	USER	사용자	78	
+매칭	USG	용도	3	
+매칭	VER	버전	18	
+매칭	VIRS	바이러스	103	
+매칭	VL	값	17	
+매칭	VLD	유효	5	
+매칭	VLM	권	4	
+매칭	VRFC	검증	1	
+매칭	VRMS	VRMS	3	
+매칭	VRTC	세로	1	
+매칭	WAY	방식	1	
+매칭	WDTH	가로	1	
+매칭	WORK	근무	3	
+매칭	WRT	작성	5	
+매칭	WRTH	가치	1	
+매칭	WRTR	작성자	4	
+매칭	XML	XML	3	
+매칭	YEAR	년도	208	
+매칭	YMD	일자	247	
+매칭	YN	여부	372	
+매칭	YR	연도	1	
+매칭	YY	년	5	
+사전only	AALQ	주류	0	스키마 미사용
+사전only	AAR	행정박물실	0	스키마 미사용
+사전only	AAS	행정박물서고	0	스키마 미사용
+사전only	ABSLT	절대	0	스키마 미사용
+사전only	ACBG	학력	0	스키마 미사용
+사전only	ACDNT	사고	0	스키마 미사용
+사전only	ACE	공기조화설비	0	스키마 미사용
+사전only	ACID	산성화	0	스키마 미사용
+사전only	ACK	ACK값	0	스키마 미사용
+사전only	ACNTG	회계	0	스키마 미사용
+사전only	ACNTL	계정과목	0	스키마 미사용
+사전only	ACPL	계획서	0	스키마 미사용
+사전only	ACPP	인수서	0	스키마 미사용
+사전only	ACQS	취득	0	스키마 미사용
+사전only	ACRM	인수실	0	스키마 미사용
+사전only	ACT	액션	0	스키마 미사용
+사전only	ACTL	실제	0	스키마 미사용
+사전only	ACTNO	계좌번호	0	스키마 미사용
+사전only	ACTRSF	계좌이체	0	스키마 미사용
+사전only	ACTVTN	활성	0	스키마 미사용
+사전only	ADDRSE	수취인	0	스키마 미사용
+사전only	ADDTX	가산세	0	스키마 미사용
+사전only	ADMC	행정기관	0	스키마 미사용
+사전only	ADMDSP	행정처분	0	스키마 미사용
+사전only	ADMDST	행정구역	0	스키마 미사용
+사전only	ADRM	시청각기록물작업실	0	스키마 미사용
+사전only	ADRPRDC	시청각기록물생산현황	0	스키마 미사용
+사전only	ADRPRST	시청각기록물보존현황	0	스키마 미사용
+사전only	ADTN	가산	0	스키마 미사용
+사전only	AFPR	처리후	0	스키마 미사용
+사전only	AGL	기록계층	0	스키마 미사용
+사전only	AGNC	대리	0	스키마 미사용
+사전only	AGT	대리인	0	스키마 미사용
+사전only	AIS	행정정보시스템	0	스키마 미사용
+사전only	ALBM	앨범	0	스키마 미사용
+사전only	ALCTN	배당	0	스키마 미사용
+사전only	ALGR	알고리즘	0	스키마 미사용
+사전only	ALK	알칼리	0	스키마 미사용
+사전only	ALRO	ALERO	0	스키마 미사용
+사전only	AMIG	산전이	0	스키마 미사용
+사전only	AMS	영구기록관리시스템	0	스키마 미사용
+사전only	AMT	금액	0	스키마 미사용
+사전only	ANLS	분석	0	스키마 미사용
+사전only	ANS	답변	0	스키마 미사용
+사전only	ANSWR	답변자	0	스키마 미사용
+사전only	ANX	부속	0	스키마 미사용
+사전only	AOCR	토지이동	0	스키마 미사용
+사전only	AOS	관인	0	스키마 미사용
+사전only	APLD	신청서	0	스키마 미사용
+사전only	APNTMN	임용	0	스키마 미사용
+사전only	APPD	지정서	0	스키마 미사용
+사전only	APRS	신청결과	0	스키마 미사용
+사전only	APRVR	결재자	0	스키마 미사용
+사전only	APT	아파트	0	스키마 미사용
+사전only	APTCPX	공동주택	0	스키마 미사용
+사전only	ARC	전거레코드	0	스키마 미사용
+사전only	ARCH	건축	0	스키마 미사용
+사전only	ARCHIVE_KEY	아카이브키	0	스키마 미사용
+사전only	ARCHS	영구기록물관리기관	0	스키마 미사용
+사전only	ARMY	군	0	스키마 미사용
+사전only	ARVL	도착	0	스키마 미사용
+사전only	ASCD	행정표준코드	0	스키마 미사용
+사전only	AST	자산	0	스키마 미사용
+사전only	ATK	접근토큰	0	스키마 미사용
+사전only	ATLFCS	간선시설	0	스키마 미사용
+사전only	ATND	참석	0	스키마 미사용
+사전only	ATNT	요주의	0	스키마 미사용
+사전only	ATPR	참석자	0	스키마 미사용
+사전only	ATPT	시도	0	스키마 미사용
+사전only	ATTR	속성	0	스키마 미사용
+사전only	ATTT	진본성	0	스키마 미사용
+사전only	AUD	오디오	0	스키마 미사용
+사전only	AUDC	감사추적	0	스키마 미사용
+사전only	AUDR	감사기록	0	스키마 미사용
+사전only	AUDT	감사증적	0	스키마 미사용
+사전only	AUDV	시청각	0	스키마 미사용
+사전only	AUSR	인가된사용자	0	스키마 미사용
+사전only	AUT	저자	0	스키마 미사용
+사전only	AVRG	평균	0	스키마 미사용
+사전only	AVTSMT	통지	0	스키마 미사용
+사전only	BACNT	계좌	0	스키마 미사용
+사전only	BADN	불량	0	스키마 미사용
+사전only	BANK	은행	0	스키마 미사용
+사전only	BBS	게시판	0	스키마 미사용
+사전only	BCP	업무연속성계획	0	스키마 미사용
+사전only	BCRN	배경	0	스키마 미사용
+사전only	BDAR	건축면적	0	스키마 미사용
+사전only	BDCVRT	건폐율	0	스키마 미사용
+사전only	BDRG	건축물대장	0	스키마 미사용
+사전only	BDST	건축물	0	스키마 미사용
+사전only	BFE	실행전	0	스키마 미사용
+사전only	BGNCST	착공	0	스키마 미사용
+사전only	BGT	예산	0	스키마 미사용
+사전only	BIA	업무영향분석	0	스키마 미사용
+사전only	BID	입찰	0	스키마 미사용
+사전only	BITD	비트심도	0	스키마 미사용
+사전only	BIZ	사업	0	스키마 미사용
+사전only	BK	책	0	스키마 미사용
+사전only	BKQY	권수	0	스키마 미사용
+사전only	BLBK	판본	0	스키마 미사용
+사전only	BLCK	블록	0	스키마 미사용
+사전only	BLDG	건물	0	스키마 미사용
+사전only	BLDR	시공자	0	스키마 미사용
+사전only	BLN	귀속	0	스키마 미사용
+사전only	BLNC	잔액	0	스키마 미사용
+사전only	BMNO	건물본번	0	스키마 미사용
+사전only	BMS	업무관리시스템	0	스키마 미사용
+사전only	BNO	건물번호	0	스키마 미사용
+사전only	BOBK	책등	0	스키마 미사용
+사전only	BOOK	도서	0	스키마 미사용
+사전only	BPLC	사업장	0	스키마 미사용
+사전only	BRMS	BRMS	0	스키마 미사용
+사전only	BRNCH	지점	0	스키마 미사용
+사전only	BRNO	사업자등록번호	0	스키마 미사용
+사전only	BRNS	밝기	0	스키마 미사용
+사전only	BROF	지사	0	스키마 미사용
+사전only	BRTD	생일	0	스키마 미사용
+사전only	BSNO	건물부번	0	스키마 미사용
+사전only	BT	폭	0	스키마 미사용
+사전only	BULK	다량	0	스키마 미사용
+사전only	BURA	국	0	스키마 미사용
+사전only	BYLT	외필지	0	스키마 미사용
+사전only	BYNG	매수	0	스키마 미사용
+사전only	BZENT	사업체	0	스키마 미사용
+사전only	BZENTY	업체	0	스키마 미사용
+사전only	BZMN	사업자	0	스키마 미사용
+사전only	BZSTAT	업태	0	스키마 미사용
+사전only	C	C클래스	0	스키마 미사용
+사전only	CALL	호출	0	스키마 미사용
+사전only	CAMS	중앙영구기록관리시스템	0	스키마 미사용
+사전only	CARMDL	차종	0	스키마 미사용
+사전only	CARR	경력	0	스키마 미사용
+사전only	CATH	공저자	0	스키마 미사용
+사전only	CAUS	원인	0	스키마 미사용
+사전only	CCTV	폐쇄회로감시장치	0	스키마 미사용
+사전only	CDIR	련방향	0	스키마 미사용
+사전only	CDSC	CD	0	스키마 미사용
+사전only	CELL	셀	0	스키마 미사용
+사전only	CHAR	문자	0	스키마 미사용
+사전only	CHBTN	동거	0	스키마 미사용
+사전only	CHCE	채택	0	스키마 미사용
+사전only	CHHS	변경이력	0	스키마 미사용
+사전only	CHNL	중국어	0	스키마 미사용
+사전only	CHOP	세절	0	스키마 미사용
+사전only	CLAUS	절	0	스키마 미사용
+사전only	CLB	색보정	0	스키마 미사용
+사전only	CLCLN	정산	0	스키마 미사용
+사전only	CLIP	클립	0	스키마 미사용
+사전only	CLLC	콜렉션	0	스키마 미사용
+사전only	CLLS	셀룰로오스	0	스키마 미사용
+사전only	CLM	청구	0	스키마 미사용
+사전only	CLN	청소	0	스키마 미사용
+사전only	CLNO	순번호	0	스키마 미사용
+사전only	CLNT	클라이언트	0	스키마 미사용
+사전only	CLOR	색채	0	스키마 미사용
+사전only	CLPW	폐쇄망	0	스키마 미사용
+사전only	CLS	종목	0	스키마 미사용
+사전only	CLSBIZ	폐업	0	스키마 미사용
+사전only	CLSG	폐쇄	0	스키마 미사용
+사전only	CLTPTY	문화재	0	스키마 미사용
+사전only	CLV	적합성수준	0	스키마 미사용
+사전only	CMAR	공용면적	0	스키마 미사용
+사전only	CMCN	준공	0	스키마 미사용
+사전only	CMD	커맨드	0	스키마 미사용
+사전only	CMDL	명령어	0	스키마 미사용
+사전only	CMDTY	물품	0	스키마 미사용
+사전only	CMNT	댓글	0	스키마 미사용
+사전only	CMP	컴포넌트	0	스키마 미사용
+사전only	CMPS	구성	0	스키마 미사용
+사전only	CMPTNC	관할	0	스키마 미사용
+사전only	CMPTTN	산정	0	스키마 미사용
+사전only	CMS	CMS	0	스키마 미사용
+사전only	CNBD	집합건물	0	스키마 미사용
+사전only	CNCH	한문	0	스키마 미사용
+사전only	CNCLTN	해지	0	스키마 미사용
+사전only	CNCN	집중	0	스키마 미사용
+사전only	CNO	련번호	0	스키마 미사용
+사전only	CNOR	관계기관	0	스키마 미사용
+사전only	CNOV	통권	0	스키마 미사용
+사전only	CNPT	거래처	0	스키마 미사용
+사전only	CNTOM	대수	0	스키마 미사용
+사전only	CNTR	센터	0	스키마 미사용
+사전only	CNTRL	통제	0	스키마 미사용
+사전only	CO	회사	0	스키마 미사용
+사전only	COMP	압축	0	스키마 미사용
+사전only	COMT	통신	0	스키마 미사용
+사전only	CONM	상호	0	스키마 미사용
+사전only	CONTS	콘텐츠	0	스키마 미사용
+사전only	CONV	소집	0	스키마 미사용
+사전only	COPP	코트지	0	스키마 미사용
+사전only	COPY	복본	0	스키마 미사용
+사전only	CORP	법인	0	스키마 미사용
+사전only	CPLR	완료자	0	스키마 미사용
+사전only	CPSR	작곡자	0	스키마 미사용
+사전only	CPTL	자본금	0	스키마 미사용
+사전only	CR	직업	0	스키마 미사용
+사전only	CRCD	신용카드	0	스키마 미사용
+사전only	CRCLM	교육과정	0	스키마 미사용
+사전only	CRDN	단속	0	스키마 미사용
+사전only	CRDTR	채권자	0	스키마 미사용
+사전only	CREATR	생성자	0	스키마 미사용
+사전only	CREC	비밀기록물	0	스키마 미사용
+사전only	CRL	인증서폐기목록	0	스키마 미사용
+사전only	CRNO	법인등록번호	0	스키마 미사용
+사전only	CRNR	코너	0	스키마 미사용
+사전only	CRS	과정	0	스키마 미사용
+사전only	CRTFCT	자격증	0	스키마 미사용
+사전only	CSE	사안	0	스키마 미사용
+사전only	CSTD	보관	0	스키마 미사용
+사전only	CSTRN	공사	0	스키마 미사용
+사전only	CSVT	보존처리	0	스키마 미사용
+사전only	CT	법원	0	스키마 미사용
+사전only	CTCMT	유의사항	0	스키마 미사용
+사전only	CTFA	인증기관	0	스키마 미사용
+사전only	CTFS	인증서주체	0	스키마 미사용
+사전only	CTGRY	범주	0	스키마 미사용
+사전only	CTNR	용기	0	스키마 미사용
+사전only	CTNT	목차	0	스키마 미사용
+사전only	CTOY	카테고리	0	스키마 미사용
+사전only	CTPV	시도	0	스키마 미사용
+사전only	CTRB	기증	0	스키마 미사용
+사전only	CTRT	계약	0	스키마 미사용
+사전only	CTST	공모	0	스키마 미사용
+사전only	CTY	도시	0	스키마 미사용
+사전only	CUST	고객	0	스키마 미사용
+사전only	CVLCPT	민원	0	스키마 미사용
+사전only	CVLPR	민원인	0	스키마 미사용
+사전only	DACD	탈산	0	스키마 미사용
+사전only	DACDR	탈산실	0	스키마 미사용
+사전only	DADDR	상세주소	0	스키마 미사용
+사전only	DAGR	비동의	0	스키마 미사용
+사전only	DBTR	채무자	0	스키마 미사용
+사전only	DCL	신고자	0	스키마 미사용
+사전only	DCLR	신고	0	스키마 미사용
+사전only	DCLSF	세분류	0	스키마 미사용
+사전only	DCMNT	서류	0	스키마 미사용
+사전only	DCSD	사망자	0	스키마 미사용
+사전only	DCSN	결정	0	스키마 미사용
+사전only	DDC	공제	0	스키마 미사용
+사전only	DDLN	마감	0	스키마 미사용
+사전only	DELM	기술요소	0	스키마 미사용
+사전only	DESIGN	설계	0	스키마 미사용
+사전only	DEV	개발	0	스키마 미사용
+사전only	DFN	정의	0	스키마 미사용
+사전only	DFRZ	저온냉각	0	스키마 미사용
+사전only	DGR	전자화기록물	0	스키마 미사용
+사전only	DGRE	정도	0	스키마 미사용
+사전only	DGSTFN	만족도	0	스키마 미사용
+사전only	DGTZ	디지털화	0	스키마 미사용
+사전only	DISCON	취하	0	스키마 미사용
+사전only	DLDTN	배달처	0	스키마 미사용
+사전only	DLN	운전면허번호	0	스키마 미사용
+사전only	DLNG	거래	0	스키마 미사용
+사전only	DLQ	염료	0	스키마 미사용
+사전only	DLTR	삭제자	0	스키마 미사용
+사전only	DLVGDS	납품	0	스키마 미사용
+사전only	DM	지름	0	스키마 미사용
+사전only	DMLTN	철거	0	스키마 미사용
+사전only	DMN	도메인	0	스키마 미사용
+사전only	DMON	데몬	0	스키마 미사용
+사전only	DN	식별명	0	스키마 미사용
+사전only	DNTK	미반입	0	스키마 미사용
+사전only	DONG	행정동	0	스키마 미사용
+사전only	DP	도면용지	0	스키마 미사용
+사전only	DPCN	중복	0	스키마 미사용
+사전only	DPR	재난관리대비	0	스키마 미사용
+사전only	DPRT	배치율	0	스키마 미사용
+사전only	DPST	입금	0	스키마 미사용
+사전only	DPSTR	예금주	0	스키마 미사용
+사전only	DPTCH	디스패치	0	스키마 미사용
+사전only	DPTCNY	출국	0	스키마 미사용
+사전only	DPTRE	출발	0	스키마 미사용
+사전only	DPUB	전자간행물	0	스키마 미사용
+사전only	DR	의사	0	스키마 미사용
+사전only	DRCS	전자기록생산시스템	0	스키마 미사용
+사전only	DRCT	디렉토리	0	스키마 미사용
+사전only	DRFT	기안	0	스키마 미사용
+사전only	DRP	재난복구계획	0	스키마 미사용
+사전only	DRS	재난복구시스템	0	스키마 미사용
+사전only	DRV	드라이브	0	스키마 미사용
+사전only	DSA	전자서명알고리즘	0	스키마 미사용
+사전only	DSBD	대시보드	0	스키마 미사용
+사전only	DSBLTY	장애	0	스키마 미사용
+사전only	DSCL	적발	0	스키마 미사용
+사전only	DSCNT	할인	0	스키마 미사용
+사전only	DSCSN	상담	0	스키마 미사용
+사전only	DSGNR	설계자	0	스키마 미사용
+사전only	DSMN	재난관리	0	스키마 미사용
+사전only	DSMSL	해임	0	스키마 미사용
+사전only	DSPP	기술서	0	스키마 미사용
+사전only	DSPR	폐기처리	0	스키마 미사용
+사전only	DSPY	전시	0	스키마 미사용
+사전only	DSS	질병	0	스키마 미사용
+사전only	DSTR	재난	0	스키마 미사용
+사전only	DSTRCT	지구	0	스키마 미사용
+사전only	DTBN	교부	0	스키마 미사용
+사전only	DTH	사망	0	스키마 미사용
+사전only	DTN	열화	0	스키마 미사용
+사전only	DTPC	전산	0	스키마 미사용
+사전only	DTRN	삭제사유	0	스키마 미사용
+사전only	DTTY	상세유형	0	스키마 미사용
+사전only	DU	기술단위	0	스키마 미사용
+사전only	DUDT	납기	0	스키마 미사용
+사전only	DVD	DVD	0	스키마 미사용
+사전only	DVLR	시행자	0	스키마 미사용
+사전only	EARN	소득	0	스키마 미사용
+사전only	EATOUT	외식	0	스키마 미사용
+사전only	ECFRD	친환경	0	스키마 미사용
+사전only	ECHLN	계급	0	스키마 미사용
+사전only	EDNO	판차	0	스키마 미사용
+사전only	EDNST	교육기관	0	스키마 미사용
+사전only	EDTR	편집기	0	스키마 미사용
+사전only	EDU	교육	0	스키마 미사용
+사전only	EFFL	유출	0	스키마 미사용
+사전only	ELPS	종사자	0	스키마 미사용
+사전only	ELVTR	승강기	0	스키마 미사용
+사전only	EMD	읍면동	0	스키마 미사용
+사전only	EMLADR	이메일주소	0	스키마 미사용
+사전only	EMP	직원	0	스키마 미사용
+사전only	EMRG	긴급	0	스키마 미사용
+사전only	EMUL	에뮬레이션	0	스키마 미사용
+사전only	ENC	인코딩	0	스키마 미사용
+사전only	ENCP	캡슐화	0	스키마 미사용
+사전only	ENG	영문	0	스키마 미사용
+사전only	ENGL	영어	0	스키마 미사용
+사전only	ENLSTM	입대	0	스키마 미사용
+사전only	ENT	기업	0	스키마 미사용
+사전only	ENTCNY	입국	0	스키마 미사용
+사전only	ENTRST	위촉	0	스키마 미사용
+사전only	ENTRY	응모자	0	스키마 미사용
+사전only	ENV	환경	0	스키마 미사용
+사전only	ENVL	봉투	0	스키마 미사용
+사전only	EPAYNO	전자납부번호	0	스키마 미사용
+사전only	EPOS	구문서	0	스키마 미사용
+사전only	EQTR	대등	0	스키마 미사용
+사전only	ER	긴급구조	0	스키마 미사용
+사전only	ERA	시대	0	스키마 미사용
+사전only	ERAG	긴급구조기관	0	스키마 미사용
+사전only	ERSA	긴급구조지원기관	0	스키마 미사용
+사전only	ERSR	말소	0	스키마 미사용
+사전only	ERTIM	전자기록기술정보관리	0	스키마 미사용
+사전only	ESNTL	필수	0	스키마 미사용
+사전only	ESTBL	개설	0	스키마 미사용
+사전only	ESTG	합사	0	스키마 미사용
+사전only	ETM	회차	0	스키마 미사용
+사전only	EUSE	비상용	0	스키마 미사용
+사전only	EVNT	행사	0	스키마 미사용
+사전only	EX	예시	0	스키마 미사용
+사전only	EXCH	교체	0	스키마 미사용
+사전only	EXCN	실행	0	스키마 미사용
+사전only	EXCPTN	특이	0	스키마 미사용
+사전only	EXMN	조사	0	스키마 미사용
+사전only	EXMNE	수험자	0	스키마 미사용
+사전only	EXMNR	조사자	0	스키마 미사용
+사전only	EXMPTN	면제	0	스키마 미사용
+사전only	EXP	보내기	0	스키마 미사용
+사전only	EXPND	지출	0	스키마 미사용
+사전only	EXPP	검토서	0	스키마 미사용
+사전only	EXPSR	노출	0	스키마 미사용
+사전only	EXT	내선	0	스키마 미사용
+사전only	EXTS	연장	0	스키마 미사용
+사전only	EXTSH	소멸	0	스키마 미사용
+사전only	EYCH	육안검수	0	스키마 미사용
+사전only	FAM	가족	0	스키마 미사용
+사전only	FART	용적률	0	스키마 미사용
+사전only	FAX	FAX	0	스키마 미사용
+사전only	FBCTN	제작	0	스키마 미사용
+사전only	FBL	파일블록	0	스키마 미사용
+사전only	FCAR	시설면적	0	스키마 미사용
+사전only	FCLT	시설	0	스키마 미사용
+사전only	FCTR	요소	0	스키마 미사용
+사전only	FCVR	포맷변환	0	스키마 미사용
+사전only	FDAD	검색도구	0	스키마 미사용
+사전only	FEE	수수료	0	스키마 미사용
+사전only	FENC	필름봉합처리	0	스키마 미사용
+사전only	FFNLG	과태료	0	스키마 미사용
+사전only	FGGG	외국어	0	스키마 미사용
+사전only	FICH	피시	0	스키마 미사용
+사전only	FLBS	만가	0	스키마 미사용
+사전only	FLCTN	변동	0	스키마 미사용
+사전only	FLD	분야	0	스키마 미사용
+사전only	FLDR	폴더	0	스키마 미사용
+사전only	FLEXT	파일확장자	0	스키마 미사용
+사전only	FLMN	사후관리	0	스키마 미사용
+사전only	FLN	편철	0	스키마 미사용
+사전only	FLRPLN	도면	0	스키마 미사용
+사전only	FLS_CLNO	기록물철분류번호	0	스키마 미사용
+사전only	FMTMG	포맷관리	0	스키마 미사용
+사전only	FNDN	설립	0	스키마 미사용
+사전only	FNRN	외국명	0	스키마 미사용
+사전only	FNSH	수료	0	스키마 미사용
+사전only	FNST	금융기관	0	스키마 미사용
+사전only	FOOD	식품	0	스키마 미사용
+사전only	FORC	강제	0	스키마 미사용
+사전only	FORUM	포럼	0	스키마 미사용
+사전only	FOXING	폭싱	0	스키마 미사용
+사전only	FRCS	가맹점	0	스키마 미사용
+사전only	FREL	프랑스어	0	스키마 미사용
+사전only	FRGN	외국	0	스키마 미사용
+사전only	FRGNR	외국인	0	스키마 미사용
+사전only	FRM	형식	0	스키마 미사용
+사전only	FRNO	외국인등록번호	0	스키마 미사용
+사전only	FTM	옛날	0	스키마 미사용
+사전only	FUMI	훈증소독	0	스키마 미사용
+사전only	FXNO	팩스번호	0	스키마 미사용
+사전only	FXT	고착제	0	스키마 미사용
+사전only	FYER	년간	0	스키마 미사용
+사전only	FYR	회계연도	0	스키마 미사용
+사전only	GARD	지기	0	스키마 미사용
+사전only	GATE	출입문	0	스키마 미사용
+사전only	GCC	GCC	0	스키마 미사용
+사전only	GDNC	안내	0	스키마 미사용
+사전only	GDS	상품	0	스키마 미사용
+사전only	GERL	독일어	0	스키마 미사용
+사전only	GFA	총면적	0	스키마 미사용
+사전only	GIS	GIS	0	스키마 미사용
+사전only	GIVE	지급	0	스키마 미사용
+사전only	GLP	글리프	0	스키마 미사용
+사전only	GLPL	유리원판	0	스키마 미사용
+사전only	GNRL	종합	0	스키마 미사용
+사전only	GPKI	행정전자서명	0	스키마 미사용
+사전only	GRAMT	총금액	0	스키마 미사용
+사전only	GRDTN	졸업	0	스키마 미사용
+사전only	GRND	지상	0	스키마 미사용
+사전only	GRNTE	보증	0	스키마 미사용
+사전only	GRP	단체	0	스키마 미사용
+사전only	GRPP	갱지	0	스키마 미사용
+사전only	GTPL	수집처	0	스키마 미사용
+사전only	GVBK	반환	0	스키마 미사용
+사전only	GVGN	총독부	0	스키마 미사용
+사전only	GVMNFC	관서	0	스키마 미사용
+사전only	GVNR	총독	0	스키마 미사용
+사전only	GVOF	공직자	0	스키마 미사용
+사전only	HANJI	한지	0	스키마 미사용
+사전only	HD	습도	0	스키마 미사용
+사전only	HDMT	개최	0	스키마 미사용
+사전only	HDOF	재직	0	스키마 미사용
+사전only	HDOFC	본사	0	스키마 미사용
+사전only	HDPL	소장처	0	스키마 미사용
+사전only	HDR	헤더	0	스키마 미사용
+사전only	HDTL	표목	0	스키마 미사용
+사전only	HH	세대	0	스키마 미사용
+사전only	HLDY	휴일	0	스키마 미사용
+사전only	HLPDSK	문의처	0	스키마 미사용
+사전only	HMID	가습처리	0	스키마 미사용
+사전only	HMPG	누리집	0	스키마 미사용
+사전only	HOME	자택	0	스키마 미사용
+사전only	HRBR	항만	0	스키마 미사용
+사전only	HSFN	해시함수	0	스키마 미사용
+사전only	HSH	해시	0	스키마 미사용
+사전only	HSHLDR	세대주	0	스키마 미사용
+사전only	HSPTL	병원	0	스키마 미사용
+사전only	HSTS	주최자	0	스키마 미사용
+사전only	HTML	HTML	0	스키마 미사용
+사전only	HYBF	혼합기록물철	0	스키마 미사용
+사전only	HYMN	인	0	스키마 미사용
+사전only	HYRO	가수분해	0	스키마 미사용
+사전only	ICSN	포함	0	스키마 미사용
+사전only	IDFR	확인자	0	스키마 미사용
+사전only	IDNTF	식별	0	스키마 미사용
+사전only	ILCK	연동	0	스키마 미사용
+사전only	IMPT	중요	0	스키마 미사용
+사전only	IMPTR	수입업체	0	스키마 미사용
+사전only	INCDNT	사건	0	스키마 미사용
+사전only	INCM	수입	0	스키마 미사용
+사전only	INCTX	소득세	0	스키마 미사용
+사전only	INDCT	표시	0	스키마 미사용
+사전only	INDIV	개별	0	스키마 미사용
+사전only	INDR	옥내	0	스키마 미사용
+사전only	INET	인터넷	0	스키마 미사용
+사전only	INFRM	고지	0	스키마 미사용
+사전only	INIT	초기화	0	스키마 미사용
+사전only	INJPSN	부상자	0	스키마 미사용
+사전only	INK	잉크	0	스키마 미사용
+사전only	INLD	기관장	0	스키마 미사용
+사전only	INNB	고유번호	0	스키마 미사용
+사전only	INOF	접수처	0	스키마 미사용
+사전only	INSCTR	점검자	0	스키마 미사용
+사전only	INSRNC	보험	0	스키마 미사용
+사전only	INSTR	강사	0	스키마 미사용
+사전only	INT	이자	0	스키마 미사용
+사전only	INTG	정수	0	스키마 미사용
+사전only	INTO	기관정보	0	스키마 미사용
+사전only	IOUT	반출입	0	스키마 미사용
+사전only	IPC	IPC	0	스키마 미사용
+사전only	IS	국제표준	0	스키마 미사용
+사전only	ISBN	ISBN	0	스키마 미사용
+사전only	ISNO	호	0	스키마 미사용
+사전only	ISO	ISO	0	스키마 미사용
+사전only	ISRC	정보원	0	스키마 미사용
+사전only	ISSN	ISSN	0	스키마 미사용
+사전only	ISSPR	이슈페이퍼	0	스키마 미사용
+사전only	ITEM	품목	0	스키마 미사용
+사전only	ITRST	관심	0	스키마 미사용
+사전only	JAPL	일본어	0	스키마 미사용
+사전only	JBGP	직군	0	스키마 미사용
+사전only	JBLN	직렬	0	스키마 미사용
+사전only	JBTTL	직책	0	스키마 미사용
+사전only	JGMT	판정	0	스키마 미사용
+사전only	JGT	판단	0	스키마 미사용
+사전only	JNCMP	입사	0	스키마 미사용
+사전only	JOIN	가입	0	스키마 미사용
+사전only	KBRDR	입력자	0	스키마 미사용
+사전only	KDC	KDC	0	스키마 미사용
+사전only	KIS	한국산업표준	0	스키마 미사용
+사전only	KOR	한국	0	스키마 미사용
+사전only	KORN	한글	0	스키마 미사용
+사전only	KP	유지	0	스키마 미사용
+사전only	KSGT	조기호표	0	스키마 미사용
+사전only	KSIC	한국표준산업분류	0	스키마 미사용
+사전only	KWRD	키워드	0	스키마 미사용
+사전only	LAND	토지	0	스키마 미사용
+사전only	LANE	차로	0	스키마 미사용
+사전only	LAPI	장기검증통합연계API	0	스키마 미사용
+사전only	LAT	위도	0	스키마 미사용
+사전only	LAW	법	0	스키마 미사용
+사전only	LBRCO	인건비	0	스키마 미사용
+사전only	LCLSF	대분류	0	스키마 미사용
+사전only	LCNS	면허	0	스키마 미사용
+사전only	LCPMT	인허가	0	스키마 미사용
+사전only	LCST	리프캐스팅	0	스키마 미사용
+사전only	LCTN	소재지	0	스키마 미사용
+사전only	LDAP	LDAP	0	스키마 미사용
+사전only	LDAR	토지면적	0	스키마 미사용
+사전only	LDCG	지목	0	스키마 미사용
+사전only	LEVY	부과	0	스키마 미사용
+사전only	LGL	법적	0	스키마 미사용
+사전only	LGLZTN	양성화	0	스키마 미사용
+사전only	LGT	로그아웃	0	스키마 미사용
+사전only	LI	리	0	스키마 미사용
+사전only	LNDRG	토지대장	0	스키마 미사용
+사전only	LNTR	장기	0	스키마 미사용
+사전only	LN_NO	행번호	0	스키마 미사용
+사전only	LOAN	대출	0	스키마 미사용
+사전only	LOCK	잠금	0	스키마 미사용
+사전only	LOD	기술계층	0	스키마 미사용
+사전only	LOSS	손망실	0	스키마 미사용
+사전only	LOT	경도	0	스키마 미사용
+사전only	LOTNO	지번	0	스키마 미사용
+사전only	LOUT	소등	0	스키마 미사용
+사전only	LQ	대량	0	스키마 미사용
+사전only	LSTN	청취	0	스키마 미사용
+사전only	LT	길이	0	스키마 미사용
+사전only	LTP	장기보존	0	스키마 미사용
+사전only	LTPF	장기보존포맷	0	스키마 미사용
+사전only	LTRT	문헌	0	스키마 미사용
+사전only	LTVD	장기검증데이터	0	스키마 미사용
+사전only	LTVM	장기검증관리체계	0	스키마 미사용
+사전only	LTWK	저작물	0	스키마 미사용
+사전only	LUX	룩스	0	스키마 미사용
+사전only	LWTRK	최하위	0	스키마 미사용
+사전only	LYR	계층	0	스키마 미사용
+사전only	LYWR	작사자	0	스키마 미사용
+사전only	MAC	MAC	0	스키마 미사용
+사전only	MANX	주부속	0	스키마 미사용
+사전only	MAPSHT	도엽	0	스키마 미사용
+사전only	MBL	휴대	0	스키마 미사용
+사전only	MBLD	주건축물	0	스키마 미사용
+사전only	MBPH	핸드폰	0	스키마 미사용
+사전only	MBR	회원	0	스키마 미사용
+사전only	MCLSF	중분류	0	스키마 미사용
+사전only	MCNCL	기계식	0	스키마 미사용
+사전only	MCPBND	지방채	0	스키마 미사용
+사전only	MDL	모델	0	스키마 미사용
+사전only	MDLCR	의료	0	스키마 미사용
+사전only	MDLE	모듈	0	스키마 미사용
+사전only	MFTR	다중파일전송	0	스키마 미사용
+사전only	MGM	미농지	0	스키마 미사용
+사전only	MI	메시지무결성	0	스키마 미사용
+사전only	MJR	전공	0	스키마 미사용
+사전only	MMD	자기매체	0	스키마 미사용
+사전only	MMR	기록관리메타데이터	0	스키마 미사용
+사전only	MMS	자기매체서고	0	스키마 미사용
+사전only	MNFCTR	제작사	0	스키마 미사용
+사전only	MNFTR	제조	0	스키마 미사용
+사전only	MNM	연명	0	스키마 미사용
+사전only	MNNG	의미	0	스키마 미사용
+사전only	MNO	본번	0	스키마 미사용
+사전only	MNT	분	0	스키마 미사용
+사전only	MNTSMG	회의록관리	0	스키마 미사용
+사전only	MOCA	촬영기	0	스키마 미사용
+사전only	MODE	모드	0	스키마 미사용
+사전only	MPP	본관	0	스키마 미사용
+사전only	MR	메모보고	0	스키마 미사용
+사전only	MRD	매염	0	스키마 미사용
+사전only	MRG	결혼	0	스키마 미사용
+사전only	MRGN	여유	0	스키마 미사용
+사전only	MSBK	잡서	0	스키마 미사용
+사전only	MSH	이동식서가	0	스키마 미사용
+사전only	MSRMT	측정	0	스키마 미사용
+사전only	MSRSTN	측정소	0	스키마 미사용
+사전only	MSTR	다중세션전송	0	스키마 미사용
+사전only	MTCG	입산	0	스키마 미사용
+사전only	MTCLTN	입학	0	스키마 미사용
+사전only	MTN	산	0	스키마 미사용
+사전only	MTNABN	존폐	0	스키마 미사용
+사전only	MTRY	만기	0	스키마 미사용
+사전only	MVIN	전입	0	스키마 미사용
+사전only	MVMN	이동	0	스키마 미사용
+사전only	MWP	기계목재펄프	0	스키마 미사용
+사전only	NCSS	필요성	0	스키마 미사용
+사전only	NF	네거티브필름	0	스키마 미사용
+사전only	NGTV	음화	0	스키마 미사용
+사전only	NHIS	역사	0	스키마 미사용
+사전only	NKE	육안	0	스키마 미사용
+사전only	NML	정상	0	스키마 미사용
+사전only	NMRS	매수	0	스키마 미사용
+사전only	NMSP	네임스페이스	0	스키마 미사용
+사전only	NOCP	부수	0	스키마 미사용
+사전only	NOCS	건수	0	스키마 미사용
+사전only	NODE	교점	0	스키마 미사용
+사전only	NOPE	인원수	0	스키마 미사용
+사전only	NOPG	면수	0	스키마 미사용
+사전only	NOSL	지질	0	스키마 미사용
+사전only	NPAG	새창	0	스키마 미사용
+사전only	NPMNT	체납	0	스키마 미사용
+사전only	NREF	인용표준	0	스키마 미사용
+사전only	NRLN	니어라인	0	스키마 미사용
+사전only	NSCVRG	보도	0	스키마 미사용
+사전only	NSF	불만족	0	스키마 미사용
+사전only	NTNLTY	국적	0	스키마 미사용
+사전only	NTSL	판매	0	스키마 미사용
+사전only	NTWK	네트워크	0	스키마 미사용
+사전only	NWD	신구	0	스키마 미사용
+사전only	OAK	소장	0	스키마 미사용
+사전only	OALP	공시지가	0	스키마 미사용
+사전only	OATH	원저자	0	스키마 미사용
+사전only	OBJC	이의	0	스키마 미사용
+사전only	OBSRVN	관측	0	스키마 미사용
+사전only	OBSVTR	관측소	0	스키마 미사용
+사전only	OCPT	직종	0	스키마 미사용
+사전only	OCRN	발생	0	스키마 미사용
+사전only	ODN	보통	0	스키마 미사용
+사전only	OFAT	직권	0	스키마 미사용
+사전only	OFC	사무실	0	스키마 미사용
+사전only	OFLN	오프라인	0	스키마 미사용
+사전only	OGBK	원서	0	스키마 미사용
+사전only	OLDT	강목	0	스키마 미사용
+사전only	OMS	생략	0	스키마 미사용
+사전only	OMST	광매체서고	0	스키마 미사용
+사전only	ONSL	자체	0	스키마 미사용
+사전only	OPBIZ	개업	0	스키마 미사용
+사전only	OPIN	의견조회	0	스키마 미사용
+사전only	OPMD	광매체	0	스키마 미사용
+사전only	OPNG	개통	0	스키마 미사용
+사전only	OPNS	오픈소스	0	스키마 미사용
+사전only	OPTN	옵션	0	스키마 미사용
+사전only	ORDR	주문	0	스키마 미사용
+사전only	ORGN	기원	0	스키마 미사용
+사전only	ORGNFL	원파일	0	스키마 미사용
+사전only	ORST	구술	0	스키마 미사용
+사전only	OTDR	옥외	0	스키마 미사용
+사전only	OTPT	출력	0	스키마 미사용
+사전only	OTPW	OTP	0	스키마 미사용
+사전only	OUTL	개요	0	스키마 미사용
+사전only	OVPMNT	과오납금	0	스키마 미사용
+사전only	OVRS	누락	0	스키마 미사용
+사전only	OVSS	해외	0	스키마 미사용
+사전only	OWNR	소유자	0	스키마 미사용
+사전only	OWNSHP	소유권	0	스키마 미사용
+사전only	OXI	산화	0	스키마 미사용
+사전only	OZIP	구우편번호	0	스키마 미사용
+사전only	PAGN	공공기관	0	스키마 미사용
+사전only	PAMT	가액	0	스키마 미사용
+사전only	PARK	공원	0	스키마 미사용
+사전only	PARS	파싱	0	스키마 미사용
+사전only	PASS	합격	0	스키마 미사용
+사전only	PAY	납부	0	스키마 미사용
+사전only	PBLNT	공시	0	스키마 미사용
+사전only	PBLR	게시자	0	스키마 미사용
+사전only	PBRGAR	공부면적	0	스키마 미사용
+사전only	PBSV	공무원	0	스키마 미사용
+사전only	PC	PC	0	스키마 미사용
+사전only	PCAA	정책분야	0	스키마 미사용
+사전only	PCPP	처리서	0	스키마 미사용
+사전only	PCRT	처리율	0	스키마 미사용
+사전only	PDART	게시글	0	스키마 미사용
+사전only	PDBR	기록물폐기심의서	0	스키마 미사용
+사전only	PDBS_LIST	생산기본목록	0	스키마 미사용
+사전only	PDLRYLIST	생산배부대장	0	스키마 미사용
+사전only	PDPBRC	생산기록물현황	0	스키마 미사용
+사전only	PDSTMNG	생산현황관리	0	스키마 미사용
+사전only	PDSTTC	생산현황통계	0	스키마 미사용
+사전only	PDST_FOSE	생산현황서식구분	0	스키마 미사용
+사전only	PF	포지티브필름	0	스키마 미사용
+사전only	PHOTO	사진	0	스키마 미사용
+사전only	PHPP	인화지	0	스키마 미사용
+사전only	PHYS	물리	0	스키마 미사용
+사전only	PICE	점	0	스키마 미사용
+사전only	PJTCO	사업비	0	스키마 미사용
+사전only	PKG	일괄	0	스키마 미사용
+사전only	PKGWK	일괄작업	0	스키마 미사용
+사전only	PKI	PKI	0	스키마 미사용
+사전only	PLF	폴리에스테르필름	0	스키마 미사용
+사전only	PLOR	원산지	0	스키마 미사용
+사전only	PLRM	정책영역	0	스키마 미사용
+사전only	PLTF	플랫폼	0	스키마 미사용
+사전only	PNO	여권번호	0	스키마 미사용
+사전only	PNTM	시점	0	스키마 미사용
+사전only	POPUP	팝업	0	스키마 미사용
+사전only	POWK	근무지	0	스키마 미사용
+사전only	PPLTN	인구	0	스키마 미사용
+사전only	PPRC	종이기록물	0	스키마 미사용
+사전only	PRCHS	구매	0	스키마 미사용
+사전only	PRCP	관계자	0	스키마 미사용
+사전only	PRCT	응용	0	스키마 미사용
+사전only	PRDM	본적지	0	스키마 미사용
+사전only	PREP	예비	0	스키마 미사용
+사전only	PRGRM	프로그램	0	스키마 미사용
+사전only	PRGT	가등록	0	스키마 미사용
+사전only	PRIDTF	개인식별	0	스키마 미사용
+사전only	PRMD	보존매체	0	스키마 미사용
+사전only	PRMSN	허가	0	스키마 미사용
+사전only	PROC	프로세스	0	스키마 미사용
+사전only	PROD	생산시	0	스키마 미사용
+사전only	PRPR	처리기간	0	스키마 미사용
+사전only	PRPSL	발의	0	스키마 미사용
+사전only	PRRT	우선순위	0	스키마 미사용
+사전only	PRSD	대통령	0	스키마 미사용
+사전only	PRSNTN	발표	0	스키마 미사용
+사전only	PRSS	출판	0	스키마 미사용
+사전only	PRST	증정	0	스키마 미사용
+사전only	PRTCR	보호자	0	스키마 미사용
+사전only	PRTPNT	참여자	0	스키마 미사용
+사전only	PRUS	전용	0	스키마 미사용
+사전only	PRVC	개인정보	0	스키마 미사용
+사전only	PRVN	방지	0	스키마 미사용
+사전only	PRZ	시상	0	스키마 미사용
+사전only	PSN	소유	0	스키마 미사용
+사전only	PSNGR	승용	0	스키마 미사용
+사전only	PST	게시물	0	스키마 미사용
+사전only	PSTP	연기	0	스키마 미사용
+사전only	PSTV	양화	0	스키마 미사용
+사전only	PTCR	특정	0	스키마 미사용
+사전only	PTDS	토론자	0	스키마 미사용
+사전only	PWDBS	장애인	0	스키마 미사용
+사전only	PYR	입금자	0	스키마 미사용
+사전only	QITEM	문항	0	스키마 미사용
+사전only	QLFC	자격	0	스키마 미사용
+사전only	QSTN	질문	0	스키마 미사용
+사전only	RA	기록물관리기관	0	스키마 미사용
+사전only	RAFOS	1회섭취참고량	0	스키마 미사용
+사전only	RANK	순위	0	스키마 미사용
+사전only	RBPRSN	책임자	0	스키마 미사용
+사전only	RCAR	보존소	0	스키마 미사용
+사전only	RCDR	기록자	0	스키마 미사용
+사전only	RCGN	검정	0	스키마 미사용
+사전only	RCL	기록물컬렉션	0	스키마 미사용
+사전only	RCMDTN	추천	0	스키마 미사용
+사전only	RCMLND	매립지	0	스키마 미사용
+사전only	RCMM	상신	0	스키마 미사용
+사전only	RCOV	재난관리복구	0	스키마 미사용
+사전only	RCPN	수납자	0	스키마 미사용
+사전only	RCVMT	수납	0	스키마 미사용
+사전only	RCVN	재변환	0	스키마 미사용
+사전only	RDCPCT	승차정원	0	스키마 미사용
+사전only	RDEX	감면	0	스키마 미사용
+사전only	RDM	환수	0	스키마 미사용
+사전only	RDRM	열람실	0	스키마 미사용
+사전only	RDTN	축소	0	스키마 미사용
+사전only	REC	녹음	0	스키마 미사용
+사전only	REFS	전거	0	스키마 미사용
+사전only	REPR	수선	0	스키마 미사용
+사전only	REPTN	반복	0	스키마 미사용
+사전only	RES	해상도	0	스키마 미사용
+사전only	RETR	재전송	0	스키마 미사용
+사전only	REVS	가역성	0	스키마 미사용
+사전only	RFID	RFID	0	스키마 미사용
+사전only	RFND	환불	0	스키마 미사용
+사전only	RG	등기	0	스키마 미사용
+사전only	RGRM	등록실	0	스키마 미사용
+사전only	RGRP	기록물군	0	스키마 미사용
+사전only	RHM	상대습도	0	스키마 미사용
+사전only	RINSP	재검사	0	스키마 미사용
+사전only	RLGN	종교	0	스키마 미사용
+사전only	RLMA	분야A	0	스키마 미사용
+사전only	RLMB	분야B	0	스키마 미사용
+사전only	RLVT	해당	0	스키마 미사용
+사전only	RLX	이완	0	스키마 미사용
+사전only	RMBR	환급	0	스키마 미사용
+사전only	RMGBAS	기록관리기준	0	스키마 미사용
+사전only	RMGR	기록관리자	0	스키마 미사용
+사전only	RMS	기록관리표준	0	스키마 미사용
+사전only	RNO	단번호	0	스키마 미사용
+사전only	ROAD	도로	0	스키마 미사용
+사전only	ROLE	역할	0	스키마 미사용
+사전only	ROLL	롤	0	스키마 미사용
+사전only	ROOF	지붕	0	스키마 미사용
+사전only	ROW	행	0	스키마 미사용
+사전only	RPMT	상환	0	스키마 미사용
+사전only	RPOS	재배치	0	스키마 미사용
+사전only	RPR	수리	0	스키마 미사용
+사전only	RPRM	복제실	0	스키마 미사용
+사전only	RPRSV	대표자	0	스키마 미사용
+사전only	RPTP	보고서	0	스키마 미사용
+사전only	RQDC	의뢰서	0	스키마 미사용
+사전only	RQST	의뢰	0	스키마 미사용
+사전only	RSCH	연구	0	스키마 미사용
+사전only	RSCHDR	연구책임자	0	스키마 미사용
+사전only	RSCHPTC	연구참여자	0	스키마 미사용
+사전only	RSCHR	연구자	0	스키마 미사용
+사전only	RSDTX	주민세	0	스키마 미사용
+사전only	RSGNTN	퇴사	0	스키마 미사용
+사전only	RSK	위험	0	스키마 미사용
+사전only	RSKA	위험분석	0	스키마 미사용
+사전only	RSKAS	위험평가	0	스키마 미사용
+사전only	RSKM	위험관리	0	스키마 미사용
+사전only	RSLTN	결의	0	스키마 미사용
+사전only	RSPDNT	응답자	0	스키마 미사용
+사전only	RSR	기록물계열	0	스키마 미사용
+사전only	RSRC	자원	0	스키마 미사용
+사전only	RSRM	자료실	0	스키마 미사용
+사전only	RSVT	예약	0	스키마 미사용
+사전only	RTE	노선	0	스키마 미사용
+사전only	RTL	유통	0	스키마 미사용
+사전only	RTMT	퇴임	0	스키마 미사용
+사전only	RTPYR	납부자	0	스키마 미사용
+사전only	RTRCN	취소	0	스키마 미사용
+사전only	RTRM	퇴직	0	스키마 미사용
+사전only	RVR	하천	0	스키마 미사용
+사전only	RVSN	개정	0	스키마 미사용
+사전only	RVVL	재생	0	스키마 미사용
+사전only	RVWR	검토자	0	스키마 미사용
+사전only	SAREA	권역	0	스키마 미사용
+사전only	SBJCT	과목	0	스키마 미사용
+사전only	SBMS	상정	0	스키마 미사용
+사전only	SBMSN	제출	0	스키마 미사용
+사전only	SBSN	중권역	0	스키마 미사용
+사전only	SBTTL	부제목	0	스키마 미사용
+사전only	SCHD	스케줄	0	스키마 미사용
+사전only	SCHL	학교	0	스키마 미사용
+사전only	SCHR	스케줄링	0	스키마 미사용
+사전only	SCKBD	병상	0	스키마 미사용
+사전only	SCLE	규모	0	스키마 미사용
+사전only	SCLSF	소분류	0	스키마 미사용
+사전only	SCM	스키마	0	스키마 미사용
+사전only	SCR	점수	0	스키마 미사용
+사전only	SCRM	스캐닝실	0	스키마 미사용
+사전only	SCRT	증권	0	스키마 미사용
+사전only	SCSBD	낙찰	0	스키마 미사용
+사전only	SCSBJT	학과	0	스키마 미사용
+사전only	SDIS	규격검사	0	스키마 미사용
+사전only	SED	SEED	0	스키마 미사용
+사전only	SEMINR	세미나	0	스키마 미사용
+사전only	SERS	계열	0	스키마 미사용
+사전only	SFMN	자체관리	0	스키마 미사용
+사전only	SFPRPL	자주식	0	스키마 미사용
+사전only	SFTW	소프트웨어	0	스키마 미사용
+사전only	SGG	시군구	0	스키마 미사용
+사전only	SGGT	건의	0	스키마 미사용
+사전only	SHA	SHA	0	스키마 미사용
+사전only	SHGHRK	차상위	0	스키마 미사용
+사전only	SHR	공유	0	스키마 미사용
+사전only	SHT	시트	0	스키마 미사용
+사전only	SIAR	대지면적	0	스키마 미사용
+사전only	SID	SID	0	스키마 미사용
+사전only	SIGUN	시군	0	스키마 미사용
+사전only	SITE	사이트	0	스키마 미사용
+사전only	SLIP	전표	0	스키마 미사용
+사전only	SLRM	소독실	0	스키마 미사용
+사전only	SLS	매출	0	스키마 미사용
+사전only	SM	총계	0	스키마 미사용
+사전only	SMA	자체관리기관	0	스키마 미사용
+사전only	SMLT	시뮬레이션	0	스키마 미사용
+사전only	SMPL	샘플	0	스키마 미사용
+사전only	SMS	SMS	0	스키마 미사용
+사전only	SNCN	인가	0	스키마 미사용
+사전only	SNDBK	반송	0	스키마 미사용
+사전only	SNDR	발송자	0	스키마 미사용
+사전only	SNGL	단일	0	스키마 미사용
+사전only	SNGR	가수	0	스키마 미사용
+사전only	SNO	부번	0	스키마 미사용
+사전only	SOCK	소켓	0	스키마 미사용
+사전only	SOE	비상사태	0	스키마 미사용
+사전only	SOND	음향	0	스키마 미사용
+사전only	SPAB	특기	0	스키마 미사용
+사전only	SPAREA	특수지	0	스키마 미사용
+사전only	SPCE	공간	0	스키마 미사용
+사전only	SPCM	시료	0	스키마 미사용
+사전only	SPK	발표자	0	스키마 미사용
+사전only	SPLMNT	보완	0	스키마 미사용
+사전only	SPLY	공급	0	스키마 미사용
+사전only	SPMT	출고	0	스키마 미사용
+사전only	SPS	후원자	0	스키마 미사용
+사전only	SPT	현장	0	스키마 미사용
+사전only	SPVS	감독	0	스키마 미사용
+사전only	SRCNTR	특수기록관	0	스키마 미사용
+사전only	SRLN	원어	0	스키마 미사용
+사전only	SRVY	설문	0	스키마 미사용
+사전only	SSL	SSL	0	스키마 미사용
+사전only	SSSN	세션	0	스키마 미사용
+사전only	STAF	국무	0	스키마 미사용
+사전only	STATS	통계	0	스키마 미사용
+사전only	STBLT	적합	0	스키마 미사용
+사전only	STBX	보관함	0	스키마 미사용
+사전only	STD	표준	0	스키마 미사용
+사전only	STDG	법정동	0	스키마 미사용
+사전only	STEP	단계	0	스키마 미사용
+사전only	STGP	속기사	0	스키마 미사용
+사전only	STLI	법정리	0	스키마 미사용
+사전only	STLM	결제	0	스키마 미사용
+사전only	STM	시분초	0	스키마 미사용
+사전only	STRT	개시	0	스키마 미사용
+사전only	STRTS	구조물	0	스키마 미사용
+사전only	STSF	만족	0	스키마 미사용
+사전only	STTY	법정	0	스키마 미사용
+사전only	SUBC	항	0	스키마 미사용
+사전only	SUM	합계	0	스키마 미사용
+사전only	SUPP	첨부물	0	스키마 미사용
+사전only	SVLF	내용연수	0	스키마 미사용
+사전only	SYNCZTN	동기화	0	스키마 미사용
+사전only	SZG	사이징	0	스키마 미사용
+사전only	SZR	압류	0	스키마 미사용
+사전only	TAMT	총합계	0	스키마 미사용
+사전only	TARC	송수신	0	스키마 미사용
+사전only	TAS	온도적응서고	0	스키마 미사용
+사전only	TBLE	표	0	스키마 미사용
+사전only	TCBIZ	휴업	0	스키마 미사용
+사전only	TCSTRN	총공사	0	스키마 미사용
+사전only	TELGM	전문	0	스키마 미사용
+사전only	TELOFC	국	0	스키마 미사용
+사전only	TEST	시험	0	스키마 미사용
+사전only	THCK	두께	0	스키마 미사용
+사전only	THE	시소러스	0	스키마 미사용
+사전only	THING	물건	0	스키마 미사용
+사전only	THMA	주제	0	스키마 미사용
+사전only	THP	감열지	0	스키마 미사용
+사전only	THRG	경유	0	스키마 미사용
+사전only	THTY	30	0	스키마 미사용
+사전only	TKCG	담당	0	스키마 미사용
+사전only	TKMNY	출금	0	스키마 미사용
+사전only	TKO	취임	0	스키마 미사용
+사전only	TLF	전송목록파일	0	스키마 미사용
+사전only	TLS	TLS	0	스키마 미사용
+사전only	TM	시각	0	스키마 미사용
+사전only	TMPS	예비(임시)서고	0	스키마 미사용
+사전only	TMPT	온도	0	스키마 미사용
+사전only	TNOCS	총건수	0	스키마 미사용
+사전only	TNOPE	총인원수	0	스키마 미사용
+사전only	TOT	집계	0	스키마 미사용
+사전only	TOTI	반출반입	0	스키마 미사용
+사전only	TPBIZ	업종	0	스키마 미사용
+사전only	TPCO	총사업비	0	스키마 미사용
+사전only	TPKCT	총주차	0	스키마 미사용
+사전only	TPMT	총지급	0	스키마 미사용
+사전only	TRFLN	차선	0	스키마 미사용
+사전only	TRFSTN	환승역	0	스키마 미사용
+사전only	TRLR	역자	0	스키마 미사용
+사전only	TRMNL	단말기	0	스키마 미사용
+사전only	TRMO	송·수신모듈	0	스키마 미사용
+사전only	TRMS	약관	0	스키마 미사용
+사전only	TRMT	송신	0	스키마 미사용
+사전only	TRNG	훈련	0	스키마 미사용
+사전only	TRPR	대상자	0	스키마 미사용
+사전only	TRTM	취급	0	스키마 미사용
+사전only	TSA	시점확인시스템	0	스키마 미사용
+사전only	TST	시점확인정보	0	스키마 미사용
+사전only	TTPS	연행	0	스키마 미사용
+사전only	TWTY	20	0	스키마 미사용
+사전only	TXBS	과세표준	0	스키마 미사용
+사전only	TXITM	세목	0	스키마 미사용
+사전only	TXPR	납세자	0	스키마 미사용
+사전only	TXTN	과세	0	스키마 미사용
+사전only	UAPV	미승인	0	스키마 미사용
+사전only	UAWD	비채택어	0	스키마 미사용
+사전only	UCFM	미확정	0	스키마 미사용
+사전only	UDGD	지하	0	스키마 미사용
+사전only	UINT	통합기관	0	스키마 미사용
+사전only	UNCL	미수집	0	스키마 미사용
+사전only	UNKN	미상	0	스키마 미사용
+사전only	UNQ	고유	0	스키마 미사용
+사전only	UNTPRC	단가	0	스키마 미사용
+사전only	UNTY	통합	0	스키마 미사용
+사전only	URGT	미등록	0	스키마 미사용
+사전only	URLADR	URL주소	0	스키마 미사용
+사전only	URSH	독촉장	0	스키마 미사용
+사전only	USPP	사용용도	0	스키마 미사용
+사전only	USPR	사용기간	0	스키마 미사용
+사전only	UTZTN	이용	0	스키마 미사용
+사전only	VAT	부가가치세	0	스키마 미사용
+사전only	VDIS	유효성검사	0	스키마 미사용
+사전only	VDO	동영상	0	스키마 미사용
+사전only	VE	속도	0	스키마 미사용
+사전only	VHCL	차량	0	스키마 미사용
+사전only	VHRNO	자동차등록번호	0	스키마 미사용
+사전only	VID	비디오	0	스키마 미사용
+사전only	VIN	차대번호	0	스키마 미사용
+사전only	VLDT	유효성	0	스키마 미사용
+사전only	VLTN	위반	0	스키마 미사용
+사전only	VR	가상	0	스키마 미사용
+사전only	VREC	필수기록물	0	스키마 미사용
+사전only	VRIS	바이러스검사	0	스키마 미사용
+사전only	VRY	매우	0	스키마 미사용
+사전only	VST	방문	0	스키마 미사용
+사전only	VSTR	방문자	0	스키마 미사용
+사전only	VWR	뷰어	0	스키마 미사용
+사전only	WAS	WAS	0	스키마 미사용
+사전only	WBCP	웹카피	0	스키마 미사용
+사전only	WDSP	띄어쓰기	0	스키마 미사용
+사전only	WEB	웹	0	스키마 미사용
+사전only	WEEK	주	0	스키마 미사용
+사전only	WHDWL	탈퇴	0	스키마 미사용
+사전only	WHOL	전체	0	스키마 미사용
+사전only	WKFW	워크플로우	0	스키마 미사용
+사전only	WM	워터마크	0	스키마 미사용
+사전only	WNDO	원도	0	스키마 미사용
+사전only	WOPM	무단	0	스키마 미사용
+사전only	WP	백상지	0	스키마 미사용
+사전only	WRC	직장	0	스키마 미사용
+사전only	WRD	유선	0	스키마 미사용
+사전only	WREC	웹기록물	0	스키마 미사용
+사전only	WRHS	입고	0	스키마 미사용
+사전only	WRKDY	근무일	0	스키마 미사용
+사전only	WRKR	근로자	0	스키마 미사용
+사전only	WT	무게	0	스키마 미사용
+사전only	WTHN	이내	0	스키마 미사용
+사전only	WTLN	대기열	0	스키마 미사용
+사전only	XUAR	전용면적	0	스키마 미사용
+사전only	YM	연월	0	스키마 미사용
+사전only	ZIP	우편번호	0	스키마 미사용
+사전only	ZNG	용도지역	0	스키마 미사용
+사전only	ZONE	구역	0	스키마 미사용
+스키마only	CD(AUTH		1	tb_stmenuahthrtgrp.cert_cd(auth_cd)
+스키마only	CD)		1	tb_stmenuahthrtgrp.cert_cd(auth_cd)
+스키마only	OFCLNM		1	tb_rdrecordcreat.rcpt_doc_dsptch_ofclnm
+스키마only	OFCLSL		1	tb_adarchivalobj.ofclsl_dscd_pbanc_yn

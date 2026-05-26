@@ -155,6 +155,7 @@ export default {
       else if (this.activeFilter === 'REJECTED') items = items.filter(i => i.aprvStatRaw === 3);
       if (this.typeFilter !== '전체') items = items.filter(i => i.reqTp === this.typeFilter);
       this.pageCount = Math.ceil(items.length / this.itemsPerPage);
+      if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
       return items;
     }
   },
