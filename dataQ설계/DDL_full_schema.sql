@@ -818,7 +818,8 @@ CREATE TABLE quality.tb_diag_result (
     diag_type character varying(50) NOT NULL,
     diag_detail text,
     std_value character varying(500),
-    actual_value character varying(500)
+    actual_value character varying(500),
+    obj_owner character varying(100)
 );
 
 
@@ -2310,6 +2311,13 @@ CREATE INDEX idx_qual_rule_catalog_clsf ON quality.tb_qual_rule_catalog USING bt
 --
 
 CREATE INDEX imsi_comment_attr_name_idx ON quality.imsi_comment USING btree (attr_name);
+
+
+--
+-- Name: ix_diag_result_owner_obj; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_diag_result_owner_obj ON quality.tb_diag_result USING btree (diag_job_id, obj_owner, obj_nm, attr_nm);
 
 
 --

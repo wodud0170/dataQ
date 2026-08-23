@@ -6,6 +6,7 @@ import lombok.Data;
 public class StdDiagResultVo {
     private Long resultId;
     private String diagJobId;
+    private String objOwner;    // 테이블 소유자(스키마). 같은 이름의 테이블이 여러 스키마에 있을 때 구분자
     private String objNm;       // 테이블명
     private String attrNm;      // 컬럼 영문명
     private String attrNmKr;    // 컬럼 한글명

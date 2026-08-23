@@ -850,7 +850,10 @@ export default {
       const issueColCnt = detail.filter(d => d.diagTypeList && d.diagTypeList.length > 0).length;
       const okColCnt = totalColCnt - issueColCnt;
       const complianceRate = totalColCnt > 0 ? Math.round((okColCnt / totalColCnt) * 100) : 0;
-      const totalTableCnt = new Set(detail.map(d => d.objNm)).size;
+      // 테이블 식별 키는 소유자(스키마)+이름이다. 이름만으로 세면 다른 스키마의
+      // 같은 이름 테이블이 하나로 합쳐져, 소유자 단위로 세는 issueTableCnt 보다
+      // 작아진다 (실제로 "전체 19 / 이슈 22" 로 표시되던 원인).
+      const totalTableCnt = new Set(detail.map(d => (d.objOwner || '') + '.' + d.objNm)).size;
       const issueTableCnt = summary.filter(s => s.issueCnt > 0).length;
       const totalIssueCnt = summary.reduce((sum, s) => sum + (s.issueCnt || 0), 0);
       return { totalColCnt, issueColCnt, okColCnt, complianceRate, totalTableCnt, issueTableCnt, totalIssueCnt };

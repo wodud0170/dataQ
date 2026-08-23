@@ -235,8 +235,11 @@ export default {
         for (const a of attrs) {
           if (a.fkYn !== 'Y' || !a.fkParentObjNm) continue;
           const toKey = (a.objOwner || '') + '|' + a.objNm;
-          // 부모 테이블의 owner를 모르므로 obj 목록에서 같은 objNm 찾기 (여러개면 첫번째)
-          const parent = objs.find(o => o.objNm === a.fkParentObjNm);
+          // FK_PARENT_OBJ_NM 에는 owner 가 없다. 같은 이름이 여러 스키마에 있으면
+          // 자식과 같은 스키마를 먼저 고른다 — 아무거나 집으면 다른 스키마로 선이 그어진다.
+          const parent = objs.find(o => o.objNm === a.fkParentObjNm
+                                     && (o.objOwner || '') === (a.objOwner || ''))
+                      || objs.find(o => o.objNm === a.fkParentObjNm);
           if (!parent) continue;
           const fromKey = (parent.objOwner || '') + '|' + parent.objNm;
           if (!objKeySet.has(fromKey) || !objKeySet.has(toKey)) continue;

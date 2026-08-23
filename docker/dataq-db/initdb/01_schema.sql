@@ -1,24 +1,3 @@
--- ============================================================================
--- dataQ 신규 환경 스키마 초기화 스크립트
---
--- ** 이 파일은 라이브 DB 의 pg_dump 결과다. 직접 수정하지 말 것. **
--- 갱신 명령:
---   docker exec -i dataq-db pg_dump -U admin -d postgres -n quality -n ndata \
---     --schema-only --no-owner --no-privileges --encoding=UTF8 \
---     > docker/dataq-db/initdb/01_schema.sql
---
--- 주의 1) docker/dataq-db/Dockerfile 은 이 파일을 쓰지 않는다.
---          pgdata/ 스냅샷을 COPY 하는 방식이라 initdb 가 실행되지 않는다.
---          이 파일은 '빈 PostgreSQL 에서 새로 만들 때' 용이다.
--- 주의 2) 스키마만 있고 시드 데이터는 없다.
---          사용자 계정: 02_users.sql
---          룰 카탈로그 시드 43건: dataQ설계/sync/qual_rule_catalog_seed_2026-05-07.sql
---          단어사전 시드: dataQ설계/dict_seed_kengdic.sql
--- 주의 3) quality 스키마만 필요하면 dataQ설계/DDL_full_schema.sql 을 쓴다.
---          단 그 파일에는 ndata 스키마가 없다 (앱이 ndata.tb_data_source 를 사용).
--- 마지막 갱신: 2026-08-23
--- ============================================================================
-
 --
 -- PostgreSQL database dump
 --
@@ -871,7 +850,8 @@ CREATE TABLE quality.tb_diag_result (
     diag_type character varying(50) NOT NULL,
     diag_detail text,
     std_value character varying(500),
-    actual_value character varying(500)
+    actual_value character varying(500),
+    obj_owner character varying(100)
 );
 
 
@@ -2371,6 +2351,13 @@ CREATE INDEX idx_qual_rule_catalog_clsf ON quality.tb_qual_rule_catalog USING bt
 --
 
 CREATE INDEX imsi_comment_attr_name_idx ON quality.imsi_comment USING btree (attr_name);
+
+
+--
+-- Name: ix_diag_result_owner_obj; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_diag_result_owner_obj ON quality.tb_diag_result USING btree (diag_job_id, obj_owner, obj_nm, attr_nm);
 
 
 --

@@ -24,6 +24,7 @@
     CREATE TABLE TB_DIAG_RESULT (
         RESULT_ID       BIGSERIAL       NOT NULL,
         DIAG_JOB_ID     VARCHAR(50)     NOT NULL,
+        OBJ_OWNER       VARCHAR(100),
         OBJ_NM          VARCHAR(200),
         ATTR_NM         VARCHAR(200),
         ATTR_NM_KR      VARCHAR(200),
@@ -56,6 +57,7 @@
     <resultMap id="diagResultMap" type="com.ndata.quality.model.std.StdDiagResultVo">
         <result property="resultId"     column="RESULT_ID"/>
         <result property="diagJobId"    column="DIAG_JOB_ID"/>
+        <result property="objOwner"     column="OBJ_OWNER"/>
         <result property="objNm"        column="OBJ_NM"/>
         <result property="attrNm"       column="ATTR_NM"/>
         <result property="attrNmKr"     column="ATTR_NM_KR"/>
@@ -114,7 +116,8 @@
         JOIN TB_DATA_MODEL M ON J.DM_ID = M.DM_ID
         LEFT JOIN TB_DATA_MODEL_CLCT C ON J.DM_CLCT_ID = C.DM_CLCT_ID
         LEFT JOIN (
-            SELECT DIAG_JOB_ID, COUNT(DISTINCT OBJ_NM || '.' || ATTR_NM) as ISSUE_COL_CNT
+            SELECT DIAG_JOB_ID,
+                   COUNT(DISTINCT COALESCE(OBJ_OWNER,'') || '.' || OBJ_NM || '.' || ATTR_NM) as ISSUE_COL_CNT
             FROM TB_DIAG_RESULT
             GROUP BY DIAG_JOB_ID
         ) IC ON IC.DIAG_JOB_ID = J.DIAG_JOB_ID
@@ -156,10 +159,10 @@
 
     <insert id="insertDiagResult" parameterType="com.ndata.quality.model.std.StdDiagResultVo">
         INSERT INTO TB_DIAG_RESULT (
-            DIAG_JOB_ID, OBJ_NM, ATTR_NM, ATTR_NM_KR,
+            DIAG_JOB_ID, OBJ_OWNER, OBJ_NM, ATTR_NM, ATTR_NM_KR,
             DIAG_TYPE, DIAG_DETAIL, STD_VALUE, ACTUAL_VALUE
         ) VALUES (
-            #{diagJobId}, #{objNm}, #{attrNm}, #{attrNmKr},
+            #{diagJobId}, #{objOwner, jdbcType=VARCHAR}, #{objNm}, #{attrNm}, #{attrNmKr},
             #{diagType}, #{diagDetail},
             #{stdValue, jdbcType=VARCHAR}, #{actualValue, jdbcType=VARCHAR}
         )
@@ -171,11 +174,11 @@
 
     <select id="selectDiagResultList" parameterType="String" resultMap="diagResultMap">
         SELECT
-            RESULT_ID, DIAG_JOB_ID, OBJ_NM, ATTR_NM, ATTR_NM_KR,
+            RESULT_ID, DIAG_JOB_ID, OBJ_OWNER, OBJ_NM, ATTR_NM, ATTR_NM_KR,
             DIAG_TYPE, DIAG_DETAIL, STD_VALUE, ACTUAL_VALUE
         FROM TB_DIAG_RESULT
         WHERE DIAG_JOB_ID = #{diagJobId}
-        ORDER BY OBJ_NM, ATTR_NM
+        ORDER BY OBJ_OWNER, OBJ_NM, ATTR_NM
     </select>
 
     <!--
@@ -198,6 +201,7 @@
         LEFT JOIN TB_DIAG_RESULT R
                ON R.DIAG_JOB_ID = #{diagJobId}
               AND R.OBJ_NM = O.OBJ_NM
+              AND COALESCE(R.OBJ_OWNER,'') = COALESCE(O.OBJ_OWNER,'')
         WHERE O.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
           AND O.USE_YN = 'Y'
         GROUP BY O.OBJ_NM, O.OBJ_NM_KR, O.OBJ_OWNER
@@ -217,6 +221,7 @@
             ,COALESCE(A.OBJ_OWNER, '')                      as "objOwner"
             ,(SELECT O.OBJ_NM_KR FROM TB_DATA_MODEL_OBJ O
               WHERE O.DM_ID = A.DM_ID AND O.OBJ_NM = A.OBJ_NM
+                AND COALESCE(O.OBJ_OWNER,'') = COALESCE(A.OBJ_OWNER,'')
               LIMIT 1)                                      as "objNmKr"
             ,A.ATTR_NM                                      as "attrNm"
             ,A.ATTR_NM_KR                                   as "attrNmKr"
@@ -245,6 +250,7 @@
             ON R.DIAG_JOB_ID = #{diagJobId}
             AND R.OBJ_NM  = A.OBJ_NM
             AND R.ATTR_NM  = A.ATTR_NM
+            AND COALESCE(R.OBJ_OWNER,'') = COALESCE(A.OBJ_OWNER,'')
         LEFT JOIN TB_TERMS T
             ON T.TERMS_ENG_ABRV_NM = A.ATTR_NM
         LEFT JOIN TB_DOMAIN D

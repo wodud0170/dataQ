@@ -1730,6 +1730,7 @@ public class DataModelController {
 			} catch (Exception e) {
 				failed++;
 				Map<String, Object> fi = new HashMap<>();
+				fi.put("objOwner", attr.getObjOwner());
 				fi.put("objNm", attr.getObjNm());
 				fi.put("attrNm", attr.getAttrNm());
 				fi.put("attrNmKr", attr.getAttrNmKr());
@@ -1811,6 +1812,7 @@ public class DataModelController {
 			} catch (Exception e) {
 				failed++;
 				Map<String, Object> fi = new HashMap<>();
+				fi.put("objOwner", attr.getObjOwner());
 				fi.put("objNm", attr.getObjNm());
 				fi.put("attrNm", attr.getAttrNm());
 				fi.put("attrNmKr", attr.getAttrNmKr());
@@ -1849,6 +1851,7 @@ public class DataModelController {
 		if (ddl instanceof Number) dataDecimalLen = ((Number) ddl).shortValue();
 
 		Map<String, Object> item = new HashMap<>();
+		item.put("objOwner", attr.getObjOwner());                    // 스키마까지 있어야 행이 식별된다
 		item.put("objNm", attr.getObjNm());
 		item.put("attrNm", attr.getAttrNm());                        // 기존 (식별용)
 		item.put("newAttrNm", newAttrNm);                            // 새 영문명
@@ -1869,6 +1872,7 @@ public class DataModelController {
 		if (terms == null)
 			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
 		Map<String, Object> item = new HashMap<>();
+		item.put("objOwner", attr.getObjOwner());                    // 스키마까지 있어야 행이 식별된다
 		item.put("objNm", attr.getObjNm());
 		item.put("attrNm", attr.getAttrNm());
 		item.put("newAttrNm", engNm);                                // 영문명 그대로

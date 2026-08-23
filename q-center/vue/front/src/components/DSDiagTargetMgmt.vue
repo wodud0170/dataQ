@@ -75,9 +75,9 @@
         <!-- 컬럼 단위 -->
         <v-tab-item>
           <v-sheet class="px-3 py-2" :style="{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:'8px' }">
-            <v-autocomplete v-model="selObj" :items="objs" item-text="objNm" item-value="objNm"
-              placeholder="테이블 선택" color="ndColor" outlined dense hide-details
-              :style="{ maxWidth: '260px' }" @change="loadAttrs"></v-autocomplete>
+            <v-autocomplete v-model="selObj" :items="objOptions" item-text="_label" return-object
+              placeholder="테이블 선택" color="ndColor" outlined dense hide-details clearable
+              :style="{ maxWidth: '300px' }" @change="loadAttrs"></v-autocomplete>
             <v-text-field v-model="attrSearch" placeholder="컬럼명 검색" dense hide-details outlined
               color="ndColor" prepend-inner-icon="search" :style="{ maxWidth: '240px' }"></v-text-field>
             <v-spacer></v-spacer>
@@ -216,6 +216,15 @@ export default {
         : this.objs;
       return list.map(o => ({ ...o, _rowKey: (o.objOwner || '') + '' + o.objNm }));
     },
+    objOptions() {
+      // 테이블 식별 키는 소유자+이름이다. 이름만 보여주면 다른 스키마의 같은 이름
+      // 테이블이 구분되지 않아, 어느 쪽을 골라도 양쪽 컬럼이 모두 나왔다.
+      return this.objs.map(o => ({
+        ...o,
+        _label: (o.objOwner ? o.objOwner + '.' : '') + o.objNm
+                + (o.objNmKr ? ' (' + o.objNmKr + ')' : '')
+      }));
+    },
     filteredAttrs() {
       const q = (this.attrSearch || '').toLowerCase();
       const list = q
@@ -253,7 +262,11 @@ export default {
       axios.get(this.$APIURL.base + 'api/dm/getDataModelAttrListByClctId', { params: { clctId: this.dmId } })
         .then(r => {
           const all = r.data || [];
-          this.attrs = this.selObj ? all.filter(a => a.objNm === this.selObj) : all;
+          const sel = this.selObj;
+          this.attrs = sel
+            ? all.filter(a => a.objNm === sel.objNm
+                           && (a.objOwner || '') === (sel.objOwner || ''))
+            : all;
         });
     },
     toggleObj(item, diagType) {

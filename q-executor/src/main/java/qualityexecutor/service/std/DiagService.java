@@ -267,6 +267,7 @@ public class DiagService implements Runnable {
     private StdDiagResultVo buildResult(StdDataModelAttrVo attr, String diagType, String diagDetail, String stdValue, String actualValue) {
         StdDiagResultVo r = new StdDiagResultVo();
         r.setDiagJobId(diagJobId);
+        r.setObjOwner(attr.getObjOwner());
         r.setObjNm(attr.getObjNm());
         r.setAttrNm(attr.getAttrNm());
         r.setAttrNmKr(attr.getAttrNmKr());

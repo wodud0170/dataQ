@@ -26,6 +26,8 @@
 - 2026-05-09 | PC2 | 86번 #11 OWNER PK 정합성 | `TB_DATA_MODEL_OBJ.OBJ_OWNER` / `TB_DATA_MODEL_ATTR.OBJ_OWNER` SET DEFAULT '' + SET NOT NULL, PK 재정의 — OBJ: (DM_ID, OBJ_OWNER, OBJ_NM), ATTR: (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) | 같은 OBJ_NM 다른 OWNER (스키마) 케이스 (예: SCHEMA_A.TB_USER vs SCHEMA_B.TB_USER) 동시 등록 가능. 매퍼 INSERT ON CONFLICT 컬럼셋 + 모든 WHERE/JOIN 도 OBJ_OWNER 매칭 추가 | PC2 (PC1 도 sync 필요 — DROP OLD PK + ADD NEW PK 동일 ALTER) |
 - 2026-05-14 | PC | 88번 거버넌스 워크플로우 1단계 | (1) 5개 모델 테이블 (tb_data_model / _obj / _attr / _index / _constraint) 에 거버넌스 7컬럼 (aprv_status DEFAULT 'APPROVED' + requester_user_id + req_dt + aprv_user_id + aprv_dt + aprv_comment + submission_id) 추가. (2) tb_data_model_obj 에 tablespace_nm + biz_area_id + subj_area_id 추가. (3) tb_biz_area / tb_subj_area / tb_data_model_change_history 신규 (각 거버넌스 컬럼 포함). (4) 기존 row 일괄 APPROVED 마이그레이션. | 88_거버넌스_승인워크플로우 설계의 schema 기반 — DRAFT/SUBMITTED/APPROVED/REJECTED 상태머신 + 묶음 신청(submission_id) + 변경이력 추적. 적용 sql: `dataQ설계/sync/PC_align_2026-05-14_governance.sql` | 양쪽 (멱등 IF NOT EXISTS — 다른 PC pull 후 동일 SQL 적용)
 
+- 2026-08-23 | PC | 진단 결과 소유자 구분 (결함 ⑩) | `TB_DIAG_RESULT` 에 `OBJ_OWNER VARCHAR(100)` 추가 + 인덱스 `IX_DIAG_RESULT_OWNER_OBJ (DIAG_JOB_ID, OBJ_OWNER, OBJ_NM, ATTR_NM)`. 기존 7,246행 중 (모델, 테이블명) 이 소유자 하나로만 존재하는 6,187행 백필, 다중 스키마 중복 1,059행은 복원 정보가 없어 NULL 유지 | 2026-05-09 OWNER PK 정합성 작업이 OBJ/ATTR 만 다루고 진단 결과 테이블을 빠뜨렸다. 그 결과 `R.OBJ_NM = O.OBJ_NM` 조인이 팬아웃해 같은 이름·다른 스키마 테이블이 서로의 이슈를 물려받았고, 오라클테스트 모델에서 "전체 테이블 19 / 이슈 테이블 22" 라는 불가능한 표시가 나왔다. 준수율(ISSUE_COL_CNT) 과 표준 flag 동기화(syncAttrStndYnFromDiag) 도 같은 이유로 부정확 | 양쪽 (멱등 `ADD COLUMN IF NOT EXISTS` + 백필 UPDATE)
+
 ---
 
 ## 79번 진단 제외 관리 (직전 작업)
@@ -40,6 +42,7 @@
 |---|---|---|---|
 | `0281003` PC2 미커밋 | 2026-04-22 | DDL 변경 적용 후 파일 갱신 누락 | DDL_full_schema.sql + DDL_변경이력.md 두 파일 동시 갱신 의무화 |
 | 5월 PC1·PC2 schema 불일치 | 2026-05-04 ~ 06 | PC1 만 ALTER 적용된 컬럼 다수 (added/deleted/modified_cnt 등) | 본 파일 도입. push 전 self-check + sync ALTER 디렉토리 운영 |
+| 진단 결과 OBJ_OWNER 누락 | 2026-05-09 도입 → 2026-08-23 발견 | OWNER 를 PK 에 넣는 작업을 OBJ/ATTR 두 테이블에만 하고, 그 두 테이블을 **참조하는** TB_DIAG_RESULT 를 빠뜨림. 3개월간 준수율이 틀린 채로 표시됨 | 식별 키를 바꿀 때는 그 키로 조인되는 **모든** 테이블을 함께 훑는다. 체크 명령: `grep -rn "OBJ_NM *= *[A-Z]\.OBJ_NM" q-common/src/main/resources/mapper/` 로 owner 조건 없는 조인을 찾는다 |
 
 ---
 

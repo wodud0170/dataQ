@@ -868,15 +868,19 @@ export default {
   margin-bottom: 4px;
 }
 
+/* 폭 30% 고정 카드 안에 들어가야 한다. vw 단독이면 5자리(예: 14840)부터
+   카드를 넘어 마지막 자리가 잘리고 단위가 다음 줄로 밀린다.
+   clamp 로 상한을 두고 nowrap 으로 단위를 같은 줄에 붙인다. */
 .std-card__value {
-  font-size: 2.2vw;
+  font-size: clamp(1rem, 1.55vw, 1.8rem);
   font-weight: 700;
   color: #283593;
-  line-height: 1.1;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .std-card__value--sm {
-  font-size: 1.6vw;
+  font-size: clamp(0.95rem, 1.25vw, 1.4rem);
 }
 
 .std-card__unit {

@@ -111,7 +111,8 @@
                 to_char(to_timestamp(J.END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI') as DIAG_DT_FMT
             from TB_DIAG_JOB J
             LEFT JOIN (
-                select DIAG_JOB_ID, COUNT(DISTINCT OBJ_NM || '.' || ATTR_NM) as ISSUE_COL_CNT
+                select DIAG_JOB_ID,
+                       COUNT(DISTINCT COALESCE(OBJ_OWNER,'') || '.' || OBJ_NM || '.' || ATTR_NM) as ISSUE_COL_CNT
                 from TB_DIAG_RESULT
                 group by DIAG_JOB_ID
             ) IC on IC.DIAG_JOB_ID = J.DIAG_JOB_ID
@@ -1115,6 +1116,7 @@
 					WHERE r.DIAG_JOB_ID = #{diagJobId}
 					  AND r.OBJ_NM  = a.OBJ_NM
 					  AND r.ATTR_NM = a.ATTR_NM
+					  AND COALESCE(r.OBJ_OWNER,'') = COALESCE(a.OBJ_OWNER,'')
 				) THEN 'N' ELSE 'Y'
 			 END
 			,DOMAIN_STND_YN = CASE
@@ -1123,6 +1125,7 @@
 					WHERE r.DIAG_JOB_ID = #{diagJobId}
 					  AND r.OBJ_NM  = a.OBJ_NM
 					  AND r.ATTR_NM = a.ATTR_NM
+					  AND COALESCE(r.OBJ_OWNER,'') = COALESCE(a.OBJ_OWNER,'')
 				) THEN 'N' ELSE 'Y'
 			 END
 		WHERE a.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})

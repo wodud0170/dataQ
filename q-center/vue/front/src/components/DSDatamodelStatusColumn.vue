@@ -1685,7 +1685,7 @@ export default {
         ...dirtyItems.filter(r => r.attrNmKr && r.objNm),
       ];
       changing.forEach(r => {
-        const key = r.objNm + '|' + r.attrNmKr.trim();
+        const key = (r.objOwner || '') + '|' + r.objNm + '|' + r.attrNmKr.trim();
         if (seen[key]) {
           r._error = true;
           seen[key]._error = true;
@@ -1700,10 +1700,10 @@ export default {
       (this.dmColumnAllItems || []).forEach(it => {
         if (it._mode === 'add' || !it.attrNmKr || !it.objNm) return;
         if (this.isRowDirty(it)) return; // dirty 는 위에서 changing 으로 검사 중
-        existing[it.objNm + '|' + (it.attrNmKr || '').trim()] = it;
+        existing[(it.objOwner || '') + '|' + it.objNm + '|' + (it.attrNmKr || '').trim()] = it;
       });
       changing.forEach(r => {
-        const key = r.objNm + '|' + r.attrNmKr.trim();
+        const key = (r.objOwner || '') + '|' + r.objNm + '|' + r.attrNmKr.trim();
         // dirty 행 자기 자신이 existing 에 있는 케이스는 제외 (자기 자신 비교가 됨 — 위에서 dirty 는 existing 에 안 들어감)
         if (existing[key]) {
           r._error = true;
@@ -1912,11 +1912,12 @@ export default {
         const data = res.data || {};
         const items = data.items || [];
         const reasonMap = {};
-        (data.failedList || []).forEach(f => { reasonMap[f.objNm + '::' + f.attrNm] = f.reason; });
+        (data.failedList || []).forEach(f => { reasonMap[(f.objOwner || '') + '::' + f.objNm + '::' + f.attrNm] = f.reason; });
         // 응답 items 를 그리드 행에 직접 반영 (DB 업데이트 X — 저장 버튼 누를 때 일괄)
         items.forEach(it => {
           const row = this.dmColumnAllItems.find(r =>
-            r._mode === 'saved' && r.objNm === it.objNm && r.attrNm === it.attrNm);
+            r._mode === 'saved' && r.objNm === it.objNm && r.attrNm === it.attrNm
+            && (r.objOwner || '') === (it.objOwner || ''));
           if (!row) return;
           this.$set(row, 'attrNm',         it.newAttrNm);
           this.$set(row, 'attrNmKr',       it.newAttrNmKr);
@@ -1927,7 +1928,7 @@ export default {
         });
         // 실패 사유 주입
         this.dmColumnAllItems.forEach(r => {
-          const k = r.objNm + '::' + r.attrNm;
+          const k = (r.objOwner || '') + '::' + r.objNm + '::' + r.attrNm;
           if (reasonMap[k]) this.$set(r, '_resolveReason', reasonMap[k]);
         });
         this.$swal.fire({
@@ -1991,10 +1992,11 @@ export default {
         const data = res.data || {};
         const items = data.items || [];
         const reasonMap = {};
-        (data.failedList || []).forEach(f => { reasonMap[f.objNm + '::' + f.attrNm] = f.reason; });
+        (data.failedList || []).forEach(f => { reasonMap[(f.objOwner || '') + '::' + f.objNm + '::' + f.attrNm] = f.reason; });
         items.forEach(it => {
           const row = this.dmColumnAllItems.find(r =>
-            r._mode === 'saved' && r.objNm === it.objNm && r.attrNm === it.attrNm);
+            r._mode === 'saved' && r.objNm === it.objNm && r.attrNm === it.attrNm
+            && (r.objOwner || '') === (it.objOwner || ''));
           if (!row) return;
           this.$set(row, 'attrNm',         it.newAttrNm);
           this.$set(row, 'attrNmKr',       it.newAttrNmKr);
@@ -2004,7 +2006,7 @@ export default {
           this.$set(row, '_resolveReason', null);
         });
         this.dmColumnAllItems.forEach(r => {
-          const k = r.objNm + '::' + r.attrNm;
+          const k = (r.objOwner || '') + '::' + r.objNm + '::' + r.attrNm;
           if (reasonMap[k]) this.$set(r, '_resolveReason', reasonMap[k]);
         });
         this.$swal.fire({
