@@ -79,10 +79,23 @@ mvn clean package -DskipTests -T 1C # 깨끗하게 (build.bat 과 동일)
 - **DDL 단일 진실 정책 (2026-05-06 재정립)** — `dataQ설계/DDL_full_schema.sql` 이 schema 의 단일 진실. PC1·PC2 양쪽이 이 파일로 동기화. **pg_dump 결과** 라 사람 손이 안 닿음 → 누락 사고 원천 차단:
   1. **DDL 변경(CREATE/ALTER/DROP/컬럼·제약·인덱스 추가·변경·삭제) 후 즉시** dataq-db 에 적용 → `docker exec -i dataq-db pg_dump -U admin -d postgres -n quality --schema-only --no-owner --no-privileges --encoding=UTF8 > dataQ설계/DDL_full_schema.sql` 로 갱신
   2. `dataQ설계/DDL_변경이력.md` 에 한 줄 추가 (날짜 / 세션 / PC / 변경내용 / 사유) — 사람용 changelog
-  3. **push 전 self-check**: `grep -oE 'TB_[A-Z_]+' q-common/src/main/resources/mapper/stnd/*.xml | sort -u` 로 매퍼 참조 테이블 추출 → `DDL_full_schema.sql` 에 (case-insensitive) 모두 있는지 확인
+  3. **push 전 self-check**: `grep -ohiE '\btb_[a-z0-9_]+' q-common/src/main/resources/mapper/stnd/*.xml | tr 'A-Z' 'a-z' | sort -u` 로 매퍼 참조 테이블 추출 → `DDL_full_schema.sql` 에 (case-insensitive) 모두 있는지 확인. **`-i` 필수** — 매퍼가 소문자로도 테이블을 쓴다 (`tb_biz_area`/`tb_subj_area`/`tb_user`/`tb_domain`/`tb_terms`/`tb_word`/`tb_qual_running_lock`/`tb_data_source` 8개). 대문자만 grep 하면 이 8개가 통째로 누락됨 (2026-08-22 발견)
   4. **PC 간 sync ALTER 가 필요한 경우** (한쪽만 적용된 변경 발견 시) `dataQ설계/sync/<PC>_align_<날짜>.sql` 에 멱등 ALTER 작성 + 적용 절차 주석. 적용 후 양쪽 dump 가 동일해지면 sync 파일은 archive
   5. **사고 이력 누적 시** `dataQ설계/DDL_변경이력.md` 헤더에 사고 케이스 기록. 같은 패턴 반복 방지
-  6. **참고**: `DDL_claude_generated.sql` 은 **점진적 ALTER 히스토리** (legacy). 새 변경은 `DDL_full_schema.sql` + `DDL_변경이력.md` 만 사용. 신규 환경 구축은 `DDL_full_schema.sql` 한 파일 실행으로 완성
+  6. **참고**: `DDL_claude_generated.sql` 은 **점진적 ALTER 히스토리** (legacy). 새 변경은 `DDL_full_schema.sql` + `DDL_변경이력.md` 만 사용
+  7. **신규 환경 구축 (2026-08-23 정정)** — `DDL_full_schema.sql` **한 파일로는 안 된다.** 그 파일은 `-n quality` 덤프라 앱이 쓰는 `ndata.tb_data_source` 가 없다. 순서:
+     1. `docker/dataq-db/initdb/01_schema.sql` (quality + ndata 통합 덤프) 적용
+     2. `docker/dataq-db/initdb/02_users.sql` — 사용자 계정 시드
+     3. `dataQ설계/sync/qual_rule_catalog_seed_2026-05-07.sql` — 룰 카탈로그 43건
+     4. `dataQ설계/dict_seed_kengdic.sql` — 단어사전 시드
+
+     `01_schema.sql` 갱신 명령 (스키마 변경 시 `DDL_full_schema.sql` 과 **함께** 갱신):
+     ```bash
+     docker exec -i dataq-db pg_dump -U admin -d postgres -n quality -n ndata \
+       --schema-only --no-owner --no-privileges --encoding=UTF8 \
+       > docker/dataq-db/initdb/01_schema.sql
+     ```
+     **주의**: `docker/dataq-db/Dockerfile` 은 `pgdata/` 스냅샷을 COPY 하므로 initdb 를 실행하지 않는다. `01_schema.sql` 은 "빈 PostgreSQL 에서 새로 만들 때" 용이다. 2026-04-21 판이 4개월간 방치돼 `change_source`·`tb_term_resolve_history` 가 빠진 채였고, 그 상태로 초기화하면 `insertChangeHistory`·`termResolve.insert` 가 전부 실패한다
 - 기능 구현 시 입력 검증/에러처리/UX 흐름을 먼저 확인하고 구현
 - Vue 컴포넌트 수정 후 필요한 import가 모두 있는지 검증
 - 새 필드 추가 시 체크리스트: Java VO → MyBatis resultMap → SQL SELECT → 프론트 data/map/template
