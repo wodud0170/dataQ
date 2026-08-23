@@ -291,7 +291,7 @@ def register_word(driver, word_nm, word_eng, word_desc="Selenium 반려삭제 �
         time.sleep(0.5)
         driver.execute_script("arguments[0].click();", inputs[2])
         inputs[2].send_keys(Keys.CONTROL, "a")
-        inputs[2].send_keys(word_eng + " FULL")
+        inputs[2].send_keys(word_eng + "Full")  # 86번 #42 — 단어 영문명 공백 불허
         time.sleep(0.3)
 
     if textareas:

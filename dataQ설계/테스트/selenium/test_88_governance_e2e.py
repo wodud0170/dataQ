@@ -48,7 +48,10 @@ def main():
     db_exec("DELETE FROM quality.tb_data_model_change_history WHERE change_user_id='jyjang';")
 
     DM = "9ek4pZ2c4_Wab1k*g1_0yt"
-    TBL = "TB_MEMEBER"
+    # 2026-08-22: 원래 "TB_MEMEBER" 오타였음. 실제 테이블은 TB_MEMBER (MBR_NM attr_ord=2).
+    # saveAttrs ADD 가 부모 OBJ 존재를 검사하지 않아 오타 이름으로도 ATTR 이 생성되는 바람에
+    # Step 1~5 는 통과하고 Step 6 swapAttrOrd 만 "대상 컬럼 없음" 으로 실패했었다.
+    TBL = "TB_MEMBER"
 
     # Step 1 — jyjang ADD
     print("\n[Step 1] jyjang(user) 컬럼 추가")

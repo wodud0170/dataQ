@@ -223,7 +223,10 @@ def main():
         assert state["logId"] in ids, f"log not in list: {ids}"
         mine = next(l for l in arr if l.get("logId") == state["logId"])
         assert mine.get("triggerType") == "MANUAL"
-        assert mine.get("execStatus") == "RUNNING"
+        # runNow 는 기저 진단이 즉시 실패(예: 수집 이력 없는 모델)하면 곧바로 ERROR 로 마감된다.
+        # 이 단계의 검증 대상은 "LOG 가 목록에 뜨고 snapshot 이 남는가" 이므로 상태값은 유효 집합으로만 확인.
+        assert mine.get("execStatus") in ("RUNNING", "DONE", "ERROR", "SKIPPED"), \
+            f"예상 밖 execStatus: {mine.get('execStatus')}"
         assert mine.get("scheduleNmSnapshot") == state["scheduleNm"], "snapshot 누락"
     if not step("13. logs 목록에 포함 + snapshot 기록", _logs_contains): return
 

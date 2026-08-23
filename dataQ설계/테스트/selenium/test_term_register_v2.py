@@ -33,8 +33,16 @@ SCREEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screensho
 os.makedirs(SCREEN_DIR, exist_ok=True)
 
 _SUFFIX = str(random.randint(100, 999))
-TERM_NORMAL = f"셀명_{_SUFFIX}"      # 마지막 단어 '명' (일반 도메인)
-TERM_CODE   = f"셀유형코드_{_SUFFIX}"  # 마지막 단어 '코드' (CD → 코드 도메인 자동 토글)
+# 2026-08-22: 유니크 접미사를 뒤에 붙이면 형태소 분석의 "마지막 단어" 가 접미사 숫자가 돼
+# 각 CASE 의 전제(마지막 단어 = 명 / 코드)가 깨진다.
+#   "셀유형코드_761" -> [셀, 유형, 코드, _, 761]  → 마지막 = 761 (UNRECOGNIZED)
+# 접미사를 형식단어 앞에 넣어 마지막 단어가 형식단어로 남게 한다.
+TERM_NORMAL = f"셀{_SUFFIX}명"   # 마지막 단어 '명' (일반 도메인)
+# CASE B 는 등록까지 가지 않고 "도메인 유형 토글 + 코드 picker" 만 확인하므로 유니크할 필요가 없다.
+# 오히려 접미사를 붙이면 형태소 분석이 `셀유형323` 을 한 덩어리 UNRECOGNIZED 로 묶어
+# 선택 단어 리스트(addTerm_wordList)가 흐트러지고 토글 조건이 깨진다.
+# 전 토큰이 MATCHED 되는 고정 이름을 쓴다 — [셀(CELL), 유형(TYPE), 코드(CD)].
+TERM_CODE   = "셀유형코드"
 # 82번 §3 v2 케이스 — analyzeTermsBatch 단어 정확 분리 검증
 # (사전 등록 단어가 늘어나면 케이스 무용 — 미등록 토큰을 일부러 의미없는 문자열로 구성)
 TERM_MIXED  = "블라블라일자"           # UNRECOGNIZED(블라블라) + MATCHED(일자) 혼합
@@ -156,11 +164,20 @@ def select_all_words_in_modal(driver):
     for r in rows:
         try:
             cb = r.find_element(By.CSS_SELECTOR, ".v-simple-checkbox")
-            ActionChains(driver).move_to_element(cb).click().perform()
+            # 2026-08-22: DSTerm._applyAnalyzedWords 는 MATCHED 단어를 이미 선택된 상태로 넣는다
+            # (newSelectedList[i] = [item]). 무조건 클릭하면 오히려 선택이 해제돼
+            # addTerm_wordList 가 비고 "도메인 유형" 토글이 사라진다.
+            # → 이미 체크된 행은 건드리지 않고, 안 된 행만 클릭한다.
+            if "mdi-checkbox-marked" in (cb.get_attribute("innerHTML") or ""):
+                clicked += 1
+                continue
+            icon = cb.find_element(By.CSS_SELECTOR, "i") if cb.find_elements(By.CSS_SELECTOR, "i") else cb
+            driver.execute_script("arguments[0].click();", icon)
             time.sleep(0.3)
-            clicked += 1
+            if "mdi-checkbox-marked" in (cb.get_attribute("innerHTML") or ""):
+                clicked += 1
         except: continue
-    print(f"  단어 체크박스 {clicked}개 클릭")
+    print(f"  단어 체크박스 {clicked}개 선택 상태")
     time.sleep(1)
     return clicked
 
@@ -216,9 +233,16 @@ def main():
         def caseB():
             open_add_modal(driver)
             inp = find_term_input_in_modal(driver)
+            # Vuetify input 은 .clear() 만으로 v-model 이 안 비워져 잔여 텍스트에 이어붙는 경우가 있다
+            # (실제로 "셀유형코드dIAKJFaj" 가 입력돼 마지막 단어가 CD 가 아니게 되는 현상 발생).
+            # Ctrl+A 로 전체 선택 후 덮어쓰고, 실제 들어간 값을 확인한다.
             inp.clear()
+            inp.send_keys(Keys.CONTROL, "a")
             inp.send_keys(TERM_CODE)
-            print(f"  용어명 입력: {TERM_CODE} → 자동 분석 대기")
+            time.sleep(0.3)
+            actual = inp.get_attribute("value") or ""
+            print(f"  용어명 입력: {TERM_CODE} (실제 입력값='{actual}') → 자동 분석 대기")
+            assert actual == TERM_CODE, f"입력값 오염: 기대 '{TERM_CODE}', 실제 '{actual}'"
             time.sleep(3)
             # 단어 선택 (분류별 1개)
             select_all_words_in_modal(driver)

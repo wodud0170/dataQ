@@ -155,6 +155,7 @@ def main():
     def _b1():
         body = {
             "dataModelId": edit_id,
+            "objOwner": "XMI",   # importXmiModel 이 OBJ_OWNER='XMI' 로 넣음. PK 일부라 필수.
             "objNm": "EMPLOYEE",
             "attrNm": "EMP_NAME",
             "attrNmKr": "직원명",
@@ -181,6 +182,7 @@ def main():
     def _b2():
         body = {
             "dataModelId": edit_id,
+            "objOwner": "XMI",   # importXmiModel 이 OBJ_OWNER='XMI' 로 넣음. PK 일부라 필수.
             "objNm": "EMPLOYEE",
             "attrNm": "EMAIL",
             "attrNmKr": "이메일",
@@ -204,6 +206,7 @@ def main():
     def _b3():
         body = {
             "dataModelId": edit_id,
+            "objOwner": "XMI",   # importXmiModel 이 OBJ_OWNER='XMI' 로 넣음. PK 일부라 필수.
             "objNm": "EMPLOYEE",
             "objNmKr": "직원테이블",
             "objComment": "수정테스트"
@@ -223,6 +226,7 @@ def main():
     def _b4():
         body = {
             "dataModelId": edit_id,
+            "objOwner": "XMI",   # importXmiModel 이 OBJ_OWNER='XMI' 로 넣음. PK 일부라 필수.
             "objNm": "EMPLOYEE",
             "attrNm": "EMAIL"
         }

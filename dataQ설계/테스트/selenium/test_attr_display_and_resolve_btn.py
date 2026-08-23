@@ -4,7 +4,7 @@ DSDatamodelStatusColumn 화면 변경 검증:
 1. 비표준 컬럼(termsStndYn='N') 의 attrNm 컬럼은 빈값으로 표시 (TMP_COL_N 노출 안 됨)
 2. [선택 컬럼 물리모델 변환] 버튼은 체크 전에도 노출 + 체크 안 했을 때 disabled, 체크 후 enabled
 
-전제: 서버 28091 기동, CAMS 모델에 비표준 컬럼이 다수 존재 (TERMS_STND_YN='N')
+전제: 서버 28091 기동, TARGET_MODEL 에 비표준 컬럼이 다수 존재 (TERMS_STND_YN='N')
 """
 import os, sys, time, traceback
 from datetime import datetime
@@ -18,6 +18,9 @@ from selenium.webdriver.support import expected_conditions as EC
 BASE = "http://localhost:28091"
 SCREENSHOT_DIR = os.path.join(os.path.dirname(__file__), "screenshots")
 PREFIX = "attrcol_"
+# 검증 대상 데이터모델. USE_YN='Y' 이면서 비표준 컬럼이 있는 모델이어야 한다.
+# (구 "CAMS" 모델은 2026 년 CAMS 작업이 2026RAMS repo 로 분리되며 USE_YN='N' 처리됨)
+TARGET_MODEL = "오라클테스트"
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 results = []
 
@@ -105,10 +108,12 @@ def main():
         if not step("3. 변환 버튼 — 체크 전 visible + disabled", _check_resolve_btn_disabled_before_select): return
 
         def _select_model():
-            select_model_in_filter(d, "CAMS")
+            # 2026-08-22: 기존 "CAMS" 모델은 USE_YN='N' 으로 비활성화돼 autocomplete 에 안 뜬다.
+            # 활성 + 비표준 컬럼 보유 모델로 교체 (오라클테스트: 비표준 104 / 전체 125).
+            select_model_in_filter(d, TARGET_MODEL)
             time.sleep(2)
             shot(d, "02_model_selected")
-        if not step("4. CAMS 모델 선택", _select_model): return
+        if not step(f"4. 모델 선택 ({TARGET_MODEL})", _select_model): return
 
         def _check_attr_nm_no_tmp():
             # 그리드의 "컬럼명" 컬럼 (attrNm) 값들 중 TMP_COL_N 패턴이 없어야 함

@@ -286,9 +286,13 @@ def test_visibility_filter():
         record("TC4-space_api", False, f"status={r2.status_code}")
     else:
         data2 = r2.json()
+        # 2026-05-17 "88번 거버넌스 — 미승인 가시성 수정"(81e3acb) 으로 정책이 바뀌었다.
+        # DataModelController.getDataModelAttrListByClctId 주석 그대로:
+        #   "관리자도 남의 미승인(DRAFT/SUBMITTED)은 컬럼 메뉴에 노출 안 됨 — 승인 화면에서만 본다"
+        # → admin 도 타인 DRAFT 는 0건이 정상.
         visible = [x for x in data2 if x.get("attrNm") == "TC4_DRAFT_COL"]
-        record("TC4-space_sees_draft", len(visible) == 1,
-               f"space(admin) 시점 DRAFT 노출 {len(visible)}건 (1 기대)")
+        record("TC4-space_no_draft_leak", len(visible) == 0,
+               f"space(admin) 시점 타인 DRAFT 노출 {len(visible)}건 (0 기대 — 승인 화면 전용)")
 
     # cleanup
     try:

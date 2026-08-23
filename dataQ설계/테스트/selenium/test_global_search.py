@@ -91,6 +91,7 @@ def main():
         print("\n[STEP 3] 검색결과에서 '단어등록TEST' 클릭")
 
         target_found = False
+        target_word = None
         # expansion panel이 열려있을 수 있으니 단어 패널 클릭 시도
         try:
             panels = driver.find_elements(By.CSS_SELECTOR, ".v-expansion-panel-header")
@@ -104,37 +105,27 @@ def main():
         except:
             pass
 
-        # 테이블에서 "단어등록TEST" 찾기
+        # 2026-08-22: 기존엔 "단어등록TEST" 라는 수동 테스트 잔여 데이터를 찾았는데
+        # 그 단어가 DB 에서 사라져 항상 실패했다. 검증 대상은 "검색결과 행을 클릭하면
+        # 사전 탭으로 이동하며 검색조건이 세팅되는가" 이므로 첫 행을 동적으로 집는다.
         time.sleep(1)
         rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
         print(f"  테이블 행 수: {len(rows)}")
         for row in rows:
             try:
-                text = row.text
-                if "단어등록TEST" in text:
-                    row.click()
-                    target_found = True
-                    print(f"  '단어등록TEST' 행 클릭: {text[:60]}")
-                    break
+                text = (row.text or "").strip()
+                if not text:
+                    continue
+                target_word = text.split()[0]
+                row.click()
+                target_found = True
+                print(f"  검색결과 첫 행 클릭: {text[:60]}  (대상 단어='{target_word}')")
+                break
             except:
                 continue
 
         if not target_found:
-            # XPath로 시도
-            try:
-                cells = driver.find_elements(By.XPATH, "//td[contains(text(), '단어등록TEST')]")
-                if cells:
-                    cells[0].click()
-                    target_found = True
-                    print(f"  '단어등록TEST' 셀 클릭 (XPath)")
-            except:
-                pass
-
-        if not target_found:
-            print("  [FAIL] '단어등록TEST' 항목 못 찾음")
-            # 디버깅: 테이블 내용 출력
-            for i, row in enumerate(rows[:5]):
-                print(f"    행[{i}]: {row.text[:80]}")
+            print("  [FAIL] 검색결과 행이 하나도 없음")
             driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_gs_step3_fail.png")
             return 1
 
@@ -155,7 +146,7 @@ def main():
         print(f"  '단어' 탭 존재: {'PASS' if tab_found else 'FAIL'}")
 
         # 5. 검색조건 확인
-        print("\n[STEP 5] 검색조건에 '단어등록TEST' 세팅 확인")
+        print(f"\n[STEP 5] 검색조건에 '{target_word}' 세팅 확인")
 
         search_value_found = False
         data_found = False
@@ -164,7 +155,7 @@ def main():
         inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='text']")
         for inp in inputs:
             val = inp.get_attribute("value") or ""
-            if "단어등록TEST" in val:
+            if target_word and target_word in val:
                 search_value_found = True
                 print(f"  [PASS] 검색조건: '{val}'")
                 break
@@ -177,13 +168,13 @@ def main():
                 if val:
                     print(f"    [{i}] value='{val}' placeholder='{ph}'")
 
-        # 테이블에 "단어등록TEST" 데이터 확인
+        # 테이블에 클릭한 단어 데이터 확인
         time.sleep(1)
         rows = driver.find_elements(By.CSS_SELECTOR, "table tbody tr")
         for row in rows:
-            if "단어등록TEST" in row.text:
+            if target_word and target_word in row.text:
                 data_found = True
-                print(f"  [PASS] 조회 결과에 '단어등록TEST' 확인")
+                print(f"  [PASS] 조회 결과에 '{target_word}' 확인")
                 break
 
         if not data_found:

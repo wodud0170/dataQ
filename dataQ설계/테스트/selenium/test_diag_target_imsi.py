@@ -135,7 +135,7 @@ VALUES
     # ============================================================
     def _p3():
         r = s.post(BASE + "/api/dm/setObjDiagTarget", json={
-            "dmId": DM_ID, "objNm": "IMSI_TEST_001",
+            "dmId": DM_ID, "objOwner": "SYSTEM","objNm": "IMSI_TEST_001",
             "diagType": "STND", "targetYn": "N", "reason": "단건 OFF 테스트"
         }, timeout=10)
         assert r.status_code == 200, f"{r.status_code}"
@@ -152,7 +152,7 @@ SELECT STND_DIAG_TARGET_YN || '|' || COALESCE(STND_DIAG_TARGET_REASON,'NULL') ||
     # ============================================================
     def _p4():
         r = s.post(BASE + "/api/dm/setObjDiagTargetBatch", json={
-            "dmId": DM_ID, "objNms": ["IMSI_TEST_002","IMSI_TEST_003"],
+            "dmId": DM_ID, "objOwner": "SYSTEM","objNms": ["IMSI_TEST_002","IMSI_TEST_003"],
             "diagType": "STRUCT", "targetYn": "N", "reason": "일괄 OFF 사유 입력"
         }, timeout=10)
         assert r.status_code == 200
@@ -168,7 +168,7 @@ SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
     # ============================================================
     def _p5():
         r = s.post(BASE + "/api/dm/setAttrDiagTarget", json={
-            "dmId": DM_ID, "objNm": "IMSI_TEST_001", "attrNm": "NAME",
+            "dmId": DM_ID, "objOwner": "SYSTEM","objNm": "IMSI_TEST_001", "attrNm": "NAME",
             "diagType": "STRUCT", "targetYn": "N", "reason": ""
         }, timeout=10)
         assert r.status_code == 200
@@ -183,7 +183,7 @@ SELECT STRUCT_DIAG_TARGET_YN || '|' || COALESCE(STRUCT_DIAG_TARGET_REASON,'NULL'
     # ============================================================
     def _p6():
         r = s.post(BASE + "/api/dm/setAttrDiagTargetBatch", json={
-            "dmId": DM_ID, "objNm": "IMSI_TEST_002", "attrNms": ["CODE","VALUE"],
+            "dmId": DM_ID, "objOwner": "SYSTEM","objNm": "IMSI_TEST_002", "attrNms": ["CODE","VALUE"],
             "diagType": "STND", "targetYn": "N", "reason": "컬럼 일괄 OFF"
         }, timeout=10)
         assert r.status_code == 200
@@ -300,20 +300,20 @@ SELECT A.OBJ_NM || '.' || A.ATTR_NM
     def _p11():
         # 모든 OBJ ON
         s.post(BASE + "/api/dm/setObjDiagTargetBatch", json={
-            "dmId": DM_ID, "objNms": ["IMSI_TEST_001","IMSI_TEST_002","IMSI_TEST_003"],
+            "dmId": DM_ID, "objOwner": "SYSTEM","objNms": ["IMSI_TEST_001","IMSI_TEST_002","IMSI_TEST_003"],
             "diagType": "STND", "targetYn": "Y", "reason": ""
         }, timeout=10)
         s.post(BASE + "/api/dm/setObjDiagTargetBatch", json={
-            "dmId": DM_ID, "objNms": ["IMSI_TEST_001","IMSI_TEST_002","IMSI_TEST_003"],
+            "dmId": DM_ID, "objOwner": "SYSTEM","objNms": ["IMSI_TEST_001","IMSI_TEST_002","IMSI_TEST_003"],
             "diagType": "STRUCT", "targetYn": "Y", "reason": ""
         }, timeout=10)
         # ATTR ON 복귀
         s.post(BASE + "/api/dm/setAttrDiagTarget", json={
-            "dmId": DM_ID, "objNm":"IMSI_TEST_001","attrNm":"NAME",
+            "dmId": DM_ID, "objOwner": "SYSTEM","objNm":"IMSI_TEST_001","attrNm":"NAME",
             "diagType":"STRUCT","targetYn":"Y","reason":""
         }, timeout=10)
         s.post(BASE + "/api/dm/setAttrDiagTargetBatch", json={
-            "dmId": DM_ID, "objNm":"IMSI_TEST_002","attrNms":["CODE","VALUE"],
+            "dmId": DM_ID, "objOwner": "SYSTEM","objNm":"IMSI_TEST_002","attrNms":["CODE","VALUE"],
             "diagType":"STND","targetYn":"Y","reason":""
         }, timeout=10)
         # 검증 — 사유 NULL 클리어

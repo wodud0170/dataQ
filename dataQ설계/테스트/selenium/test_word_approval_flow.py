@@ -25,7 +25,8 @@ import random
 _SUFFIX = str(random.randint(100, 999))
 TEST_WORD_NM = f"셀레니움{_SUFFIX}"
 TEST_WORD_ENG = f"SELEN{_SUFFIX}"
-TEST_WORD_ENG_FULL = f"SELENIUM TEST {_SUFFIX}"
+# 86번 #42(2026-05-10) — 단어는 원자(atomic). 영문명에 공백/언더바 불허 → 붙여쓰기.
+TEST_WORD_ENG_FULL = f"SeleniumTest{_SUFFIX}"
 TEST_WORD_DESC = "Selenium 자동화 테스트용 단어"
 
 

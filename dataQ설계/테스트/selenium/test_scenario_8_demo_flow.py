@@ -202,7 +202,18 @@ def seed_demo_diagnosis():
     return dm_id, diag_id
 
 
+# 2026-08-22 — S2~S9 가 전부 "데이터 품질 진단" 메뉴(도메인 룰 관리 / 카탈로그 / 컬럼 규칙 매핑 /
+# 값 프로파일링) 위에서 도는 시연 플로우인데, 해당 메뉴가 NdNav.vue:265-314 에서 통째로 주석
+# 처리됐다 (2026-05-13 영업 라인업 분리 결정). 메뉴가 없으니 전 단계가 구조적으로 통과 불가.
+# 메뉴 복원 시 아래를 False 로 되돌리면 시연 플로우가 다시 실행된다.
+QUAL_MENU_DISABLED = True
+
+
 def main():
+    if QUAL_MENU_DISABLED:
+        print("\n[SKIP] '데이터 품질 진단' 메뉴가 주석 처리된 상태 (NdNav.vue:265-314).")
+        print("       S2~S9 는 전부 해당 메뉴 화면이라 검증 불가 → 전체 SKIP.")
+        return
     print("\n[준비] 데모 진단 데이터 시드…")
     dm_id, diag_id = seed_demo_diagnosis()
     print(f"  dm_id={dm_id}  diag_id={diag_id}")

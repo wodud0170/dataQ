@@ -69,8 +69,14 @@ def main():
         r.raise_for_status()
         arr = r.json() or []
         assert arr, "데이터모델 없음"
-        state["dmId"] = arr[0]["dataModelId"]
-        state["dmNm"] = arr[0].get("dataModelNm")
+        # 수집 이력(TB_DATA_MODEL_CLCT)이 없는 모델을 고르면 runNow 가 [DATA_NOT_FOUND] 로
+        # 즉시 ERROR 마감돼 이후 STEP 6/7(LOG 마감·LAST_EXEC 갱신) 검증이 의미를 잃는다.
+        # objCnt > 0 만으로는 부족 — CLCT row 유무를 반영하는 clctDt 로 거른다.
+        withClct = [m for m in arr if m.get("clctDt")]
+        assert withClct, "수집 이력 있는 데이터모델이 없음 — 데이터모델 수집을 먼저 수행할 것"
+        picked = withClct[0]
+        state["dmId"] = picked["dataModelId"]
+        state["dmNm"] = picked.get("dataModelNm")
         print(f"  모델: {state['dmNm']} ({state['dmId']})")
     if not step("2. 데이터모델 확보", _pick_model): return
 

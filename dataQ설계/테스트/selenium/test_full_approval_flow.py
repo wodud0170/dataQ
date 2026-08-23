@@ -279,7 +279,8 @@ def register_word(driver, word_nm, word_eng, word_eng_full="", word_desc="Seleni
         inputs[1].send_keys(word_eng)
         time.sleep(0.5)
         if not word_eng_full:
-            word_eng_full = word_eng + " FULL"
+            # 86번 #42 — 단어 영문명 공백 불허
+            word_eng_full = word_eng + "Full"
         inputs[2].click()
         inputs[2].send_keys(Keys.CONTROL, "a")
         inputs[2].send_keys(word_eng_full)

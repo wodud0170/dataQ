@@ -138,7 +138,8 @@ def main():
             dm_in = _input_for_label("데이터모델")
             assert dm_in, "데이터모델 input 못 찾음"
             js_click(d, dm_in); time.sleep(0.5)
-            dm_in.send_keys("CAMS"); time.sleep(1)
+            # 2026-08-22: 구 "CAMS" 모델은 USE_YN='N' 이라 autocomplete 에 안 뜬다 → 활성 모델로 교체
+            dm_in.send_keys("오라클테스트"); time.sleep(1)
             opt = d.find_elements(By.CSS_SELECTOR, ".menuable__content__active .v-list-item")
             if not opt:
                 opt = d.find_elements(By.CSS_SELECTOR, "[role='option']")

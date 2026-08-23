@@ -41,6 +41,20 @@ def step(name, fn):
         results.append((name, "FAIL"))
 
 
+# 2026-08-22 — "데이터 품질 진단" 메뉴가 NdNav.vue:265-314 에서 통째로 주석 처리됨
+# (2026-05-13 영업 라인업 분리 결정). #nav_qual* 이 DOM 에 없어 UI 단계는 구조적으로 통과 불가.
+# 메뉴 복원 시 아래를 False 로 되돌리면 UI 단계가 다시 실행된다.
+QUAL_MENU_DISABLED = True
+
+
+def ui_step(name, fn):
+    if QUAL_MENU_DISABLED:
+        print(f"\n=== {name}\n  >> SKIP (qual 메뉴 주석 처리 상태 — NdNav.vue:265-314)")
+        results.append((name, "SKIP"))
+        return
+    step(name, fn)
+
+
 def docker_psql(sql):
     cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
@@ -279,7 +293,7 @@ def main():
         finally:
             time.sleep(1)
             drv.quit()
-    step("P12. UI — DSQualStats 진입 + 차트 헤더", _p12)
+    ui_step("P12. UI — DSQualStats 진입 + 차트 헤더", _p12)
 
     # P13. UI — 모델 선택 후 apexchart svg 렌더
     def _p13():
@@ -332,7 +346,7 @@ def main():
         finally:
             time.sleep(1)
             drv.quit()
-    step("P13. UI — 모델 선택 후 차트 또는 empty 노출", _p13)
+    ui_step("P13. UI — 모델 선택 후 차트 또는 empty 노출", _p13)
 
     cleanup()
 

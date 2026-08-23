@@ -100,9 +100,17 @@ def main():
         r = admin.post(BASE + "/api/dm/getDataModelStatsList", json={}, timeout=10)
         arr = r.json() or []
         assert arr
-        # 기본 모델 — 첫 번째 (CAMS 로 가정, 수집 이력 보유)
-        state["dmId"] = arr[0]["dataModelId"]
-        print(f"  기본 모델: {arr[0].get('dataModelNm')} ({state['dmId']})")
+        # 2026-08-22: 기존엔 arr[0] 을 "CAMS(수집 이력 보유)" 로 가정했는데,
+        # CAMS 모델이 USE_YN='N' 으로 비활성화되면서 arr[0] 이 수집 이력 없는 테스트 잔여 모델이 됐다.
+        # 그 결과 B/E/F 가 전부 [DATA_NOT_FOUND] 로 실패했다.
+        # STRUCT/BOTH 진단은 데이터소스도 필요하므로 clctDt + dataModelDsId 를 모두 가진 모델을 고른다.
+        best = [m for m in arr if m.get("clctDt") and m.get("dataModelDsId")]
+        fallback = [m for m in arr if m.get("clctDt")]
+        assert best or fallback, "수집 이력 있는 데이터모델이 없음 — 데이터모델 수집을 먼저 수행할 것"
+        base = (best or fallback)[0]
+        state["dmId"] = base["dataModelId"]
+        print(f"  기본 모델: {base.get('dataModelNm')} ({state['dmId']}) "
+              f"clctDt={base.get('clctDt')} dsId={base.get('dataModelDsId')}")
 
         # 수집 이력 없는 모델 신규 생성 — C 테스트용
         nm = "PHASE4_NO_CLCT_" + datetime.now().strftime("%H%M%S")

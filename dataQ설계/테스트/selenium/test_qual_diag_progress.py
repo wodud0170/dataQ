@@ -50,6 +50,20 @@ def step(name, fn):
         results.append((name, "FAIL"))
 
 
+# 2026-08-22 — "데이터 품질 진단" 메뉴가 NdNav.vue:265-314 에서 통째로 주석 처리됨
+# (2026-05-13 영업 라인업 분리 결정). #nav_qual* 이 DOM 에 없어 UI 단계는 구조적으로 통과 불가.
+# 메뉴 복원 시 아래를 False 로 되돌리면 UI 단계가 다시 실행된다.
+QUAL_MENU_DISABLED = True
+
+
+def ui_step(name, fn):
+    if QUAL_MENU_DISABLED:
+        print(f"\n=== {name}\n  >> SKIP (qual 메뉴 주석 처리 상태 — NdNav.vue:265-314)")
+        results.append((name, "SKIP"))
+        return
+    step(name, fn)
+
+
 def docker_psql(sql):
     cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
@@ -327,7 +341,7 @@ def main():
         finally:
             time.sleep(1)
             drv.quit()
-    step("P13. UI — 진입 + 도메인분류 헤더 + 분류 multi 입력 존재", _p13)
+    ui_step("P13. UI — 진입 + 도메인분류 헤더 + 분류 multi 입력 존재", _p13)
 
     # P14. UI — Run 버튼 disabled (selected=0 일 때) 회귀
     def _p14():
@@ -367,7 +381,7 @@ def main():
         finally:
             time.sleep(1)
             drv.quit()
-    step("P14. UI — 모델 미선택 시 진단 버튼 disabled", _p14)
+    ui_step("P14. UI — 모델 미선택 시 진단 버튼 disabled", _p14)
 
     # P15. 폴링 종료 조건 — DONE/ERROR/SKIPPED 시 polling 중단 시뮬
     def _p15():
@@ -461,7 +475,7 @@ def main():
         finally:
             time.sleep(1)
             drv.quit()
-    step("P21. UI — 도메인분류 multi autocomplete 클릭 OK", _p21)
+    ui_step("P21. UI — 도메인분류 multi autocomplete 클릭 OK", _p21)
 
     cleanup_test_data()
 
