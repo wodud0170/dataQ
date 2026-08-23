@@ -262,6 +262,10 @@ export default {
       labels: ['준수', '미준수'],
       chart: {
         type: 'donut',
+        // 2026-08-23: keep-alive 탭이 가려지면 부모 크기가 0 이 되고
+        // ApexCharts 가 그 크기로 재계산하며 <svg height="NaN">, <path d="M NaN NaN A NaN"> 를
+        // 만들어 콘솔에 SEVERE 16건을 뿜었다. 부모 리사이즈에 반응하지 않게 한다.
+        redrawOnParentResize: false,
       },
       plotOptions: {
         pie: {
@@ -303,6 +307,10 @@ export default {
       labels: ['준수', '미준수'],
       chart: {
         type: 'donut',
+        // 2026-08-23: keep-alive 탭이 가려지면 부모 크기가 0 이 되고
+        // ApexCharts 가 그 크기로 재계산하며 <svg height="NaN">, <path d="M NaN NaN A NaN"> 를
+        // 만들어 콘솔에 SEVERE 16건을 뿜었다. 부모 리사이즈에 반응하지 않게 한다.
+        redrawOnParentResize: false,
       },
       plotOptions: {
         pie: {
@@ -344,6 +352,10 @@ export default {
       labels: ['준수', '미준수'],
       chart: {
         type: 'donut',
+        // 2026-08-23: keep-alive 탭이 가려지면 부모 크기가 0 이 되고
+        // ApexCharts 가 그 크기로 재계산하며 <svg height="NaN">, <path d="M NaN NaN A NaN"> 를
+        // 만들어 콘솔에 SEVERE 16건을 뿜었다. 부모 리사이즈에 반응하지 않게 한다.
+        redrawOnParentResize: false,
       },
       plotOptions: {
         pie: {
@@ -385,7 +397,7 @@ export default {
     struct_pie_chartOptions: {
       colors: ['#43A047', '#FF9800'],
       labels: ['일치', '불일치'],
-      chart: { type: 'donut' },
+      chart: { type: 'donut', redrawOnParentResize: false },
       plotOptions: {
         pie: {
           donut: {
@@ -418,7 +430,7 @@ export default {
     // 진단 추이 라인차트
     diagTrendSeries: [{ name: '준수율', data: [] }],
     diagTrendOptions: {
-      chart: { type: 'line', toolbar: { show: false }, sparkline: { enabled: false } },
+      chart: { type: 'line', toolbar: { show: false }, sparkline: { enabled: false }, redrawOnParentResize: false },
       colors: ['#3F51B5'],
       stroke: { width: 3, curve: 'smooth' },
       markers: { size: 5, colors: ['#3F51B5'], strokeColors: '#fff', strokeWidth: 2 },

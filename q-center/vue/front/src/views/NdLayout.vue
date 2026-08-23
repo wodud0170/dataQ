@@ -166,9 +166,11 @@ export default {
             this.navAllGroupClose();
 
             switch (this.activeContent) {
-                case "dashboard":
-                    document.getElementById("nav_dashboard").classList.add("v-list-item--active", "ndColor--text");
+                case "dashboard": {
+                    const dashEl = document.getElementById("nav_dashboard");
+                    if (dashEl) dashEl.classList.add("v-list-item--active", "ndColor--text");
                     break;
+                }
                 case "term":
                 case "dsCode":
                 case "word":
@@ -182,23 +184,23 @@ export default {
                 case "datamodelStatusTable":
                 case "datamodelStatusColumn":
                 case "erwinImport":
-                    document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("dsGroup");
                     break;
                 case "boardNotice":
                 case "boardQna":
-                    document.getElementById("communityGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("communityGroup");
                     break;
                 case "myRequest":
                 case "myProfile":
-                    document.getElementById("myPageGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("myPageGroup");
                     break;
                 case "dataDiag":
                 case "dataDiagResult":
-                    document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("diagGroup");
                     break;
                 case "structDiag":
                 case "structDiagResult":
-                    document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("structDiagGroup");
                     break;
                 case "dqi":
                 case "ctq":
@@ -207,18 +209,18 @@ export default {
                 case "qv":
                 case "rvi":
                 case "dqqvrt":
-                    document.getElementById("dqGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("dqGroup");
                     break;
                 case "user":
                 case "roles":
                 case "approval":
                 case "system":
                 case "datasource":
-                    document.getElementById("mmGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("mmGroup");
                     break;
                 case "scurrent":
                 case "qcurrent":
-                    document.getElementById("andGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("andGroup");
                     break;
                 default:
 
@@ -338,6 +340,27 @@ export default {
             }
             this.tabs = resetTabItems;
         },
+        // 그룹 헤더 활성화 — 대상 그룹이 없으면(주석 처리·삭제된 메뉴) 조용히 넘어간다.
+        // 2026-08-23: dqGroup / andGroup 은 이미 NdNav 에 존재하지 않아 null 이 된다.
+        _activateGroup(groupId) {
+            const el = document.getElementById(groupId);
+            if (!el || !el.childNodes || !el.childNodes[0] || !el.childNodes[0].classList) return;
+            el.childNodes[0].classList.add('v-list-item--active', 'ndColor--text');
+        },
+        // nav 항목 id 는 'nav_' + 컴포넌트명 규칙을 따르지 않는 경우가 있다.
+        // 예) nav_dm_history ↔ 컴포넌트 dmHistory, nav_area_mgmt ↔ areaMgmt
+        // 규칙 위반분을 여기서 흡수한다. 신규 메뉴 추가 시 id 를 규칙에 맞추면 등록 불필요.
+        _navIdOf(tabName) {
+            const alias = {
+                dmHistory:    'nav_dm_history',
+                myDmChanges:  'nav_my_dm_changes',
+                dmApproval:   'nav_dm_approval',
+                areaMgmt:     'nav_area_mgmt',
+                myDmApproval: 'nav_mypage_dm_approval',
+                myDmChangeList: 'nav_mypage_dm_changes',
+            };
+            return alias[tabName] || ('nav_' + tabName);
+        },
         changeNavItem(tabName) {
             const active = document.querySelectorAll('.v-list-item--active');
 
@@ -351,38 +374,39 @@ export default {
             } else {
                 // group Active
                 if (tabName === 'boardNotice' || tabName === 'boardQna') {
-                    document.getElementById("communityGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("communityGroup");
                 } else if (tabName === 'myRequest' || tabName === 'myProfile') {
-                    document.getElementById("myPageGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("myPageGroup");
                 } else if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory') {
-                    document.getElementById("dsGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("dsGroup");
 
                 } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
-                    document.getElementById("diagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("diagGroup");
                 } else if (tabName === 'structDiag' || tabName === 'structDiagResult') {
-                    document.getElementById("structDiagGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("structDiagGroup");
                 } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'erwinImport') {
-                    document.getElementById("dmGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("dmGroup");
 
                 } else if (tabName === 'dqi' || tabName === 'ctq' || tabName === 'dqbr' || tabName === 'target' || tabName === 'qv' || tabName === 'rvi' || tabName === 'dqqvrt') {
-                    document.getElementById("dqGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("dqGroup");
 
                     if (tabName === 'dqi' || tabName === 'ctq' || tabName === 'dqbr') {
-                        document.getElementById("navDqSub1").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                        this._activateGroup("navDqSub1");
                     } else if (tabName === 'target' || tabName === 'qv') {
-                        document.getElementById("navDqSub2").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                        this._activateGroup("navDqSub2");
                     } else if (tabName === 'rvi' || tabName === 'dqqvrt') {
-                        document.getElementById("navDqSub3").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                        this._activateGroup("navDqSub3");
                     }
 
                 } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'system' || tabName ==='datasource') {
-                    document.getElementById("mmGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("mmGroup");
                 } else if (tabName === 'scurrent' || tabName === 'qcurrent') {
-                    document.getElementById("andGroup").childNodes[0].classList.add("v-list-item--active", "ndColor--text");
+                    this._activateGroup("andGroup");
                 }
 
                 // item Active
-                document.getElementById("nav_" + tabName).classList.add("v-list-item--active");
+                const navEl = document.getElementById(this._navIdOf(tabName));
+                if (navEl) navEl.classList.add("v-list-item--active");
             }
         },
         navAllGroupClose() {
