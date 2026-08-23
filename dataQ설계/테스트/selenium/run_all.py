@@ -49,6 +49,11 @@ def cleanup_browsers():
 
 # 우선순위 그룹 — 빠른 거 먼저, UI 무거운 거 나중. 같은 그룹 안에선 알파벳 순.
 GROUPS = [
+    ("전 화면 콘솔 에러 스캔", [
+        # 2026-08-23 신규. 프론트엔드 런타임 에러 사각지대를 덮는다.
+        # 다른 테스트보다 먼저 돌려서, 화면이 기본 상태에서 깨끗한지부터 확인한다.
+        "test_console_errors.py",
+    ]),
     ("API/Login (가벼움)", [
         "test_login.py",
         "test_phase1_schedule_api.py",
