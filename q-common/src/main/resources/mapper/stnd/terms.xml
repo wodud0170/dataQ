@@ -120,7 +120,8 @@
 				order by A.TERMS_NM
 	</select>
 
-	<select id="selectTermsInfoByNm" parameterType="String" resultMap="stdTermsMap">
+	<!-- 용어 상세 조회 본문 — selectTermsInfoByNm / selectTermsInfoById 공용 -->
+	<sql id="termsInfoSelectBody">
             select distinct
 					 A.TERMS_ID
 					,A.TERMS_NM			
@@ -158,7 +159,17 @@
 						ELSE '{null}'::text[] END
 					) as ALLOPH_SYNM from TB_TERMS) A LEFT OUTER JOIN TB_DOMAIN B 
 					on A.DOMAIN_NM = B.DOMAIN_NM
+	</sql>
+
+	<select id="selectTermsInfoByNm" parameterType="String" resultMap="stdTermsMap">
+		<include refid="termsInfoSelectBody"/>
 			where A.TERMS_NM = #{termsNm} OR A.ALLOPH_SYNM = #{termsNm}
+	</select>
+
+	<!-- 88번 승인 이력 — TERMS_ID 로 현재값 조회 (word.selectWordInfoById 대응) -->
+	<select id="selectTermsInfoById" parameterType="String" resultMap="stdTermsMap">
+		<include refid="termsInfoSelectBody"/>
+			where A.TERMS_ID = #{termsId}
 	</select>
 
 	<select id="selectTermsByNm" parameterType="String" resultMap="stdTermsMap">

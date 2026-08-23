@@ -1420,6 +1420,11 @@ public class DataModelController {
 	@RequestMapping(value = "/updateObj", method = RequestMethod.POST)
 	public Mono<Response> updateObj(@RequestBody Map<String, Object> body) {
 		Response result = new Response();
+		// rename/owner cascade 는 최대 5+4+2 개 테이블을 연달아 바꾼다.
+		// sqlSessionTemplate 은 문장 단위 자동 커밋이라 중간에 실패하면 앞부분만 반영되고
+		// 되돌릴 수 없다 (컬럼은 새 이름, 인덱스는 옛 이름으로 갈리는 영구 불일치).
+		// → deleteObjs 와 동일하게 단일 세션 트랜잭션으로 묶는다.
+		SqlSession session = null;
 		try {
 			String dataModelId = (String) body.get("dataModelId");
 			String origObjNm   = (String) body.get("origObjNm");
@@ -1471,11 +1476,12 @@ public class DataModelController {
 				rn.put("newObjNm",    newObjNm);
 				rn.put("objOwner",    origOwner);
 
-				sqlSessionTemplate.update("datamodel.renameObjAttrCascade",          rn);
-				sqlSessionTemplate.update("datamodel.renameObjIndexCascade",         rn);
-				sqlSessionTemplate.update("datamodel.renameObjConstraintCascade",    rn);
-				sqlSessionTemplate.update("datamodel.renameObjConstraintRefCascade", rn);
-				sqlSessionTemplate.update("datamodel.renameObjPhysical",             rn);
+				if (session == null) session = sqlSessionFactory.openSession();
+				session.update("datamodel.renameObjAttrCascade",          rn);
+				session.update("datamodel.renameObjIndexCascade",         rn);
+				session.update("datamodel.renameObjConstraintCascade",    rn);
+				session.update("datamodel.renameObjConstraintRefCascade", rn);
+				session.update("datamodel.renameObjPhysical",             rn);
 			}
 
 			// 86번 #11 — OBJ_OWNER 변경 cascade (OBJ 본체 update 보다 먼저 — sub rows 의 OLD owner 매칭이 살아있을 때 갱신).
@@ -1485,10 +1491,11 @@ public class DataModelController {
 				ownParam.put("objNm",       newObjNm);
 				ownParam.put("objOwner",    origOwner);  // OLD — WHERE 매칭
 				ownParam.put("newOwner",    objOwner);   // NEW — SET 적용
-				sqlSessionTemplate.update("datamodel.cascadeAttrOwner",          ownParam);
-				sqlSessionTemplate.update("datamodel.cascadeIndexOwner",         ownParam);
-				sqlSessionTemplate.update("datamodel.cascadeConstraintOwner",    ownParam);
-				sqlSessionTemplate.update("datamodel.cascadeConstraintRefOwner", ownParam);
+				if (session == null) session = sqlSessionFactory.openSession();
+				session.update("datamodel.cascadeAttrOwner",          ownParam);
+				session.update("datamodel.cascadeIndexOwner",         ownParam);
+				session.update("datamodel.cascadeConstraintOwner",    ownParam);
+				session.update("datamodel.cascadeConstraintRefOwner", ownParam);
 			}
 
 			// 한글명/오너/설명 update — PK 가 OWNER 포함이라 OWNER 변경 시 row 자체 ID 가 바뀜
@@ -1504,7 +1511,15 @@ public class DataModelController {
 			objVo.setTablespaceNm((String) body.get("tablespaceNm"));
 			objVo.setBizAreaId((String) body.get("bizAreaId"));
 			objVo.setSubjAreaId((String) body.get("subjAreaId"));
-			sqlSessionTemplate.update("datamodel.updateDataModelObj", objVo);
+			// PK 는 (DM_ID, OBJ_OWNER, OBJ_NM). 0건이면 대상이 아예 없는 것 → 성공으로 오인 방지.
+			// 트랜잭션 안이므로 return 이 아니라 throw — catch 에서 rollback 후 동일 메시지로 500.
+			if (session == null) session = sqlSessionFactory.openSession();
+			int objUpdated = session.update("datamodel.updateDataModelObj", objVo);
+			if (objUpdated == 0) {
+				throw new IllegalStateException(
+					"수정 대상 테이블을 찾지 못했습니다. (dmId=" + dataModelId
+					+ ", owner=" + objVo.getObjOwner() + ", obj=" + newObjNm + ")");
+			}
 			if (ownerChange) {
 				// OBJ 의 OWNER 자체를 OLD → NEW 로 변경 (PK 일부)
 				Map<String, Object> ownerUpd = new HashMap<>();
@@ -1512,8 +1527,10 @@ public class DataModelController {
 				ownerUpd.put("objNm",       newObjNm);
 				ownerUpd.put("objOwner",    origOwner);  // WHERE 매칭
 				ownerUpd.put("newOwner",    objOwner);
-				sqlSessionTemplate.update("datamodel.updateObjOwnerKey", ownerUpd);
+				session.update("datamodel.updateObjOwnerKey", ownerUpd);
 			}
+			// 여기까지 전부 성공해야 커밋. 이력 기록은 커밋 이후 별도 트랜잭션.
+			session.commit();
 
 			// 88번 거버넌스 — updateObj 이력 (Tier 1 if owner/rename, else Tier 2)
 			String updObjTier = (rename || ownerChange) ? "TIER1" : "TIER2";
@@ -1526,8 +1543,15 @@ public class DataModelController {
 
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
+			if (session != null) {
+				try { session.rollback(); } catch (Exception ignore) {}
+			}
 			log.error(">> updateObj failed : {}", e.getMessage(), e);
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		} finally {
+			if (session != null) {
+				try { session.close(); } catch (Exception ignore) {}
+			}
 		}
 		return Mono.just(result);
 	}
@@ -1952,7 +1976,16 @@ public class DataModelController {
 				attrVo.setDomainStndYn("N");
 				log.info(">> updateAttr standard re-check downgraded: {}", stdErr.getMessage());
 			}
-			sqlSessionTemplate.update("datamodel.updateDataModelAttr", attrVo);
+			// PK 는 (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM). objOwner 가 안 맞으면 0건 갱신인데
+			// 예전엔 그대로 200 을 돌려줘 "저장됐다"고 오인됐다 → 갱신 건수 검사.
+			int attrUpdated = sqlSessionTemplate.update("datamodel.updateDataModelAttr", attrVo);
+			if (attrUpdated == 0) {
+				result.setResultInfo(RestResult.CODE_500.getCode(),
+					"수정 대상 컬럼을 찾지 못했습니다. (dmId=" + attrVo.getDataModelId()
+					+ ", owner=" + attrVo.getObjOwner() + ", obj=" + attrVo.getObjNm()
+					+ ", attr=" + attrVo.getAttrNm() + ")");
+				return Mono.just(result);
+			}
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			log.error(">> updateAttr failed : {}", e.getMessage());
@@ -1975,7 +2008,16 @@ public class DataModelController {
 			param.put("objNm",       attrVo.getObjNm());
 			param.put("attrNm",      attrVo.getAttrNm());
 			cascadeDeleteAttrRefs(session, param);
-			session.delete("datamodel.deleteDataModelAttr", param);
+			// PK 는 (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM). 0건이면 삭제된 게 없는데 200 이 나가던 문제.
+			int attrDeleted = session.delete("datamodel.deleteDataModelAttr", param);
+			if (attrDeleted == 0) {
+				session.rollback();
+				result.setResultInfo(RestResult.CODE_500.getCode(),
+					"삭제 대상 컬럼을 찾지 못했습니다. (dmId=" + attrVo.getDataModelId()
+					+ ", owner=" + param.get("objOwner") + ", obj=" + attrVo.getObjNm()
+					+ ", attr=" + attrVo.getAttrNm() + ")");
+				return Mono.just(result);
+			}
 			session.update("datamodel.syncDataModelObjAttrCnt", param);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);

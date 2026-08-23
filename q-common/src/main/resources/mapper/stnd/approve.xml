@@ -273,6 +273,19 @@
       AND t.APRV_YN = 'N'
   </select>
 
+  <!-- 단어 반려 시: 해당 단어를 사용하는 '승인된' 용어 조회.
+       TB_TERMS_WORDS 의 word FK(tb_terms_words_fk_2)에 ON DELETE 절이 없어(NO ACTION),
+       승인된 용어가 참조 중이면 단어 물리삭제가 FK 위반으로 터지고 트랜잭션 전체가 롤백된다.
+       터지기 전에 미리 걸러 친화 메시지를 주기 위한 조회. -->
+  <select id="selectApprovedTermsByWordId" parameterType="String" resultType="String">
+    SELECT t.TERMS_NM
+    FROM TB_TERMS_WORDS tw
+    JOIN TB_TERMS t ON tw.TERMS_ID = t.TERMS_ID
+    WHERE tw.WORD_ID = #{wordId}
+      AND t.APRV_YN = 'Y'
+    ORDER BY t.TERMS_NM
+  </select>
+
   <!-- 항목별 승인 이력 조회 (시간순) -->
   <select id="selectApprovalHistoryByItem" parameterType="hashmap" resultType="hashmap">
     SELECT REQ_ID as "reqId",

@@ -22,15 +22,12 @@
 			   m.DM_NM AS "dataModelNm"
 		FROM TB_DATA_MODEL_ATTR a
 		JOIN TB_DATA_MODEL m ON a.DM_ID = m.DM_ID
-		WHERE a.DM_CLCT_ID IN (
-			SELECT c.DM_CLCT_ID
-			FROM TB_DATA_MODEL_CLCT c
-			WHERE c.CLCT_END_DT = (
-				SELECT MAX(c2.CLCT_END_DT)
-				FROM TB_DATA_MODEL_CLCT c2
-				WHERE c2.DM_ID = c.DM_ID
-			)
-		)
+		<!-- 2026-08-23: 기존엔 a.DM_CLCT_ID 로 "최신 수집 회차" 를 골랐는데,
+		     CLCT 폐기(44/48번) 때 TB_DATA_MODEL_ATTR 에서 DM_CLCT_ID 컬럼이 제거되면서
+		     `column a.dm_clct_id does not exist` 로 단어 영향도 분석이 항상 500 이었다.
+		     현재 규약대로 DM_ID + USE_YN='Y' (soft-delete 로 stale 행 배제) 로 대체. -->
+		WHERE a.USE_YN = 'Y'
+		AND m.USE_YN = 'Y'
 		AND a.ATTR_NM ILIKE '%' || (
 			SELECT w.WORD_ENG_ABRV_NM FROM TB_WORD w WHERE w.WORD_ID = #{wordId}
 		) || '%'

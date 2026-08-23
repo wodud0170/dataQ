@@ -91,6 +91,13 @@ public class ScheduledDiagLauncher {
             p.put("diagJobId",    null);
             p.put("structDiagId", null);
             try { sql.update("diagSchedule.updateLogFinish", p); } catch (Exception ignore) {}
+            // LOG 만 마감하면 스케줄의 LAST_EXEC_* 가 안 채워져 목록에서 "마지막 실행" 이 빈칸으로 남는다.
+            // 정상 완료 경로(DiagSchedulerRunner.markFinish)와 동일하게 갱신.
+            Map<String, Object> pSc = new HashMap<>();
+            pSc.put("scheduleId", sc.getScheduleId());
+            pSc.put("status",     "ERROR");
+            pSc.put("logId",      logId);
+            try { sql.update("diagSchedule.updateScheduleLastExec", pSc); } catch (Exception ignore) {}
             throw e;
         }
     }

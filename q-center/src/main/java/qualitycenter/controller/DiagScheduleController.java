@@ -211,6 +211,13 @@ public class DiagScheduleController {
                 p.put("diagJobId",    null);
                 p.put("structDiagId", null);
                 sqlSessionTemplate.update("diagSchedule.updateLogFinish", p);
+                // LOG 만 마감하면 스케줄 목록의 "마지막 실행" 이 계속 빈칸으로 남는다.
+                // 정상 완료 경로(DiagSchedulerRunner.markFinish)와 동일하게 LAST_EXEC_* 도 갱신.
+                Map<String, Object> pSc = new HashMap<>();
+                pSc.put("scheduleId", scheduleId);
+                pSc.put("status",     "ERROR");
+                pSc.put("logId",      log.getLogId());
+                sqlSessionTemplate.update("diagSchedule.updateScheduleLastExec", pSc);
                 throw we;
             }
 

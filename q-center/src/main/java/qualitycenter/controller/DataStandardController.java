@@ -1746,6 +1746,18 @@ public class DataStandardController {
 
 					switch (objType) {
 						case WORD:
+							// 승인된 용어가 이 단어를 참조 중이면 물리삭제가 FK(tb_terms_words_fk_2, ON DELETE 없음)
+							// 위반으로 터지면서 트랜잭션 전체가 롤백된다. raw PSQLException 이 그대로 나가지 않도록
+							// deleteWords 와 동일한 형태의 친화 메시지로 미리 차단한다.
+							List<String> approvedTerms = session.selectList(
+									"approve.selectApprovedTermsByWordId", dataVo.getReqItemId());
+							if (approvedTerms != null && !approvedTerms.isEmpty()) {
+								String termList = approvedTerms.size() <= 3
+										? String.join(", ", approvedTerms)
+										: String.join(", ", approvedTerms.subList(0, 3)) + " 외 " + (approvedTerms.size() - 3) + "건";
+								throw new Exception("승인된 용어에서 사용 중이므로 반려할 수 없습니다: " + termList
+										+ " (해당 용어를 먼저 정리한 뒤 반려하세요)");
+							}
 							// 단어 반려 → 연관 미승인 용어 cascade 삭제
 							List<Map<String, Object>> relatedTerms = session.selectList(
 									"approve.selectUnapprovedTermsByWordId", dataVo.getReqItemId());
@@ -1817,8 +1829,9 @@ public class DataStandardController {
 					try {
 						switch (objType) {
 							case TERMS:
-								Object termsObj = sqlSessionTemplate.selectOne("terms.selectTermsInfo", dataVo.getReqItemId());
-								currValue = termsObj != null ? termsObj.toString() : null;
+								List<StdTermsVo> termsInfoList = sqlSessionTemplate.selectList("terms.selectTermsInfoById", dataVo.getReqItemId());
+								currValue = !termsInfoList.isEmpty() ? termsInfoList.get(0).toString() : null;
+								if (targetNm == null && !termsInfoList.isEmpty()) targetNm = termsInfoList.get(0).getTermsNm();
 								break;
 							case WORD:
 								List<StdWordVo> wordInfoList = sqlSessionTemplate.selectList("word.selectWordInfoById", dataVo.getReqItemId());
