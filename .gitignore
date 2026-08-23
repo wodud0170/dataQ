@@ -67,3 +67,12 @@ cookies.txt
 
 # Playwright MCP 런타임 디렉터리
 .playwright-mcp/
+
+# === 테스트 실행 산출물 (2026-08-23) ===
+# 매 실행마다 덮어써져 git status 를 오염시킨다. 파일은 로컬에 남지만 추적하지 않는다.
+# 문서에서 참조하는 이미지는 dataQ설계/manual_screenshots/ 에 두고 계속 추적한다.
+dataQ설계/테스트/selenium/screenshots/
+dataQ설계/테스트/selenium/tmp_xlsx/
+dataQ설계/테스트/test_screenshots/
+/*.png
+test_upload_fail.xlsx
