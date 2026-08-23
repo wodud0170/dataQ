@@ -24,6 +24,7 @@ public class StdDataModelAttrVo {
 	private String fkYn;
 	// 85번 — XMI 2.1 관계 매핑용. FK 일 때 참조 부모 테이블/컬럼.
 	private String fkParentObjNm;
+	private String fkParentObjOwner;   // 부모 테이블 소유자(스키마). 이름만으로는 다중 스키마에서 부모를 특정할 수 없다
 	private String fkParentAttrNm;
 	private String defaultVal;
 	private short attrOrder;

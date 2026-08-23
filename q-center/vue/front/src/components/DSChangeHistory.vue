@@ -186,14 +186,16 @@ export default {
                 { text: "일괄등록", value: "BULK_UPLOAD" },
                 { text: "자동 추천", value: "AUTO_RECOMMEND" }
             ],
-            // 86번 #38 — 변경일시 오른쪽 끝으로 + 너비 확장 (두줄 방지) + 등록경로 컬럼 제거
-            //   (saveChangeHistory 가 changeSource 안 넘겨서 항상 NULL → '-' 표시. 정상화는 호출처 10곳+ 변경 필요)
+            // 등록 경로 컬럼은 saveChangeHistory 가 changeSource 를 안 넘겨 항상 '-' 라
+            // 한동안 빼두었다. 2026-08-23 서버에서 값을 채우도록 고쳐 되살린다.
+            // 그 이전 이력은 값이 없어 '-' 로 보인다.
             headers: [
                 { text: "유형", value: "changeType", width: "90px" },
                 { text: "대상", value: "targetType", width: "90px" },
                 { text: "대상명", value: "targetNm", width: "200px" },
                 { text: "요약", value: "summary" },
                 { text: "건수", value: "changeCnt", width: "70px", align: "center" },
+                { text: "등록 경로", value: "changeSourceLabel", width: "110px" },
                 { text: "변경자", value: "changeUserId", width: "100px" },
                 { text: "변경일시", value: "changeDt", width: "180px" }
             ],

@@ -103,6 +103,7 @@ public class QualColRuleController {
             if (vo.getDomainRuleId() != null && vo.getCustomRuleId() != null) {
                 vo.setCustomRuleId(null);
             }
+            vo.setObjOwner(resolveOwner(vo.getDmId(), vo.getObjNm(), vo.getAttrNm(), vo.getObjOwner()));
             vo.setUpdtUserId(session.getUserId());
             sql.insert("qualColRule.upsertColRule", vo);
             res.setResultInfo(RestResult.CODE_200.getCode(), "저장 완료");
@@ -122,14 +123,41 @@ public class QualColRuleController {
             vo.setDmId(body.get("dmId"));
             vo.setObjNm(body.get("objNm"));
             vo.setAttrNm(body.get("attrNm"));
+            vo.setObjOwner(resolveOwner(vo.getDmId(), vo.getObjNm(), vo.getAttrNm(),
+                                        body.get("objOwner")));
             vo.setExcludeYn("Y".equals(body.get("excludeYn")) ? "Y" : "N");
             vo.setUpdtUserId(session.getUserId());
             sql.insert("qualColRule.upsertColRule", vo);
             res.setResultInfo(RestResult.CODE_200.getCode(), "OK");
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) { res.setResultInfo(400, e.getMessage()); }
+        catch (Exception e) {
             log.error(">> colrule exclude failed", e);
             res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
         }
         return res;
+    }
+
+    /**
+     * 컬럼 룰의 식별 키는 (모델, 소유자, 테이블, 컬럼) 이다.
+     * 호출부가 소유자를 안 보내면 모델에서 찾아 채운다.
+     *
+     * 소유자를 그냥 '' 로 두면 조회 조인(col_meta.OBJ_OWNER)과 어긋나 저장은 됐는데
+     * 화면에 반영이 안 되는 상태가 된다. 여러 스키마에 같은 이름이 있으면 어느 쪽인지
+     * 알 수 없으므로 임의로 고르지 않고 거부한다.
+     */
+    private String resolveOwner(String dmId, String objNm, String attrNm, String given) {
+        if (given != null && !given.trim().isEmpty()) return given.trim();
+        Map<String, Object> p = new java.util.HashMap<>();
+        p.put("dmId", dmId);
+        p.put("objNm", objNm);
+        p.put("attrNm", attrNm);
+        java.util.List<String> owners = sql.selectList("qualColRule.selectOwnersOfAttr", p);
+        if (owners == null || owners.isEmpty()) return "";
+        if (owners.size() > 1) {
+            throw new IllegalArgumentException(
+                "같은 이름의 컬럼이 여러 스키마에 있습니다 (" + String.join(", ", owners)
+                + "). objOwner 를 함께 보내주세요.");
+        }
+        return owners.get(0);
     }
 }

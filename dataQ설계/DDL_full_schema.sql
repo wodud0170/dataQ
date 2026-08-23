@@ -339,7 +339,8 @@ CREATE TABLE quality.tb_data_model_attr (
     aprv_user_id character varying(50),
     aprv_dt character varying(14),
     aprv_comment character varying(500),
-    submission_id character varying(40)
+    submission_id character varying(40),
+    fk_parent_obj_owner character varying(100)
 );
 
 
@@ -1070,7 +1071,8 @@ CREATE TABLE quality.tb_qual_col_rule (
     custom_rule_id character varying(40),
     exclude_yn character varying(1) DEFAULT 'N'::character varying,
     updt_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    obj_owner character varying(100) DEFAULT ''::character varying NOT NULL
 );
 
 
@@ -1177,7 +1179,8 @@ CREATE TABLE quality.tb_qual_profile_result (
     min_len integer,
     max_len integer,
     top_values text,
-    updated_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    obj_owner character varying(100)
 );
 
 
@@ -1271,7 +1274,8 @@ CREATE TABLE quality.tb_qual_rule_result (
     violation_cnt bigint,
     violation_rate numeric(7,4),
     sample_cnt integer,
-    error_msg text
+    error_msg text,
+    obj_owner character varying(100)
 );
 
 
@@ -1292,7 +1296,8 @@ CREATE TABLE quality.tb_qual_running_lock (
     attr_nm character varying(200) NOT NULL,
     diag_id character varying(50),
     user_id character varying(50),
-    start_dt character varying(14) NOT NULL
+    start_dt character varying(14) NOT NULL,
+    obj_owner character varying(100)
 );
 
 
@@ -1356,7 +1361,8 @@ CREATE TABLE quality.tb_qual_violation_sample (
     attr_nm character varying(100) DEFAULT ''::character varying NOT NULL,
     seq integer NOT NULL,
     pk_values text,
-    violating_val character varying(500)
+    violating_val character varying(500),
+    obj_owner character varying(100)
 );
 
 
@@ -2003,7 +2009,7 @@ ALTER TABLE ONLY quality.tb_domain_rule
 --
 
 ALTER TABLE ONLY quality.tb_qual_col_rule
-    ADD CONSTRAINT pk_tb_qual_col_rule PRIMARY KEY (dm_id, obj_nm, attr_nm);
+    ADD CONSTRAINT pk_tb_qual_col_rule PRIMARY KEY (dm_id, obj_owner, obj_nm, attr_nm);
 
 
 --

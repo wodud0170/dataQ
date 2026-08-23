@@ -28,6 +28,12 @@
 
 - 2026-08-23 | PC | 진단 결과 소유자 구분 (결함 ⑩) | `TB_DIAG_RESULT` 에 `OBJ_OWNER VARCHAR(100)` 추가 + 인덱스 `IX_DIAG_RESULT_OWNER_OBJ (DIAG_JOB_ID, OBJ_OWNER, OBJ_NM, ATTR_NM)`. 기존 7,246행 중 (모델, 테이블명) 이 소유자 하나로만 존재하는 6,187행 백필, 다중 스키마 중복 1,059행은 복원 정보가 없어 NULL 유지 | 2026-05-09 OWNER PK 정합성 작업이 OBJ/ATTR 만 다루고 진단 결과 테이블을 빠뜨렸다. 그 결과 `R.OBJ_NM = O.OBJ_NM` 조인이 팬아웃해 같은 이름·다른 스키마 테이블이 서로의 이슈를 물려받았고, 오라클테스트 모델에서 "전체 테이블 19 / 이슈 테이블 22" 라는 불가능한 표시가 나왔다. 준수율(ISSUE_COL_CNT) 과 표준 flag 동기화(syncAttrStndYnFromDiag) 도 같은 이유로 부정확 | 양쪽 (멱등 `ADD COLUMN IF NOT EXISTS` + 백필 UPDATE)
 
+- 2026-08-23 | PC | FK 부모 소유자 (DEF-08b / DEF-03) | `TB_DATA_MODEL_ATTR` 에 `FK_PARENT_OBJ_OWNER VARCHAR(100)` 추가. FK 참조 80행 중 부모 테이블 이름이 유일한 79행 백필, 1행은 부모 테이블이 모델에 없어 미확정 | `FK_PARENT_OBJ_NM` 만으로는 다중 스키마에서 부모를 특정할 수 없어 `clearFkParentRefByAttr` / `renameAttrInFkParent` / 반려 cascade 가 엉뚱한 스키마 행까지 건드렸다. 테이블 rename 시 자식의 `FK_PARENT_OBJ_NM` 갱신 누락(DEF-03)도 이 컬럼이 있어야 정확히 고칠 수 있다 | 양쪽 (멱등 `ADD COLUMN IF NOT EXISTS` + 백필 UPDATE)
+
+- 2026-08-23 | PC | 품질 진단 소유자 구분 | `TB_QUAL_COL_RULE` / `TB_QUAL_RULE_RESULT` / `TB_QUAL_RUNNING_LOCK` 에 `OBJ_OWNER VARCHAR(100)` 추가. col_rule 46행 중 45행 백필 | 결함 ⑩ 과 같은 계열. 이 3개 테이블만 `OBJ_OWNER` 가 없어 `qualColRule.xml` / `qualDiag.xml` 조인이 다중 스키마에서 팬아웃한다. 품질 진단 메뉴는 비활성이지만 서버 기능은 살아 있어 함께 정리 | 양쪽 (멱등)
+
+- 2026-08-23 | PC | 품질 컬럼 룰 식별 키 정정 | `TB_QUAL_COL_RULE.OBJ_OWNER` DEFAULT `''` + NOT NULL, PK 재정의 `(DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM)`. `TB_QUAL_PROFILE_RESULT` / `TB_QUAL_VIOLATION_SAMPLE` 에도 `OBJ_OWNER` 추가 (profile_result 46행 백필) | 조회 조인에만 소유자를 넣고 **쓰기 경로를 안 고쳐** 저장은 되는데 화면에 반영이 안 되는 상태가 됐다 (회귀 `test_qual_col_rule` P8 로 발각). 키 컬럼을 추가할 땐 INSERT·ON CONFLICT·DELETE·VO·컨트롤러까지 같이 가야 한다 | 양쪽 (NULL → `''` 정규화 후 PK 교체)
+
 ---
 
 ## 79번 진단 제외 관리 (직전 작업)

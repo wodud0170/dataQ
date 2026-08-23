@@ -22,7 +22,10 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 BASE_URL = "http://localhost:28091"
 import random
-_SUFFIX = str(random.randint(100, 999))
+# 3자리 난수는 900가지뿐이라 반복 실행에서 충돌한다.
+# 폴루션이 남아 있으면 "이미 존재하는 단어" 로 STEP 1 부터 깨진다.
+# 초 단위 시각 + 난수로 사실상 충돌하지 않게 한다.
+_SUFFIX = time.strftime("%H%M%S") + str(random.randint(10, 99))
 TEST_WORD_NM = f"셀레니움{_SUFFIX}"
 TEST_WORD_ENG = f"SELEN{_SUFFIX}"
 # 86번 #42(2026-05-10) — 단어는 원자(atomic). 영문명에 공백/언더바 불허 → 붙여쓰기.

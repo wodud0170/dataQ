@@ -117,7 +117,12 @@
 		ORDER BY CHANGE_SEQ ASC
 	</select>
 
-	<!-- 승인 / 반려 / 신청 / 롤백 -->
+	<!--
+	  승인 / 반려 — DEF-09, DEF-14
+	  APPROVED / REJECTED 는 종료 상태다. 가드가 없으면 이미 승인된 항목을 반려 API 로
+	  다시 넘겨 삭제하거나, 반려된 항목을 승인으로 되돌릴 수 있었다.
+	  전이 가능한 출발 상태를 명시하고, 0건이면 호출부가 알아채도록 한다.
+	-->
 	<update id="updateAprvStatus" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
 		   SET APRV_STATUS  = #{aprvStatus},
@@ -125,6 +130,8 @@
 		       APRV_DT      = #{aprvDt},
 		       APRV_COMMENT = #{aprvComment, jdbcType=VARCHAR}
 		 WHERE CHANGE_SEQ = #{changeSeq}
+		   AND APRV_STATUS IN
+		   <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
 	</update>
 
 	<!-- DRAFT → SUBMITTED 일괄 (신청 묶음) -->
@@ -161,7 +168,8 @@
 		SELECT CHANGE_SEQ as change_seq, DM_ID as dm_id, CHANGE_TYPE as change_type,
 		       OBJ_OWNER as obj_owner, OBJ_NM as obj_nm, ATTR_NM as attr_nm,
 		       CONSTRAINT_NM as constraint_nm, INDEX_NM as index_nm,
-		       APRV_STATUS as aprv_status, CHANGE_USER_ID as change_user_id
+		       APRV_STATUS as aprv_status, CHANGE_USER_ID as change_user_id,
+		       BEFORE_JSON as before_json, AFTER_JSON as after_json
 		  FROM TB_DATA_MODEL_CHANGE_HISTORY
 		 WHERE CHANGE_SEQ = #{value}
 	</select>
@@ -178,10 +186,11 @@
 		 WHERE DM_ID = #{dmId}
 		   AND FK_PARENT_OBJ_NM = #{parentObjNm}
 		   AND FK_PARENT_ATTR_NM = #{parentAttrNm}
+		   AND COALESCE(FK_PARENT_OBJ_OWNER,'') = COALESCE(NULLIF(#{parentObjOwner, jdbcType=VARCHAR},''),'')
 		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
 	</update>
 
-	<!-- 부모 테이블 반려 시 그 테이블의 PENDING ATTR 들 정리 -->
+	<!-- 부모 테이블 반려 시 그 테이블의 PENDING ATTR 들 정리 (DEF-08c — 소유자까지 매칭) -->
 	<update id="cascadeRejectAttrsInObj" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_ATTR
 		   SET APRV_STATUS  = #{aprvStatus},
@@ -190,8 +199,68 @@
 		       APRV_COMMENT = #{aprvComment, jdbcType=VARCHAR}
 		 WHERE DM_ID = #{dmId}
 		   AND OBJ_NM = #{objNm}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
 		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
 	</update>
+
+	<!--
+	  DEF-07 — 위 두 cascade 는 모델 row 만 바꾸고 변경 이력은 SUBMITTED 로 남겨,
+	  승인 화면에 이미 반려된 항목이 계속 대기 중으로 보였다. 이력도 함께 반려한다.
+	  반환값(갱신 건수)은 DEF-06 의 반복 전파 종료 판정에 쓴다.
+	-->
+	<update id="cascadeRejectHistoryInObj" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt},
+		       APRV_COMMENT = #{aprvComment, jdbcType=VARCHAR}
+		 WHERE DM_ID = #{dmId}
+		   AND OBJ_NM = #{objNm}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND CHANGE_TYPE LIKE '%\_ATTR' ESCAPE '\'
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</update>
+
+	<update id="cascadeRejectHistoryByAttr" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CHANGE_HISTORY h
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt},
+		       APRV_COMMENT = #{aprvComment, jdbcType=VARCHAR}
+		 WHERE h.DM_ID = #{dmId}
+		   AND h.APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+		   AND EXISTS (
+		       SELECT 1 FROM TB_DATA_MODEL_ATTR a
+		        WHERE a.DM_ID = h.DM_ID
+		          AND a.OBJ_NM = h.OBJ_NM
+		          AND a.ATTR_NM = h.ATTR_NM
+		          AND COALESCE(a.OBJ_OWNER,'') = COALESCE(h.OBJ_OWNER,'')
+		          AND a.FK_PARENT_OBJ_NM  = #{parentObjNm}
+		          AND a.FK_PARENT_ATTR_NM = #{parentAttrNm}
+		          AND COALESCE(a.FK_PARENT_OBJ_OWNER,'') = COALESCE(NULLIF(#{parentObjOwner, jdbcType=VARCHAR},''),'')
+		   )
+	</update>
+
+	<!-- DEF-06 — 이 컬럼을 FK 부모로 참조하는 대기 중 컬럼. 반려 전에 미리 찾아둔다
+	     (반려하고 나면 상태가 바뀌어 목록에서 빠지므로 손자를 못 찾는다). -->
+	<select id="selectPendingChildrenOfAttr" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT OBJ_OWNER as objOwner, OBJ_NM as objNm, ATTR_NM as attrNm
+		  FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dmId}
+		   AND FK_PARENT_OBJ_NM  = #{parentObjNm}
+		   AND FK_PARENT_ATTR_NM = #{parentAttrNm}
+		   AND COALESCE(FK_PARENT_OBJ_OWNER,'') = COALESCE(NULLIF(#{parentObjOwner, jdbcType=VARCHAR},''),'')
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</select>
+
+	<!-- 테이블 반려 cascade 직후, 그 회차에 반려된 컬럼 키 (손자 전파의 기점) -->
+	<select id="selectRejectedAttrKeys" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT OBJ_OWNER as objOwner, OBJ_NM as objNm, ATTR_NM as attrNm
+		  FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dmId}
+		   AND APRV_STATUS = 'REJECTED'
+		   AND APRV_DT = #{aprvDt}
+	</select>
 
 	<!-- 88번 — 승인/반려 시 실제 모델 row 의 aprv_status 동기화용 -->
 	<update id="syncAttrAprvStatus" parameterType="java.util.Map">

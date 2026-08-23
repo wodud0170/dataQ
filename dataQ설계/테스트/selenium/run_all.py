@@ -14,27 +14,50 @@ TIMEOUT_PER_TEST = 600  # 10 min
 
 # 각 테스트 사이 폴루션 정리.
 # 테스트가 INSERT 하는 패턴만 좁혀서 삭제 (실 데이터 영향 없음).
-CLEANUP_SQL = (
-    "DELETE FROM TB_TERMS_WORDS WHERE TERMS_NM ~ '^(셀|테스트)';"
-    "DELETE FROM TB_TERMS       WHERE TERMS_NM ~ '^(셀|테스트)';"
-    "DELETE FROM TB_WORD        WHERE WORD_NM  ~ '^(셀|테스트단어_)';"
-    "DELETE FROM TB_DOMAIN      WHERE DOMAIN_NM LIKE '셀도메인%';"
-    "DELETE FROM TB_DOMAIN_GRP  WHERE DOMAIN_GRP_NM LIKE '테스트그룹_%' OR DOMAIN_GRP_NM LIKE '분류용그룹_%';"
-    "DELETE FROM TB_DOMAIN_CLSF WHERE DOMAIN_CLSF_NM LIKE '테스트분류_%';"
-    "DELETE FROM TB_APRV_STATS  WHERE REQ_ITEM_NM ~ '^(셀|테스트)';"
-    "DELETE FROM TB_DATA_MODEL_ATTR WHERE OBJ_NM LIKE 'IMSI_%';"
-    "DELETE FROM TB_DATA_MODEL_OBJ  WHERE OBJ_NM LIKE 'IMSI_%';"
-)
+
+# 테스트가 만든 행만 좁혀서 지운다.
+#
+# 2026-08-23 — 이 SQL 이 통째로 죽어 있었다.
+#   첫 문장이 TB_TERMS_WORDS.TERMS_NM 을 참조하는데 그 테이블엔 TERMS_ID 뿐이다.
+#   psql -c 는 여러 문장을 하나의 암시적 트랜잭션으로 묶으므로, 첫 에러에 전부 롤백됐다.
+#   결과: 폴루션 정리가 한 번도 실행되지 않아 '셀반려삭제NNN' 같은 행이 며칠치 쌓였고,
+#   3자리 난수 suffix 가 충돌하면서 test_reject_physical_delete 가 간헐 실패했다.
+#
+# 그래서 두 가지를 바꿨다.
+#   1) 컬럼명을 실제 스키마에 맞춤 (TERMS_ID 서브쿼리)
+#   2) 문장을 하나씩 따로 실행 — 한 문장이 실패해도 나머지는 지워지도록
+CLEANUP_STATEMENTS = [
+    "DELETE FROM TB_TERMS_WORDS WHERE TERMS_ID IN (SELECT TERMS_ID FROM TB_TERMS WHERE TERMS_NM ~ '^(셀|테스트)')",
+    "DELETE FROM TB_TERMS_WORDS WHERE WORD_NM ~ '^(셀|테스트단어_)'",
+    "DELETE FROM TB_TERMS       WHERE TERMS_NM ~ '^(셀|테스트)'",
+    "DELETE FROM TB_WORD        WHERE WORD_NM  ~ '^(셀|테스트단어_)'",
+    "DELETE FROM TB_DOMAIN      WHERE DOMAIN_NM LIKE '셀도메인%'",
+    "DELETE FROM TB_DOMAIN_GRP  WHERE DOMAIN_GRP_NM LIKE '테스트그룹_%' OR DOMAIN_GRP_NM LIKE '분류용그룹_%'",
+    "DELETE FROM TB_DOMAIN_CLSF WHERE DOMAIN_CLSF_NM LIKE '테스트분류_%'",
+    "DELETE FROM TB_APRV_STATS  WHERE REQ_ITEM_NM ~ '^(셀|테스트)'",
+    "DELETE FROM TB_DATA_MODEL_ATTR WHERE OBJ_NM LIKE 'IMSI_%'",
+    "DELETE FROM TB_DATA_MODEL_OBJ  WHERE OBJ_NM LIKE 'IMSI_%'",
+]
 
 
-def cleanup_db():
-    """테스트 폴루션 정리. 실패해도 무시."""
-    try:
-        cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
-               "-c", "SET search_path TO quality;" + CLEANUP_SQL]
-        subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-    except Exception:
-        pass
+def cleanup_db(verbose=False):
+    """테스트 폴루션 정리.
+
+    각 문장을 독립 실행한다. 하나가 실패해도 나머지는 지워져야 한다.
+    verbose=True 면 실패한 문장을 출력한다 (스위트 시작 시 한 번만).
+    """
+    for stmt in CLEANUP_STATEMENTS:
+        try:
+            cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+                   "-v", "ON_ERROR_STOP=1",
+                   "-c", "SET search_path TO quality; " + stmt]
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=20,
+                               encoding="utf-8", errors="replace")
+            if verbose and r.returncode != 0:
+                print(f"  [cleanup 실패] {stmt[:60]}… → {(r.stderr or '').strip()[:120]}")
+        except Exception as e:
+            if verbose:
+                print(f"  [cleanup 예외] {stmt[:60]}… → {e}")
 
 
 def cleanup_browsers():
@@ -169,8 +192,10 @@ def main():
 
     discover_extra()
 
-    # 시작 시 한 번 폴루션 청소
-    cleanup_db()
+    # 시작 시 한 번 폴루션 청소 — 여기서만 실패 문장을 출력한다.
+    # (조용히 실패하면 폴루션이 며칠씩 쌓여 난수 충돌로 간헐 실패가 난다)
+    print("[cleanup] 폴루션 정리")
+    cleanup_db(verbose=True)
     cleanup_browsers()
 
     all_results = []

@@ -32,7 +32,10 @@ BASE_URL = "http://localhost:28091"
 SCREEN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")
 os.makedirs(SCREEN_DIR, exist_ok=True)
 
-_SUFFIX = str(random.randint(100, 999))
+# 3자리 난수는 900가지뿐이라 반복 실행에서 충돌한다.
+# 폴루션이 남아 있으면 "이미 존재하는 단어" 로 STEP 1 부터 깨진다.
+# 초 단위 시각 + 난수로 사실상 충돌하지 않게 한다.
+_SUFFIX = time.strftime("%H%M%S") + str(random.randint(10, 99))
 # 2026-08-22: 유니크 접미사를 뒤에 붙이면 형태소 분석의 "마지막 단어" 가 접미사 숫자가 돼
 # 각 CASE 의 전제(마지막 단어 = 명 / 코드)가 깨진다.
 #   "셀유형코드_761" -> [셀, 유형, 코드, _, 761]  → 마지막 = 761 (UNRECOGNIZED)

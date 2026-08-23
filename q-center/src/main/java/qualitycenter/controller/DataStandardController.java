@@ -1716,6 +1716,13 @@ public class DataStandardController {
 		Response result = new Response();
 		List<Map<String, Object>> warnings = new ArrayList<>();
 
+		// DEF-15 — 승인·반려는 관리자 전용. 화면에서는 메뉴가 안 보이지만 이 API 는 열려 있어
+		// 일반 사용자가 자기 신청을 스스로 승인할 수 있었다. 서버에서 다시 막는다.
+		if (!sessionService.isAdmin()) {
+			result.setResultInfo(403, "승인·반려는 관리자만 가능합니다.");
+			return Mono.just(result);
+		}
+
 		for (StdApproveStatVo dataVo : dataVos) {
 			dataVo.setId(StringUtils.getUUID());
 			dataVo.setAprvUserId(sessionService.getUserId());
@@ -1726,7 +1733,9 @@ public class DataStandardController {
 				NDQualityStdObjectType objType = NDQualityStdObjectType.valueOf(dataVo.getReqTp());
 
 				// 용어 승인 시: 구성 단어 미승인 여부 체크
-				if (objType == NDQualityStdObjectType.TERMS
+				// DEF-13 — 코드도 TB_TERMS 에 저장되는 용어라 같은 가드를 태워야 한다.
+				// TERMS 만 검사하면 코드로 등록한 용어는 미승인 단어로 이뤄져도 승인됐다.
+				if ((objType == NDQualityStdObjectType.TERMS || objType == NDQualityStdObjectType.CODE)
 						&& dataVo.getAprvStat() == NDQualityApproveStat.APPROVED.getValue()) {
 					List<Map<String, Object>> unapprovedWords = session.selectList(
 							"approve.selectUnapprovedWordsByTermsId", dataVo.getReqItemId());
@@ -1849,7 +1858,7 @@ public class DataStandardController {
 						log.warn("승인 이력 조회 실패: {}", ex.getMessage());
 					}
 					saveChangeHistory("INSERT", targetType, dataVo.getReqItemId(), targetNm,
-							null, currValue, targetType + " 승인 등록: " + targetNm);
+							null, currValue, targetType + " 승인 등록: " + targetNm, "ADMIN_APPROVE");
 				}
 			} catch (Exception e) {
 				session.rollback();
@@ -2154,7 +2163,7 @@ public class DataStandardController {
 		// 이력 저장 (관리자 즉시 승인 시에만)
 		if (isAdmin) {
 			saveChangeHistory("INSERT", "WORD", wordId, wordVo.getWordNm(),
-					null, wordVo.toString(), "단어 등록(표준화 추천): " + wordVo.getWordNm());
+					null, wordVo.toString(), "단어 등록(표준화 추천): " + wordVo.getWordNm(), "AUTO_RECOMMEND");
 		}
 
 		res.put("success", true);
@@ -2405,6 +2414,7 @@ public class DataStandardController {
 				history.put("changeCnt", registeredTerms);
 				history.put("summary", String.format("용어 일괄등록(표준화 추천) %d건 (성공:%d, 건너뜀:%d, 실패:%d)", items.size(), registeredTerms, skipped, failed));
 				history.put("changeUserId", userId);
+				history.put("changeSource", "BULK_UPLOAD");
 				sqlSessionTemplate.insert("changehistory.insertChangeHistory", history);
 				// 상세 건 저장
 				int seq = 1;
@@ -3175,8 +3185,23 @@ public class DataStandardController {
 		return result;
 	}
 
+	/**
+	 * 변경 이력 저장. 등록 경로(CHANGE_SOURCE)는 세션 권한에서 파생한다.
+	 *
+	 * 그동안 이 값을 아무도 안 넣어 전 행이 NULL 이었고, 변경 이력 화면의
+	 * '등록 경로' 필터가 항상 빈 결과를 냈다. 호출처가 18곳이라 기본값을 여기서
+	 * 정하고, 승인·추천처럼 경로가 분명한 곳만 아래 오버로드로 명시한다.
+	 */
 	private void saveChangeHistory(String changeType, String targetType, String targetId, String targetNm,
 			String prevValue, String currValue, String summary) {
+		boolean admin = false;
+		try { admin = sessionService.isAdmin(); } catch (Exception ignore) {}
+		saveChangeHistory(changeType, targetType, targetId, targetNm, prevValue, currValue, summary,
+				admin ? "ADMIN_DIRECT" : "USER_REQUEST");
+	}
+
+	private void saveChangeHistory(String changeType, String targetType, String targetId, String targetNm,
+			String prevValue, String currValue, String summary, String changeSource) {
 		try {
 			Map<String, Object> history = new HashMap<>();
 			history.put("changeId", StringUtils.getUUID());
@@ -3189,6 +3214,7 @@ public class DataStandardController {
 			history.put("prevValue", prevValue);
 			history.put("currValue", currValue);
 			history.put("changeUserId", sessionService.getUserId());
+			history.put("changeSource", changeSource);
 			sqlSessionTemplate.insert("changehistory.insertChangeHistory", history);
 		} catch (Exception e) {
 			log.warn("변경이력 저장 실패: {}", e.getMessage());

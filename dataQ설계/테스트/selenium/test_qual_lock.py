@@ -61,17 +61,24 @@ def main():
 
     # P1. 테이블 + PK 존재
     def _p1():
-        cnt = docker_psql_count(
-            "SELECT COUNT(*) FROM information_schema.columns "
+        # 컬럼 "개수" 를 고정하면 스키마가 늘 때마다 무관한 테스트가 깨진다.
+        # (2026-08-23 OBJ_OWNER 추가로 6 → 7 이 되며 실패했다)
+        # 이 테스트가 실제로 보장하려는 건 lock 이 동작할 필수 컬럼이 있느냐다.
+        cols = docker_psql(
+            "SELECT string_agg(lower(column_name), ',' ORDER BY column_name) "
+            "FROM information_schema.columns "
             "WHERE table_schema='quality' AND table_name='tb_qual_running_lock';"
         )
-        assert cnt == 6, f"6 컬럼 기대, 실제 {cnt}"
+        have = set((cols or "").split(","))
+        need = {"dm_id", "obj_nm", "attr_nm", "start_dt", "user_id", "diag_id"}
+        missing = need - have
+        assert not missing, f"필수 컬럼 누락: {sorted(missing)} (실제: {sorted(have)})"
         pk = docker_psql(
             "SELECT constraint_name FROM information_schema.table_constraints "
             "WHERE table_name='tb_qual_running_lock' AND constraint_type='PRIMARY KEY';"
         )
         assert pk == "pk_tb_qual_running_lock", f"PK 이름 불일치: {pk}"
-    step("P1. TB_QUAL_RUNNING_LOCK 테이블 + 6 컬럼 + PK 검증", _p1)
+    step("P1. TB_QUAL_RUNNING_LOCK 필수 컬럼 + PK 검증", _p1)
 
     # P2. 단건 acquire + release
     def _p2():

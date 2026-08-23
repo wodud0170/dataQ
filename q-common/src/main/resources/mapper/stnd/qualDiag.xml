@@ -204,7 +204,7 @@
     -->
     <select id="selectRuleResultByClsf" parameterType="map" resultType="map">
         WITH col_clsf AS (
-          SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM,
+          SELECT a.DM_ID, a.OBJ_OWNER, a.OBJ_NM, a.ATTR_NM,
                  COALESCE(d.DOMAIN_CLSF_NM, '미분류') AS DOMAIN_CLSF_NM
             FROM TB_DATA_MODEL_ATTR a
             LEFT JOIN TB_TERMS t  ON t.TERMS_NM  = a.ATTR_NM_KR
@@ -223,7 +223,7 @@
           JOIN TB_QUAL_DIAG_HISTORY dh ON dh.DIAG_ID = rr.DIAG_ID
           LEFT JOIN col_clsf cc
             ON cc.DM_ID = dh.DM_ID
-           AND cc.OBJ_NM = rr.OBJ_NM
+           AND cc.OBJ_NM = rr.OBJ_NM AND COALESCE(cc.OBJ_OWNER,'') = COALESCE(rr.OBJ_OWNER,'')
            AND cc.ATTR_NM = rr.ATTR_NM
          WHERE rr.DIAG_ID = #{diagId}
          GROUP BY COALESCE(cc.DOMAIN_CLSF_NM, '미분류')
@@ -235,7 +235,7 @@
     -->
     <select id="selectRuleResultByClsfDrill" parameterType="map" resultType="map">
         WITH col_clsf AS (
-          SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM,
+          SELECT a.DM_ID, a.OBJ_OWNER, a.OBJ_NM, a.ATTR_NM,
                  COALESCE(d.DOMAIN_CLSF_NM, '미분류') AS DOMAIN_CLSF_NM,
                  d.DOMAIN_NM
             FROM TB_DATA_MODEL_ATTR a
@@ -258,7 +258,7 @@
           LEFT JOIN TB_QUAL_RULE r ON r.RULE_ID = rr.RULE_ID
           LEFT JOIN col_clsf cc
             ON cc.DM_ID = dh.DM_ID
-           AND cc.OBJ_NM = rr.OBJ_NM
+           AND cc.OBJ_NM = rr.OBJ_NM AND COALESCE(cc.OBJ_OWNER,'') = COALESCE(rr.OBJ_OWNER,'')
            AND cc.ATTR_NM = rr.ATTR_NM
          WHERE rr.DIAG_ID = #{diagId}
            AND COALESCE(cc.DOMAIN_CLSF_NM, '미분류') = #{domainClsfNm}

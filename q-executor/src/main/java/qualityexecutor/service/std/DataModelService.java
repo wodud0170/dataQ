@@ -196,7 +196,7 @@ public class DataModelService implements Runnable {
 					// 86번 #11 — 수집 단계 표준여부 검사. 진단(Diag) 에서도 다시 하지만, 수집 직후 화면에 표준 여부가 보이도록 일치화.
 					// 표준여부 체크 - 용어,도메인
 					String attrNmUp = stdDataModelAttrVo.getAttrNm() == null ? "" : stdDataModelAttrVo.getAttrNm().toUpperCase();
-					StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByEngNm", attrNmUp);
+					StdTermsVo stdTermsVo = session.selectOne("terms.selectApprovedTermsByEngNm", attrNmUp);
 					if (stdTermsVo != null) {
 						stdDataModelAttrVo.setTermsStndYn("Y");
 						stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");

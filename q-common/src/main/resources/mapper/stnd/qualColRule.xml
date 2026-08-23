@@ -16,7 +16,7 @@
     <select id="selectEffectiveRulesByModel" parameterType="map"
             resultType="com.ndata.quality.model.std.QualColRuleVo">
         WITH col_meta AS (
-          SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM, a.ATTR_NM_KR,
+          SELECT a.DM_ID, a.OBJ_OWNER, a.OBJ_NM, a.ATTR_NM, a.ATTR_NM_KR,
                  d.DOMAIN_ID,
                  t.DOMAIN_NM AS TERM_DOMAIN_NM
             FROM TB_DATA_MODEL_ATTR a
@@ -28,7 +28,7 @@
             <if test="attrNm != null"> AND a.ATTR_NM = #{attrNm} </if>
         ),
         col_default_dom AS (
-          SELECT cm.DM_ID, cm.OBJ_NM, cm.ATTR_NM, cm.DOMAIN_ID,
+          SELECT cm.DM_ID, cm.OBJ_OWNER, cm.OBJ_NM, cm.ATTR_NM, cm.DOMAIN_ID,
                  dr.DOMAIN_RULE_ID AS DEFAULT_DR_ID,
                  dr.RULE_NM        AS DEFAULT_RULE_NM,
                  dr.RULE_TYPE      AS DEFAULT_RULE_TYPE,
@@ -83,9 +83,9 @@
                END AS effectiveSource
           FROM col_meta cm
           LEFT JOIN col_default_dom cd
-            ON cd.DM_ID = cm.DM_ID AND cd.OBJ_NM = cm.OBJ_NM AND cd.ATTR_NM = cm.ATTR_NM
+            ON cd.DM_ID = cm.DM_ID AND cd.OBJ_NM = cm.OBJ_NM AND cd.ATTR_NM = cm.ATTR_NM AND COALESCE(cd.OBJ_OWNER,'') = COALESCE(cm.OBJ_OWNER,'')
           LEFT JOIN TB_QUAL_COL_RULE cr
-            ON cr.DM_ID = cm.DM_ID AND cr.OBJ_NM = cm.OBJ_NM AND cr.ATTR_NM = cm.ATTR_NM
+            ON cr.DM_ID = cm.DM_ID AND cr.OBJ_NM = cm.OBJ_NM AND cr.ATTR_NM = cm.ATTR_NM AND COALESCE(cr.OBJ_OWNER,'') = COALESCE(cm.OBJ_OWNER,'')
           LEFT JOIN TB_QUAL_RULE ur
             ON ur.RULE_ID = cr.CUSTOM_RULE_ID
           LEFT JOIN TB_DOMAIN_RULE udr
@@ -94,15 +94,17 @@
     </select>
 
     <insert id="upsertColRule" parameterType="com.ndata.quality.model.std.QualColRuleVo">
+        <!-- 컬럼 식별 키는 소유자를 포함한다. 소유자를 빼면 다른 스키마의 같은 이름
+             컬럼이 하나의 룰을 공유하게 되고, 조회 조인과도 어긋난다. -->
         INSERT INTO TB_QUAL_COL_RULE (
-            DM_ID, OBJ_NM, ATTR_NM, DOMAIN_RULE_ID, CUSTOM_RULE_ID, EXCLUDE_YN,
+            DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM, DOMAIN_RULE_ID, CUSTOM_RULE_ID, EXCLUDE_YN,
             UPDT_USER_ID, UPDT_DT
         ) VALUES (
-            #{dmId}, #{objNm}, #{attrNm},
+            #{dmId}, COALESCE(#{objOwner, jdbcType=VARCHAR}, ''), #{objNm}, #{attrNm},
             #{domainRuleId}, #{customRuleId}, COALESCE(#{excludeYn}, 'N'),
             #{updtUserId}, CURRENT_TIMESTAMP
         )
-        ON CONFLICT (DM_ID, OBJ_NM, ATTR_NM) DO UPDATE SET
+        ON CONFLICT (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) DO UPDATE SET
             DOMAIN_RULE_ID = EXCLUDED.DOMAIN_RULE_ID,
             CUSTOM_RULE_ID = EXCLUDED.CUSTOM_RULE_ID,
             EXCLUDE_YN     = EXCLUDED.EXCLUDE_YN,
@@ -110,9 +112,19 @@
             UPDT_DT        = CURRENT_TIMESTAMP
     </insert>
 
+    <!-- 호출부가 소유자를 안 보냈을 때 모델에서 찾아본다.
+         2건 이상이면 어느 스키마인지 특정할 수 없으므로 호출부가 거부해야 한다. -->
+    <select id="selectOwnersOfAttr" parameterType="map" resultType="String">
+        SELECT DISTINCT COALESCE(OBJ_OWNER, '')
+          FROM TB_DATA_MODEL_ATTR
+         WHERE DM_ID = #{dmId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+           AND USE_YN = 'Y'
+    </select>
+
     <delete id="deleteColRule" parameterType="map">
         DELETE FROM TB_QUAL_COL_RULE
          WHERE DM_ID = #{dmId} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+           AND OBJ_OWNER = COALESCE(#{objOwner, jdbcType=VARCHAR}, '')
     </delete>
 
     <!--
@@ -121,7 +133,7 @@
     -->
     <select id="selectEffectiveWithLatest" parameterType="map" resultType="map">
         WITH col_meta AS (
-          SELECT a.DM_ID, a.OBJ_NM, a.ATTR_NM, a.ATTR_NM_KR,
+          SELECT a.DM_ID, a.OBJ_OWNER, a.OBJ_NM, a.ATTR_NM, a.ATTR_NM_KR,
                  d.DOMAIN_ID, d.DOMAIN_NM, d.DOMAIN_CLSF_NM
             FROM TB_DATA_MODEL_ATTR a
             LEFT JOIN TB_TERMS t  ON t.TERMS_NM    = a.ATTR_NM_KR
@@ -135,7 +147,7 @@
             </if>
         ),
         col_default_dom AS (
-          SELECT cm.DM_ID, cm.OBJ_NM, cm.ATTR_NM, cm.DOMAIN_ID,
+          SELECT cm.DM_ID, cm.OBJ_OWNER, cm.OBJ_NM, cm.ATTR_NM, cm.DOMAIN_ID,
                  dr.DOMAIN_RULE_ID AS DEFAULT_DR_ID,
                  dr.RULE_NM        AS DEFAULT_RULE_NM,
                  dr.RULE_TYPE      AS DEFAULT_RULE_TYPE,
@@ -193,20 +205,20 @@
                      ELSE 100.0 - lr.VIOLATION_RATE END) AS "ruleConformRate"
           FROM col_meta cm
           LEFT JOIN col_default_dom cd
-            ON cd.DM_ID = cm.DM_ID AND cd.OBJ_NM = cm.OBJ_NM AND cd.ATTR_NM = cm.ATTR_NM
+            ON cd.DM_ID = cm.DM_ID AND cd.OBJ_NM = cm.OBJ_NM AND cd.ATTR_NM = cm.ATTR_NM AND COALESCE(cd.OBJ_OWNER,'') = COALESCE(cm.OBJ_OWNER,'')
           LEFT JOIN TB_QUAL_COL_RULE cr
-            ON cr.DM_ID = cm.DM_ID AND cr.OBJ_NM = cm.OBJ_NM AND cr.ATTR_NM = cm.ATTR_NM
+            ON cr.DM_ID = cm.DM_ID AND cr.OBJ_NM = cm.OBJ_NM AND cr.ATTR_NM = cm.ATTR_NM AND COALESCE(cr.OBJ_OWNER,'') = COALESCE(cm.OBJ_OWNER,'')
           LEFT JOIN TB_QUAL_RULE ur
             ON ur.RULE_ID = cr.CUSTOM_RULE_ID
           LEFT JOIN TB_DOMAIN_RULE udr
             ON udr.DOMAIN_RULE_ID = cr.DOMAIN_RULE_ID
           LEFT JOIN TB_QUAL_PROFILE_RESULT pr
-            ON pr.DM_ID = cm.DM_ID AND pr.OBJ_NM = cm.OBJ_NM AND pr.ATTR_NM = cm.ATTR_NM
+            ON pr.DM_ID = cm.DM_ID AND pr.OBJ_NM = cm.OBJ_NM AND pr.ATTR_NM = cm.ATTR_NM AND COALESCE(pr.OBJ_OWNER,'') = COALESCE(cm.OBJ_OWNER,'')
           LEFT JOIN LATERAL (
             SELECT rr.VIOLATION_CNT, rr.TOTAL_CNT, rr.VIOLATION_RATE
               FROM TB_QUAL_RULE_RESULT rr
               JOIN TB_QUAL_DIAG_HISTORY dh ON dh.DIAG_ID = rr.DIAG_ID
-             WHERE rr.OBJ_NM = cm.OBJ_NM AND rr.ATTR_NM = cm.ATTR_NM
+             WHERE rr.OBJ_NM = cm.OBJ_NM AND rr.ATTR_NM = cm.ATTR_NM AND COALESCE(rr.OBJ_OWNER,'') = COALESCE(cm.OBJ_OWNER,'')
                AND dh.DM_ID = cm.DM_ID AND dh.STATUS = 'DONE'
              ORDER BY dh.DIAG_DT DESC
              LIMIT 1

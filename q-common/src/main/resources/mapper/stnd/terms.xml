@@ -172,8 +172,9 @@
 			where A.TERMS_ID = #{termsId}
 	</select>
 
-	<select id="selectTermsByNm" parameterType="String" resultMap="stdTermsMap">
-			select 
+	<!-- 용어 단건 조회 공용 본문 — WHERE 는 각 select 가 붙인다. -->
+	<sql id="termsSingleSelectBody">
+			select
 				 A.TERMS_ID
 				,A.TERMS_NM			
 				,A.TERMS_ENG_ABRV_NM
@@ -207,44 +208,35 @@
 				,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
 			from TB_TERMS A LEFT OUTER JOIN TB_DOMAIN B 
 			     on A.DOMAIN_NM = B.DOMAIN_NM
+	</sql>
+
+	<!-- 등록 시 중복 검사용 — 미승인 용어와의 중복도 잡아야 하므로 승인 필터 없음 -->
+	<select id="selectTermsByNm" parameterType="String" resultMap="stdTermsMap">
+		<include refid="termsSingleSelectBody"/>
 			where A.TERMS_NM = #{termsNm} OR #{termsNm} = any(A.ALLOPH_SYNM_LST)
 	</select>
 
+	<!--
+	  DEF-12 계열 — 표준화·표준판정에 쓰는 조회는 승인된 용어만 봐야 한다.
+	  기존 selectTermsByEngNm / selectTermsByNm 은 등록 시 중복 검사에도 쓰이므로
+	  (미승인 용어와의 중복도 잡아야 한다) 필터를 넣지 않고 그대로 둔다.
+	  아래 두 쿼리는 본문을 재사용하고 APRV_YN 조건만 더한다.
+	-->
+	<select id="selectApprovedTermsByEngNm" parameterType="String" resultMap="stdTermsMap">
+		<include refid="termsSingleSelectBody"/>
+			where A.TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
+			  and A.APRV_YN = 'Y'
+	</select>
+
+	<select id="selectApprovedTermsByNm" parameterType="String" resultMap="stdTermsMap">
+		<include refid="termsSingleSelectBody"/>
+			where (A.TERMS_NM = #{termsNm} OR #{termsNm} = any(A.ALLOPH_SYNM_LST))
+			  and A.APRV_YN = 'Y'
+	</select>
+
+	<!-- 등록 시 중복 검사용 — 미승인 용어와의 중복도 잡아야 하므로 승인 필터 없음 -->
 	<select id="selectTermsByEngNm" parameterType="String" resultMap="stdTermsMap">
-			select 
-				 A.TERMS_ID
-				,A.TERMS_NM			
-				,A.TERMS_ENG_ABRV_NM
-				,A.TERMS_DESC		
-				,A.DOMAIN_NM	
-				,B.DATA_TYPE
-				,B.DATA_LEN
-				,B.DATA_DECIMAL_LEN
-				,B.ALLOW_VAL_LST	
-				,CASE
-		            WHEN B.STOR_FMT is null AND B.DATA_TYPE = 'VARCHAR'	-- VARCHAR
-		            	THEN B.DATA_LEN||'자리 이내 문자'
-		            WHEN STOR_FMT is null AND B.DATA_TYPE = 'CHAR'	-- CHAR
-		            	THEN B.DATA_LEN||'자리 문자'
-		            ELSE B.STOR_FMT
-		         END as STOR_FMT
-				,B.EXPR_FMT_LST	
-				,A.CODE_GRP	
-				,A.CHRG_ORG	
-				,A.ALLOPH_SYNM_LST	
-				,A.COMM_STND_YN	
-				,A.MAGNTD_ORD		
-				,A.APRV_YN			
-				,A.APRV_USER_ID	
-				,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
-				,A.CRET_USER_ID	
-				,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT	
-				,A.UPDT_USER_ID	
-				,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
-				,A.REQ_SYS_CD
-				,(select SYS_NM from TB_SYS_INFO where sys_cd = A.REQ_SYS_CD) as REQ_SYS_NM
-			from TB_TERMS A LEFT OUTER JOIN TB_DOMAIN B 
-			     on A.DOMAIN_NM = B.DOMAIN_NM
+		<include refid="termsSingleSelectBody"/>
 			where A.TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
 	</select>
 
@@ -261,6 +253,10 @@
 			,D.DATA_DECIMAL_LEN
 		FROM TB_TERMS T
 		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM
+		<!-- DEF-12 — 승인된 용어만 진단 기준이 된다.
+		     필터가 없으면 승인 대기 중인 용어에 맞춘 컬럼이 '표준' 으로 판정되고,
+		     그 용어가 반려되는 순간 준수율이 소급해서 틀어진다. -->
+		WHERE T.APRV_YN = 'Y'
 	</select>
 
 	<!-- 전체 용어 한글명 기준 조회 (추천 서비스용, 파라미터 없음) -->

@@ -628,6 +628,15 @@ public class DataModelController {
 	public Mono<Response> collectDataModel(HttpServletRequest request, @RequestBody StdDataModelVo dataVo) {
 		log.info(">> started collect data model : {}", dataVo);
 
+		// 같은 모델을 동시에 수집하면 MERGE 가 서로의 결과를 덮어쓴다. 진단과 같은 가드.
+		int running = sqlSessionTemplate.selectOne(
+				"datamodel.selectActiveCollectCount", dataVo.getDataModelId());
+		if (running > 0) {
+			Response busy = new Response();
+			busy.setResultInfo(409, "이미 진행 중인 수집이 있습니다.");
+			return Mono.just(busy);
+		}
+
 		WebClientHandler webClientHandler = new WebClientHandler(
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/dm/collectDataModel");
 		Mono<Response> mResponse = webClientHandler.postData(sessionService.getUserId(),
@@ -833,6 +842,9 @@ public class DataModelController {
 				String fk = (String) col.get("fkYn");
 				attrVo.setFkYn(fk != null ? fk : "N");
 				attrVo.setFkParentObjNm((String) col.get("fkParentObjNm"));
+				// XMI/ERwin 에는 스키마 개념이 없다. 임포트 모델은 단일 소유자이므로
+				// 부모 소유자는 자기 자신과 같다고 본다.
+				attrVo.setFkParentObjOwner(attrVo.getObjOwner());
 				attrVo.setFkParentAttrNm((String) col.get("fkParentAttrNm"));
 				attrVo.setTermsStndYn("N");
 				attrVo.setDomainStndYn("N");
@@ -1147,6 +1159,7 @@ public class DataModelController {
 				ap.put("attrNm",          ownCol);
 				ap.put("fkYn",            "Y");
 				ap.put("fkParentObjNm",   refTableNm);
+				ap.put("fkParentObjOwner", refOwner);
 				ap.put("fkParentAttrNm",  refCol);
 				session.update("datamodel.updateAttrFk", ap);
 			}
@@ -1263,6 +1276,7 @@ public class DataModelController {
 						ap2.put("attrNm",      rr.get("columnNm"));
 						ap2.put("fkYn",        "N");
 						ap2.put("fkParentObjNm",  null);
+						ap2.put("fkParentObjOwner", null);
 						ap2.put("fkParentAttrNm", null);
 						session.update("datamodel.updateAttrFk", ap2);
 					}
@@ -1333,6 +1347,7 @@ public class DataModelController {
 				ap.put("attrNm",          r.get("columnNm"));
 				ap.put("fkYn",            "N");
 				ap.put("fkParentObjNm",   null);
+				ap.put("fkParentObjOwner", null);
 				ap.put("fkParentAttrNm",  null);
 				session.update("datamodel.updateAttrFk", ap);
 			}
@@ -1481,6 +1496,7 @@ public class DataModelController {
 				session.update("datamodel.renameObjIndexCascade",         rn);
 				session.update("datamodel.renameObjConstraintCascade",    rn);
 				session.update("datamodel.renameObjConstraintRefCascade", rn);
+				session.update("datamodel.renameObjFkParentCascade",      rn);   // DEF-03
 				session.update("datamodel.renameObjPhysical",             rn);
 			}
 
@@ -1537,9 +1553,16 @@ public class DataModelController {
 			String updObjAprvStatus = "TIER1".equals(updObjTier)
 					? changeHistory.resolveAprvStatusForUserChange()
 					: "APPROVED";
+			// DEF-04 — 변경 전/후 값을 남겨야 반려 시 되돌릴 수 있다. 그동안 둘 다 null 이었다.
+			Map<String, Object> beforeObj = new HashMap<>();
+			beforeObj.put("objOwner", origOwner);
+			beforeObj.put("objNm",    origObjNm);
+			Map<String, Object> afterObj = new HashMap<>();
+			afterObj.put("objOwner", objOwner);
+			afterObj.put("objNm",    newObjNm != null ? newObjNm : origObjNm);
 			changeHistory.record(null, dataModelId, "MODIFY_OBJ", updObjTier,
 					objOwner, newObjNm != null ? newObjNm : origObjNm, null, null, null,
-					null, null, null, updObjAprvStatus);
+					toJsonSafe(beforeObj), toJsonSafe(afterObj), null, updObjAprvStatus);
 
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -1568,10 +1591,17 @@ public class DataModelController {
 			param.put("dataModelId", objVo.getDataModelId());
 			param.put("objOwner",    objVo.getObjOwner() == null ? "" : objVo.getObjOwner());  // 86번 #11
 			param.put("objNm",       objVo.getObjNm());
-			session.delete("datamodel.deleteDataModelAttrsByObj", param);
-			session.delete("datamodel.deleteDataModelObj", param);
-			// 88번 거버넌스 — DELETE 이력 (Tier 1)
+			// DEF-05 — 승인 대기 삭제는 감춰만 둔다. DEF-02 — 승인된 삭제는 참조까지 정리.
 			String delObjAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+			if ("APPROVED".equals(delObjAprvStatus)) {
+				cascadeDeleteObjRefs(session, param);
+				session.delete("datamodel.deleteDataModelAttrsByObj", param);
+				session.delete("datamodel.deleteDataModelObj", param);
+			} else {
+				param.put("deletedDt", changeHistory.currentDt());
+				session.update("datamodel.softDeleteAttrsByObjPending", param);
+				session.update("datamodel.softDeleteObjPending", param);
+			}
 			changeHistory.record(session, objVo.getDataModelId(), "DEL_OBJ", "TIER1",
 					(String)param.get("objOwner"), objVo.getObjNm(), null, null, null,
 					null, null,
@@ -1628,9 +1658,16 @@ public class DataModelController {
 					param.put("dataModelId", dataModelId);
 					param.put("objOwner",    objOwner);
 					param.put("objNm",       objNm);
-					session.delete("datamodel.deleteDataModelAttrsByObj", param);
-					session.delete("datamodel.deleteDataModelObj", param);
 					String aprvStatus = changeHistory.resolveAprvStatusForUserChange();
+					if ("APPROVED".equals(aprvStatus)) {
+						cascadeDeleteObjRefs(session, param);   // DEF-02
+						session.delete("datamodel.deleteDataModelAttrsByObj", param);
+						session.delete("datamodel.deleteDataModelObj", param);
+					} else {
+						param.put("deletedDt", changeHistory.currentDt());   // DEF-05
+						session.update("datamodel.softDeleteAttrsByObjPending", param);
+						session.update("datamodel.softDeleteObjPending", param);
+					}
 					changeHistory.record(session, dataModelId, "DEL_OBJ", "TIER1",
 							objOwner, objNm, null, null, null,
 							null, null,
@@ -1868,7 +1905,7 @@ public class DataModelController {
 		if (engNm == null || engNm.trim().isEmpty())
 			throw new IllegalStateException("영문명 없음");
 		com.ndata.quality.model.std.StdTermsVo terms =
-			sqlSessionTemplate.selectOne("terms.selectTermsByEngNm", engNm.trim());
+			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm", engNm.trim());
 		if (terms == null)
 			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
 		Map<String, Object> item = new HashMap<>();
@@ -2011,9 +2048,17 @@ public class DataModelController {
 			param.put("objOwner",    attrVo.getObjOwner() == null ? "" : attrVo.getObjOwner());
 			param.put("objNm",       attrVo.getObjNm());
 			param.put("attrNm",      attrVo.getAttrNm());
-			cascadeDeleteAttrRefs(session, param);
-			// PK 는 (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM). 0건이면 삭제된 게 없는데 200 이 나가던 문제.
-			int attrDeleted = session.delete("datamodel.deleteDataModelAttr", param);
+			// DEF-05 — 승인이 필요한 사용자면 물리 삭제하지 않는다. 반려 시 되돌려야 한다.
+			String delAttrStatus = changeHistory.resolveAprvStatusForUserChange();
+			int attrDeleted;
+			if ("APPROVED".equals(delAttrStatus)) {
+				cascadeDeleteAttrRefs(session, param);
+				// PK 는 (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM). 0건이면 삭제된 게 없는데 200 이 나가던 문제.
+				attrDeleted = session.delete("datamodel.deleteDataModelAttr", param);
+			} else {
+				param.put("deletedDt", changeHistory.currentDt());
+				attrDeleted = session.update("datamodel.softDeleteAttrPending", param);
+			}
 			if (attrDeleted == 0) {
 				session.rollback();
 				result.setResultInfo(RestResult.CODE_500.getCode(),
@@ -2023,6 +2068,14 @@ public class DataModelController {
 				return Mono.just(result);
 			}
 			session.update("datamodel.syncDataModelObjAttrCnt", param);
+			// 단건 삭제도 이력을 남긴다. 그동안 그리드 배치 삭제만 기록돼,
+			// 이 경로로 지운 컬럼은 승인 화면에도 변경 이력에도 나타나지 않았다.
+			changeHistory.record(session, attrVo.getDataModelId(), "DEL_ATTR", "TIER1",
+					(String) param.get("objOwner"), attrVo.getObjNm(), attrVo.getAttrNm(), null, null,
+					null, null,
+					changeHistory.generateDdlSnippet("DEL_ATTR", (String) param.get("objOwner"),
+							attrVo.getObjNm(), attrVo.getAttrNm(), null, null),
+					delAttrStatus);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -2056,6 +2109,22 @@ public class DataModelController {
 	/**
 	 * 87-3 — 컬럼 삭제 시 cascade 정리 (CONSTRAINT, INDEX, 외부 FK, FK_PARENT_*)
 	 */
+	/**
+	 * DEF-02 — 테이블 삭제 시 cascade 정리.
+	 *
+	 * 그동안 컬럼만 지우고 인덱스·제약조건·다른 테이블이 건 FK·FK_PARENT_* 참조를 남겼다.
+	 * javadoc 은 "하위 컬럼 함께 삭제" 라고만 적혀 있었지만, 남은 참조는 ERD 에 끊어진
+	 * 관계선으로 나타나고 재수집 시 유령 제약조건으로 되살아난다.
+	 *
+	 * 순서 주의 — 참조를 먼저 끊고 본체를 지운다.
+	 */
+	private void cascadeDeleteObjRefs(SqlSession session, Map<String, Object> param) {
+		session.delete("datamodel.deleteIndexByObj",       param);
+		session.delete("datamodel.deleteConstraintByObj",  param);
+		session.delete("datamodel.deleteInboundFkByObj",   param);
+		session.update("datamodel.clearFkParentRefByObj",  param);
+	}
+
 	private void cascadeDeleteAttrRefs(SqlSession session, Map<String, Object> param) {
 		session.delete("datamodel.deleteConstraintByAttr",  param);
 		session.delete("datamodel.deleteIndexByAttr",       param);
@@ -2395,11 +2464,16 @@ public class DataModelController {
 						p.put("objOwner",    objOwner);  // 86번 #11
 						p.put("objNm",       objNm);
 						p.put("attrNm",      attrNm);
-						cascadeDeleteAttrRefs(session, p);  // 87-3 — CONSTRAINT/INDEX/외부FK/FK_PARENT cascade
-						session.delete("datamodel.deleteDataModelAttr", p);
-						deleted++;
-						// 88번 거버넌스 — DELETE 이력 (Tier 1)
+						// DEF-05 — 승인 대기 삭제는 물리 삭제하지 않는다 (반려 시 복구 대상)
 						String delAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+						if ("APPROVED".equals(delAprvStatus)) {
+							cascadeDeleteAttrRefs(session, p);  // 87-3 — CONSTRAINT/INDEX/외부FK/FK_PARENT cascade
+							session.delete("datamodel.deleteDataModelAttr", p);
+						} else {
+							p.put("deletedDt", changeHistory.currentDt());
+							session.update("datamodel.softDeleteAttrPending", p);
+						}
+						deleted++;
 						changeHistory.record(session, dataModelId, "DEL_ATTR", "TIER1",
 								objOwner, objNm, attrNm, null, null,
 								null, null,
@@ -2496,7 +2570,7 @@ public class DataModelController {
 		}
 		try {
 			com.ndata.quality.model.std.StdTermsVo terms =
-				sqlSessionTemplate.selectOne("terms.selectTermsByNm", termsNm.trim());
+				sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm", termsNm.trim());
 			if (terms == null) {
 				result.put("found", false);
 				result.put("message", "'" + termsNm + "' 에 해당하는 표준 용어가 없습니다.");
@@ -2591,6 +2665,33 @@ public class DataModelController {
 			throw new IllegalStateException("UPDATE 매칭 실패 (owner='" + updateMap.get("objOwner")
 				+ "', obj='" + attr.getObjNm() + "', attr='" + attr.getAttrNm() + "')");
 		}
+		// DEF-11 — 영문명이 바뀌면 그 이름을 참조하는 인덱스·제약조건·FK 도 따라가야 한다.
+		// saveAttrs 는 이 cascade 를 호출하는데 이 경로만 빠져 있어,
+		// 한글명 기준 표준화로 컬럼명을 바꾸면 참조가 옛 이름에 남았다.
+		if (!newAttrNm.equals(attr.getAttrNm())) {
+			Map<String, Object> ren = new HashMap<>();
+			ren.put("dataModelId", attr.getDataModelId());
+			ren.put("objOwner",    updateMap.get("objOwner"));
+			ren.put("objNm",       attr.getObjNm());
+			ren.put("origAttrNm",  attr.getAttrNm());
+			ren.put("newAttrNm",   newAttrNm);
+			sqlSessionTemplate.update("datamodel.renameAttrInIndex",         ren);
+			sqlSessionTemplate.update("datamodel.renameAttrInConstraint",    ren);
+			sqlSessionTemplate.update("datamodel.renameAttrInConstraintRef", ren);
+			sqlSessionTemplate.update("datamodel.renameAttrInFkParent",      ren);
+
+			// 거버넌스 이력도 남긴다. 그동안 이 경로는 컬럼 물리명을 바꾸면서도
+			// 변경 이력에 나타나지 않아 승인 대상에서 통째로 빠졌다.
+			Map<String, Object> beforeAttr = new HashMap<>();
+			beforeAttr.put("objOwner", updateMap.get("objOwner"));
+			beforeAttr.put("objNm",    attr.getObjNm());
+			beforeAttr.put("attrNm",   attr.getAttrNm());
+			beforeAttr.put("attrNmKr", attr.getAttrNmKr());
+			changeHistory.record(null, attr.getDataModelId(), "MODIFY_ATTR", "TIER1",
+					(String) updateMap.get("objOwner"), attr.getObjNm(), newAttrNm, null, null,
+					toJsonSafe(beforeAttr), toJsonSafe(updateMap), null,
+					changeHistory.resolveAprvStatusForUserChange());
+		}
 		// 88번 §16 — 변환 이력 기록 (사용자가 입력했던 한글 → 표준 매핑)
 		recordResolveHistory(attr.getDataModelId(), attr.getObjOwner(), attr.getObjNm(),
 				newAttrNm, attrNmKr, attrNmKr, newAttrNm,
@@ -2633,7 +2734,7 @@ public class DataModelController {
 			throw new IllegalStateException("영문명 없음");
 
 		com.ndata.quality.model.std.StdTermsVo terms =
-			sqlSessionTemplate.selectOne("terms.selectTermsByEngNm", engNm.trim());
+			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm", engNm.trim());
 		if (terms == null)
 			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
 
@@ -2696,7 +2797,7 @@ public class DataModelController {
 
 		// 영문명 기준 표준 용어 매칭 (TB_TERMS.TERMS_ENG_ABRV_NM = attrNm)
 		com.ndata.quality.model.std.StdTermsVo term =
-			sqlSessionTemplate.selectOne("terms.selectTermsByEngNm", attrNm.trim());
+			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm", attrNm.trim());
 		if (term == null) {
 			throw new IllegalStateException("표준 미준수: '" + attrNm + "' 에 해당하는 표준 용어가 등록되어있지 않습니다.");
 		}

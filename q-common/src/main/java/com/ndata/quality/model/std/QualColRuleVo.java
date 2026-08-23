@@ -9,6 +9,7 @@ import lombok.Data;
 @Data
 public class QualColRuleVo {
     private String dmId;
+    private String objOwner;         // 스키마. 컬럼 식별 키의 일부
     private String objNm;
     private String attrNm;
     private String domainRuleId;     // 도메인 룰 사용 시

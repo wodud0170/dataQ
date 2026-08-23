@@ -26,7 +26,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 
 BASE_URL = "http://localhost:28091"
-_SUFFIX = str(random.randint(100, 999))
+# 3자리 난수는 900가지뿐이라 반복 실행에서 충돌한다.
+# 폴루션이 남아 있으면 "이미 존재하는 단어" 로 STEP 1 부터 깨진다.
+# 초 단위 시각 + 난수로 사실상 충돌하지 않게 한다.
+_SUFFIX = time.strftime("%H%M%S") + str(random.randint(10, 99))
 TEST_WORD = f"셀반려삭제{_SUFFIX}"
 TEST_WORD_ENG = f"SELREJDEL{_SUFFIX}"
 SCREENSHOT_DIR = "C:/Users/장재영/Desktop/dataQ/dataQ설계/테스트/selenium/screenshots"
