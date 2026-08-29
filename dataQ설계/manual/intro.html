@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Navid Meta 제품 소개</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -80,9 +82,13 @@ a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius
 section{padding:56px 0;border-top:1px solid var(--line)}
 section:first-of-type{border-top:0}
 @media(min-width:760px){ section{padding:76px 0} }
+/* 라벨류는 본문 한글 서체를 쓴다.
+   IBM Plex Mono 에는 한글 글리프가 없어 시스템 폰트로 폴백되고,
+   거기에 넓은 자간이 겹치면 글자가 흩어져 깨져 보인다.
+   모노는 숫자·코드 등 라틴 문자에만 쓴다. */
 .eyebrow{
-  font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
-  letter-spacing:.18em;text-transform:uppercase;color:var(--accent);
+  font-family:"IBM Plex Sans KR",sans-serif;font-size:11.5px;font-weight:600;
+  letter-spacing:.06em;color:var(--accent);
   display:flex;align-items:center;gap:10px;margin-bottom:18px;
 }
 .eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -111,8 +117,8 @@ h3{font-size:clamp(16px,3.4vw,18px);font-weight:700;letter-spacing:-.02em;line-h
 @media(min-width:760px){ .gap-fig{padding:32px 30px 24px} }
 .gap-row{display:flex;flex-direction:column;gap:6px;margin-bottom:22px}
 .gap-row:last-of-type{margin-bottom:0}
-.gap-label{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
-  letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.gap-label{font-family:"IBM Plex Sans KR",sans-serif;font-size:12px;font-weight:600;
+  letter-spacing:.02em;color:var(--ink-2)}
 .ruler{height:26px;position:relative;border-radius:4px;overflow:hidden;
   background:linear-gradient(90deg,var(--surface-2) 0 1px,transparent 1px);
   background-size:calc(100% / 24) 100%;border:1px solid var(--line)}
@@ -145,8 +151,8 @@ h3{font-size:clamp(16px,3.4vw,18px);font-weight:700;letter-spacing:-.02em;line-h
   padding:22px 20px;box-shadow:var(--shadow)}
 .card h3{margin-bottom:9px}
 .card p{color:var(--ink-2);font-size:14.5px;line-height:1.72}
-.card .tag{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;
-  letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:9px}
+.card .tag{font-size:11.5px;font-weight:600;letter-spacing:.03em;
+  font-variant-numeric:tabular-nums;color:var(--accent);display:block;margin-bottom:9px}
 
 /* ── 이슈 4종 ── */
 .taxo{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
@@ -169,7 +175,7 @@ table{width:100%;min-width:480px;border-collapse:collapse;font-size:14.5px}
 th,td{padding:13px 16px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
 tbody tr:last-child td{border-bottom:0}
 th{background:var(--surface-2);font-weight:600;font-size:12.5px;letter-spacing:.02em;
-  font-family:"IBM Plex Mono",monospace;text-transform:uppercase;color:var(--ink-2)}
+  color:var(--ink-2)}
 td .yes{color:var(--ok);font-weight:600}
 td .no{color:var(--dev);font-weight:600}
 

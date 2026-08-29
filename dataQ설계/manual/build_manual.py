@@ -113,16 +113,16 @@ li{margin:4px 0}
 .tnum{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;
   color:var(--accent);background:var(--accent-soft);border-radius:6px;
   padding:2px 7px;flex:none;letter-spacing:.02em}
-.role{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:500;
-  letter-spacing:.08em;padding:3px 8px;border-radius:999px;white-space:nowrap;
+.role{font-size:11px;font-weight:600;
+  letter-spacing:.02em;padding:3px 8px;border-radius:999px;white-space:nowrap;
   color:var(--ok);background:var(--ok-bg);border:1px solid var(--ok-line)}
 .role.admin{color:var(--admin);background:var(--admin-bg);border-color:var(--admin-line)}
 .role.user{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
 .goal{color:var(--ink-2);margin:2px 0 14px}
 
 .block{margin:14px 0}
-.block > .h{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;
-  letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.block > .h{font-size:11.5px;font-weight:600;
+  letter-spacing:.02em;color:var(--ink-2);margin-bottom:6px}
 ol.steps{counter-reset:s;list-style:none;padding:0;margin:0}
 ol.steps > li{counter-increment:s;position:relative;padding-left:30px;margin:9px 0}
 ol.steps > li::before{content:counter(s);position:absolute;left:0;top:.15em;
@@ -136,6 +136,8 @@ ol.steps > li::before{content:counter(s);position:absolute;left:0;top:.15em;
 .verify .h{color:var(--ok)}
 
 .traps{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}
+.traps > .h{font-size:11.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--ink-2);margin-bottom:8px}
 .trap{margin:12px 0}
 .trap .sym{font-weight:600}
 .trap .why{color:var(--ink-2);font-size:.94em;margin:2px 0}
@@ -161,8 +163,8 @@ h2.app{font-size:clamp(20px,4.6vw,25px);font-weight:600;letter-spacing:-.02em;
 
 .toc{background:var(--surface);border:1px solid var(--line);border-radius:14px;
   padding:16px 18px;margin:24px 0}
-.toc .pt{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+.toc .pt{font-size:11.5px;font-weight:600;
+  letter-spacing:.02em;color:var(--accent);
   margin:14px 0 4px}
 .toc .pt:first-child{margin-top:0}
 .toc ol{list-style:none;margin:0;padding:0}
@@ -294,9 +296,11 @@ def render_table(spec):
 def build(artifact=False):
     tasks = [t for _, _, ts in PARTS for t in ts]
     p = []
-    if not artifact:
-        p.append('<meta charset="utf-8">')
-        p.append('<meta name="viewport" content="width=device-width,initial-scale=1">')
+    # charset 은 아티팩트판에도 넣는다. 래퍼가 넣어주긴 하지만,
+    # 파일을 그대로 로컬에서 열거나 PDF 로 뽑을 때 없으면 한글이 통째로 깨진다.
+    # body 안의 meta charset 은 파서가 무시하므로 아티팩트에서는 무해하다.
+    p.append('<meta charset="utf-8">')
+    p.append('<meta name="viewport" content="width=device-width,initial-scale=1">')
     p.append("<title>Navid Meta 사용자 매뉴얼</title>")
     p.append(FONTS)
     p.append("<style>%s</style>" % CSS)
@@ -376,10 +380,7 @@ def build(artifact=False):
                          % t["verify"])
 
             if t.get("traps"):
-                p.append('<div class="traps"><div class="h" '
-                         'style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;'
-                         'font-weight:600;letter-spacing:.11em;text-transform:uppercase;'
-                         'color:var(--ink-2);margin-bottom:8px">자주 겪는 문제</div>')
+                p.append('<div class="traps"><div class="h">자주 겪는 문제</div>')
                 for sym, why, fix in t["traps"]:
                     p.append('<div class="trap"><div class="sym">%s</div>' % sym)
                     if why:
