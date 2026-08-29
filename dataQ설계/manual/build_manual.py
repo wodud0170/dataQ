@@ -297,15 +297,15 @@ def build(artifact=False):
     if not artifact:
         p.append('<meta charset="utf-8">')
         p.append('<meta name="viewport" content="width=device-width,initial-scale=1">')
-    p.append("<title>Narae DataQ 사용자 매뉴얼</title>")
+    p.append("<title>Navid Meta 사용자 매뉴얼</title>")
     p.append(FONTS)
     p.append("<style>%s</style>" % CSS)
     p.append('<div class="wrap">')
 
     # 표지
     p.append('<header class="cover">')
-    p.append('<div class="eyebrow">User Manual &middot; v4.0</div>')
-    p.append("<h1>Narae DataQ 사용자 매뉴얼</h1>")
+    p.append('<div class="eyebrow">User Manual &middot; v5.0</div>')
+    p.append("<h1>Navid Meta 사용자 매뉴얼</h1>")
     p.append('<p class="lede">데이터 표준 관리 · 모델 수집 · 표준 진단 플랫폼. '
              '화면 설명이 아니라 <b>하려는 일</b> 순서로 정리했습니다. '
              '각 작업은 목적 · 사전 조건 · 단계 · 확인 방법 · 자주 겪는 문제로 되어 있습니다.</p>')
@@ -431,7 +431,7 @@ def build(artifact=False):
         p.append("<tr><td><b>%s</b></td><td>%s</td><td>%s</td></tr>" % (t, d, scope))
     p.append("</tbody></table></div>")
 
-    p.append("<footer>Narae DataQ 사용자 매뉴얼 v4.0 · 2026-08-23<br>"
+    p.append("<footer>Navid Meta 사용자 매뉴얼 v5.0 · 2026-08-25<br>"
              "작업 %d개 · 스크린샷은 현재 빌드에서 촬영 (개발 환경 데이터라 건수·이름은 운영과 다릅니다)"
              "</footer>" % len(tasks))
     p.append("</div>")
