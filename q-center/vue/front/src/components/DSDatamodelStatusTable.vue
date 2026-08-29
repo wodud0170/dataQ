@@ -540,7 +540,7 @@ export default {
       const url = this.$APIURL.base + 'api/dm/uploadTemplate?scope=tables';
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'dataq_tables_template.xlsx');
+      link.setAttribute('download', 'navidmeta_tables_template.xlsx');
       document.body.appendChild(link);
       link.click();
       link.remove();

@@ -13,6 +13,6 @@
   <!-- Checkmark in last cell -->
   <polyline points="58,75 67,84 80,66" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <!-- Text -->
-  <text x="110" y="48" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="300" fill="#5C6BC0" letter-spacing="4">NARAE</text>
+  <text x="110" y="48" font-family="'Segoe UI', Arial, sans-serif" font-size="22" font-weight="300" fill="#5C6BC0" letter-spacing="4">NAVID</text>
   <text x="110" y="84" font-family="'Segoe UI', Arial, sans-serif" font-size="36" font-weight="700" fill="#1A237E">Meta</text>
 </svg>

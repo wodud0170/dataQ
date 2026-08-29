@@ -2060,7 +2060,7 @@ export default {
       const url = this.$APIURL.base + 'api/dm/uploadTemplate?scope=attrs';
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'dataq_attrs_template.xlsx');
+      link.setAttribute('download', 'navidmeta_attrs_template.xlsx');
       document.body.appendChild(link);
       link.click();
       link.remove();
