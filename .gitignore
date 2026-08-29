@@ -80,5 +80,6 @@ test_upload_fail.xlsx
 # 매뉴얼 생성물 — build_manual.py + assets/ 로 재생성 가능 (HTML 각 5MB)
 dataQ설계/manual/index.html
 dataQ설계/manual/artifact.html
+dataQ설계/manual/intro.html
 dataQ설계/manual/*.pdf
 dataQ설계/manual/intro_artifact.html
