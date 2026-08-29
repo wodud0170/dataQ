@@ -91,6 +91,13 @@ li{margin:4px 0}
 .cover h1{font-size:clamp(29px,7.2vw,44px);line-height:1.16;letter-spacing:-.028em;
   font-weight:600;margin:12px 0 12px;text-wrap:balance}
 .lede{color:var(--ink-2);font-size:clamp(14.5px,3.6vw,17px);margin:0 0 24px;max-width:36em}
+.entry{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:12px;overflow:hidden}
+.entry-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;
+  background:var(--surface);padding:13px 16px;text-decoration:none;color:var(--ink)}
+.entry-row:hover{background:var(--accent-soft)}
+.entry-row .c{font-size:13.5px;color:var(--ink-2);flex:none;min-width:9.5em}
+.entry-row .d{font-weight:600;font-size:14.5px;color:var(--accent)}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:10px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
 .stat .n{font-family:"IBM Plex Mono",monospace;font-size:25px;font-weight:600;
@@ -320,16 +327,16 @@ def build(artifact=False):
     p.append('<header class="cover">')
     p.append('<div class="eyebrow">User Manual &middot; v5.0</div>')
     p.append("<h1>Navid Meta 사용자 매뉴얼</h1>")
-    p.append('<p class="lede">데이터 표준 관리 · 모델 수집 · 표준 진단 플랫폼. '
-             '화면 설명이 아니라 <b>하려는 일</b> 순서로 정리했습니다. '
-             '각 작업은 목적 · 사전 조건 · 단계 · 확인 방법 · 자주 겪는 문제로 되어 있습니다.</p>')
-    p.append('<div class="stats">')
-    p.append('<div class="stat"><div class="n">%d</div><div class="l">작업</div></div>' % len(tasks))
-    p.append('<div class="stat"><div class="n">%d</div><div class="l">부</div></div>' % len(PARTS))
-    p.append('<div class="stat"><div class="n">%d</div><div class="l">자주 겪는 문제</div></div>'
-             % sum(len(t.get("traps") or []) for t in tasks))
-    p.append('<div class="stat"><div class="n">%d</div><div class="l">오류 메시지</div></div>'
-             % len(ERROR_DICT))
+    p.append('<p class="lede">하려는 일을 목차에서 찾으세요. 처음부터 읽지 않아도 됩니다.</p>')
+    p.append('<div class="entry">')
+    for cond, dest, href in [
+        ("처음 쓴다면",              "작업 1 · 로그인하고 화면 구조 익히기", "#t1"),
+        ("오류 메시지를 만났다면",     "부록 C · 오류 메시지 사전",           "#errors"),
+        ("화면 이름만 안다면",        "부록 B · 화면 찾아보기",              "#screens"),
+        ("준수율을 올리려면",         "5부 · 표준 준수율 올리기",            "#t14"),
+    ]:
+        p.append('<a class="entry-row" href="%s"><span class="c">%s</span>'
+                 '<span class="d">%s</span></a>' % (href, cond, dest))
     p.append("</div></header>")
 
     # 목차

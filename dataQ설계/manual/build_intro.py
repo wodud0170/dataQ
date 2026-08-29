@@ -560,9 +560,8 @@ def build(artifact=False):
     p.append('</section>')
 
     p.append('<footer>Navid Meta &middot; 데이터 표준 관리 · 모델 수집 · 표준 진단 플랫폼<br>'
-             '이 문서의 수치와 기능 서술은 제품 소스 코드 · 설계 문서 · 자동화 테스트를 '
-             '대조해 확인한 것만 담았습니다. 스크린샷은 개발 환경에서 촬영했습니다. &middot; 2026-08-25'
-             '</footer>')
+             '스크린샷은 개발 환경에서 촬영했습니다. 건수와 이름은 실제 운영과 다릅니다. '
+             '&middot; 2026-08-25</footer>')
     p.append('</div>')
 
     out = os.path.join(HERE, "intro_artifact.html" if artifact else "intro.html")
