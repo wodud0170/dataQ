@@ -97,12 +97,19 @@ li{margin:4px 0}
   font-variant-numeric:tabular-nums;line-height:1.1;letter-spacing:-.02em;color:var(--accent)}
 .stat .l{font-size:12px;color:var(--ink-2);margin-top:4px;line-height:1.45}
 
-/* 파트 */
-.part{margin:60px 0 0}
-.part > h2{font-size:clamp(21px,5vw,27px);font-weight:600;letter-spacing:-.022em;
-  margin:0 0 6px;text-wrap:balance}
-.part > .sub{color:var(--ink-2);margin:0 0 6px;max-width:40em}
-.part-rule{height:3px;background:var(--accent);border-radius:2px;width:52px;margin:14px 0 4px}
+/* 파트 — 32개 작업이 이어지므로 파트 경계를 눈에 띄게 만든다.
+   번호 띠가 있어야 "지금 몇 부를 보고 있는지" 가 스크롤 중에도 유지된다. */
+.part{margin:74px 0 0;scroll-margin-top:20px}
+.part-head{display:flex;align-items:baseline;gap:14px;padding-bottom:14px;
+  border-bottom:2px solid var(--accent)}
+.part-no{font-family:"IBM Plex Mono",monospace;font-size:clamp(30px,7vw,44px);
+  font-weight:600;line-height:.9;color:var(--accent-soft);letter-spacing:-.05em;
+  flex:none;font-variant-numeric:tabular-nums}
+:root:not([data-theme="light"]) .part-no{color:var(--accent-soft)}
+.part-head > div{flex:1;min-width:0}
+.part > .part-head h2{font-size:clamp(21px,5vw,27px);font-weight:600;
+  letter-spacing:-.022em;margin:0;text-wrap:balance}
+.part .sub{color:var(--ink-2);margin:10px 0 0;max-width:40em;font-size:14.5px}
 
 /* 작업 카드 — 번호는 실제 순서를 뜻한다 (앞 작업이 뒤 작업의 사전 조건) */
 .task{background:var(--surface);border:1px solid var(--line);border-radius:14px;
@@ -110,6 +117,8 @@ li{margin:4px 0}
 @media(min-width:760px){ .task{padding:26px 28px} }
 .task > h3{font-size:clamp(17px,4vw,20px);font-weight:600;letter-spacing:-.018em;
   margin:0 0 4px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;text-wrap:balance}
+.task{scroll-margin-top:16px}
+.task:target{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),var(--shadow)}
 .tnum{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;
   color:var(--accent);background:var(--accent-soft);border-radius:6px;
   padding:2px 7px;flex:none;letter-spacing:.02em}
@@ -163,9 +172,10 @@ h2.app{font-size:clamp(20px,4.6vw,25px);font-weight:600;letter-spacing:-.02em;
 
 .toc{background:var(--surface);border:1px solid var(--line);border-radius:14px;
   padding:16px 18px;margin:24px 0}
-.toc .pt{font-size:11.5px;font-weight:600;
-  letter-spacing:.02em;color:var(--accent);
-  margin:14px 0 4px}
+.toc .pt{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--accent);
+  margin:16px 0 4px;display:flex;align-items:baseline;gap:8px}
+.toc .pt span{font-family:"IBM Plex Mono",monospace;font-size:10.5px;opacity:.65;
+  font-variant-numeric:tabular-nums}
 .toc .pt:first-child{margin-top:0}
 .toc ol{list-style:none;margin:0;padding:0}
 .toc a{display:flex;gap:10px;align-items:baseline;padding:5px 0;
@@ -325,8 +335,8 @@ def build(artifact=False):
     # 목차
     p.append('<nav class="toc">')
     n = 0
-    for title, _sub, ts in PARTS:
-        p.append('<div class="pt">%s</div><ol>' % title)
+    for pi, (title, _sub, ts) in enumerate(PARTS, 1):
+        p.append('<div class="pt"><span>%02d</span>%s</div><ol>' % (pi, title))
         for t in ts:
             n += 1
             p.append('<li><a href="#%s"><span class="n">%02d</span><span>%s</span></a></li>'
@@ -342,9 +352,10 @@ def build(artifact=False):
     # 본문
     n = 0
     missing = []
-    for title, sub, ts in PARTS:
+    for pi, (title, sub, ts) in enumerate(PARTS, 1):
         p.append('<section class="part">')
-        p.append('<h2>%s</h2><div class="part-rule"></div><p class="sub">%s</p>' % (title, sub))
+        p.append('<div class="part-head"><span class="part-no">%02d</span>'
+                 '<div><h2>%s</h2></div></div><p class="sub">%s</p>' % (pi, title, sub))
         for t in ts:
             n += 1
             p.append('<article class="task" id="%s">' % t["id"])
