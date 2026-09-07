@@ -28,6 +28,24 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: tb_event_log; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_event_log (
+    time_val timestamp(3) with time zone NOT NULL,
+    hostname character varying(50),
+    job_id character varying(50),
+    obj_id character varying(50),
+    obj_nm character varying(100),
+    obj_tp smallint,
+    job_ex_svc character varying(30),
+    severity character varying(10),
+    msg character varying(1000),
+    job_ex_user_id character varying(50)
+);
+
+
+--
 -- Name: dual; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -80,13 +98,6 @@ CREATE TABLE quality.tb_aprv_stats (
     aprv_stat_updt_rsn character varying(50),
     req_item_nm character varying(200)
 );
-
-
---
--- Name: COLUMN tb_aprv_stats.req_item_nm; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_aprv_stats.req_item_nm IS '요청 항목명 (반려 시 원본 삭제되므로 이력 보존용)';
 
 
 --
@@ -245,7 +256,8 @@ CREATE TABLE quality.tb_code_data (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     updt_dt character varying(14),
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -273,7 +285,8 @@ CREATE TABLE quality.tb_data_model (
     aprv_user_id character varying(50),
     aprv_dt character varying(14),
     aprv_comment character varying(500),
-    submission_id character varying(40)
+    submission_id character varying(40),
+    dict_id character varying(22)
 );
 
 
@@ -296,6 +309,13 @@ COMMENT ON COLUMN quality.tb_data_model.struct_diag_dt IS '구조진단 최종 �
 --
 
 COMMENT ON COLUMN quality.tb_data_model.model_type IS 'PHYSICAL(물리만), LOGICAL(논리만), BOTH(논리+물리)';
+
+
+--
+-- Name: COLUMN tb_data_model.dict_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model.dict_id IS '이 모델에 적용할 표준사전. NULL 이면 스케줄 진단 불가';
 
 
 --
@@ -339,37 +359,8 @@ CREATE TABLE quality.tb_data_model_attr (
     aprv_user_id character varying(50),
     aprv_dt character varying(14),
     aprv_comment character varying(500),
-    submission_id character varying(40),
-    fk_parent_obj_owner character varying(100)
+    submission_id character varying(40)
 );
-
-
---
--- Name: COLUMN tb_data_model_attr.attr_nm_kr; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_attr.attr_nm_kr IS '컬럼 논리명 (편집 가능). 최초 수집 시 ATTR_COMMENT 값 복사';
-
-
---
--- Name: COLUMN tb_data_model_attr.attr_comment; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_attr.attr_comment IS 'DB에서 수집한 컬럼 코멘트 원본 (수집 시 자동, 읽기 전용)';
-
-
---
--- Name: COLUMN tb_data_model_attr.use_yn; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_attr.use_yn IS '사용여부 Y/N (N=소프트 삭제)';
-
-
---
--- Name: COLUMN tb_data_model_attr.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_attr.deleted_dt IS '소프트 삭제 일시 YYYYMMDDHH24MISS';
 
 
 --
@@ -518,34 +509,6 @@ COMMENT ON TABLE quality.tb_data_model_clct IS '데이터수집';
 
 
 --
--- Name: COLUMN tb_data_model_clct.clct_type; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_clct.clct_type IS '스냅샷 원천 (DBMS: 수집, MANUAL: 수동편집, ERWIN: ERwin 임포트)';
-
-
---
--- Name: COLUMN tb_data_model_clct.added_cnt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_clct.added_cnt IS '재수집 시 추가된 테이블·컬럼 합계';
-
-
---
--- Name: COLUMN tb_data_model_clct.deleted_cnt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_clct.deleted_cnt IS '재수집 시 삭제된 테이블·컬럼 합계';
-
-
---
--- Name: COLUMN tb_data_model_clct.modified_cnt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_clct.modified_cnt IS '재수집 시 변경된 테이블·컬럼 합계';
-
-
---
 -- Name: tb_data_model_constraint; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -576,20 +539,6 @@ CREATE TABLE quality.tb_data_model_constraint (
 
 
 --
--- Name: COLUMN tb_data_model_constraint.use_yn; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_constraint.use_yn IS '사용 여부 (Y/N). soft-delete 대상은 N';
-
-
---
--- Name: COLUMN tb_data_model_constraint.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_constraint.deleted_dt IS 'soft-delete 시각 (YYYYMMDDHH24MISS)';
-
-
---
 -- Name: tb_data_model_index; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -614,20 +563,6 @@ CREATE TABLE quality.tb_data_model_index (
     aprv_comment character varying(500),
     submission_id character varying(40)
 );
-
-
---
--- Name: COLUMN tb_data_model_index.use_yn; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_index.use_yn IS '사용 여부 (Y/N). soft-delete 대상은 N';
-
-
---
--- Name: COLUMN tb_data_model_index.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_index.deleted_dt IS 'soft-delete 시각 (YYYYMMDDHH24MISS)';
 
 
 --
@@ -688,34 +623,6 @@ CREATE TABLE quality.tb_data_model_obj (
     biz_area_id character varying(40),
     subj_area_id character varying(40)
 );
-
-
---
--- Name: COLUMN tb_data_model_obj.obj_nm_kr; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_obj.obj_nm_kr IS '테이블 논리명 (편집 가능). 최초 수집 시 OBJ_COMMENT 값 복사';
-
-
---
--- Name: COLUMN tb_data_model_obj.obj_comment; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_obj.obj_comment IS 'DB에서 수집한 테이블 코멘트 원본 (수집 시 자동, 읽기 전용)';
-
-
---
--- Name: COLUMN tb_data_model_obj.use_yn; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_obj.use_yn IS '사용여부 Y/N (N=소프트 삭제)';
-
-
---
--- Name: COLUMN tb_data_model_obj.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_obj.deleted_dt IS '소프트 삭제 일시 YYYYMMDDHH24MISS';
 
 
 --
@@ -802,8 +709,16 @@ CREATE TABLE quality.tb_diag_job (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     start_dt character varying(14),
-    end_dt character varying(14)
+    end_dt character varying(14),
+    dict_id character varying(22)
 );
+
+
+--
+-- Name: COLUMN tb_diag_job.dict_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_diag_job.dict_id IS '이 진단이 사용한 표준사전';
 
 
 --
@@ -819,8 +734,7 @@ CREATE TABLE quality.tb_diag_result (
     diag_type character varying(50) NOT NULL,
     diag_detail text,
     std_value character varying(500),
-    actual_value character varying(500),
-    obj_owner character varying(100)
+    actual_value character varying(500)
 );
 
 
@@ -865,7 +779,8 @@ CREATE TABLE quality.tb_diag_schedule (
     cret_user_id character varying(40),
     cret_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updt_user_id character varying(40),
-    updt_dt timestamp without time zone
+    updt_dt timestamp without time zone,
+    dict_id character varying(22)
 );
 
 
@@ -902,6 +817,13 @@ COMMENT ON COLUMN quality.tb_diag_schedule.use_yn IS '활성/비활성 토글';
 --
 
 COMMENT ON COLUMN quality.tb_diag_schedule.last_exec_log_id IS '최근 실행 LOG 참조 (빠른 조회용)';
+
+
+--
+-- Name: COLUMN tb_diag_schedule.dict_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_diag_schedule.dict_id IS '예약 진단이 사용할 표준사전. NULL 이면 모델 값';
 
 
 --
@@ -979,7 +901,8 @@ CREATE TABLE quality.tb_domain (
     updt_user_id character varying(50),
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
-    use_yn character(1) DEFAULT 'Y'::bpchar
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -995,7 +918,8 @@ CREATE TABLE quality.tb_domain_clsf (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     updt_dt character varying(14),
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -1010,7 +934,8 @@ CREATE TABLE quality.tb_domain_grp (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     updt_dt character varying(14),
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -1027,10 +952,10 @@ CREATE TABLE quality.tb_domain_rule (
     sort_ord integer DEFAULT 1 NOT NULL,
     use_yn character varying(1) DEFAULT 'Y'::character varying NOT NULL,
     descr text,
-    cret_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     cret_user_id character varying(50),
-    updt_dt timestamp without time zone,
-    updt_user_id character varying(50)
+    cret_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updt_user_id character varying(50),
+    updt_dt timestamp without time zone
 );
 
 
@@ -1038,25 +963,7 @@ CREATE TABLE quality.tb_domain_rule (
 -- Name: TABLE tb_domain_rule; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_domain_rule IS '도메인별 검증 규칙 1:N (70번 §2.1)';
-
-
---
--- Name: tb_event_log; Type: TABLE; Schema: quality; Owner: -
---
-
-CREATE TABLE quality.tb_event_log (
-    time_val timestamp(3) with time zone NOT NULL,
-    hostname character varying(50),
-    job_id character varying(50),
-    obj_id character varying(50),
-    obj_nm character varying(100),
-    obj_tp smallint,
-    job_ex_svc character varying(30),
-    severity character varying(10),
-    msg character varying(1000),
-    job_ex_user_id character varying(50)
-);
+COMMENT ON TABLE quality.tb_domain_rule IS '도메인별 룰 정의 (1:N) — 70번';
 
 
 --
@@ -1070,9 +977,8 @@ CREATE TABLE quality.tb_qual_col_rule (
     domain_rule_id character varying(40),
     custom_rule_id character varying(40),
     exclude_yn character varying(1) DEFAULT 'N'::character varying,
-    updt_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updt_user_id character varying(50),
-    obj_owner character varying(100) DEFAULT ''::character varying NOT NULL
+    updt_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -1080,7 +986,7 @@ CREATE TABLE quality.tb_qual_col_rule (
 -- Name: TABLE tb_qual_col_rule; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_qual_col_rule IS '컬럼 → 적용 규칙 매핑 (70번 §2.2). 행 없으면 도메인 SORT_ORD=1 default';
+COMMENT ON TABLE quality.tb_qual_col_rule IS '컬럼별 룰 매핑 (도메인룰 우선 / 커스텀 / 제외) — 70번';
 
 
 --
@@ -1156,7 +1062,7 @@ CREATE TABLE quality.tb_qual_profile_history (
 -- Name: TABLE tb_qual_profile_history; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_qual_profile_history IS '값 진단 시계열 누적 (통계 메뉴용, 70번 §2.3)';
+COMMENT ON TABLE quality.tb_qual_profile_history IS '값 프로파일 시계열 누적 (MIN/MAX/AVG/STD/LEN/COUNT) — 70번';
 
 
 --
@@ -1179,8 +1085,7 @@ CREATE TABLE quality.tb_qual_profile_result (
     min_len integer,
     max_len integer,
     top_values text,
-    updated_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    obj_owner character varying(100)
+    updated_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -1251,14 +1156,14 @@ COMMENT ON TABLE quality.tb_qual_rule_catalog IS '룰 템플릿 (이메일/주�
 -- Name: COLUMN tb_qual_rule_catalog.is_built_in; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_qual_rule_catalog.is_built_in IS '시스템 기본 (Y, 읽기전용 + fork만 가능) / 사용자 정의 (N) — 83번';
+COMMENT ON COLUMN quality.tb_qual_rule_catalog.is_built_in IS '83번 Step2 — 시스템 기본 룰(Y, 읽기 전용) vs 사용자 정의(N) 분리';
 
 
 --
 -- Name: COLUMN tb_qual_rule_catalog.domain_clsf_nm; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_qual_rule_catalog.domain_clsf_nm IS '행안부 도메인 분류명 (전화번호/금액/연월일 등). 분류 단위 자동 추천 키';
+COMMENT ON COLUMN quality.tb_qual_rule_catalog.domain_clsf_nm IS '83번 Step2 — 행안부 도메인 분류명 (자동 추천 매칭 키)';
 
 
 --
@@ -1274,8 +1179,7 @@ CREATE TABLE quality.tb_qual_rule_result (
     violation_cnt bigint,
     violation_rate numeric(7,4),
     sample_cnt integer,
-    error_msg text,
-    obj_owner character varying(100)
+    error_msg text
 );
 
 
@@ -1296,8 +1200,7 @@ CREATE TABLE quality.tb_qual_running_lock (
     attr_nm character varying(200) NOT NULL,
     diag_id character varying(50),
     user_id character varying(50),
-    start_dt character varying(14) NOT NULL,
-    obj_owner character varying(100)
+    start_dt character varying(14) NOT NULL
 );
 
 
@@ -1306,48 +1209,6 @@ CREATE TABLE quality.tb_qual_running_lock (
 --
 
 COMMENT ON TABLE quality.tb_qual_running_lock IS '품질 진단 컬럼 단위 동시 실행 방지 — application-level mutex (운영 DB 락 X). 83번';
-
-
---
--- Name: COLUMN tb_qual_running_lock.dm_id; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.dm_id IS '데이터 모델 ID';
-
-
---
--- Name: COLUMN tb_qual_running_lock.obj_nm; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.obj_nm IS '테이블명';
-
-
---
--- Name: COLUMN tb_qual_running_lock.attr_nm; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.attr_nm IS '컬럼명';
-
-
---
--- Name: COLUMN tb_qual_running_lock.diag_id; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.diag_id IS '진행 중 진단 ID';
-
-
---
--- Name: COLUMN tb_qual_running_lock.user_id; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.user_id IS '진단 트리거한 사용자';
-
-
---
--- Name: COLUMN tb_qual_running_lock.start_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.start_dt IS 'lock 획득 시각 (YYYYMMDDHH24MISS) — 30분 경과 시 stale 자동 정리';
 
 
 --
@@ -1361,8 +1222,7 @@ CREATE TABLE quality.tb_qual_violation_sample (
     attr_nm character varying(100) DEFAULT ''::character varying NOT NULL,
     seq integer NOT NULL,
     pk_values text,
-    violating_val character varying(500),
-    obj_owner character varying(100)
+    violating_val character varying(500)
 );
 
 
@@ -1371,6 +1231,45 @@ CREATE TABLE quality.tb_qual_violation_sample (
 --
 
 COMMENT ON TABLE quality.tb_qual_violation_sample IS '위반 샘플 행 (PK + 위반값, 룰당 기본 100건)';
+
+
+--
+-- Name: tb_std_dict; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_std_dict (
+    dict_id character varying(22) NOT NULL,
+    dict_nm character varying(100) NOT NULL,
+    dict_desc character varying(500),
+    default_yn character(1) DEFAULT 'N'::bpchar,
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    term_last_word_clsf_yn character(1) DEFAULT 'N'::bpchar,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_std_dict; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_std_dict IS '표준사전 (단어·용어·도메인·코드의 이름공간)';
+
+
+--
+-- Name: COLUMN tb_std_dict.default_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.default_yn IS '신규 모델 등록 시 기본 선택되는 사전';
+
+
+--
+-- Name: COLUMN tb_std_dict.term_last_word_clsf_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.term_last_word_clsf_yn IS '용어의 마지막 단어가 형식단어여야 하는지. Y=필수, N=미적용';
 
 
 --
@@ -1773,7 +1672,8 @@ CREATE TABLE quality.tb_terms (
     updt_user_id character varying(50),
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
-    use_yn character(1) DEFAULT 'Y'::bpchar
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -1832,7 +1732,8 @@ CREATE TABLE quality.tb_word (
     updt_user_id character varying(50),
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
-    use_yn character(1) DEFAULT 'Y'::bpchar
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -2009,7 +1910,7 @@ ALTER TABLE ONLY quality.tb_domain_rule
 --
 
 ALTER TABLE ONLY quality.tb_qual_col_rule
-    ADD CONSTRAINT pk_tb_qual_col_rule PRIMARY KEY (dm_id, obj_owner, obj_nm, attr_nm);
+    ADD CONSTRAINT pk_tb_qual_col_rule PRIMARY KEY (dm_id, obj_nm, attr_nm);
 
 
 --
@@ -2229,6 +2130,14 @@ ALTER TABLE ONLY quality.tb_domain
 
 
 --
+-- Name: tb_std_dict tb_std_dict_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_std_dict
+    ADD CONSTRAINT tb_std_dict_pk PRIMARY KEY (dict_id);
+
+
+--
 -- Name: tb_subj_area tb_subj_area_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -2288,7 +2197,7 @@ ALTER TABLE ONLY quality.tb_word
 -- Name: domain_grp_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX domain_grp_ux_1 ON quality.tb_domain_grp USING btree (domain_grp_nm);
+CREATE UNIQUE INDEX domain_grp_ux_1 ON quality.tb_domain_grp USING btree (dict_id, domain_grp_nm);
 
 
 --
@@ -2317,13 +2226,6 @@ CREATE INDEX idx_qual_rule_catalog_clsf ON quality.tb_qual_rule_catalog USING bt
 --
 
 CREATE INDEX imsi_comment_attr_name_idx ON quality.imsi_comment USING btree (attr_name);
-
-
---
--- Name: ix_diag_result_owner_obj; Type: INDEX; Schema: quality; Owner: -
---
-
-CREATE INDEX ix_diag_result_owner_obj ON quality.tb_diag_result USING btree (diag_job_id, obj_owner, obj_nm, attr_nm);
 
 
 --
@@ -2456,7 +2358,7 @@ CREATE INDEX tb_code_data_ix_3 ON quality.tb_code_data USING btree (code_val);
 -- Name: tb_code_data_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_code_data_ux_1 ON quality.tb_code_data USING btree (code_nm, code_val);
+CREATE UNIQUE INDEX tb_code_data_ux_1 ON quality.tb_code_data USING btree (dict_id, code_nm, code_val);
 
 
 --
@@ -2512,14 +2414,21 @@ CREATE INDEX tb_data_model_map_ix3 ON quality.tb_data_model_map USING btree (obj
 -- Name: tb_domain_clsf_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_domain_clsf_ux_1 ON quality.tb_domain_clsf USING btree (domain_clsf_nm);
+CREATE UNIQUE INDEX tb_domain_clsf_ux_1 ON quality.tb_domain_clsf USING btree (dict_id, domain_clsf_nm);
+
+
+--
+-- Name: tb_domain_ix_dict; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX tb_domain_ix_dict ON quality.tb_domain USING btree (dict_id);
 
 
 --
 -- Name: tb_domain_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_domain_ux_1 ON quality.tb_domain USING btree (domain_nm);
+CREATE UNIQUE INDEX tb_domain_ux_1 ON quality.tb_domain USING btree (dict_id, domain_nm);
 
 
 --
@@ -2530,17 +2439,31 @@ CREATE INDEX tb_event_log_time_idx ON quality.tb_event_log USING btree (time_val
 
 
 --
+-- Name: tb_std_dict_ux_1; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE UNIQUE INDEX tb_std_dict_ux_1 ON quality.tb_std_dict USING btree (dict_nm);
+
+
+--
+-- Name: tb_terms_ix_dict; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX tb_terms_ix_dict ON quality.tb_terms USING btree (dict_id);
+
+
+--
 -- Name: tb_terms_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_terms_ux_1 ON quality.tb_terms USING btree (terms_nm);
+CREATE UNIQUE INDEX tb_terms_ux_1 ON quality.tb_terms USING btree (dict_id, terms_nm);
 
 
 --
 -- Name: tb_terms_ux_2; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (terms_eng_abrv_nm);
+CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (dict_id, terms_eng_abrv_nm);
 
 
 --
@@ -2548,6 +2471,13 @@ CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (terms_eng_abr
 --
 
 CREATE INDEX tb_word_ix_3 ON quality.tb_word USING btree (word_eng_nm);
+
+
+--
+-- Name: tb_word_ix_dict; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX tb_word_ix_dict ON quality.tb_word USING btree (dict_id);
 
 
 --
@@ -2561,35 +2491,21 @@ CREATE UNIQUE INDEX tb_word_ux_1 ON quality.tb_word USING btree (word_id, word_n
 -- Name: tb_word_ux_2; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_word_ux_2 ON quality.tb_word USING btree (word_eng_abrv_nm);
+CREATE UNIQUE INDEX tb_word_ux_2 ON quality.tb_word USING btree (dict_id, word_eng_abrv_nm);
 
 
 --
--- Name: uix_domain_nm; Type: INDEX; Schema: quality; Owner: -
+-- Name: tb_word_ux_3; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX uix_domain_nm ON quality.tb_domain USING btree (domain_nm);
-
-
---
--- Name: uix_terms_nm; Type: INDEX; Schema: quality; Owner: -
---
-
-CREATE UNIQUE INDEX uix_terms_nm ON quality.tb_terms USING btree (terms_nm);
+CREATE UNIQUE INDEX tb_word_ux_3 ON quality.tb_word USING btree (dict_id, word_nm);
 
 
 --
--- Name: uix_word_eng_abrv_nm; Type: INDEX; Schema: quality; Owner: -
+-- Name: tb_event_log ts_insert_blocker; Type: TRIGGER; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX uix_word_eng_abrv_nm ON quality.tb_word USING btree (word_eng_abrv_nm);
-
-
---
--- Name: uix_word_nm; Type: INDEX; Schema: quality; Owner: -
---
-
-CREATE UNIQUE INDEX uix_word_nm ON quality.tb_word USING btree (word_nm);
+CREATE TRIGGER ts_insert_blocker BEFORE INSERT ON quality.tb_event_log FOR EACH ROW EXECUTE FUNCTION _timescaledb_internal.insert_blocker();
 
 
 --
@@ -2605,7 +2521,7 @@ ALTER TABLE ONLY quality.tb_data_model
 --
 
 ALTER TABLE ONLY quality.tb_domain_clsf
-    ADD CONSTRAINT tb_domain_clsf_fk_1 FOREIGN KEY (domain_grp_nm) REFERENCES quality.tb_domain_grp(domain_grp_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT tb_domain_clsf_fk_1 FOREIGN KEY (dict_id, domain_grp_nm) REFERENCES quality.tb_domain_grp(dict_id, domain_grp_nm) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -2613,7 +2529,7 @@ ALTER TABLE ONLY quality.tb_domain_clsf
 --
 
 ALTER TABLE ONLY quality.tb_domain
-    ADD CONSTRAINT tb_domain_fk_1 FOREIGN KEY (domain_grp_nm) REFERENCES quality.tb_domain_grp(domain_grp_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT tb_domain_fk_1 FOREIGN KEY (dict_id, domain_grp_nm) REFERENCES quality.tb_domain_grp(dict_id, domain_grp_nm) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -2621,7 +2537,7 @@ ALTER TABLE ONLY quality.tb_domain
 --
 
 ALTER TABLE ONLY quality.tb_domain
-    ADD CONSTRAINT tb_domain_fk_2 FOREIGN KEY (domain_clsf_nm) REFERENCES quality.tb_domain_clsf(domain_clsf_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT tb_domain_fk_2 FOREIGN KEY (dict_id, domain_clsf_nm) REFERENCES quality.tb_domain_clsf(dict_id, domain_clsf_nm) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -2629,7 +2545,7 @@ ALTER TABLE ONLY quality.tb_domain
 --
 
 ALTER TABLE ONLY quality.tb_terms
-    ADD CONSTRAINT tb_terms_fk FOREIGN KEY (domain_nm) REFERENCES quality.tb_domain(domain_nm) ON UPDATE CASCADE;
+    ADD CONSTRAINT tb_terms_fk FOREIGN KEY (dict_id, domain_nm) REFERENCES quality.tb_domain(dict_id, domain_nm) ON UPDATE CASCADE;
 
 
 --

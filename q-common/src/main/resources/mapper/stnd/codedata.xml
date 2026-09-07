@@ -88,6 +88,7 @@
             ,CODE_VAL_DESC
             ,CRET_DT
             ,CRET_USER_ID
+            ,DICT_ID
            )
            VALUES
            (
@@ -99,6 +100,7 @@
             ,#{codeValDesc, jdbcType=VARCHAR}
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{cretUserId, jdbcType=VARCHAR}
+            ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
            )
   </insert>
 

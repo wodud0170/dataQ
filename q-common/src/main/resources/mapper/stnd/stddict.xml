@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="stddict">
+
+	<!-- 98번 표준사전 세트 — 사전 CRUD + 사전 속성 조회.
+	     사전 속성(형식단어 필수 여부 등)은 기관마다 표준화 관례가 달라서 사전에 붙는다. -->
+
+	<sql id="cols">
+		       dict_id                as "dictId",
+		       dict_nm                as "dictNm",
+		       dict_desc              as "dictDesc",
+		       default_yn             as "defaultYn",
+		       use_yn                 as "useYn",
+		       term_last_word_clsf_yn as "termLastWordClsfYn",
+		       cret_dt                as "cretDt",
+		       cret_user_id           as "cretUserId",
+		       updt_dt                as "updtDt",
+		       updt_user_id           as "updtUserId"
+	</sql>
+
+	<select id="selectDictList" resultType="java.util.Map">
+		SELECT <include refid="cols"/>
+		  FROM tb_std_dict
+		 WHERE COALESCE(use_yn, 'Y') = 'Y'
+		 ORDER BY default_yn DESC, dict_nm
+	</select>
+
+	<select id="selectDictById" parameterType="java.lang.String" resultType="java.util.Map">
+		SELECT <include refid="cols"/>
+		  FROM tb_std_dict
+		 WHERE dict_id = #{dictId}
+	</select>
+
+	<!-- 신규 모델 등록 화면의 기본 선택값 -->
+	<select id="selectDefaultDictId" resultType="java.lang.String">
+		SELECT dict_id
+		  FROM tb_std_dict
+		 WHERE COALESCE(use_yn, 'Y') = 'Y'
+		 ORDER BY default_yn DESC, cret_dt
+		 LIMIT 1
+	</select>
+
+	<!-- 모델이 쓰는 사전. 모델에 사전이 없으면 NULL 이 나온다 (스케줄 차단 판단용) -->
+	<select id="selectDictIdByModel" parameterType="java.lang.String" resultType="java.lang.String">
+		SELECT dict_id
+		  FROM tb_data_model
+		 WHERE dm_id = #{dmId}
+	</select>
+
+	<!-- 사전별 등록 건수 (사전 관리 화면) -->
+	<select id="selectDictStats" parameterType="java.lang.String" resultType="java.util.Map">
+		SELECT (SELECT count(*) FROM tb_word   WHERE dict_id = #{dictId}) as "wordCnt",
+		       (SELECT count(*) FROM tb_terms  WHERE dict_id = #{dictId}) as "termsCnt",
+		       (SELECT count(*) FROM tb_domain WHERE dict_id = #{dictId}) as "domainCnt",
+		       (SELECT count(*) FROM tb_data_model WHERE dict_id = #{dictId}) as "modelCnt"
+	</select>
+
+	<insert id="insertDict" parameterType="java.util.Map">
+		INSERT INTO tb_std_dict
+		  (dict_id, dict_nm, dict_desc, default_yn, use_yn,
+		   term_last_word_clsf_yn, cret_dt, cret_user_id, updt_dt, updt_user_id)
+		VALUES
+		  (#{dictId}, #{dictNm}, #{dictDesc, jdbcType=VARCHAR},
+		   COALESCE(#{defaultYn, jdbcType=VARCHAR}, 'N'), 'Y',
+		   COALESCE(#{termLastWordClsfYn, jdbcType=VARCHAR}, 'N'),
+		   to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR},
+		   to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR})
+	</insert>
+
+	<update id="updateDict" parameterType="java.util.Map">
+		UPDATE tb_std_dict
+		   SET dict_nm                = #{dictNm},
+		       dict_desc              = #{dictDesc, jdbcType=VARCHAR},
+		       term_last_word_clsf_yn = COALESCE(#{termLastWordClsfYn, jdbcType=VARCHAR}, term_last_word_clsf_yn),
+		       updt_dt                = to_char(now(), 'YYYYMMDDHH24MISS'),
+		       updt_user_id           = #{userId, jdbcType=VARCHAR}
+		 WHERE dict_id = #{dictId}
+	</update>
+
+	<!-- 기본 사전은 하나만. 새로 지정하기 전에 전부 내린다. -->
+	<update id="clearDefaultDict">
+		UPDATE tb_std_dict SET default_yn = 'N' WHERE default_yn = 'Y'
+	</update>
+
+	<update id="setDefaultDict" parameterType="java.lang.String">
+		UPDATE tb_std_dict SET default_yn = 'Y' WHERE dict_id = #{dictId}
+	</update>
+
+	<!-- 물리 삭제하지 않는다. 사전이 사라지면 그 사전으로 잰 진단 이력을 해석할 수 없다. -->
+	<update id="disableDict" parameterType="java.util.Map">
+		UPDATE tb_std_dict
+		   SET use_yn       = 'N',
+		       updt_dt      = to_char(now(), 'YYYYMMDDHH24MISS'),
+		       updt_user_id = #{userId, jdbcType=VARCHAR}
+		 WHERE dict_id = #{dictId}
+		   AND default_yn <![CDATA[<>]]> 'Y'
+	</update>
+
+</mapper>

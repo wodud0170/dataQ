@@ -86,6 +86,9 @@ public class DataModelController {
 	private SqlSessionTemplate sqlSessionTemplate;
 
 	@Autowired
+	private com.ndata.quality.service.StdDictService dictService;
+
+	@Autowired
 	private ExcelDownloadService excelDownloadService;
 
 	@Autowired
@@ -2584,7 +2587,7 @@ public class DataModelController {
 
 			if (terms.getDomainNm() != null) {
 				com.ndata.quality.model.std.StdDomainVo domain =
-					sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", terms.getDomainNm());
+					sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", terms.getDomainNm()));
 				if (domain != null) {
 					result.put("domainId", domain.getId());
 					result.put("dataType", domain.getDataType());

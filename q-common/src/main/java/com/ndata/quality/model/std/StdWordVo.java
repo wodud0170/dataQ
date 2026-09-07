@@ -4,6 +4,8 @@ import lombok.Data;
 
 @Data
 public class StdWordVo {
+	/** 98번 — 이 항목이 속한 표준사전. */
+	private String dictId;
 	private String id;
 	private String wordNm;
 	private String wordEngAbrvNm;

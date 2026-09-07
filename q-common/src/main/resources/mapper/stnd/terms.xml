@@ -235,9 +235,10 @@
 	</select>
 
 	<!-- 등록 시 중복 검사용 — 미승인 용어와의 중복도 잡아야 하므로 승인 필터 없음 -->
-	<select id="selectTermsByEngNm" parameterType="String" resultMap="stdTermsMap">
+	<select id="selectTermsByEngNm" parameterType="java.util.Map" resultMap="stdTermsMap">
 		<include refid="termsSingleSelectBody"/>
 			where A.TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
+			  and A.DICT_ID = #{dictId}
 	</select>
 
 	<!-- 진단용: 전체 용어 + 도메인 데이터 한번에 로드 (UNNEST 없이 1건/용어) -->
@@ -294,6 +295,7 @@
             ,CRET_USER_ID	
 			,APRV_STAT_UPDT_DT
 			,REQ_SYS_CD
+            ,DICT_ID
            )
            VALUES
            (
@@ -313,6 +315,7 @@
             ,#{cretUserId, jdbcType=VARCHAR}
 			,to_char(now(), 'YYYYMMDDHH24MISS')
 			,#{reqSysCd, jdbcType=VARCHAR}
+            ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
            )
 	</insert>
 

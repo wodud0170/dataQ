@@ -4,6 +4,8 @@ import lombok.Data;
 
 @Data
 public class StdDomainVo {
+	/** 98번 — 이 항목이 속한 표준사전. */
+	private String dictId;
 	private String id;
 	private String domainNm;
 	private String domainGrpNm;

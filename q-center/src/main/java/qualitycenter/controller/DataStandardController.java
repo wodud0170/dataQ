@@ -89,6 +89,9 @@ public class DataStandardController {
 	private SqlSessionTemplate sqlSessionTemplate;
 
 	@Autowired
+	private com.ndata.quality.service.StdDictService dictService;
+
+	@Autowired
 	private SqlSessionFactory sqlSessionFactory; // transaction 사용할 경우 사용
 
 	@Autowired
@@ -341,7 +344,7 @@ public class DataStandardController {
 			// 영문약어가 TB_WORD에 이미 등록되어 있으면 중복 경고
 			boolean abrvDuplicate = false;
 			if (!dictAbrv.isEmpty()) {
-				StdWordVo existing = sqlSessionTemplate.selectOne("word.selectWordByEngAbrvNm", dictAbrv);
+				StdWordVo existing = sqlSessionTemplate.selectOne("word.selectWordByEngAbrvNm", dictService.nameParam(null, "wordEngAbrvNm", dictAbrv));
 				if (existing != null) {
 					abrvDuplicate = true;
 				}
@@ -376,7 +379,7 @@ public class DataStandardController {
 	/** 영문약어로 단어 조회 (용어 빠른 등록용) */
 	@RequestMapping(value = "/getWordByEngAbrvNm", method = RequestMethod.GET)
 	public StdWordVo getWordByEngAbrvNm(String wordEngAbrvNm) {
-		List<StdWordVo> list = sqlSessionTemplate.selectList("word.selectWordByEngAbrvNm", wordEngAbrvNm);
+		List<StdWordVo> list = sqlSessionTemplate.selectList("word.selectWordByEngAbrvNm", dictService.nameParam(null, "wordEngAbrvNm", wordEngAbrvNm));
 		return list.isEmpty() ? null : list.get(0);
 	}
 
@@ -1100,7 +1103,7 @@ public class DataStandardController {
 			// 86번 #30 — 입력 검증 강화 (raw DB 에러 노출 방지 + 빈값/이상치 차단)
 			validateDomainInput(dataVo);
 			// 중복 체크: 동일 도메인명이 이미 존재하면 승인 상태에 따라 메시지 분기
-			StdDomainVo existingDomain = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dataVo.getDomainNm());
+			StdDomainVo existingDomain = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", dataVo.getDomainNm()));
 			if (existingDomain != null) {
 				String dupMsg = "Y".equals(existingDomain.getAprvYn())
 						? "이미 승인된 도메인명입니다."
@@ -1267,7 +1270,7 @@ public class DataStandardController {
 			// 86번 #30 — updateDomain 도 동일 검증
 			validateDomainInput(dataVo);
 			// 변경 전 값 조회
-			List<StdDomainVo> prevList = sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dataVo.getDomainNm());
+			List<StdDomainVo> prevList = sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", dataVo.getDomainNm()));
 			String prevValue = prevList != null && !prevList.isEmpty() ? prevList.get(0).toString() : null;
 			sqlSessionTemplate.update("domain.updateDomain", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
@@ -1338,7 +1341,7 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/getDomainInfoByNm", method = RequestMethod.GET)
 	public List<StdDomainVo> getDomainInfoByNm(String domainNm) {
-		return sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", domainNm);
+		return sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", domainNm));
 	}
 
 	/**
@@ -1849,7 +1852,7 @@ public class DataStandardController {
 								break;
 							case DOMAIN:
 								if (targetNm != null) {
-									Object domainObj = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", targetNm);
+									Object domainObj = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", targetNm));
 									currValue = domainObj != null ? domainObj.toString() : null;
 								}
 								break;
@@ -2300,7 +2303,7 @@ public class DataStandardController {
 
 				// 도메인 유효성 체크
 				if (domainNm != null && !domainNm.trim().isEmpty()) {
-					Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", domainNm.trim());
+					Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", domainNm.trim()));
 					if (domainCheck == null) {
 						throw new RuntimeException("등록되지 않은 도메인입니다: " + domainNm);
 					}
@@ -3134,7 +3137,7 @@ public class DataStandardController {
 	 */
 	private String checkForbiddenWord(String wordNm) {
 		if (wordNm == null || wordNm.trim().isEmpty()) return null;
-		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordByForbiddenNm", wordNm.trim());
+		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordByForbiddenNm", dictService.nameParam(null, "wordNm", wordNm.trim()));
 		if (found != null) {
 			String stdWordNm = (String) found.get("wordNm");
 			return "'" + wordNm.trim() + "'은(는) '" + stdWordNm + "'의 금칙어입니다. '" + stdWordNm + "'를 사용해주세요.";

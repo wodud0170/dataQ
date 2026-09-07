@@ -35,27 +35,673 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: tb_job_log; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_job_log (
+    job_id character varying(50) NOT NULL,
+    time_val timestamp(3) with time zone NOT NULL,
+    p_obj_id character varying(50) NOT NULL,
+    p_obj_nm character varying(100),
+    obj_id character varying(50) NOT NULL,
+    obj_nm character varying(100),
+    obj_tp smallint,
+    job_ex_svc character varying(30),
+    status smallint,
+    prcs_cnt bigint,
+    succ_cnt bigint,
+    msg character varying(1000),
+    job_ex_user_id character varying(50),
+    job_ex_group_id character varying(50)
+);
+
+
+--
+-- Name: tb_event_log; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_event_log (
+    time_val timestamp(3) with time zone NOT NULL,
+    hostname character varying(50),
+    job_id character varying(50),
+    obj_id character varying(50),
+    obj_nm character varying(100),
+    obj_tp smallint,
+    job_ex_svc character varying(30),
+    severity character varying(10),
+    msg character varying(4000),
+    job_ex_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_event_log; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_event_log (
+    time_val timestamp(3) with time zone NOT NULL,
+    hostname character varying(50),
+    job_id character varying(50),
+    obj_id character varying(50),
+    obj_nm character varying(100),
+    obj_tp smallint,
+    job_ex_svc character varying(30),
+    severity character varying(10),
+    msg character varying(1000),
+    job_ex_user_id character varying(50)
+);
+
+
+--
+-- Name: dual; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.dual (
+    c1 character(1)
+);
+
+
+--
+-- Name: qrtz_blob_triggers; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_blob_triggers (
+    sched_name character varying(120) NOT NULL,
+    trigger_name character varying(200) NOT NULL,
+    trigger_group character varying(200) NOT NULL,
+    blob_data bytea
+);
+
+
+--
+-- Name: qrtz_calendars; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_calendars (
+    sched_name character varying(120) NOT NULL,
+    calendar_name character varying(200) NOT NULL,
+    calendar bytea NOT NULL
+);
+
+
+--
+-- Name: qrtz_cron_triggers; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_cron_triggers (
+    sched_name character varying(120) NOT NULL,
+    trigger_name character varying(200) NOT NULL,
+    trigger_group character varying(200) NOT NULL,
+    cron_expression character varying(120) NOT NULL,
+    time_zone_id character varying(80)
+);
+
+
+--
+-- Name: qrtz_fired_triggers; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_fired_triggers (
+    sched_name character varying(120) NOT NULL,
+    entry_id character varying(95) NOT NULL,
+    trigger_name character varying(200) NOT NULL,
+    trigger_group character varying(200) NOT NULL,
+    instance_name character varying(200) NOT NULL,
+    fired_time bigint NOT NULL,
+    sched_time bigint NOT NULL,
+    priority integer NOT NULL,
+    state character varying(16) NOT NULL,
+    job_name character varying(200),
+    job_group character varying(200),
+    is_nonconcurrent boolean,
+    requests_recovery boolean
+);
+
+
+--
+-- Name: qrtz_job_details; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_job_details (
+    sched_name character varying(120) NOT NULL,
+    job_name character varying(200) NOT NULL,
+    job_group character varying(200) NOT NULL,
+    description character varying(250),
+    job_class_name character varying(250) NOT NULL,
+    is_durable boolean NOT NULL,
+    is_nonconcurrent boolean NOT NULL,
+    is_update_data boolean NOT NULL,
+    requests_recovery boolean NOT NULL,
+    job_data bytea
+);
+
+
+--
+-- Name: qrtz_locks; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_locks (
+    sched_name character varying(120) NOT NULL,
+    lock_name character varying(40) NOT NULL
+);
+
+
+--
+-- Name: qrtz_paused_trigger_grps; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_paused_trigger_grps (
+    sched_name character varying(120) NOT NULL,
+    trigger_group character varying(200) NOT NULL
+);
+
+
+--
+-- Name: qrtz_scheduler_state; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_scheduler_state (
+    sched_name character varying(120) NOT NULL,
+    instance_name character varying(200) NOT NULL,
+    last_checkin_time bigint NOT NULL,
+    checkin_interval bigint NOT NULL
+);
+
+
+--
+-- Name: qrtz_simple_triggers; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_simple_triggers (
+    sched_name character varying(120) NOT NULL,
+    trigger_name character varying(200) NOT NULL,
+    trigger_group character varying(200) NOT NULL,
+    repeat_count bigint NOT NULL,
+    repeat_interval bigint NOT NULL,
+    times_triggered bigint NOT NULL
+);
+
+
+--
+-- Name: qrtz_simprop_triggers; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_simprop_triggers (
+    sched_name character varying(120) NOT NULL,
+    trigger_name character varying(200) NOT NULL,
+    trigger_group character varying(200) NOT NULL,
+    str_prop_1 character varying(512),
+    str_prop_2 character varying(512),
+    str_prop_3 character varying(512),
+    int_prop_1 integer,
+    int_prop_2 integer,
+    long_prop_1 bigint,
+    long_prop_2 bigint,
+    dec_prop_1 numeric(13,4),
+    dec_prop_2 numeric(13,4),
+    bool_prop_1 boolean,
+    bool_prop_2 boolean
+);
+
+
+--
+-- Name: qrtz_triggers; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.qrtz_triggers (
+    sched_name character varying(120) NOT NULL,
+    trigger_name character varying(200) NOT NULL,
+    trigger_group character varying(200) NOT NULL,
+    job_name character varying(200) NOT NULL,
+    job_group character varying(200) NOT NULL,
+    description character varying(250),
+    next_fire_time bigint,
+    prev_fire_time bigint,
+    priority integer,
+    trigger_state character varying(16) NOT NULL,
+    trigger_type character varying(8) NOT NULL,
+    start_time bigint NOT NULL,
+    end_time bigint,
+    calendar_name character varying(200),
+    misfire_instr smallint,
+    job_data bytea
+);
+
+
+--
 -- Name: tb_data_source; Type: TABLE; Schema: ndata; Owner: -
 --
 
 CREATE TABLE ndata.tb_data_source (
     ds_id character varying(50) NOT NULL,
-    dsn character varying(200),
-    ds_tp smallint,
-    dbms_tp character varying(50),
-    driver_nm character varying(200),
-    svr_addr character varying(200),
-    port character varying(10),
-    user_id character varying(100),
-    pwd character varying(500),
-    charset character varying(50),
-    private_key character varying(500),
-    db_name character varying(200),
-    rm_dir character varying(500),
-    conn_props character varying(200),
-    secure_yn boolean DEFAULT false,
+    dsn character varying(50) NOT NULL,
+    ds_tp smallint NOT NULL,
+    dbms_tp character varying(30),
+    driver_nm character varying(50),
+    svr_addr character varying(50),
+    port integer,
+    user_id character varying(50),
+    pwd character varying(200),
+    charset character varying(20),
+    private_key character varying(4000),
+    db_name character varying(50),
+    rm_dir character varying(200),
+    conn_props character varying(500),
+    secure_yn character varying(10),
     conn_test_yn character(1) DEFAULT 'N'::bpchar,
     conn_test_dt timestamp without time zone
+);
+
+
+--
+-- Name: tb_data_source_bak; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_data_source_bak (
+    ds_id character varying(50) NOT NULL,
+    dsn character varying(50) NOT NULL,
+    ds_tp smallint NOT NULL,
+    dbms_tp character varying(30),
+    driver_nm character varying(50),
+    svr_addr character varying(50),
+    port integer,
+    user_id character varying(50),
+    pwd character varying(200),
+    charset character varying(20),
+    private_key character varying(4000),
+    db_name character varying(50),
+    rm_dir character varying(200)
+);
+
+
+--
+-- Name: tb_data_tmpl; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_data_tmpl (
+    data_tmpl_id character varying(50) NOT NULL,
+    p_data_tmpl_id character varying(50),
+    data_tmpl_nm character varying(50) NOT NULL,
+    data_tmpl_tp smallint NOT NULL,
+    data_names character varying[],
+    data_types character varying[],
+    data_lens bigint[],
+    data_precisions smallint[],
+    data_descs character varying[],
+    data_sep character varying(10),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_job_status; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_job_status (
+    job_name character varying(200) NOT NULL,
+    job_group character varying(200) NOT NULL,
+    trigger_type character varying(8) NOT NULL,
+    description character varying(250),
+    last_fire_time timestamp without time zone,
+    last_success_time timestamp without time zone,
+    result_msg character varying(100)
+);
+
+
+--
+-- Name: tb_object; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_object (
+    obj_id character varying(50) NOT NULL,
+    p_obj_id character varying(50),
+    obj_tp smallint
+);
+
+
+--
+-- Name: tb_prcd_cols_map; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_cols_map (
+    prcd_id character varying(50) NOT NULL,
+    trgt_vars character varying[],
+    asgn_vars character varying[],
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_prcd_flow; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_flow (
+    prcd_id character varying(50) NOT NULL,
+    from_prcd_id character varying(50) NOT NULL,
+    to_prcd_id character varying(50) NOT NULL,
+    task_id character varying(50) NOT NULL,
+    flow_tp smallint NOT NULL,
+    obj_tp smallint NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_prcd_input; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_input (
+    prcd_in_id character varying(50) NOT NULL,
+    prcd_id character varying(50) NOT NULL,
+    data_file_path character varying(200),
+    data_tmpl_id character varying(100),
+    data_start_num bigint,
+    data_end_num bigint,
+    data_file_alias character varying(10),
+    charset character varying(20),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_prcd_join_method; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_join_method (
+    prcd_join_id character varying(50) NOT NULL,
+    prcd_id character varying(50) NOT NULL,
+    join_method smallint,
+    join_left_input_id character varying(50),
+    join_left_key character varying,
+    join_right_input_id character varying(50),
+    join_right_key character varying,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_prcd_load; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_load (
+    prcd_id character varying(50) NOT NULL,
+    prcd_nm character varying(100) NOT NULL,
+    task_id character varying(50) NOT NULL,
+    obj_tp smallint NOT NULL,
+    load_script character varying(8000),
+    pre_script character varying(2000),
+    pre_script_ex_yn boolean,
+    after_script character varying(2000),
+    after_script_ex_yn boolean,
+    data_tmpl_id character varying(50),
+    expl character varying(200),
+    xpos smallint,
+    ypos smallint,
+    xposw smallint,
+    yposw smallint,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_prcd_output; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_output (
+    prcd_out_id character varying(50) NOT NULL,
+    prcd_id character varying(50) NOT NULL,
+    data_file_path character varying(200),
+    data_tmpl_id character varying(100),
+    data_flt_reg_exp character varying(500),
+    charset character varying(20),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_prcd_trnf; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_trnf (
+    prcd_id character varying(50) NOT NULL,
+    prcd_nm character varying(100) NOT NULL,
+    task_id character varying(50) NOT NULL,
+    obj_tp smallint NOT NULL,
+    expl character varying(200),
+    xpos smallint,
+    ypos smallint,
+    xposw smallint,
+    yposw smallint,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_prcd_unld; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_unld (
+    prcd_id character varying(50) NOT NULL,
+    prcd_nm character varying(100) NOT NULL,
+    task_id character varying(50) NOT NULL,
+    obj_tp smallint NOT NULL,
+    unld_script character varying(8000),
+    pre_script character varying(2000),
+    pre_script_ex_yn boolean,
+    after_script character varying(2000),
+    after_script_ex_yn boolean,
+    data_tmpl_id character varying(50),
+    expl character varying(200),
+    xpos smallint,
+    ypos smallint,
+    xposw smallint,
+    yposw smallint,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_prcd_xsql; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_prcd_xsql (
+    prcd_id character varying(50) NOT NULL,
+    prcd_nm character varying(100) NOT NULL,
+    task_id character varying(50) NOT NULL,
+    obj_tp smallint NOT NULL,
+    ds_id character varying(50),
+    query_script character varying(2000),
+    expl character varying(200),
+    xpos smallint,
+    ypos smallint,
+    xposw smallint,
+    yposw smallint,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_proj; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_proj (
+    proj_id character varying(50) NOT NULL,
+    p_proj_id character varying(50),
+    proj_tp smallint NOT NULL,
+    proj_nm character varying(100) NOT NULL,
+    work_path character varying(200),
+    ver smallint,
+    expl character varying(200),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_property; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_property (
+    obj_id character varying(50) NOT NULL,
+    p_obj_id character varying(50),
+    attr_ki character varying(50) NOT NULL,
+    attr_tp character varying(50) NOT NULL,
+    obj_tp smallint NOT NULL,
+    val1 character varying(2000),
+    val1_type character varying(10),
+    val2 character varying(2000),
+    val2_type character varying(10),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_setting; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_setting (
+    ki character varying(50) NOT NULL,
+    tp character varying(10) NOT NULL,
+    val character varying(100),
+    val_type character varying(10),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_task; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_task (
+    task_id character varying(50) NOT NULL,
+    task_nm character varying(100) NOT NULL,
+    proj_id character varying(100) NOT NULL,
+    work_path character varying(200),
+    ver smallint,
+    expl character varying(200),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_task_param; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_task_param (
+    task_id character varying(50) NOT NULL,
+    prcd_nm character varying(100) NOT NULL,
+    param_nm character varying(100) NOT NULL,
+    param_type character varying(10),
+    param_len bigint,
+    param_precision smallint,
+    param_default_val character varying(200),
+    param_script character varying(1000),
+    param_ord smallint NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_user; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_user (
+    user_id character varying(50) NOT NULL,
+    pwd character varying(200),
+    nm character varying(50),
+    email character varying(50),
+    adm_yn boolean,
+    cret_dt character varying(14),
+    updt_dt character varying(14),
+    block_time character varying(14),
+    login_fail_count smallint,
+    del_yn boolean,
+    phone character varying(20)
+);
+
+
+--
+-- Name: tb_user_asgn_role; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_user_asgn_role (
+    user_id character varying(50) NOT NULL,
+    role_nm character varying(50) NOT NULL,
+    cret_dt character varying(14)
+);
+
+
+--
+-- Name: tb_user_role; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_user_role (
+    role_nm character varying(50) NOT NULL,
+    proj_access_rights smallint,
+    tmpl_access_rights smallint,
+    cret_dt character varying(14),
+    updt_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: tb_user_role_authority; Type: TABLE; Schema: ndata; Owner: -
+--
+
+CREATE TABLE ndata.tb_user_role_authority (
+    role_nm character varying(50) NOT NULL,
+    a_obj_id character varying(50) NOT NULL,
+    a_obj_tp character(1) NOT NULL,
+    a_obj_depth smallint,
+    all_subs_yn boolean,
+    cret_dt character varying(14),
+    cret_user_id character varying(50)
 );
 
 
@@ -112,13 +758,6 @@ CREATE TABLE quality.tb_aprv_stats (
     aprv_stat_updt_rsn character varying(50),
     req_item_nm character varying(200)
 );
-
-
---
--- Name: COLUMN tb_aprv_stats.req_item_nm; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_aprv_stats.req_item_nm IS '요청 항목명 (반려 시 원본 삭제되므로 이력 보존용)';
 
 
 --
@@ -277,7 +916,8 @@ CREATE TABLE quality.tb_code_data (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     updt_dt character varying(14),
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -305,7 +945,8 @@ CREATE TABLE quality.tb_data_model (
     aprv_user_id character varying(50),
     aprv_dt character varying(14),
     aprv_comment character varying(500),
-    submission_id character varying(40)
+    submission_id character varying(40),
+    dict_id character varying(22)
 );
 
 
@@ -328,6 +969,13 @@ COMMENT ON COLUMN quality.tb_data_model.struct_diag_dt IS '구조진단 최종 �
 --
 
 COMMENT ON COLUMN quality.tb_data_model.model_type IS 'PHYSICAL(물리만), LOGICAL(논리만), BOTH(논리+물리)';
+
+
+--
+-- Name: COLUMN tb_data_model.dict_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model.dict_id IS '이 모델에 적용할 표준사전. NULL 이면 스케줄 진단 불가';
 
 
 --
@@ -371,37 +1019,8 @@ CREATE TABLE quality.tb_data_model_attr (
     aprv_user_id character varying(50),
     aprv_dt character varying(14),
     aprv_comment character varying(500),
-    submission_id character varying(40),
-    fk_parent_obj_owner character varying(100)
+    submission_id character varying(40)
 );
-
-
---
--- Name: COLUMN tb_data_model_attr.attr_nm_kr; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_attr.attr_nm_kr IS '컬럼 논리명 (편집 가능). 최초 수집 시 ATTR_COMMENT 값 복사';
-
-
---
--- Name: COLUMN tb_data_model_attr.attr_comment; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_attr.attr_comment IS 'DB에서 수집한 컬럼 코멘트 원본 (수집 시 자동, 읽기 전용)';
-
-
---
--- Name: COLUMN tb_data_model_attr.use_yn; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_attr.use_yn IS '사용여부 Y/N (N=소프트 삭제)';
-
-
---
--- Name: COLUMN tb_data_model_attr.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_attr.deleted_dt IS '소프트 삭제 일시 YYYYMMDDHH24MISS';
 
 
 --
@@ -550,34 +1169,6 @@ COMMENT ON TABLE quality.tb_data_model_clct IS '데이터수집';
 
 
 --
--- Name: COLUMN tb_data_model_clct.clct_type; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_clct.clct_type IS '스냅샷 원천 (DBMS: 수집, MANUAL: 수동편집, ERWIN: ERwin 임포트)';
-
-
---
--- Name: COLUMN tb_data_model_clct.added_cnt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_clct.added_cnt IS '재수집 시 추가된 테이블·컬럼 합계';
-
-
---
--- Name: COLUMN tb_data_model_clct.deleted_cnt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_clct.deleted_cnt IS '재수집 시 삭제된 테이블·컬럼 합계';
-
-
---
--- Name: COLUMN tb_data_model_clct.modified_cnt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_clct.modified_cnt IS '재수집 시 변경된 테이블·컬럼 합계';
-
-
---
 -- Name: tb_data_model_constraint; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -608,20 +1199,6 @@ CREATE TABLE quality.tb_data_model_constraint (
 
 
 --
--- Name: COLUMN tb_data_model_constraint.use_yn; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_constraint.use_yn IS '사용 여부 (Y/N). soft-delete 대상은 N';
-
-
---
--- Name: COLUMN tb_data_model_constraint.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_constraint.deleted_dt IS 'soft-delete 시각 (YYYYMMDDHH24MISS)';
-
-
---
 -- Name: tb_data_model_index; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -646,20 +1223,6 @@ CREATE TABLE quality.tb_data_model_index (
     aprv_comment character varying(500),
     submission_id character varying(40)
 );
-
-
---
--- Name: COLUMN tb_data_model_index.use_yn; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_index.use_yn IS '사용 여부 (Y/N). soft-delete 대상은 N';
-
-
---
--- Name: COLUMN tb_data_model_index.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_index.deleted_dt IS 'soft-delete 시각 (YYYYMMDDHH24MISS)';
 
 
 --
@@ -720,34 +1283,6 @@ CREATE TABLE quality.tb_data_model_obj (
     biz_area_id character varying(40),
     subj_area_id character varying(40)
 );
-
-
---
--- Name: COLUMN tb_data_model_obj.obj_nm_kr; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_obj.obj_nm_kr IS '테이블 논리명 (편집 가능). 최초 수집 시 OBJ_COMMENT 값 복사';
-
-
---
--- Name: COLUMN tb_data_model_obj.obj_comment; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_obj.obj_comment IS 'DB에서 수집한 테이블 코멘트 원본 (수집 시 자동, 읽기 전용)';
-
-
---
--- Name: COLUMN tb_data_model_obj.use_yn; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_obj.use_yn IS '사용여부 Y/N (N=소프트 삭제)';
-
-
---
--- Name: COLUMN tb_data_model_obj.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_data_model_obj.deleted_dt IS '소프트 삭제 일시 YYYYMMDDHH24MISS';
 
 
 --
@@ -834,8 +1369,16 @@ CREATE TABLE quality.tb_diag_job (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     start_dt character varying(14),
-    end_dt character varying(14)
+    end_dt character varying(14),
+    dict_id character varying(22)
 );
+
+
+--
+-- Name: COLUMN tb_diag_job.dict_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_diag_job.dict_id IS '이 진단이 사용한 표준사전';
 
 
 --
@@ -851,8 +1394,7 @@ CREATE TABLE quality.tb_diag_result (
     diag_type character varying(50) NOT NULL,
     diag_detail text,
     std_value character varying(500),
-    actual_value character varying(500),
-    obj_owner character varying(100)
+    actual_value character varying(500)
 );
 
 
@@ -897,7 +1439,8 @@ CREATE TABLE quality.tb_diag_schedule (
     cret_user_id character varying(40),
     cret_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updt_user_id character varying(40),
-    updt_dt timestamp without time zone
+    updt_dt timestamp without time zone,
+    dict_id character varying(22)
 );
 
 
@@ -934,6 +1477,13 @@ COMMENT ON COLUMN quality.tb_diag_schedule.use_yn IS '활성/비활성 토글';
 --
 
 COMMENT ON COLUMN quality.tb_diag_schedule.last_exec_log_id IS '최근 실행 LOG 참조 (빠른 조회용)';
+
+
+--
+-- Name: COLUMN tb_diag_schedule.dict_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_diag_schedule.dict_id IS '예약 진단이 사용할 표준사전. NULL 이면 모델 값';
 
 
 --
@@ -1011,7 +1561,8 @@ CREATE TABLE quality.tb_domain (
     updt_user_id character varying(50),
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
-    use_yn character(1) DEFAULT 'Y'::bpchar
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -1027,7 +1578,8 @@ CREATE TABLE quality.tb_domain_clsf (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     updt_dt character varying(14),
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -1042,7 +1594,8 @@ CREATE TABLE quality.tb_domain_grp (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     updt_dt character varying(14),
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -1059,10 +1612,10 @@ CREATE TABLE quality.tb_domain_rule (
     sort_ord integer DEFAULT 1 NOT NULL,
     use_yn character varying(1) DEFAULT 'Y'::character varying NOT NULL,
     descr text,
-    cret_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     cret_user_id character varying(50),
-    updt_dt timestamp without time zone,
-    updt_user_id character varying(50)
+    cret_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updt_user_id character varying(50),
+    updt_dt timestamp without time zone
 );
 
 
@@ -1070,25 +1623,7 @@ CREATE TABLE quality.tb_domain_rule (
 -- Name: TABLE tb_domain_rule; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_domain_rule IS '도메인별 검증 규칙 1:N (70번 §2.1)';
-
-
---
--- Name: tb_event_log; Type: TABLE; Schema: quality; Owner: -
---
-
-CREATE TABLE quality.tb_event_log (
-    time_val timestamp(3) with time zone NOT NULL,
-    hostname character varying(50),
-    job_id character varying(50),
-    obj_id character varying(50),
-    obj_nm character varying(100),
-    obj_tp smallint,
-    job_ex_svc character varying(30),
-    severity character varying(10),
-    msg character varying(1000),
-    job_ex_user_id character varying(50)
-);
+COMMENT ON TABLE quality.tb_domain_rule IS '도메인별 룰 정의 (1:N) — 70번';
 
 
 --
@@ -1102,9 +1637,8 @@ CREATE TABLE quality.tb_qual_col_rule (
     domain_rule_id character varying(40),
     custom_rule_id character varying(40),
     exclude_yn character varying(1) DEFAULT 'N'::character varying,
-    updt_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updt_user_id character varying(50),
-    obj_owner character varying(100) DEFAULT ''::character varying NOT NULL
+    updt_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -1112,7 +1646,7 @@ CREATE TABLE quality.tb_qual_col_rule (
 -- Name: TABLE tb_qual_col_rule; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_qual_col_rule IS '컬럼 → 적용 규칙 매핑 (70번 §2.2). 행 없으면 도메인 SORT_ORD=1 default';
+COMMENT ON TABLE quality.tb_qual_col_rule IS '컬럼별 룰 매핑 (도메인룰 우선 / 커스텀 / 제외) — 70번';
 
 
 --
@@ -1188,7 +1722,7 @@ CREATE TABLE quality.tb_qual_profile_history (
 -- Name: TABLE tb_qual_profile_history; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_qual_profile_history IS '값 진단 시계열 누적 (통계 메뉴용, 70번 §2.3)';
+COMMENT ON TABLE quality.tb_qual_profile_history IS '값 프로파일 시계열 누적 (MIN/MAX/AVG/STD/LEN/COUNT) — 70번';
 
 
 --
@@ -1211,8 +1745,7 @@ CREATE TABLE quality.tb_qual_profile_result (
     min_len integer,
     max_len integer,
     top_values text,
-    updated_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    obj_owner character varying(100)
+    updated_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -1283,14 +1816,14 @@ COMMENT ON TABLE quality.tb_qual_rule_catalog IS '룰 템플릿 (이메일/주�
 -- Name: COLUMN tb_qual_rule_catalog.is_built_in; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_qual_rule_catalog.is_built_in IS '시스템 기본 (Y, 읽기전용 + fork만 가능) / 사용자 정의 (N) — 83번';
+COMMENT ON COLUMN quality.tb_qual_rule_catalog.is_built_in IS '83번 Step2 — 시스템 기본 룰(Y, 읽기 전용) vs 사용자 정의(N) 분리';
 
 
 --
 -- Name: COLUMN tb_qual_rule_catalog.domain_clsf_nm; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_qual_rule_catalog.domain_clsf_nm IS '행안부 도메인 분류명 (전화번호/금액/연월일 등). 분류 단위 자동 추천 키';
+COMMENT ON COLUMN quality.tb_qual_rule_catalog.domain_clsf_nm IS '83번 Step2 — 행안부 도메인 분류명 (자동 추천 매칭 키)';
 
 
 --
@@ -1306,8 +1839,7 @@ CREATE TABLE quality.tb_qual_rule_result (
     violation_cnt bigint,
     violation_rate numeric(7,4),
     sample_cnt integer,
-    error_msg text,
-    obj_owner character varying(100)
+    error_msg text
 );
 
 
@@ -1328,8 +1860,7 @@ CREATE TABLE quality.tb_qual_running_lock (
     attr_nm character varying(200) NOT NULL,
     diag_id character varying(50),
     user_id character varying(50),
-    start_dt character varying(14) NOT NULL,
-    obj_owner character varying(100)
+    start_dt character varying(14) NOT NULL
 );
 
 
@@ -1338,48 +1869,6 @@ CREATE TABLE quality.tb_qual_running_lock (
 --
 
 COMMENT ON TABLE quality.tb_qual_running_lock IS '품질 진단 컬럼 단위 동시 실행 방지 — application-level mutex (운영 DB 락 X). 83번';
-
-
---
--- Name: COLUMN tb_qual_running_lock.dm_id; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.dm_id IS '데이터 모델 ID';
-
-
---
--- Name: COLUMN tb_qual_running_lock.obj_nm; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.obj_nm IS '테이블명';
-
-
---
--- Name: COLUMN tb_qual_running_lock.attr_nm; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.attr_nm IS '컬럼명';
-
-
---
--- Name: COLUMN tb_qual_running_lock.diag_id; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.diag_id IS '진행 중 진단 ID';
-
-
---
--- Name: COLUMN tb_qual_running_lock.user_id; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.user_id IS '진단 트리거한 사용자';
-
-
---
--- Name: COLUMN tb_qual_running_lock.start_dt; Type: COMMENT; Schema: quality; Owner: -
---
-
-COMMENT ON COLUMN quality.tb_qual_running_lock.start_dt IS 'lock 획득 시각 (YYYYMMDDHH24MISS) — 30분 경과 시 stale 자동 정리';
 
 
 --
@@ -1393,8 +1882,7 @@ CREATE TABLE quality.tb_qual_violation_sample (
     attr_nm character varying(100) DEFAULT ''::character varying NOT NULL,
     seq integer NOT NULL,
     pk_values text,
-    violating_val character varying(500),
-    obj_owner character varying(100)
+    violating_val character varying(500)
 );
 
 
@@ -1403,6 +1891,45 @@ CREATE TABLE quality.tb_qual_violation_sample (
 --
 
 COMMENT ON TABLE quality.tb_qual_violation_sample IS '위반 샘플 행 (PK + 위반값, 룰당 기본 100건)';
+
+
+--
+-- Name: tb_std_dict; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_std_dict (
+    dict_id character varying(22) NOT NULL,
+    dict_nm character varying(100) NOT NULL,
+    dict_desc character varying(500),
+    default_yn character(1) DEFAULT 'N'::bpchar,
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    term_last_word_clsf_yn character(1) DEFAULT 'N'::bpchar,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_std_dict; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_std_dict IS '표준사전 (단어·용어·도메인·코드의 이름공간)';
+
+
+--
+-- Name: COLUMN tb_std_dict.default_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.default_yn IS '신규 모델 등록 시 기본 선택되는 사전';
+
+
+--
+-- Name: COLUMN tb_std_dict.term_last_word_clsf_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.term_last_word_clsf_yn IS '용어의 마지막 단어가 형식단어여야 하는지. Y=필수, N=미적용';
 
 
 --
@@ -1805,7 +2332,8 @@ CREATE TABLE quality.tb_terms (
     updt_user_id character varying(50),
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
-    use_yn character(1) DEFAULT 'Y'::bpchar
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -1864,7 +2392,8 @@ CREATE TABLE quality.tb_word (
     updt_user_id character varying(50),
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
-    use_yn character(1) DEFAULT 'Y'::bpchar
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
 );
 
 
@@ -1949,11 +2478,283 @@ ALTER TABLE ONLY quality.tb_term_resolve_history ALTER COLUMN history_seq SET DE
 
 
 --
--- Name: tb_data_source pk_tb_data_source; Type: CONSTRAINT; Schema: ndata; Owner: -
+-- Name: tb_prcd_unld newtable_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
 --
 
-ALTER TABLE ONLY ndata.tb_data_source
-    ADD CONSTRAINT pk_tb_data_source PRIMARY KEY (ds_id);
+ALTER TABLE ONLY ndata.tb_prcd_unld
+    ADD CONSTRAINT newtable_pk PRIMARY KEY (prcd_id);
+
+
+--
+-- Name: qrtz_blob_triggers qrtz_blob_triggers_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_blob_triggers
+    ADD CONSTRAINT qrtz_blob_triggers_pkey PRIMARY KEY (sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: qrtz_calendars qrtz_calendars_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_calendars
+    ADD CONSTRAINT qrtz_calendars_pkey PRIMARY KEY (sched_name, calendar_name);
+
+
+--
+-- Name: qrtz_cron_triggers qrtz_cron_triggers_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_cron_triggers
+    ADD CONSTRAINT qrtz_cron_triggers_pkey PRIMARY KEY (sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: qrtz_fired_triggers qrtz_fired_triggers_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_fired_triggers
+    ADD CONSTRAINT qrtz_fired_triggers_pkey PRIMARY KEY (sched_name, entry_id);
+
+
+--
+-- Name: qrtz_job_details qrtz_job_details_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_job_details
+    ADD CONSTRAINT qrtz_job_details_pkey PRIMARY KEY (sched_name, job_name, job_group);
+
+
+--
+-- Name: qrtz_locks qrtz_locks_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_locks
+    ADD CONSTRAINT qrtz_locks_pkey PRIMARY KEY (sched_name, lock_name);
+
+
+--
+-- Name: qrtz_paused_trigger_grps qrtz_paused_trigger_grps_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_paused_trigger_grps
+    ADD CONSTRAINT qrtz_paused_trigger_grps_pkey PRIMARY KEY (sched_name, trigger_group);
+
+
+--
+-- Name: qrtz_scheduler_state qrtz_scheduler_state_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_scheduler_state
+    ADD CONSTRAINT qrtz_scheduler_state_pkey PRIMARY KEY (sched_name, instance_name);
+
+
+--
+-- Name: qrtz_simple_triggers qrtz_simple_triggers_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_simple_triggers
+    ADD CONSTRAINT qrtz_simple_triggers_pkey PRIMARY KEY (sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: qrtz_simprop_triggers qrtz_simprop_triggers_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_simprop_triggers
+    ADD CONSTRAINT qrtz_simprop_triggers_pkey PRIMARY KEY (sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: qrtz_triggers qrtz_triggers_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_triggers
+    ADD CONSTRAINT qrtz_triggers_pkey PRIMARY KEY (sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: tb_data_source_bak tb_data_source_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_data_source_bak
+    ADD CONSTRAINT tb_data_source_pk PRIMARY KEY (ds_id);
+
+
+--
+-- Name: tb_data_tmpl tb_data_tmpl_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_data_tmpl
+    ADD CONSTRAINT tb_data_tmpl_pk PRIMARY KEY (data_tmpl_id);
+
+
+--
+-- Name: tb_event_log tb_event_log_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_event_log
+    ADD CONSTRAINT tb_event_log_pk PRIMARY KEY (time_val);
+
+
+--
+-- Name: tb_job_log tb_job_log_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_job_log
+    ADD CONSTRAINT tb_job_log_pk PRIMARY KEY (job_id, time_val, obj_id);
+
+
+--
+-- Name: tb_job_status tb_job_status_pkey; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_job_status
+    ADD CONSTRAINT tb_job_status_pkey PRIMARY KEY (job_name, job_group);
+
+
+--
+-- Name: tb_prcd_cols_map tb_prcd_cols_map_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_cols_map
+    ADD CONSTRAINT tb_prcd_cols_map_pk PRIMARY KEY (prcd_id);
+
+
+--
+-- Name: tb_prcd_flow tb_prcd_flow_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_flow
+    ADD CONSTRAINT tb_prcd_flow_pk PRIMARY KEY (prcd_id);
+
+
+--
+-- Name: tb_prcd_join_method tb_prcd_join_method_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_join_method
+    ADD CONSTRAINT tb_prcd_join_method_pk PRIMARY KEY (prcd_join_id);
+
+
+--
+-- Name: tb_prcd_load tb_prcd_load_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_load
+    ADD CONSTRAINT tb_prcd_load_pk PRIMARY KEY (prcd_id);
+
+
+--
+-- Name: tb_object tb_prcd_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_object
+    ADD CONSTRAINT tb_prcd_pk PRIMARY KEY (obj_id);
+
+
+--
+-- Name: tb_prcd_input tb_prcd_trnf_input_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_input
+    ADD CONSTRAINT tb_prcd_trnf_input_pk PRIMARY KEY (prcd_in_id);
+
+
+--
+-- Name: tb_prcd_output tb_prcd_trnf_output_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_output
+    ADD CONSTRAINT tb_prcd_trnf_output_pk PRIMARY KEY (prcd_out_id);
+
+
+--
+-- Name: tb_prcd_trnf tb_prcd_trnf_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_trnf
+    ADD CONSTRAINT tb_prcd_trnf_pk PRIMARY KEY (prcd_id);
+
+
+--
+-- Name: tb_prcd_xsql tb_prcd_xsql_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_xsql
+    ADD CONSTRAINT tb_prcd_xsql_pk PRIMARY KEY (prcd_id);
+
+
+--
+-- Name: tb_proj tb_proj_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_proj
+    ADD CONSTRAINT tb_proj_pk PRIMARY KEY (proj_id);
+
+
+--
+-- Name: tb_property tb_property_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_property
+    ADD CONSTRAINT tb_property_pk PRIMARY KEY (obj_id, attr_ki, attr_tp);
+
+
+--
+-- Name: tb_user_role_authority tb_role_authority_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_user_role_authority
+    ADD CONSTRAINT tb_role_authority_pk PRIMARY KEY (role_nm, a_obj_id, a_obj_tp);
+
+
+--
+-- Name: tb_setting tb_setting_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_setting
+    ADD CONSTRAINT tb_setting_pk PRIMARY KEY (ki, tp);
+
+
+--
+-- Name: tb_task_param tb_task_param_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_task_param
+    ADD CONSTRAINT tb_task_param_pk PRIMARY KEY (task_id, prcd_nm, param_nm);
+
+
+--
+-- Name: tb_task tb_task_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_task
+    ADD CONSTRAINT tb_task_pk PRIMARY KEY (task_id);
+
+
+--
+-- Name: tb_user_asgn_role tb_user_asgn_role_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_user_asgn_role
+    ADD CONSTRAINT tb_user_asgn_role_pk PRIMARY KEY (user_id, role_nm);
+
+
+--
+-- Name: tb_user tb_user_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_user
+    ADD CONSTRAINT tb_user_pk PRIMARY KEY (user_id);
+
+
+--
+-- Name: tb_user_role tb_user_role_pk; Type: CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_user_role
+    ADD CONSTRAINT tb_user_role_pk PRIMARY KEY (role_nm);
 
 
 --
@@ -2049,7 +2850,7 @@ ALTER TABLE ONLY quality.tb_domain_rule
 --
 
 ALTER TABLE ONLY quality.tb_qual_col_rule
-    ADD CONSTRAINT pk_tb_qual_col_rule PRIMARY KEY (dm_id, obj_owner, obj_nm, attr_nm);
+    ADD CONSTRAINT pk_tb_qual_col_rule PRIMARY KEY (dm_id, obj_nm, attr_nm);
 
 
 --
@@ -2269,6 +3070,14 @@ ALTER TABLE ONLY quality.tb_domain
 
 
 --
+-- Name: tb_std_dict tb_std_dict_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_std_dict
+    ADD CONSTRAINT tb_std_dict_pk PRIMARY KEY (dict_id);
+
+
+--
 -- Name: tb_subj_area tb_subj_area_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -2325,10 +3134,192 @@ ALTER TABLE ONLY quality.tb_word
 
 
 --
+-- Name: idx_qrtz_ft_inst_job_req_rcvry; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_ft_inst_job_req_rcvry ON ndata.qrtz_fired_triggers USING btree (sched_name, instance_name, requests_recovery);
+
+
+--
+-- Name: idx_qrtz_ft_j_g; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_ft_j_g ON ndata.qrtz_fired_triggers USING btree (sched_name, job_name, job_group);
+
+
+--
+-- Name: idx_qrtz_ft_jg; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_ft_jg ON ndata.qrtz_fired_triggers USING btree (sched_name, job_group);
+
+
+--
+-- Name: idx_qrtz_ft_t_g; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_ft_t_g ON ndata.qrtz_fired_triggers USING btree (sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: idx_qrtz_ft_tg; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_ft_tg ON ndata.qrtz_fired_triggers USING btree (sched_name, trigger_group);
+
+
+--
+-- Name: idx_qrtz_ft_trig_inst_name; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_ft_trig_inst_name ON ndata.qrtz_fired_triggers USING btree (sched_name, instance_name);
+
+
+--
+-- Name: idx_qrtz_j_grp; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_j_grp ON ndata.qrtz_job_details USING btree (sched_name, job_group);
+
+
+--
+-- Name: idx_qrtz_j_req_recovery; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_j_req_recovery ON ndata.qrtz_job_details USING btree (sched_name, requests_recovery);
+
+
+--
+-- Name: idx_qrtz_t_c; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_c ON ndata.qrtz_triggers USING btree (sched_name, calendar_name);
+
+
+--
+-- Name: idx_qrtz_t_g; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_g ON ndata.qrtz_triggers USING btree (sched_name, trigger_group);
+
+
+--
+-- Name: idx_qrtz_t_j; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_j ON ndata.qrtz_triggers USING btree (sched_name, job_name, job_group);
+
+
+--
+-- Name: idx_qrtz_t_jg; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_jg ON ndata.qrtz_triggers USING btree (sched_name, job_group);
+
+
+--
+-- Name: idx_qrtz_t_n_g_state; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_n_g_state ON ndata.qrtz_triggers USING btree (sched_name, trigger_group, trigger_state);
+
+
+--
+-- Name: idx_qrtz_t_n_state; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_n_state ON ndata.qrtz_triggers USING btree (sched_name, trigger_name, trigger_group, trigger_state);
+
+
+--
+-- Name: idx_qrtz_t_next_fire_time; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_next_fire_time ON ndata.qrtz_triggers USING btree (sched_name, next_fire_time);
+
+
+--
+-- Name: idx_qrtz_t_nft_misfire; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_nft_misfire ON ndata.qrtz_triggers USING btree (sched_name, misfire_instr, next_fire_time);
+
+
+--
+-- Name: idx_qrtz_t_nft_st; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_nft_st ON ndata.qrtz_triggers USING btree (sched_name, trigger_state, next_fire_time);
+
+
+--
+-- Name: idx_qrtz_t_nft_st_misfire; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_nft_st_misfire ON ndata.qrtz_triggers USING btree (sched_name, misfire_instr, next_fire_time, trigger_state);
+
+
+--
+-- Name: idx_qrtz_t_nft_st_misfire_grp; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_nft_st_misfire_grp ON ndata.qrtz_triggers USING btree (sched_name, misfire_instr, next_fire_time, trigger_group, trigger_state);
+
+
+--
+-- Name: idx_qrtz_t_state; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX idx_qrtz_t_state ON ndata.qrtz_triggers USING btree (sched_name, trigger_state);
+
+
+--
+-- Name: tb_event_log_obj_id_idx; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX tb_event_log_obj_id_idx ON ndata.tb_event_log USING btree (obj_id);
+
+
+--
+-- Name: tb_job_log_obj_id_idx; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX tb_job_log_obj_id_idx ON ndata.tb_job_log USING btree (obj_id);
+
+
+--
+-- Name: tb_job_log_p_obj_id_idx; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX tb_job_log_p_obj_id_idx ON ndata.tb_job_log USING btree (time_val, p_obj_id, obj_id);
+
+
+--
+-- Name: tb_job_log_time_val_idx; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX tb_job_log_time_val_idx ON ndata.tb_job_log USING btree (time_val DESC);
+
+
+--
+-- Name: tb_object_p_obj_id_idx; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX tb_object_p_obj_id_idx ON ndata.tb_object USING btree (p_obj_id, obj_id);
+
+
+--
+-- Name: tb_task_proj_id_idx; Type: INDEX; Schema: ndata; Owner: -
+--
+
+CREATE INDEX tb_task_proj_id_idx ON ndata.tb_task USING btree (proj_id);
+
+
+--
 -- Name: domain_grp_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX domain_grp_ux_1 ON quality.tb_domain_grp USING btree (domain_grp_nm);
+CREATE UNIQUE INDEX domain_grp_ux_1 ON quality.tb_domain_grp USING btree (dict_id, domain_grp_nm);
 
 
 --
@@ -2357,13 +3348,6 @@ CREATE INDEX idx_qual_rule_catalog_clsf ON quality.tb_qual_rule_catalog USING bt
 --
 
 CREATE INDEX imsi_comment_attr_name_idx ON quality.imsi_comment USING btree (attr_name);
-
-
---
--- Name: ix_diag_result_owner_obj; Type: INDEX; Schema: quality; Owner: -
---
-
-CREATE INDEX ix_diag_result_owner_obj ON quality.tb_diag_result USING btree (diag_job_id, obj_owner, obj_nm, attr_nm);
 
 
 --
@@ -2496,7 +3480,7 @@ CREATE INDEX tb_code_data_ix_3 ON quality.tb_code_data USING btree (code_val);
 -- Name: tb_code_data_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_code_data_ux_1 ON quality.tb_code_data USING btree (code_nm, code_val);
+CREATE UNIQUE INDEX tb_code_data_ux_1 ON quality.tb_code_data USING btree (dict_id, code_nm, code_val);
 
 
 --
@@ -2552,14 +3536,21 @@ CREATE INDEX tb_data_model_map_ix3 ON quality.tb_data_model_map USING btree (obj
 -- Name: tb_domain_clsf_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_domain_clsf_ux_1 ON quality.tb_domain_clsf USING btree (domain_clsf_nm);
+CREATE UNIQUE INDEX tb_domain_clsf_ux_1 ON quality.tb_domain_clsf USING btree (dict_id, domain_clsf_nm);
+
+
+--
+-- Name: tb_domain_ix_dict; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX tb_domain_ix_dict ON quality.tb_domain USING btree (dict_id);
 
 
 --
 -- Name: tb_domain_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_domain_ux_1 ON quality.tb_domain USING btree (domain_nm);
+CREATE UNIQUE INDEX tb_domain_ux_1 ON quality.tb_domain USING btree (dict_id, domain_nm);
 
 
 --
@@ -2570,17 +3561,31 @@ CREATE INDEX tb_event_log_time_idx ON quality.tb_event_log USING btree (time_val
 
 
 --
+-- Name: tb_std_dict_ux_1; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE UNIQUE INDEX tb_std_dict_ux_1 ON quality.tb_std_dict USING btree (dict_nm);
+
+
+--
+-- Name: tb_terms_ix_dict; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX tb_terms_ix_dict ON quality.tb_terms USING btree (dict_id);
+
+
+--
 -- Name: tb_terms_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_terms_ux_1 ON quality.tb_terms USING btree (terms_nm);
+CREATE UNIQUE INDEX tb_terms_ux_1 ON quality.tb_terms USING btree (dict_id, terms_nm);
 
 
 --
 -- Name: tb_terms_ux_2; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (terms_eng_abrv_nm);
+CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (dict_id, terms_eng_abrv_nm);
 
 
 --
@@ -2588,6 +3593,13 @@ CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (terms_eng_abr
 --
 
 CREATE INDEX tb_word_ix_3 ON quality.tb_word USING btree (word_eng_nm);
+
+
+--
+-- Name: tb_word_ix_dict; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX tb_word_ix_dict ON quality.tb_word USING btree (dict_id);
 
 
 --
@@ -2601,35 +3613,259 @@ CREATE UNIQUE INDEX tb_word_ux_1 ON quality.tb_word USING btree (word_id, word_n
 -- Name: tb_word_ux_2; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_word_ux_2 ON quality.tb_word USING btree (word_eng_abrv_nm);
+CREATE UNIQUE INDEX tb_word_ux_2 ON quality.tb_word USING btree (dict_id, word_eng_abrv_nm);
 
 
 --
--- Name: uix_domain_nm; Type: INDEX; Schema: quality; Owner: -
+-- Name: tb_word_ux_3; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX uix_domain_nm ON quality.tb_domain USING btree (domain_nm);
-
-
---
--- Name: uix_terms_nm; Type: INDEX; Schema: quality; Owner: -
---
-
-CREATE UNIQUE INDEX uix_terms_nm ON quality.tb_terms USING btree (terms_nm);
+CREATE UNIQUE INDEX tb_word_ux_3 ON quality.tb_word USING btree (dict_id, word_nm);
 
 
 --
--- Name: uix_word_eng_abrv_nm; Type: INDEX; Schema: quality; Owner: -
+-- Name: tb_event_log ts_insert_blocker; Type: TRIGGER; Schema: ndata; Owner: -
 --
 
-CREATE UNIQUE INDEX uix_word_eng_abrv_nm ON quality.tb_word USING btree (word_eng_abrv_nm);
+CREATE TRIGGER ts_insert_blocker BEFORE INSERT ON ndata.tb_event_log FOR EACH ROW EXECUTE FUNCTION _timescaledb_internal.insert_blocker();
 
 
 --
--- Name: uix_word_nm; Type: INDEX; Schema: quality; Owner: -
+-- Name: tb_job_log ts_insert_blocker; Type: TRIGGER; Schema: ndata; Owner: -
 --
 
-CREATE UNIQUE INDEX uix_word_nm ON quality.tb_word USING btree (word_nm);
+CREATE TRIGGER ts_insert_blocker BEFORE INSERT ON ndata.tb_job_log FOR EACH ROW EXECUTE FUNCTION _timescaledb_internal.insert_blocker();
+
+
+--
+-- Name: tb_event_log ts_insert_blocker; Type: TRIGGER; Schema: quality; Owner: -
+--
+
+CREATE TRIGGER ts_insert_blocker BEFORE INSERT ON quality.tb_event_log FOR EACH ROW EXECUTE FUNCTION _timescaledb_internal.insert_blocker();
+
+
+--
+-- Name: qrtz_blob_triggers qrtz_blob_triggers_sched_name_trigger_name_trigger_group_fkey; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_blob_triggers
+    ADD CONSTRAINT qrtz_blob_triggers_sched_name_trigger_name_trigger_group_fkey FOREIGN KEY (sched_name, trigger_name, trigger_group) REFERENCES ndata.qrtz_triggers(sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: qrtz_cron_triggers qrtz_cron_triggers_sched_name_trigger_name_trigger_group_fkey; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_cron_triggers
+    ADD CONSTRAINT qrtz_cron_triggers_sched_name_trigger_name_trigger_group_fkey FOREIGN KEY (sched_name, trigger_name, trigger_group) REFERENCES ndata.qrtz_triggers(sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: qrtz_simple_triggers qrtz_simple_triggers_sched_name_trigger_name_trigger_group_fkey; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_simple_triggers
+    ADD CONSTRAINT qrtz_simple_triggers_sched_name_trigger_name_trigger_group_fkey FOREIGN KEY (sched_name, trigger_name, trigger_group) REFERENCES ndata.qrtz_triggers(sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: qrtz_simprop_triggers qrtz_simprop_triggers_sched_name_trigger_name_trigger_grou_fkey; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_simprop_triggers
+    ADD CONSTRAINT qrtz_simprop_triggers_sched_name_trigger_name_trigger_grou_fkey FOREIGN KEY (sched_name, trigger_name, trigger_group) REFERENCES ndata.qrtz_triggers(sched_name, trigger_name, trigger_group);
+
+
+--
+-- Name: qrtz_triggers qrtz_triggers_sched_name_job_name_job_group_fkey; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.qrtz_triggers
+    ADD CONSTRAINT qrtz_triggers_sched_name_job_name_job_group_fkey FOREIGN KEY (sched_name, job_name, job_group) REFERENCES ndata.qrtz_job_details(sched_name, job_name, job_group);
+
+
+--
+-- Name: tb_prcd_flow tb_prcd_flow_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_flow
+    ADD CONSTRAINT tb_prcd_flow_fk FOREIGN KEY (task_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_join_method tb_prcd_join_method_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_join_method
+    ADD CONSTRAINT tb_prcd_join_method_fk FOREIGN KEY (prcd_id) REFERENCES ndata.tb_prcd_trnf(prcd_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_load tb_prcd_load_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_load
+    ADD CONSTRAINT tb_prcd_load_fk FOREIGN KEY (prcd_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_load tb_prcd_load_fk_1; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_load
+    ADD CONSTRAINT tb_prcd_load_fk_1 FOREIGN KEY (task_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_trnf tb_prcd_trnf_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_trnf
+    ADD CONSTRAINT tb_prcd_trnf_fk FOREIGN KEY (prcd_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_trnf tb_prcd_trnf_fk_1; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_trnf
+    ADD CONSTRAINT tb_prcd_trnf_fk_1 FOREIGN KEY (task_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_input tb_prcd_trnf_input_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_input
+    ADD CONSTRAINT tb_prcd_trnf_input_fk FOREIGN KEY (prcd_id) REFERENCES ndata.tb_prcd_trnf(prcd_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_input tb_prcd_trnf_input_fk_1; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_input
+    ADD CONSTRAINT tb_prcd_trnf_input_fk_1 FOREIGN KEY (data_tmpl_id) REFERENCES ndata.tb_data_tmpl(data_tmpl_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_cols_map tb_prcd_trnf_map_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_cols_map
+    ADD CONSTRAINT tb_prcd_trnf_map_fk FOREIGN KEY (prcd_id) REFERENCES ndata.tb_prcd_trnf(prcd_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_output tb_prcd_trnf_output_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_output
+    ADD CONSTRAINT tb_prcd_trnf_output_fk FOREIGN KEY (prcd_id) REFERENCES ndata.tb_prcd_trnf(prcd_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_output tb_prcd_trnf_output_fk_1; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_output
+    ADD CONSTRAINT tb_prcd_trnf_output_fk_1 FOREIGN KEY (data_tmpl_id) REFERENCES ndata.tb_data_tmpl(data_tmpl_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_unld tb_prcd_unld_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_unld
+    ADD CONSTRAINT tb_prcd_unld_fk FOREIGN KEY (prcd_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_unld tb_prcd_unld_fk_1; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_unld
+    ADD CONSTRAINT tb_prcd_unld_fk_1 FOREIGN KEY (task_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_xsql tb_prcd_xsql_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_xsql
+    ADD CONSTRAINT tb_prcd_xsql_fk FOREIGN KEY (prcd_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_prcd_xsql tb_prcd_xsql_fk_1; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_prcd_xsql
+    ADD CONSTRAINT tb_prcd_xsql_fk_1 FOREIGN KEY (task_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_proj tb_proj_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_proj
+    ADD CONSTRAINT tb_proj_fk FOREIGN KEY (proj_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_property tb_property_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_property
+    ADD CONSTRAINT tb_property_fk FOREIGN KEY (obj_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_task tb_task_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_task
+    ADD CONSTRAINT tb_task_fk FOREIGN KEY (task_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_task tb_task_fk_1; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_task
+    ADD CONSTRAINT tb_task_fk_1 FOREIGN KEY (proj_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_task_param tb_task_param_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_task_param
+    ADD CONSTRAINT tb_task_param_fk FOREIGN KEY (task_id) REFERENCES ndata.tb_object(obj_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_user_asgn_role tb_user_asgn_role_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_user_asgn_role
+    ADD CONSTRAINT tb_user_asgn_role_fk FOREIGN KEY (user_id) REFERENCES ndata.tb_user(user_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_user_asgn_role tb_user_asgn_role_fk_1; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_user_asgn_role
+    ADD CONSTRAINT tb_user_asgn_role_fk_1 FOREIGN KEY (role_nm) REFERENCES ndata.tb_user_role(role_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: tb_user_role_authority tb_user_role_authority_fk; Type: FK CONSTRAINT; Schema: ndata; Owner: -
+--
+
+ALTER TABLE ONLY ndata.tb_user_role_authority
+    ADD CONSTRAINT tb_user_role_authority_fk FOREIGN KEY (role_nm) REFERENCES ndata.tb_user_role(role_nm) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -2645,7 +3881,7 @@ ALTER TABLE ONLY quality.tb_data_model
 --
 
 ALTER TABLE ONLY quality.tb_domain_clsf
-    ADD CONSTRAINT tb_domain_clsf_fk_1 FOREIGN KEY (domain_grp_nm) REFERENCES quality.tb_domain_grp(domain_grp_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT tb_domain_clsf_fk_1 FOREIGN KEY (dict_id, domain_grp_nm) REFERENCES quality.tb_domain_grp(dict_id, domain_grp_nm) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -2653,7 +3889,7 @@ ALTER TABLE ONLY quality.tb_domain_clsf
 --
 
 ALTER TABLE ONLY quality.tb_domain
-    ADD CONSTRAINT tb_domain_fk_1 FOREIGN KEY (domain_grp_nm) REFERENCES quality.tb_domain_grp(domain_grp_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT tb_domain_fk_1 FOREIGN KEY (dict_id, domain_grp_nm) REFERENCES quality.tb_domain_grp(dict_id, domain_grp_nm) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -2661,7 +3897,7 @@ ALTER TABLE ONLY quality.tb_domain
 --
 
 ALTER TABLE ONLY quality.tb_domain
-    ADD CONSTRAINT tb_domain_fk_2 FOREIGN KEY (domain_clsf_nm) REFERENCES quality.tb_domain_clsf(domain_clsf_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT tb_domain_fk_2 FOREIGN KEY (dict_id, domain_clsf_nm) REFERENCES quality.tb_domain_clsf(dict_id, domain_clsf_nm) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -2669,7 +3905,7 @@ ALTER TABLE ONLY quality.tb_domain
 --
 
 ALTER TABLE ONLY quality.tb_terms
-    ADD CONSTRAINT tb_terms_fk FOREIGN KEY (domain_nm) REFERENCES quality.tb_domain(domain_nm) ON UPDATE CASCADE;
+    ADD CONSTRAINT tb_terms_fk FOREIGN KEY (dict_id, domain_nm) REFERENCES quality.tb_domain(dict_id, domain_nm) ON UPDATE CASCADE;
 
 
 --

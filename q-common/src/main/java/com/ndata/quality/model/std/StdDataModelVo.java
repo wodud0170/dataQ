@@ -4,6 +4,8 @@ import lombok.Data;
 
 @Data
 public class StdDataModelVo {
+	/** 98번 — 이 항목이 속한 표준사전. */
+	private String dictId;
 	private String dataModelId;
 	private String dataModelNm;
 	private String dataModelSysCd;

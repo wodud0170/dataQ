@@ -54,6 +54,22 @@ public class ExcelUploadService {
 	@Autowired
 	private SqlSessionFactory sqlSessionFactory;	// transaction 사용할 경우 사용
 
+	@Autowired
+	private StdDictService dictService;
+
+	/**
+	 * 98번 — 이름으로 사전 항목을 찾을 때 쓰는 파라미터.
+	 *
+	 * <p>사전을 나눈 뒤로 "영문약어가 BTWN 인 단어" 만으로는 답이 하나가 아니다.
+	 * 반드시 어느 사전에서 찾는지를 같이 줘야 한다.</p>
+	 */
+	private Map<String, Object> byName(String dictId, String key, String value) {
+		Map<String, Object> p = new HashMap<String, Object>();
+		p.put("dictId", dictId);
+		p.put(key, value);
+		return p;
+	}
+
 	/** userId로 관리자 여부 조회 (TB_USER.ADM_YN) */
 	private boolean isAdminUser(SqlSession session, String userId) {
 		if (userId == null) return false;
@@ -71,7 +87,7 @@ public class ExcelUploadService {
 	 * @return 업로드 결과 (성공/건너뜀/실패 건수 + 실패 상세)
 	 * @throws Exception Excel 파싱 실패 시
 	 */
-	public UploadResult uploadWords(String userId, MultipartFile multiPart) throws Exception {
+	public UploadResult uploadWords(String userId, String dictId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
@@ -84,7 +100,7 @@ public class ExcelUploadService {
 				StdWordVo stdWordVo = new StdWordVo();
 				try {
 					// 단어가 이미 존재하는 경우에는 Skip 한다.
-					if (session.selectOne("word.selectWordByEngAbrvNm", dataRow.get(3)) != null) {
+					if (session.selectOne("word.selectWordByEngAbrvNm", byName(dictId, "wordEngAbrvNm", dataRow.get(3))) != null) {
 						result.addSkip();
 						continue;
 					}
@@ -96,7 +112,7 @@ public class ExcelUploadService {
 						throw new Exception("단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다. (입력값: " + dataRow.get(3) + ")");
 					}
 					// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
-					Map<String, Object> forbiddenWord = session.selectOne("word.selectWordByForbiddenNm", dataRow.get(2));
+					Map<String, Object> forbiddenWord = session.selectOne("word.selectWordByForbiddenNm", byName(dictId, "wordNm", dataRow.get(2)));
 					if (forbiddenWord != null) {
 						String stdWordNm = (String) forbiddenWord.get("wordNm");
 						throw new Exception("'" + dataRow.get(2) + "'은(는) '" + stdWordNm + "'의 금칙어입니다. '" + stdWordNm + "'를 사용해주세요.");
@@ -124,6 +140,7 @@ public class ExcelUploadService {
 					stdWordVo.setCretUserId(userId);
 					stdWordVo.setUpdtUserId(userId);
 					stdWordVo.setAprvYn(aprvYn);
+					stdWordVo.setDictId(dictId);
 					session.insert("word.insertWord", stdWordVo);
 					session.commit();
 					result.addSuccess();
@@ -155,11 +172,11 @@ public class ExcelUploadService {
 	 * @return 업로드 결과
 	 * @throws Exception Excel 파싱 실패 시
 	 */
-	public UploadResult uploadTermsList(String userId, MultipartFile multiPart) throws Exception {
-		return uploadTermsList(userId, multiPart, null);
+	public UploadResult uploadTermsList(String userId, String dictId, MultipartFile multiPart) throws Exception {
+		return uploadTermsList(userId, dictId, multiPart, null);
 	}
 
-	public UploadResult uploadTermsList(String userId, MultipartFile multiPart, BiConsumer<Integer,Integer> progressCallback) throws Exception {
+	public UploadResult uploadTermsList(String userId, String dictId, MultipartFile multiPart, BiConsumer<Integer,Integer> progressCallback) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
@@ -175,7 +192,7 @@ public class ExcelUploadService {
 				StdTermsVo stdTermsVo = new StdTermsVo();
 				try {
 					// 용어가 이미 존재하는 경우에는 Skip 한다.
-					if (session.selectOne("terms.selectTermsByEngNm", dataRow.get(4)) != null) {
+					if (session.selectOne("terms.selectTermsByEngNm", byName(dictId, "termsEngAbrvNm", dataRow.get(4))) != null) {
 						result.addSkip();
 						continue;
 					}
@@ -198,10 +215,11 @@ public class ExcelUploadService {
 					stdTermsVo.setCretUserId(userId);
 					stdTermsVo.setUpdtUserId(userId);
 					stdTermsVo.setAprvYn(aprvYn);
+					stdTermsVo.setDictId(dictId);
 
 					// 도메인 유효성 검증
 					if (stdTermsVo.getDomainNm() != null) {
-						Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", stdTermsVo.getDomainNm());
+						Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", byName(dictId, "domainNm", stdTermsVo.getDomainNm()));
 						if (domainCheck == null) {
 							throw new Exception(String.format("도메인(%s)이 유효하지 않음", stdTermsVo.getDomainNm()));
 						}
@@ -211,7 +229,7 @@ public class ExcelUploadService {
 					String[] wordEngAbrvNms = stdTermsVo.getTermsEngAbrvNm().split("_");
 					List<String> invalidWords = new ArrayList<>();
 					for (String wordEngAbrvNm : wordEngAbrvNms) {
-						StdWordVo wordVo = session.selectOne("word.selectWordByEngAbrvNm", wordEngAbrvNm);
+						StdWordVo wordVo = session.selectOne("word.selectWordByEngAbrvNm", byName(dictId, "wordEngAbrvNm", wordEngAbrvNm));
 						if (wordVo == null) {
 							invalidWords.add(wordEngAbrvNm);
 						}
@@ -220,12 +238,15 @@ public class ExcelUploadService {
 						throw new Exception(String.format("단어(%s)가 유효하지 않음", String.join(", ", invalidWords)));
 					}
 
-					// 분류어 검증: 마지막 단어가 분류어(WORD_CLSF_YN='Y')여야 함
+					// 형식단어 검증: 마지막 단어가 형식단어(WORD_CLSF_YN='Y')여야 함.
+					// 98번 — 사전 속성이다. 기관마다 표준화 관례가 달라서 켠 사전에서만 본다.
 					// 단일 단어 용어도 허용 (그 자체가 형식단어면 유효)
-					String lastEngAbrv = wordEngAbrvNms[wordEngAbrvNms.length - 1];
-					StdWordVo lastWordVo = session.selectOne("word.selectWordByEngAbrvNm", lastEngAbrv);
-					if (lastWordVo != null && !"Y".equals(lastWordVo.getWordClsfYn())) {
-						throw new Exception("용어의 마지막 단어는 분류어여야 합니다. (현재: " + lastWordVo.getWordNm() + ")");
+					if (dictService.isTermLastWordClsfRequired(dictId)) {
+						String lastEngAbrv = wordEngAbrvNms[wordEngAbrvNms.length - 1];
+						StdWordVo lastWordVo = session.selectOne("word.selectWordByEngAbrvNm", byName(dictId, "wordEngAbrvNm", lastEngAbrv));
+						if (lastWordVo != null && !"Y".equals(lastWordVo.getWordClsfYn())) {
+							throw new Exception("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordVo.getWordNm() + ")");
+						}
 					}
 
 					session.insert("terms.insertTerms", stdTermsVo);
@@ -233,7 +254,7 @@ public class ExcelUploadService {
 					List<StdTermsVo.Word> wordList = new ArrayList<StdTermsVo.Word>();
 					short loop = 0;
 					for (String wordEngAbrvNm : wordEngAbrvNms) {
-						StdWordVo wordVo = session.selectOne("word.selectWordByEngAbrvNm", wordEngAbrvNm);
+						StdWordVo wordVo = session.selectOne("word.selectWordByEngAbrvNm", byName(dictId, "wordEngAbrvNm", wordEngAbrvNm));
 						StdTermsVo.Word word = new StdTermsVo.Word();
 						word.setTermsId(stdTermsVo.getId());
 						word.setWordId(wordVo.getId());
@@ -274,8 +295,8 @@ public class ExcelUploadService {
 	 * @return 업로드 결과
 	 * @throws Exception Excel 파싱 실패 시
 	 */
-	public UploadResult uploadCodeInfoList(String userId, MultipartFile multiPart) throws Exception {
-		UploadResult result = uploadTermsList(userId, multiPart);
+	public UploadResult uploadCodeInfoList(String userId, String dictId, MultipartFile multiPart) throws Exception {
+		UploadResult result = uploadTermsList(userId, dictId, multiPart);
 		// 코드 일괄 등록 이력 (uploadTermsList에서 TERM으로 저장되므로 CODE로도 기록)
 		saveUploadHistory(userId, "CODE", "코드", result);
 		return result;
@@ -291,7 +312,7 @@ public class ExcelUploadService {
 	 * @return 업로드 결과
 	 * @throws Exception Excel 파싱 실패 시
 	 */
-	public UploadResult uploadCodeDataList(String userId, MultipartFile multiPart) throws Exception {
+	public UploadResult uploadCodeDataList(String userId, String dictId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 
@@ -342,7 +363,7 @@ public class ExcelUploadService {
 	 * @return 업로드 결과
 	 * @throws Exception Excel 파싱 실패 시
 	 */
-	public UploadResult uploadDomains(String userId, MultipartFile multiPart) throws Exception {
+	public UploadResult uploadDomains(String userId, String dictId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
@@ -355,7 +376,7 @@ public class ExcelUploadService {
 				StdDomainVo stdDomainVo = new StdDomainVo();
 				try {
 					// 도메인이 이미 존재하는 경우에는 Skip 한다.
-					if (session.selectOne("domain.selectDomainInfoByNm", dataRow.get(4)) != null) {
+					if (session.selectOne("domain.selectDomainInfoByNm", byName(dictId, "domainNm", dataRow.get(4))) != null) {
 						result.addSkip();
 						continue;
 					}
@@ -388,6 +409,7 @@ public class ExcelUploadService {
 					stdDomainVo.setCretUserId(userId);
 					stdDomainVo.setUpdtUserId(userId);
 					stdDomainVo.setAprvYn(aprvYn);
+					stdDomainVo.setDictId(dictId);
 					session.insert("domain.insertDomain", stdDomainVo);
 					session.commit();
 					result.addSuccess();
@@ -415,7 +437,7 @@ public class ExcelUploadService {
 	 * <p>각 행을 파싱하여 도메인 그룹을 등록한다. 이미 존재하면 Skip.
 	 * 컬럼: [No, 도메인그룹명, 표준여부]</p>
 	 */
-	public UploadResult uploadDomainGroups(String userId, MultipartFile multiPart) throws Exception {
+	public UploadResult uploadDomainGroups(String userId, String dictId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 
@@ -463,7 +485,7 @@ public class ExcelUploadService {
 	 * 컬럼: [No, 도메인그룹명, 도메인분류명, 표준여부]
 	 * 도메인 그룹이 없으면 FK 에러를 사용자가 이해할 수 있는 메시지로 변환.</p>
 	 */
-	public UploadResult uploadDomainClsfs(String userId, MultipartFile multiPart) throws Exception {
+	public UploadResult uploadDomainClsfs(String userId, String dictId, MultipartFile multiPart) throws Exception {
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 

@@ -40,13 +40,14 @@ public class DataStandardController extends DataControllerBase {
     @PostMapping(value = "/uploadWords", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<Response> uploadWords(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
             @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
-                     @RequestParam("file") MultipartFile multiPart) {
+                     @RequestParam("file") MultipartFile multiPart,
+                     @RequestParam(value="dictId", required=false) String dictId) {
     	Response result = new Response();
     	
     	log.info(">> uploadWords started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadWords", userId, socketSessionId, inMemory(multiPart)));
+			startService(new DataStandardService("uploadWords", userId, socketSessionId, dictId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadWords failed : " + e.getMessage());
@@ -60,13 +61,14 @@ public class DataStandardController extends DataControllerBase {
     @PostMapping(value = "/uploadTermsList", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<Response> uploadTermsList(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
             @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
-                     @RequestParam("file") MultipartFile multiPart) {
+                     @RequestParam("file") MultipartFile multiPart,
+                     @RequestParam(value="dictId", required=false) String dictId) {
     	Response result = new Response();
     	
     	log.info(">> uploadTermsList started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadTermsList", userId, socketSessionId, inMemory(multiPart)));
+			startService(new DataStandardService("uploadTermsList", userId, socketSessionId, dictId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -78,13 +80,14 @@ public class DataStandardController extends DataControllerBase {
     @PostMapping(value = "/uploadCodeInfoList", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<Response> uploadCodeInfoList(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
             @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
-                     @RequestParam("file") MultipartFile multiPart) {
+                     @RequestParam("file") MultipartFile multiPart,
+                     @RequestParam(value="dictId", required=false) String dictId) {
     	Response result = new Response();
     	
     	log.info(">> uploadCodeInfoList started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadCodeInfoList", userId, socketSessionId, inMemory(multiPart)));
+			startService(new DataStandardService("uploadCodeInfoList", userId, socketSessionId, dictId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadCodeInfoList failed : " + e.getMessage());
@@ -97,13 +100,14 @@ public class DataStandardController extends DataControllerBase {
     @PostMapping(value = "/uploadCodeDataList", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<Response> uploadCodeDataList(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
             @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
-                     @RequestParam("file") MultipartFile multiPart) {
+                     @RequestParam("file") MultipartFile multiPart,
+                     @RequestParam(value="dictId", required=false) String dictId) {
     	Response result = new Response();
     	
     	log.info(">> uploadCodeDataList started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadCodeDataList", userId, socketSessionId, inMemory(multiPart)));
+			startService(new DataStandardService("uploadCodeDataList", userId, socketSessionId, dictId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadCodeDataList failed : " + e.getMessage());
@@ -117,13 +121,14 @@ public class DataStandardController extends DataControllerBase {
     @PostMapping(value = "/uploadDomains", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<Response> uploadDomains(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
                      @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
-                     @RequestParam("file") MultipartFile multiPart) {
+                     @RequestParam("file") MultipartFile multiPart,
+                     @RequestParam(value="dictId", required=false) String dictId) {
     	Response result = new Response();
     	
     	log.info(">> uploadDomains started : {}", multiPart.getOriginalFilename());
     	
     	try {
-			startService(new DataStandardService("uploadDomains", userId, socketSessionId, inMemory(multiPart)));
+			startService(new DataStandardService("uploadDomains", userId, socketSessionId, dictId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			//stompSessionService.sendMessage(socketSessionId, WsNoticeLevel.INFO, ">> uploadDomains failed : " + e.getMessage());
@@ -136,11 +141,12 @@ public class DataStandardController extends DataControllerBase {
     @PostMapping(value = "/uploadDomainGroups", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<Response> uploadDomainGroups(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
                      @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
-                     @RequestParam("file") MultipartFile multiPart) {
+                     @RequestParam("file") MultipartFile multiPart,
+                     @RequestParam(value="dictId", required=false) String dictId) {
     	Response result = new Response();
     	log.info(">> uploadDomainGroups started : {}", multiPart.getOriginalFilename());
     	try {
-			startService(new DataStandardService("uploadDomainGroups", userId, socketSessionId, inMemory(multiPart)));
+			startService(new DataStandardService("uploadDomainGroups", userId, socketSessionId, dictId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -151,11 +157,12 @@ public class DataStandardController extends DataControllerBase {
     @PostMapping(value = "/uploadDomainClsfs", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<Response> uploadDomainClsfs(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
                      @RequestHeader(value=CustomHeaders.HEADER_SCOKET_SESSION_ID, required=false) String socketSessionId,
-                     @RequestParam("file") MultipartFile multiPart) {
+                     @RequestParam("file") MultipartFile multiPart,
+                     @RequestParam(value="dictId", required=false) String dictId) {
     	Response result = new Response();
     	log.info(">> uploadDomainClsfs started : {}", multiPart.getOriginalFilename());
     	try {
-			startService(new DataStandardService("uploadDomainClsfs", userId, socketSessionId, inMemory(multiPart)));
+			startService(new DataStandardService("uploadDomainClsfs", userId, socketSessionId, dictId, inMemory(multiPart)));
 	    	result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());

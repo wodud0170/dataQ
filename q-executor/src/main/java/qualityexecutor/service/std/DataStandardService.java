@@ -28,6 +28,8 @@ public class DataStandardService implements Runnable {
 	private String userId;
 	private String ssId;
 	private MultipartFile multiPart;
+	/** 98번 — 이 일괄등록이 들어갈 표준사전 */
+	private String dictId;
 	private UploadResult lastResult;
 
 	public UploadResult getLastResult() {
@@ -40,10 +42,11 @@ public class DataStandardService implements Runnable {
 	@Autowired
 	private ExcelUploadService excelUploadService;
 
-	public DataStandardService(String jobType, String userId, String ssId, MultipartFile multiPart) {
+	public DataStandardService(String jobType, String userId, String ssId, String dictId, MultipartFile multiPart) {
 		this.jobType = jobType;
 		this.userId = userId;
 		this.ssId = ssId;
+		this.dictId = dictId;
 		this.multiPart = multiPart;
 	}
 
@@ -51,35 +54,35 @@ public class DataStandardService implements Runnable {
 	public void run() {
 		switch(jobType) {
 			case JOB_TYPE_WORDS:
-				uploadWords(userId, ssId, multiPart);
+				uploadWords(userId, ssId, dictId, multiPart);
 				break;
 			case JOB_TYPE_TERMS:
-				uploadTermsList(userId, ssId, multiPart);
+				uploadTermsList(userId, ssId, dictId, multiPart);
 				break;
 			case JOB_TYPE_CODE_INFO:
-				uploadCodeInfoList(userId, ssId, multiPart);
+				uploadCodeInfoList(userId, ssId, dictId, multiPart);
 				break;
 			case JOB_TYPE_CODE_DATA:
-				uploadCodeDataList(userId, ssId, multiPart);
+				uploadCodeDataList(userId, ssId, dictId, multiPart);
 				break;
 			case JOB_TYPE_DOMAINS:
-				uploadDomains(userId, ssId, multiPart);
+				uploadDomains(userId, ssId, dictId, multiPart);
 				break;
 			case JOB_TYPE_DOMAIN_GRPS:
-				uploadDomainGroups(userId, ssId, multiPart);
+				uploadDomainGroups(userId, ssId, dictId, multiPart);
 				break;
 			case JOB_TYPE_DOMAIN_CLSFS:
-				uploadDomainClsfs(userId, ssId, multiPart);
+				uploadDomainClsfs(userId, ssId, dictId, multiPart);
 				break;
 		}
 	}
 
 	//단어 일괄 저장
-	public void uploadWords(String userId, String ssId, MultipartFile multiPart) {
+	public void uploadWords(String userId, String ssId, String dictId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[단어] 일괄등록 시작");
-			UploadResult result = excelUploadService.uploadWords(userId, multiPart);
+			UploadResult result = excelUploadService.uploadWords(userId, dictId, multiPart);
 			sendUploadResult(ssId, "[단어]", result);
 			if (result.getSuccessCount() > 0) {
 				stompSessionService.sendNotice(WsNoticeLevel.INFO, "단어가 일괄저장되었습니다.");
@@ -92,11 +95,11 @@ public class DataStandardService implements Runnable {
 	}
 
 	//용어 일괄 저장
-	public void uploadTermsList(String userId, String ssId, MultipartFile multiPart) {
+	public void uploadTermsList(String userId, String ssId, String dictId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[용어] 일괄등록 시작");
-			UploadResult result = excelUploadService.uploadTermsList(userId, multiPart, (processed, total) -> {
+			UploadResult result = excelUploadService.uploadTermsList(userId, dictId, multiPart, (processed, total) -> {
 				try { stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, String.format("[용어] 진행 중 - %d/%d건", processed, total)); } catch (Exception ignored) {}
 			});
 			this.lastResult = result;
@@ -112,11 +115,11 @@ public class DataStandardService implements Runnable {
 	}
 
 	//코드정보 일괄 저장
-	public void uploadCodeInfoList(String userId, String ssId, MultipartFile multiPart) {
+	public void uploadCodeInfoList(String userId, String ssId, String dictId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[코드] 일괄등록 시작");
-			UploadResult result = excelUploadService.uploadCodeInfoList(userId, multiPart);
+			UploadResult result = excelUploadService.uploadCodeInfoList(userId, dictId, multiPart);
 			sendUploadResult(ssId, "[코드]", result);
 			if (result.getSuccessCount() > 0) {
 				stompSessionService.sendNotice(WsNoticeLevel.INFO, "코드정보가 일괄저장되었습니다.");
@@ -129,11 +132,11 @@ public class DataStandardService implements Runnable {
 	}
 
 	//코드데이터 일괄 저장
-	public void uploadCodeDataList(String userId, String ssId, MultipartFile multiPart) {
+	public void uploadCodeDataList(String userId, String ssId, String dictId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[코드데이터] 일괄등록 시작");
-			UploadResult result = excelUploadService.uploadCodeDataList(userId, multiPart);
+			UploadResult result = excelUploadService.uploadCodeDataList(userId, dictId, multiPart);
 			sendUploadResult(ssId, "[코드데이터]", result);
 			if (result.getSuccessCount() > 0) {
 				stompSessionService.sendNotice(WsNoticeLevel.INFO, "코드데이터(항목값)가 일괄저장되었습니다.");
@@ -146,11 +149,11 @@ public class DataStandardService implements Runnable {
 	}
 
 	//도메인 일괄 저장
-	public void uploadDomains(String userId, String ssId, MultipartFile multiPart) {
+	public void uploadDomains(String userId, String ssId, String dictId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[도메인] 일괄등록 시작");
-			UploadResult result = excelUploadService.uploadDomains(userId, multiPart);
+			UploadResult result = excelUploadService.uploadDomains(userId, dictId, multiPart);
 			sendUploadResult(ssId, "[도메인]", result);
 			if (result.getSuccessCount() > 0) {
 				stompSessionService.sendNotice(WsNoticeLevel.INFO, "도메인이 일괄저장되었습니다.");
@@ -163,11 +166,11 @@ public class DataStandardService implements Runnable {
 	}
 
 	//도메인 그룹 일괄 저장
-	public void uploadDomainGroups(String userId, String ssId, MultipartFile multiPart) {
+	public void uploadDomainGroups(String userId, String ssId, String dictId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[도메인그룹] 일괄등록 시작");
-			UploadResult result = excelUploadService.uploadDomainGroups(userId, multiPart);
+			UploadResult result = excelUploadService.uploadDomainGroups(userId, dictId, multiPart);
 			sendUploadResult(ssId, "[도메인그룹]", result);
 			if (result.getSuccessCount() > 0) {
 				stompSessionService.sendNotice(WsNoticeLevel.INFO, "도메인 그룹이 일괄저장되었습니다.");
@@ -180,11 +183,11 @@ public class DataStandardService implements Runnable {
 	}
 
 	//도메인 분류 일괄 저장
-	public void uploadDomainClsfs(String userId, String ssId, MultipartFile multiPart) {
+	public void uploadDomainClsfs(String userId, String ssId, String dictId, MultipartFile multiPart) {
 		log.info(">> websocket SSID={}, userId={}", ssId, userId);
 		try {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "[도메인분류] 일괄등록 시작");
-			UploadResult result = excelUploadService.uploadDomainClsfs(userId, multiPart);
+			UploadResult result = excelUploadService.uploadDomainClsfs(userId, dictId, multiPart);
 			sendUploadResult(ssId, "[도메인분류]", result);
 			if (result.getSuccessCount() > 0) {
 				stompSessionService.sendNotice(WsNoticeLevel.INFO, "도메인 분류가 일괄저장되었습니다.");

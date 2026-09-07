@@ -104,6 +104,7 @@
 				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
 			from TB_DOMAIN
 			where DOMAIN_NM = #{domainNm}
+			  and DICT_ID = #{dictId}
   </select>
 
   <select id="selectDomainInfoByClsfNm" parameterType="String" resultMap="stdDomainMap">
@@ -188,6 +189,7 @@
             ,CRET_USER_ID	
             ,APRV_STAT_UPDT_DT
             ,REQ_SYS_CD
+            ,DICT_ID
            )
            VALUES
            (
@@ -211,6 +213,7 @@
             ,#{cretUserId, jdbcType=VARCHAR}
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{reqSysCd, jdbcType=VARCHAR}
+            ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
            )
   </insert>
 
@@ -269,7 +272,8 @@
 				,DOMAIN_GRP_NM			
 				,COMM_STND_YN	
 				,CRET_DT			
-				,CRET_USER_ID	
+				,CRET_USER_ID
+            ,DICT_ID
            )
            VALUES
            (
@@ -278,6 +282,7 @@
             ,#{commStndYn, jdbcType=VARCHAR}
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{cretUserId, jdbcType=VARCHAR}
+            ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
            )
   </insert>
 
@@ -356,7 +361,8 @@
 				,DOMAIN_GRP_NM		
 				,COMM_STND_YN	
 				,CRET_DT			
-				,CRET_USER_ID	
+				,CRET_USER_ID
+            ,DICT_ID
            )
            VALUES
            (
@@ -366,6 +372,7 @@
             ,#{commStndYn, jdbcType=VARCHAR}
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{cretUserId, jdbcType=VARCHAR}
+            ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
            )
   </insert>
 

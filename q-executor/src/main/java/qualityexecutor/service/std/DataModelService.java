@@ -53,6 +53,9 @@ public class DataModelService implements Runnable {
 	private SqlSessionTemplate sqlSessionTemplate;
 
 	@Autowired
+	private com.ndata.quality.service.StdDictService dictService;
+
+	@Autowired
 	private SqlSessionFactory sqlSessionFactory; // transaction 사용할 경우 사용
 
 	@Autowired
@@ -210,7 +213,7 @@ public class DataModelService implements Runnable {
 					if (!attrNmUp.isEmpty()) {
 						for (String word : attrNmUp.split("_")) {
 							if (word.isEmpty()) continue;
-							StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", word);
+							StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", dictService.nameParam(null, "wordEngAbrvNm", word));
 							if (stdWordVo != null) {
 								wordLst.add(word + "(" + stdWordVo.getWordNm() + ")");
 								wordStndLst.add("Y");

@@ -203,7 +203,7 @@
 			where WORD_NM = #{wordNm} OR #{wordNm} = any(ALLOPH_SYNM_LST)
 	</select>
 
-	<select id="selectWordByEngAbrvNm" parameterType="String" resultMap="stdWordMap">
+	<select id="selectWordByEngAbrvNm" parameterType="java.util.Map" resultMap="stdWordMap">
 			select 
 				WORD_ID
 				,WORD_NM			
@@ -227,6 +227,7 @@
 				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
 			from TB_WORD
 			where WORD_ENG_ABRV_NM = #{wordEngAbrvNm}
+			  and DICT_ID = #{dictId}
 	</select>
 
 	<!-- 영문약어 목록으로 단어 일괄 조회 (용어 빠른 등록용) -->
@@ -291,6 +292,7 @@
 			,CRET_USER_ID	
 			,APRV_STAT_UPDT_DT
 			,REQ_SYS_CD
+            ,DICT_ID
            )
            VALUES
            (
@@ -311,6 +313,7 @@
             ,#{cretUserId, jdbcType=VARCHAR}
 			,to_char(now(), 'YYYYMMDDHH24MISS')
 			,#{reqSysCd, jdbcType=VARCHAR}
+            ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
 		   )
 	</insert>
 
@@ -389,11 +392,12 @@
 	</select>
 
 	<!-- 금칙어로 등록된 단어 찾기: 입력 단어명이 기존 단어의 금칙어 목록에 포함되는지 체크 -->
-	<select id="selectWordByForbiddenNm" parameterType="String" resultType="java.util.HashMap">
+	<select id="selectWordByForbiddenNm" parameterType="java.util.Map" resultType="java.util.HashMap">
 		SELECT WORD_NM AS "wordNm", WORD_ENG_ABRV_NM AS "wordEngAbrvNm"
 		FROM TB_WORD
 		WHERE #{wordNm} = ANY(FORBDN_WORD_LST)
 		  AND APRV_YN = 'Y'
+		  AND DICT_ID = #{dictId}
 		LIMIT 1
 	</select>
 
