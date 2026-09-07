@@ -452,7 +452,7 @@ public class ExcelUploadService {
 					if (grpNm == null || grpNm.trim().isEmpty()) {
 						throw new Exception("도메인 그룹명이 비어 있습니다");
 					}
-					if (session.selectOne("domain.selectDomainGroupByNm", grpNm) != null) {
+					if (session.selectOne("domain.selectDomainGroupByNm", byName(dictId, "domainGrpNm", grpNm)) != null) {
 						result.addSkip();
 						continue;
 					}
@@ -504,7 +504,7 @@ public class ExcelUploadService {
 					if (grpNm == null || grpNm.trim().isEmpty()) {
 						throw new Exception("도메인 그룹명이 비어 있습니다");
 					}
-					if (session.selectOne("domain.selectDomainClsfByNm", clsfNm) != null) {
+					if (session.selectOne("domain.selectDomainClsfByNm", byName(dictId, "domainClsfNm", clsfNm)) != null) {
 						result.addSkip();
 						continue;
 					}

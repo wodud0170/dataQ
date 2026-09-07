@@ -3,6 +3,7 @@
     <!-- 검색 + 버튼 영역 -->
     <v-sheet class="filterWrapper px-4 pt-3 pb-2">
       <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '6px' }">
+        <DictSelector v-model="dictId" @change="getDomainGroupData" />
         <span class="filterLabel">도메인 그룹명</span>
         <v-text-field v-model="searchGrpNm" @click:clear="searchGrpNm=''" clearable
           clear-icon="mdi-close-circle" type="text" color="ndColor"
@@ -176,14 +177,18 @@
 import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
 import { eventBus } from '../eventBus';
+import DictSelector from './DictSelector.vue'
 
 export default {
   name: 'DSDomainGroup',
   components: {
-    NdModal
+    NdModal,
+    DictSelector
   },
   props: ['isMobile'],
   data: () => ({
+    // 98번 — 조회할 표준사전
+    dictId: null,
     // 도메인 그룹 목록 리스트
     domainGroupAllItems: [],
     searchGrpNm: '',
@@ -332,7 +337,7 @@ export default {
     },
     getDomainGroupData() {
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainGroupList").then(result => {
+        axios.get(this.$APIURL.base + "api/std/getDomainGroupList", { params: { dictId: this.dictId } }).then(result => {
           let _data = result.data;
 
           // console 표시

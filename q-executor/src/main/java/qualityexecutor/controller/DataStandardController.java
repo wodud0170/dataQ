@@ -172,10 +172,12 @@ public class DataStandardController extends DataControllerBase {
 
     // 표준화 추천 - 용어 분석
     @PostMapping(value = "/analyzeTermsBatch")
-    public List<TermAnalysisResult> analyzeTermsBatch(@RequestBody Map<String, List<String>> request) {
-        List<String> termNames = request.get("termNames");
+    public List<TermAnalysisResult> analyzeTermsBatch(@RequestBody Map<String, Object> request) {
+        @SuppressWarnings("unchecked")
+        List<String> termNames = (List<String>) request.get("termNames");
         if (termNames == null) termNames = new ArrayList<>();
-        log.info(">> analyzeTermsBatch: {} items", termNames.size());
-        return termRecommendService.analyze(termNames);
+        String dictId = (String) request.get("dictId");
+        log.info(">> analyzeTermsBatch: {} items, dict={}", termNames.size(), dictId);
+        return termRecommendService.analyze(termNames, dictId);
     }
 }

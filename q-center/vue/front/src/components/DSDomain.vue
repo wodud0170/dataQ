@@ -8,6 +8,7 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px 0px 6px 0px' }">
+              <DictSelector v-model="dictId" @change="getDomainData" />
               <span :style="{ fontSize: '.875rem' }">도메인명</span>
               <v-text-field class="pr-4 pl-4" v-model="searchDomain" v-on:keyup.enter="getDomainData"
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
@@ -575,12 +576,14 @@ import NdModal from "./../views/modal/NdModal.vue"
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { eventBus } from './../eventBus.js'
+import DictSelector from './DictSelector.vue'
 
 export default {
   name: 'DSDomain',
   components: {
     NdModal,
-    Treeselect
+    Treeselect,
+    DictSelector
   },
   watch: {
     addDomainModalShow(val) {
@@ -599,6 +602,8 @@ export default {
   },
   props: ['isMobile'],
   data: () => ({
+    // 98번 — 조회할 표준사전
+    dictId: null,
     // 도메인 목록 리스트
     domainItems: [],
     // 검색 도메인
@@ -873,7 +878,8 @@ export default {
           'schDomainGrpNm': this.searchDomainGrpNm !== '' ? this.searchDomainGrpNm : null,
           'schDataType': this.searchDataType !== '' ? this.searchDataType : null,
           'schDataLen': this.searchDataLen !== '' ? this.searchDataLen : null,
-          'schCommStndYn': this.searchCommStndYn || null
+          'schCommStndYn': this.searchCommStndYn || null,
+          'dictId': this.dictId
         }).then(result => {
           let _data = result.data;
           // console.log(_data);
@@ -956,7 +962,7 @@ export default {
     getDomainGroupName() {
       // 도메인 그룹명을 도메인 등록, 도메인 수정에 바인드
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainGroupList").then(result => {
+        axios.get(this.$APIURL.base + "api/std/getDomainGroupList", { params: { dictId: this.dictId } }).then(result => {
           let _data = result.data;
 
           let _new_arr = [];

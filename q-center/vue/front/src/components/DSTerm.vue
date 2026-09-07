@@ -9,6 +9,7 @@
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <!-- 검색 1줄: 용어명 / 용어영문약어명 / 도메인명 -->
             <v-row :style="{ alignItems: 'center', margin: '0px', flexWrap: 'wrap', rowGap: '10px' }" class="mb-2">
+              <DictSelector v-model="dictId" @change="getTermData" />
               <!-- 용어명 검색 -->
               <span :style="{ fontSize: '.875rem' }">용어명</span>
               <v-select v-model="searchTermMode" :items="searchModeOptions" item-text="label" item-value="value"
@@ -742,13 +743,15 @@ import NdModal from "./../views/modal/NdModal.vue"
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { eventBus } from './../eventBus.js'
+import DictSelector from './DictSelector.vue'
 
 export default {
   name: 'DSTerm',
   props: ['isMobile'],
   components: {
     NdModal,
-    Treeselect
+    Treeselect,
+    DictSelector
   },
   watch: {
     termItems() {
@@ -843,6 +846,8 @@ export default {
     }
   },
   data: () => ({
+    // 98번 — 조회할 표준사전
+    dictId: null,
     // 용어 목록
     termItems: [],
 
@@ -1210,7 +1215,8 @@ export default {
           'schAprvYn': schAprvYn,
           'schCommStndYn': this.searchCommStndYn || null,
           'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
-          'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null
+          'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null,
+          'dictId': this.dictId
         }).then((res) => {
           // console.log(res.data)
           this.termItems = res.data;
@@ -2467,7 +2473,7 @@ export default {
     getDomainData() {
       // 도메인 리스트에서 도메인명을 가지고 와 도메인명을 추출하여 배열 생성
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainList").then(result => {
+        axios.get(this.$APIURL.base + "api/std/getDomainList", { params: { dictId: this.dictId } }).then(result => {
           let _data = result.data;
           // console.log(_data);
 
@@ -2631,7 +2637,7 @@ export default {
     /** 코드 목록 로드 (등록) */
     loadCodeInfoList() {
       var self = this;
-      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', {}).then(function(res) {
+      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', { dictId: this.dictId }).then(function(res) {
         self.addTerm_codeInfoList = res.data || [];
       });
     },
@@ -2661,7 +2667,7 @@ export default {
     /** 코드 목록 로드 (수정) - codeGrp가 있으면 기존 코드 자동 선택 */
     loadUpdateCodeInfoList(existingCodeGrp) {
       var self = this;
-      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', {}).then(function(res) {
+      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', { dictId: this.dictId }).then(function(res) {
         self.updateTerm_codeInfoList = res.data || [];
         // 기존 codeGrp에 해당하는 코드 자동 선택
         if (existingCodeGrp) {

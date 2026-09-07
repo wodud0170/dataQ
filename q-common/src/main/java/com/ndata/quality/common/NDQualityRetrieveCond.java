@@ -42,5 +42,14 @@ public class NDQualityRetrieveCond {
     // 데이터 품질 진단: DB 가 연결된 모델만 (Y 일 때 DM_DS_ID 가 있고 ndata.TB_DATA_SOURCE 에 존재하는 모델만 반환)
     private String connectedOnly;
 
+    /**
+     * 98번 — 조회할 표준사전. 사전 계열 목록 조회는 전부 이 값으로 좁힌다.
+     *
+     * <p>비어 있으면 사전으로 좁히지 않는다. 화면이 사전을 안 보내던 시절과
+     * 같은 동작이라 기존 호출이 깨지지 않는다. 컨트롤러에서 비어 있으면
+     * 기본 사전을 채워 넣으므로, 실제로 전역 조회가 나가는 경로는 없다.</p>
+     */
+    private String dictId;
+
 }
 

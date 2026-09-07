@@ -2860,7 +2860,7 @@ public class DataModelController {
 	private List<String> findMissingWords(List<String> tokens) {
 		List<String> missing = new ArrayList<>();
 		if (tokens.isEmpty()) return missing;
-		List<StdWordVo> found = sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", tokens);
+		List<StdWordVo> found = sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", dictService.listParam(null, "engAbrvNms", tokens));
 		java.util.Set<String> foundSet = new java.util.HashSet<>();
 		for (StdWordVo w : found) {
 			if (w.getWordEngAbrvNm() != null) foundSet.add(w.getWordEngAbrvNm().toUpperCase());

@@ -207,8 +207,9 @@
           SELECT a.DM_ID, a.OBJ_OWNER, a.OBJ_NM, a.ATTR_NM,
                  COALESCE(d.DOMAIN_CLSF_NM, '미분류') AS DOMAIN_CLSF_NM
             FROM TB_DATA_MODEL_ATTR a
-            LEFT JOIN TB_TERMS t  ON t.TERMS_NM  = a.ATTR_NM_KR
-            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM = t.DOMAIN_NM
+            LEFT JOIN TB_DATA_MODEL m ON m.DM_ID = a.DM_ID
+            LEFT JOIN TB_TERMS t  ON t.TERMS_NM  = a.ATTR_NM_KR AND t.DICT_ID = m.DICT_ID
+            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM = t.DOMAIN_NM AND d.DICT_ID = t.DICT_ID
         )
         SELECT COALESCE(cc.DOMAIN_CLSF_NM, '미분류') AS "domainClsfNm",
                COUNT(DISTINCT rr.OBJ_NM || '.' || rr.ATTR_NM) AS "colCnt",
@@ -239,8 +240,9 @@
                  COALESCE(d.DOMAIN_CLSF_NM, '미분류') AS DOMAIN_CLSF_NM,
                  d.DOMAIN_NM
             FROM TB_DATA_MODEL_ATTR a
-            LEFT JOIN TB_TERMS t  ON t.TERMS_NM  = a.ATTR_NM_KR
-            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM = t.DOMAIN_NM
+            LEFT JOIN TB_DATA_MODEL m ON m.DM_ID = a.DM_ID
+            LEFT JOIN TB_TERMS t  ON t.TERMS_NM  = a.ATTR_NM_KR AND t.DICT_ID = m.DICT_ID
+            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM = t.DOMAIN_NM AND d.DICT_ID = t.DICT_ID
         )
         SELECT rr.OBJ_NM         AS "objNm",
                rr.ATTR_NM        AS "attrNm",

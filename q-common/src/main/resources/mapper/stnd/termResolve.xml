@@ -40,7 +40,7 @@
 		       t.domain_nm          as "resolvedDomainNm"
 		  FROM TB_TERM_RESOLVE_HISTORY h
 		  LEFT JOIN TB_TERMS  t ON t.terms_id  = h.resolved_terms_id
-		  LEFT JOIN TB_DOMAIN d ON d.domain_nm = t.domain_nm
+		  LEFT JOIN TB_DOMAIN d ON d.domain_nm = t.domain_nm AND d.dict_id = t.dict_id
 		 WHERE 1=1
 		<if test="isAdmin == null or isAdmin == false">
 		   AND h.change_user_id = #{currentUserId}

@@ -8,6 +8,7 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px' }">
+              <DictSelector v-model="dictId" @change="getCodeData" />
               <span :style="{ fontSize: '.875rem' }">코드명</span>
               <!-- 코드명 입력 필드 -->
               <v-text-field class="pr-4 pl-4" v-model="searchCode" v-on:keyup.enter="getCodeData"
@@ -833,13 +834,15 @@ import NdModal from "./../views/modal/NdModal.vue"
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { eventBus } from './../eventBus.js'
+import DictSelector from './DictSelector.vue'
 
 export default {
   name: 'DSCode',
   props: ['isMobile'],
   components: {
     NdModal,
-    Treeselect
+    Treeselect,
+    DictSelector
   },
   watch: {
     codeItems() {
@@ -921,6 +924,8 @@ export default {
     }
   },
   data: () => ({
+    // 98번 — 조회할 표준사전
+    dictId: null,
     // 코드 목록
     codeItems: [],
     // 코드 값 목록
@@ -1205,7 +1210,8 @@ export default {
           'schNm': schNm,
           'schAprvYn': schAprvYn,
           'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
-          'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null
+          'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null,
+          'dictId': this.dictId
         }).then(result => {
           this.codeItems = result.data;
 
@@ -2604,7 +2610,7 @@ export default {
     getDomainData() {
       // 도메인 리스트에서 도메인명을 가지고 와 도메인명을 추출하여 배열 생성
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainList").then(result => {
+        axios.get(this.$APIURL.base + "api/std/getDomainList", { params: { dictId: this.dictId } }).then(result => {
           let _data = result.data;
           // console.log(_data);
 
@@ -2835,7 +2841,7 @@ export default {
     },
     getCodeDataList() {
       // 코드 항목 관리에서 사용하는 데이터 리스트
-      axios.get(this.$APIURL.base + "api/std/getCodeDataList").then(result => {
+      axios.get(this.$APIURL.base + "api/std/getCodeDataList", { params: { dictId: this.dictId } }).then(result => {
         let _data = result.data;
 
         this.codeDataItems = _data;

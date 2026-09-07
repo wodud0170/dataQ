@@ -8,6 +8,7 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px' }">
+              <DictSelector v-model="dictId" @change="getWordData" />
               <span :style="{ fontSize: '.875rem' }">단어명</span>
               <!-- 단어명 입력 필드 -->
               <v-text-field class="pr-4 pl-4" v-model="searchWord" v-on:keyup.enter="getWordData"
@@ -597,12 +598,14 @@ import NdModal from "./../views/modal/NdModal.vue"
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { eventBus } from './../eventBus.js'
+import DictSelector from './DictSelector.vue'
 
 export default {
   name: 'DSWord',
   components: {
     NdModal,
-    Treeselect
+    Treeselect,
+    DictSelector
   },
   watch: {
     addWord_wordClsfYn(val) {
@@ -632,6 +635,8 @@ export default {
     // 도메인 분류명 리스트
     domainClassificationItems: [],
     // 검색 단어
+    // 98번 — 조회할 표준사전
+    dictId: null,
     searchWord: '',
     // 검색 단어영문약어명
     searchEngWord: '',
@@ -779,7 +784,8 @@ export default {
       }
       axios.post(vm.$APIURL.base + 'api/std/getWordList', {
         'searchEngWord': abrvNm.trim(),
-        'schAprvYn': ''
+        'schAprvYn': '',
+        'dictId': vm.dictId
       }).then(function (res) {
         var found = false;
         if (res.data && res.data.length > 0) {
@@ -1230,7 +1236,8 @@ export default {
               'wordClsfYn': this.searchWordClsfYn || null,
               'schCommStndYn': this.searchCommStndYn || null,
               'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
-              'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null
+              'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null,
+              'dictId': this.dictId
             }).then(result => {
               let _data = result.data;
 
@@ -1768,7 +1775,7 @@ export default {
     },
     getDomainClassificationData() {
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainClassificationList").then(result => {
+        axios.get(this.$APIURL.base + "api/std/getDomainClassificationList", { params: { dictId: this.dictId } }).then(result => {
           let _data = result.data;
 
           // console 표시

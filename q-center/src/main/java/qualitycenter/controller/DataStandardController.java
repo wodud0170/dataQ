@@ -91,6 +91,21 @@ public class DataStandardController {
 	@Autowired
 	private com.ndata.quality.service.StdDictService dictService;
 
+	/**
+	 * 98번 — 목록 조회 검색조건에 사전을 보정한다.
+	 *
+	 * <p>화면이 사전을 안 보내면 기본 사전으로 채운다. 비워 두면 매퍼의
+	 * <code>&lt;if&gt;</code> 가 건너뛰어 <b>전 사전을 훑는</b> 결과가 나온다.
+	 * 그건 사전을 나눈 의미가 없으므로 여기서 반드시 채운다.</p>
+	 */
+	private NDQualityRetrieveCond withDict(NDQualityRetrieveCond cond) {
+		NDQualityRetrieveCond c = (cond != null) ? cond : new NDQualityRetrieveCond();
+		if (c.getDictId() == null || c.getDictId().trim().isEmpty()) {
+			c.setDictId(dictService.defaultDictId());
+		}
+		return c;
+	}
+
 	@Autowired
 	private SqlSessionFactory sqlSessionFactory; // transaction 사용할 경우 사용
 
@@ -152,7 +167,7 @@ public class DataStandardController {
 				return Mono.just(result);
 			}
 			// 중복 체크: 동일 단어명이 이미 존재하면 승인 상태에 따라 메시지 분기
-			StdWordVo existingWord = sqlSessionTemplate.selectOne("word.selectWordInfoByNm", dataVo.getWordNm());
+			StdWordVo existingWord = sqlSessionTemplate.selectOne("word.selectWordInfoByNm", dictService.nameParam(dataVo.getDictId(), "wordNm", dataVo.getWordNm()));
 			if (existingWord != null) {
 				String dupMsg = "Y".equals(existingWord.getAprvYn())
 						? "이미 승인된 단어명입니다."
@@ -299,7 +314,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getWordList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdWordVo> getWordList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getWordList : {}", retCond);
-		return sqlSessionTemplate.selectList("word.selectWordList", retCond);
+		return sqlSessionTemplate.selectList("word.selectWordList", withDict(retCond));
 	}
 
 	/**
@@ -310,7 +325,7 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/getWordInfoByNm", method = RequestMethod.GET)
 	public List<StdWordVo> getWordInfoByNm(@RequestParam("wordNm") String wordNm) {
-		return sqlSessionTemplate.selectList("word.selectWordInfoByNm", wordNm);
+		return sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(null, "wordNm", wordNm));
 	}
 
 	/**
@@ -324,7 +339,7 @@ public class DataStandardController {
 			return result;
 		}
 		// 1. TB_WORD 조회
-		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", wordNm.trim());
+		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(null, "wordNm", wordNm.trim()));
 		if (words != null && !words.isEmpty()) {
 			StdWordVo w = words.get(0);
 			result.put("found", true);
@@ -387,7 +402,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getWordsByEngAbrvNms", method = RequestMethod.POST)
 	public List<StdWordVo> getWordsByEngAbrvNms(@RequestBody List<String> engAbrvNms) {
 		if (engAbrvNms == null || engAbrvNms.isEmpty()) return java.util.Collections.emptyList();
-		return sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", engAbrvNms);
+		return sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", dictService.listParam(null, "engAbrvNms", engAbrvNms));
 	}
 
 	/**
@@ -540,7 +555,7 @@ public class DataStandardController {
 		List<StdWordVo> wordVoLst = new ArrayList<StdWordVo>();
 
 		// 요청된 용어가 단어이고, 형식단어(도메인)인 경우에는 바로 리턴한다.
-		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", termsNm);
+		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(null, "wordNm", termsNm));
 		log.info(">> word info by termsNm : {}", wordVoLst);
 		if (wordVoLst.size() == 1) {
 			StdWordVo wordVo = wordVoLst.get(0);
@@ -557,7 +572,7 @@ public class DataStandardController {
 			String pos = tokenMap.get(token);
 			wordVoLst = new ArrayList<StdWordVo>();
 			if (pos.equals("NN")) {// 단어가 명사인 경우
-				wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", token);
+				wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(null, "wordNm", token));
 				log.info(">> word list : {}-{}", token, wordVoLst);
 				if (wordVoLst.size() > 0) {
 					for (StdWordVo wordVo : wordVoLst) {
@@ -594,7 +609,7 @@ public class DataStandardController {
 		List<StdWordVo> wordVoLst = new ArrayList<StdWordVo>();
 
 		// 요청된 용어가 단어이고, 형식단어(도메인)인 경우에는 바로 리턴한다.
-		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", termsNm);
+		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(null, "wordNm", termsNm));
 		log.info(">> word info by termsNm : {}", wordVoLst);
 		if (wordVoLst.size() == 1) {
 			StdWordVo wordVo = wordVoLst.get(0);
@@ -615,7 +630,7 @@ public class DataStandardController {
 			String pos = tokenMap.get(token);
 			wordVoLst = new ArrayList<StdWordVo>();
 			if (pos.equals("NN")) {// 단어가 명사인 경우
-				wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", token);
+				wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(null, "wordNm", token));
 				log.info(">> word list : {}-{}", token, wordVoLst);
 				if (wordVoLst.size() > 0) {
 					for (StdWordVo wordVo : wordVoLst) {
@@ -741,7 +756,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getTermsList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdTermsVo> getTermsList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getTermsList : {}", retCond);
-		return sqlSessionTemplate.selectList("terms.selectTermsList", retCond);
+		return sqlSessionTemplate.selectList("terms.selectTermsList", withDict(retCond));
 	}
 
 	/**
@@ -753,7 +768,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getTermsListByCond", method = RequestMethod.POST)
 	public List<StdTermsVo> getTermsListByCond(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getTermsListByCond : {}", retCond);
-		return sqlSessionTemplate.selectList("terms.selectTermsList", retCond);
+		return sqlSessionTemplate.selectList("terms.selectTermsList", withDict(retCond));
 	}
 
 	/**
@@ -828,7 +843,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getCodeInfoList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdCodeInfoVo> getCodeInfoList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getCodeInfoList : {}", retCond);
-		return sqlSessionTemplate.selectList("terms.selectCodeInfoList", retCond);
+		return sqlSessionTemplate.selectList("terms.selectCodeInfoList", withDict(retCond));
 	}
 
 	/**
@@ -838,8 +853,8 @@ public class DataStandardController {
 	 * @return 매칭되는 코드 정보 목록
 	 */
 	@RequestMapping(value = "/getCodeInfoListByNm", method = RequestMethod.GET)
-	public List<StdCodeInfoVo> getCodeInfoListByNm(String codeNm) {
-		return sqlSessionTemplate.selectList("terms.selectCodeInfoListByNm", "%" + codeNm + "%");
+	public List<StdCodeInfoVo> getCodeInfoListByNm(String codeNm, String dictId) {
+		return sqlSessionTemplate.selectList("terms.selectCodeInfoListByNm", dictService.nameParam(dictId, "codeNm", "%" + codeNm + "%"));
 	}
 
 	/**
@@ -941,8 +956,8 @@ public class DataStandardController {
 	 * @return 코드데이터 전체 목록
 	 */
 	@RequestMapping(value = "/getCodeDataList", method = RequestMethod.GET)
-	public List<StdCodeDataVo> getCodeDataList() {
-		return sqlSessionTemplate.selectList("codedata.selectCodeDataList");
+	public List<StdCodeDataVo> getCodeDataList(String dictId) {
+		return sqlSessionTemplate.selectList("codedata.selectCodeDataList", dictService.dictParam(dictId));
 	}
 
 	/**
@@ -952,8 +967,8 @@ public class DataStandardController {
 	 * @return 해당 코드의 데이터(항목값) 목록
 	 */
 	@RequestMapping(value = "/getCodeDataListByNm", method = RequestMethod.GET)
-	public List<StdCodeDataVo> getCodeDataListByNm(String codeNm) {
-		return sqlSessionTemplate.selectList("codedata.selectCodeDataListByNm", codeNm);
+	public List<StdCodeDataVo> getCodeDataListByNm(String codeNm, String dictId) {
+		return sqlSessionTemplate.selectList("codedata.selectCodeDataListByNm", dictService.nameParam(dictId, "codeNm", codeNm));
 	}
 
 	/**
@@ -1330,7 +1345,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getDomainList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDomainVo> getDomainList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getDomainList : {}", retCond);
-		return sqlSessionTemplate.selectList("domain.selectDomainList", retCond);
+		return sqlSessionTemplate.selectList("domain.selectDomainList", withDict(retCond));
 	}
 
 	/**
@@ -1352,7 +1367,7 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/getDomainInfoByClsfNm", method = RequestMethod.GET)
 	public List<StdDomainVo> getDomainInfoByClsfNm(String clsfNm) {
-		return sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", clsfNm);
+		return sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", dictService.nameParam(null, "domainClsfNm", clsfNm));
 	}
 
 	/**
@@ -1453,8 +1468,8 @@ public class DataStandardController {
 	 * @return 도메인 그룹 목록
 	 */
 	@RequestMapping(value = "/getDomainGroupList", method = RequestMethod.GET)
-	public List<StdDomainGroupVo> getDomainGroupList() {
-		return sqlSessionTemplate.selectList("domain.selectDomainGroupList");
+	public List<StdDomainGroupVo> getDomainGroupList(String dictId) {
+		return sqlSessionTemplate.selectList("domain.selectDomainGroupList", dictService.dictParam(dictId));
 	}
 
 	/**
@@ -1549,8 +1564,8 @@ public class DataStandardController {
 	 * @return 도메인 분류 목록
 	 */
 	@RequestMapping(value = "/getDomainClassificationList", method = RequestMethod.GET)
-	public List<StdDomainClassificationVo> getDomainClassificationList() {
-		return sqlSessionTemplate.selectList("domain.selectDomainClassificationList");
+	public List<StdDomainClassificationVo> getDomainClassificationList(String dictId) {
+		return sqlSessionTemplate.selectList("domain.selectDomainClassificationList", dictService.dictParam(dictId));
 	}
 
 	/**
@@ -1560,8 +1575,8 @@ public class DataStandardController {
 	 * @return 매칭되는 도메인 분류 목록
 	 */
 	@RequestMapping(value = "/getDomainClassificationListByNm", method = RequestMethod.GET)
-	public List<StdDomainClassificationVo> getDomainClassificationListByNm(String domainClsfNm) {
-		return sqlSessionTemplate.selectList("domain.selectDomainClassificationListByNm", "%" + domainClsfNm + "%");
+	public List<StdDomainClassificationVo> getDomainClassificationListByNm(String domainClsfNm, String dictId) {
+		return sqlSessionTemplate.selectList("domain.selectDomainClassificationListByNm", dictService.nameParam(dictId, "domainClsfNm", "%" + domainClsfNm + "%"));
 	}
 
 	/**
@@ -1571,8 +1586,8 @@ public class DataStandardController {
 	 * @return 해당 그룹의 도메인 분류 목록
 	 */
 	@RequestMapping(value = "/getDomainClassificationListByDomainGrpNm", method = RequestMethod.GET)
-	public List<StdDomainClassificationVo> getDomainClassificationListByGrpNm(String domainGrpNm) {
-		return sqlSessionTemplate.selectList("domain.selectDomainClassificationListByGrpNm", domainGrpNm);
+	public List<StdDomainClassificationVo> getDomainClassificationListByGrpNm(String domainGrpNm, String dictId) {
+		return sqlSessionTemplate.selectList("domain.selectDomainClassificationListByGrpNm", dictService.nameParam(dictId, "domainGrpNm", domainGrpNm));
 	}
 
 	/**
@@ -2126,7 +2141,7 @@ public class DataStandardController {
 		}
 
 		// 중복 체크
-		List<StdWordVo> existing = sqlSessionTemplate.selectList("word.selectWordInfoByNm", wordNm.trim());
+		List<StdWordVo> existing = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(null, "wordNm", wordNm.trim()));
 		if (existing != null && !existing.isEmpty()) {
 			// 이미 등록된 단어 → 기존 정보 반환
 			StdWordVo existWord = existing.get(0);
@@ -2525,7 +2540,7 @@ public class DataStandardController {
 	 */
 	@GetMapping(value = "/getDomainsByClsf")
 	public List<Map<String, Object>> getDomainsByClsf(@RequestParam("domainClsfNm") String domainClsfNm) {
-		List<StdDomainVo> domains = sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", domainClsfNm);
+		List<StdDomainVo> domains = sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", dictService.nameParam(null, "domainClsfNm", domainClsfNm));
 		List<Map<String, Object>> result = new ArrayList<>();
 		for (StdDomainVo d : domains) {
 			if (!"Y".equals(d.getAprvYn())) continue;
@@ -3151,7 +3166,7 @@ public class DataStandardController {
 	 */
 	private String checkSynonymWord(String wordNm) {
 		if (wordNm == null || wordNm.trim().isEmpty()) return null;
-		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordBySynonymNm", wordNm.trim());
+		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordBySynonymNm", dictService.nameParam(null, "wordNm", wordNm.trim()));
 		if (found != null) {
 			String stdWordNm = (String) found.get("wordNm");
 			return "'" + wordNm.trim() + "'은(는) '" + stdWordNm + "'의 유사어입니다. '" + stdWordNm + "' 사용을 권장합니다.";

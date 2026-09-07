@@ -6,6 +6,7 @@
       <!-- 검색 -->
       <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
         <v-row :style="{ alignItems: 'center', margin: '0px' }">
+          <DictSelector v-model="dictId" @change="getDomainClassificationData" />
           <span :style="{ fontSize: '.875rem' }">도메인 분류명</span>
           <!-- 도매인 분류명 입력 필드 -->
           <v-text-field class="pr-4 pl-4" v-model="searchDomainClassification"
@@ -218,14 +219,18 @@
 import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
 import { eventBus } from '../eventBus';
+import DictSelector from './DictSelector.vue'
 
 export default {
   name: 'DSDomainClassification',
   components: {
-    NdModal
+    NdModal,
+    DictSelector
   },
   props: ['isMobile'],
   data: () => ({
+    // 98번 — 조회할 표준사전
+    dictId: null,
     // 도메인 분류 목록 리스트
     domainClassificationItems: [],
     // 검색 도메인 분류
@@ -396,7 +401,7 @@ export default {
     },
     getDomainClassificationData() {
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainClassificationList").then(result => {
+        axios.get(this.$APIURL.base + "api/std/getDomainClassificationList", { params: { dictId: this.dictId } }).then(result => {
           let _data = result.data;
 
           // console 표시
@@ -727,7 +732,7 @@ export default {
     getDomainGroupName() {
       // 도메인 그룹명을 도메인 등록, 도메인 수정에 바인드
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainGroupList").then(result => {
+        axios.get(this.$APIURL.base + "api/std/getDomainGroupList", { params: { dictId: this.dictId } }).then(result => {
           let _data = result.data;
 
           let _new_arr = [];

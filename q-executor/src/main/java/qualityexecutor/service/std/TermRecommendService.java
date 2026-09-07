@@ -16,16 +16,21 @@ public class TermRecommendService {
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
 
-    public List<TermAnalysisResult> analyze(List<String> termNames) {
+    @Autowired
+    private com.ndata.quality.service.StdDictService dictService;
+
+    /** 98번 — 어느 사전을 기준으로 추천할지. null 이면 기본 사전. */
+    public List<TermAnalysisResult> analyze(List<String> termNames, String dictId) {
+        Map<String, Object> dp = dictService.dictParam(dictId);
         // 1. Cache all existing terms by Korean name
-        List<StdTermsVo> allTerms = sqlSessionTemplate.selectList("terms.selectAllTermsByNm");
+        List<StdTermsVo> allTerms = sqlSessionTemplate.selectList("terms.selectAllTermsByNm", dp);
         Map<String, StdTermsVo> termsByNm = new HashMap<>();
         for (StdTermsVo t : allTerms) {
             termsByNm.put(t.getTermsNm(), t);
         }
 
         // 2. Cache all words by Korean name
-        List<StdWordVo> allWords = sqlSessionTemplate.selectList("word.selectAllWords");
+        List<StdWordVo> allWords = sqlSessionTemplate.selectList("word.selectAllWords", dp);
         Map<String, List<StdWordVo>> wordsByNm = new HashMap<>();
         for (StdWordVo w : allWords) {
             if (!wordsByNm.containsKey(w.getWordNm())) {
@@ -35,7 +40,7 @@ public class TermRecommendService {
         }
 
         // 3. Word usage counts for scoring
-        List<Map<String, Object>> usageCounts = sqlSessionTemplate.selectList("word.selectWordUsageCounts");
+        List<Map<String, Object>> usageCounts = sqlSessionTemplate.selectList("word.selectWordUsageCounts", dp);
         Map<String, Integer> usageMap = new HashMap<>();
         for (Map<String, Object> row : usageCounts) {
             String nm = (String) row.get("wordNm");
@@ -44,7 +49,7 @@ public class TermRecommendService {
         }
 
         // 4. Cache domains by classification
-        List<StdDomainVo> allDomains = sqlSessionTemplate.selectList("domain.selectAllDomains");
+        List<StdDomainVo> allDomains = sqlSessionTemplate.selectList("domain.selectAllDomains", dp);
         Map<String, List<StdDomainVo>> domainsByClsf = new HashMap<>();
         for (StdDomainVo d : allDomains) {
             String clsf = d.getDomainClsfNm();

@@ -21,6 +21,7 @@
 			where APRV_YN = 'N'
 				AND CODE_GRP IS NULL
 				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = TERMS_ID AND s.REQ_TP = 'TERMS')
+			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
     <if test="reqUserId != null">
         		AND CRET_USER_ID = #{reqUserId}
     </if>
@@ -52,6 +53,7 @@
 			where APRV_YN = 'N'
 				AND CODE_GRP IS NOT NULL
 				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = TERMS_ID AND s.REQ_TP = 'CODE')
+			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
     <if test="reqUserId != null">
         		AND CRET_USER_ID = #{reqUserId}
     </if>
@@ -82,6 +84,7 @@
 			from TB_WORD
 			where APRV_YN = 'N'
 				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = WORD_ID AND s.REQ_TP = 'WORD')
+			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
     <if test="reqUserId != null">
         		AND CRET_USER_ID = #{reqUserId}
     </if>
@@ -112,6 +115,7 @@
 			from TB_DOMAIN
 			where APRV_YN = 'N'
 				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = DOMAIN_ID AND s.REQ_TP = 'DOMAIN')
+			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
     <if test="reqUserId != null">
         		AND CRET_USER_ID = #{reqUserId}
     </if>

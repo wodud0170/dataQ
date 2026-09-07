@@ -13,9 +13,9 @@
 	</resultMap>
 	<select id="selectDataboardInfo" parameterType="com.ndata.quality.model.std.StdApproveStatVo$RetrieveCond" resultMap="dashboardMap">
 			select
-				(select count(*) from TB_TERMS where APRV_YN = 'Y') as termsCnt,
-				(select count(*) from TB_WORD where APRV_YN = 'Y') as wordCnt,
-				(select count(*) from TB_DOMAIN where APRV_YN = 'Y') as domainCnt,
+				(select count(*) from TB_TERMS where APRV_YN = 'Y' <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>) as termsCnt,
+				(select count(*) from TB_WORD where APRV_YN = 'Y' <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>) as wordCnt,
+				(select count(*) from TB_DOMAIN where APRV_YN = 'Y' <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>) as domainCnt,
 				(select (select count(*) from TB_TERMS where APRV_YN = 'N'
 							<if test="reqUserId != null">
 							AND CRET_USER_ID = #{reqUserId}
@@ -116,6 +116,7 @@
 		  FROM TB_WORD
 		 WHERE APRV_YN = 'Y'
 		   AND (WORD_NM ILIKE '%'||#{keyword}||'%' OR WORD_ENG_ABRV_NM ILIKE '%'||#{keyword}||'%')
+		<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 		 ORDER BY WORD_NM
 		 LIMIT 20
 	</select>
@@ -129,6 +130,7 @@
 		  FROM TB_TERMS
 		 WHERE APRV_YN = 'Y'
 		   AND (TERMS_NM ILIKE '%'||#{keyword}||'%' OR TERMS_ENG_ABRV_NM ILIKE '%'||#{keyword}||'%')
+		<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 		 ORDER BY TERMS_NM
 		 LIMIT 20
 	</select>
@@ -141,6 +143,7 @@
 		       DATA_LEN         AS "dataLen"
 		  FROM TB_DOMAIN
 		 WHERE DOMAIN_NM ILIKE '%'||#{keyword}||'%'
+		<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 		 ORDER BY DOMAIN_NM
 		 LIMIT 20
 	</select>

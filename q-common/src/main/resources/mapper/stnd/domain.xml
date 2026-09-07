@@ -56,6 +56,7 @@
 				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
 			from TB_DOMAIN
       where 1=1
+			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 			<if test="schNm != null">
 				AND DOMAIN_NM ILIKE '%' || #{schNm} || '%'
 			</if>
@@ -107,7 +108,7 @@
 			  and DICT_ID = #{dictId}
   </select>
 
-  <select id="selectDomainInfoByClsfNm" parameterType="String" resultMap="stdDomainMap">
+  <select id="selectDomainInfoByClsfNm" parameterType="java.util.Map" resultMap="stdDomainMap">
 			select 
 				 DOMAIN_ID
 				,DOMAIN_NM			
@@ -133,12 +134,12 @@
         ,REQ_SYS_CD
 				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
 			from TB_DOMAIN
-			where DOMAIN_CLSF_NM = #{domainClsfNm}
+			where DOMAIN_CLSF_NM = #{domainClsfNm} AND DICT_ID = #{dictId}
       order by DOMAIN_NM
   </select>
 
   <!-- 전체 도메인 조회 (추천 서비스용, 파라미터 없음) -->
-  <select id="selectAllDomains" resultMap="stdDomainMap">
+  <select id="selectAllDomains" parameterType="java.util.Map" resultMap="stdDomainMap">
     SELECT
        DOMAIN_ID
       ,DOMAIN_NM
@@ -163,6 +164,8 @@
       ,APRV_STAT_UPDT_DT
       ,REQ_SYS_CD
     FROM TB_DOMAIN
+    WHERE 1=1
+		<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
     ORDER BY DOMAIN_NM
   </select>
 
@@ -262,6 +265,8 @@
 				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
 				,UPDT_USER_ID	 
 			from TB_DOMAIN_GRP
+			where 1=1
+			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 			order by DOMAIN_GRP_NM
   </select>
 
@@ -320,6 +325,8 @@
 				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
 				,UPDT_USER_ID	    as updtUserId
 			from TB_DOMAIN_CLSF
+			where 1=1
+			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 			order by DOMAIN_CLSF_NM
   </select>
 
@@ -335,6 +342,7 @@
 				,UPDT_USER_ID	    
 			from TB_DOMAIN_CLSF
       where DOMAIN_CLSF_NM ILIKE #{domainClsfNm}
+      <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 			order by DOMAIN_CLSF_NM
   </select>
 
@@ -350,6 +358,7 @@
 				,UPDT_USER_ID	    
 			from TB_DOMAIN_CLSF
       where DOMAIN_GRP_NM = #{domainGrpNm}
+      <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 			order by DOMAIN_CLSF_NM
   </select>
 
@@ -399,12 +408,12 @@
     </foreach>
   </delete>
 
-  <select id="selectDomainGroupByNm" parameterType="String" resultType="String">
-    SELECT DOMAIN_GRP_NM FROM TB_DOMAIN_GRP WHERE DOMAIN_GRP_NM = #{domainGrpNm}
+  <select id="selectDomainGroupByNm" parameterType="java.util.Map" resultType="String">
+    SELECT DOMAIN_GRP_NM FROM TB_DOMAIN_GRP WHERE DOMAIN_GRP_NM = #{domainGrpNm} AND DICT_ID = #{dictId}
   </select>
 
-  <select id="selectDomainClsfByNm" parameterType="String" resultType="String">
-    SELECT DOMAIN_CLSF_NM FROM TB_DOMAIN_CLSF WHERE DOMAIN_CLSF_NM = #{domainClsfNm}
+  <select id="selectDomainClsfByNm" parameterType="java.util.Map" resultType="String">
+    SELECT DOMAIN_CLSF_NM FROM TB_DOMAIN_CLSF WHERE DOMAIN_CLSF_NM = #{domainClsfNm} AND DICT_ID = #{dictId}
   </select>
 
 </mapper>

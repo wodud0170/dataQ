@@ -20,8 +20,9 @@
                  d.DOMAIN_ID,
                  t.DOMAIN_NM AS TERM_DOMAIN_NM
             FROM TB_DATA_MODEL_ATTR a
-            LEFT JOIN TB_TERMS t  ON t.TERMS_NM    = a.ATTR_NM_KR
-            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM   = t.DOMAIN_NM
+            LEFT JOIN TB_DATA_MODEL m ON m.DM_ID = a.DM_ID
+            LEFT JOIN TB_TERMS t  ON t.TERMS_NM    = a.ATTR_NM_KR AND t.DICT_ID = m.DICT_ID
+            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM   = t.DOMAIN_NM AND d.DICT_ID = t.DICT_ID
            WHERE a.DM_ID  = #{dmId}
              AND a.USE_YN = 'Y'
             <if test="objNm != null">  AND a.OBJ_NM  = #{objNm}  </if>
@@ -136,8 +137,9 @@
           SELECT a.DM_ID, a.OBJ_OWNER, a.OBJ_NM, a.ATTR_NM, a.ATTR_NM_KR,
                  d.DOMAIN_ID, d.DOMAIN_NM, d.DOMAIN_CLSF_NM
             FROM TB_DATA_MODEL_ATTR a
-            LEFT JOIN TB_TERMS t  ON t.TERMS_NM    = a.ATTR_NM_KR
-            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM   = t.DOMAIN_NM
+            LEFT JOIN TB_DATA_MODEL m ON m.DM_ID = a.DM_ID
+            LEFT JOIN TB_TERMS t  ON t.TERMS_NM    = a.ATTR_NM_KR AND t.DICT_ID = m.DICT_ID
+            LEFT JOIN TB_DOMAIN d ON d.DOMAIN_NM   = t.DOMAIN_NM AND d.DICT_ID = t.DICT_ID
            WHERE a.DM_ID  = #{dmId}
              AND a.USE_YN = 'Y'
             <if test="objNm != null and objNm != ''">     AND a.OBJ_NM   ILIKE '%' || #{objNm}  || '%' </if>

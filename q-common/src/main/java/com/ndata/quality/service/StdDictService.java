@@ -96,6 +96,18 @@ public class StdDictService {
 	}
 
 	/**
+	 * 사전 하나만 넘기는 쿼리 파라미터.
+	 *
+	 * <p>진단·자동표준화가 사전을 통째로 로드하는 쿼리(`selectAll*`)에 쓴다.
+	 * dictId 가 null 이면 기본 사전으로 해석한다.</p>
+	 */
+	public Map<String, Object> dictParam(String dictId) {
+		Map<String, Object> p = new HashMap<>();
+		p.put("dictId", (dictId == null || dictId.trim().isEmpty()) ? defaultDictId() : dictId.trim());
+		return p;
+	}
+
+	/**
 	 * 이름으로 사전 항목을 찾는 쿼리의 파라미터.
 	 *
 	 * <p>사전을 나눈 뒤로 "영문약어가 BTWN 인 단어" 만으로는 답이 하나가 아니다.
@@ -110,6 +122,13 @@ public class StdDictService {
 		Map<String, Object> p = new HashMap<>();
 		p.put("dictId", (dictId == null || dictId.trim().isEmpty()) ? defaultDictId() : dictId.trim());
 		p.put(key, value);
+		return p;
+	}
+
+	/** 이름 목록으로 찾는 쿼리의 파라미터 (IN 절). dictId 가 null 이면 기본 사전. */
+	public Map<String, Object> listParam(String dictId, String key, java.util.List<?> values) {
+		Map<String, Object> p = dictParam(dictId);
+		p.put(key, values);
 		return p;
 	}
 

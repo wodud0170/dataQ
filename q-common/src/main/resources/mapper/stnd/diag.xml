@@ -79,6 +79,12 @@
         )
     </insert>
 
+    <!-- 98번 — 이 진단이 어느 사전으로 쟀는지. 나중에 "수치가 왜 튀었나" 를
+         답할 수 있는 유일한 기록이다. 진단 시작 시 DiagService 가 찍는다. -->
+    <update id="updateDiagJobDict" parameterType="java.util.Map">
+        UPDATE TB_DIAG_JOB SET DICT_ID = #{dictId} WHERE DIAG_JOB_ID = #{diagJobId}
+    </update>
+
     <update id="updateDiagJobStatus" parameterType="com.ndata.quality.model.std.StdDiagJobVo">
         UPDATE TB_DIAG_JOB SET
             STATUS = #{status}

@@ -68,8 +68,9 @@
 						UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
 							THEN ALLOPH_SYNM_LST
 							ELSE '{null}'::text[] END
-						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM) A
+						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM AND T.DICT_ID = D.DICT_ID) A
 				where 1=1
+				<if test="dictId != null and dictId != ''"> AND A.DICT_ID = #{dictId} </if>
 				<if test="schNm != null">
 					<choose>
 						<when test="schNmMode == 'exact'">
@@ -242,7 +243,7 @@
 	</select>
 
 	<!-- 진단용: 전체 용어 + 도메인 데이터 한번에 로드 (UNNEST 없이 1건/용어) -->
-	<select id="selectAllTermsForDiag" resultMap="stdTermsMap">
+	<select id="selectAllTermsForDiag" parameterType="java.util.Map" resultMap="stdTermsMap">
 		SELECT
 			 T.TERMS_ID
 			,T.TERMS_NM
@@ -253,15 +254,16 @@
 			,D.DATA_LEN
 			,D.DATA_DECIMAL_LEN
 		FROM TB_TERMS T
-		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM
+		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM AND T.DICT_ID = D.DICT_ID
 		<!-- DEF-12 — 승인된 용어만 진단 기준이 된다.
 		     필터가 없으면 승인 대기 중인 용어에 맞춘 컬럼이 '표준' 으로 판정되고,
 		     그 용어가 반려되는 순간 준수율이 소급해서 틀어진다. -->
 		WHERE T.APRV_YN = 'Y'
+		<if test="dictId != null and dictId != ''"> AND T.DICT_ID = #{dictId} </if>
 	</select>
 
 	<!-- 전체 용어 한글명 기준 조회 (추천 서비스용, 파라미터 없음) -->
-	<select id="selectAllTermsByNm" resultMap="stdTermsMap">
+	<select id="selectAllTermsByNm" parameterType="java.util.Map" resultMap="stdTermsMap">
 		SELECT
 			 T.TERMS_ID
 			,T.TERMS_NM
@@ -273,7 +275,9 @@
 			,D.DATA_LEN
 			,D.DATA_DECIMAL_LEN
 		FROM TB_TERMS T
-		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM
+		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM AND T.DICT_ID = D.DICT_ID
+		WHERE 1=1
+		<if test="dictId != null and dictId != ''"> AND T.DICT_ID = #{dictId} </if>
 	</select>
 
 	<insert id="insertTerms" parameterType="com.ndata.quality.model.std.StdTermsVo">
@@ -437,8 +441,9 @@
 						UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
 							THEN ALLOPH_SYNM_LST
 							ELSE '{null}'::text[] END
-						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM) A
+						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM AND T.DICT_ID = D.DICT_ID) A
       		where A.CODE_GRP is not null
+				<if test="dictId != null and dictId != ''"> AND A.DICT_ID = #{dictId} </if>
 			<if test="schNm != null">
 				AND (A.TERMS_NM ILIKE '%' || #{schNm} || '%' OR A.ALLOPH_SYNM ILIKE '%' || #{schNm} || '%')
 			</if>
@@ -454,7 +459,7 @@
 			order by A.TERMS_NM
 	</select>
 
-	<select id="selectCodeInfoListByNm" parameterType="String" resultMap="stdCodeMap">
+	<select id="selectCodeInfoListByNm" parameterType="java.util.Map" resultMap="stdCodeMap">
             select distinct
 					A.TERMS_ID
 					,A.TERMS_NM			
@@ -490,6 +495,7 @@
 					) as ALLOPH_SYNM from TB_TERMS) A LEFT OUTER JOIN TB_DOMAIN B 
 					on A.DOMAIN_NM = B.DOMAIN_NM
 			where A.CODE_GRP is not null AND (A.TERMS_NM ILIKE #{codeNm} OR A.ALLOPH_SYNM ILIKE #{codeNm})
+			<if test="dictId != null and dictId != ''"> AND A.DICT_ID = #{dictId} </if>
 	</select>
 
 	<select id="selectCodeInfoByNm" parameterType="String" resultMap="stdCodeMap">

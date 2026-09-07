@@ -17,10 +17,12 @@
             ,UPDT_USER_ID       as updtUserId
         FROM
             TB_CODE_DATA
+        WHERE 1=1
+        <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
         ORDER BY CODE_NM, CODE_VAL
   </select>
 
-  <select id="selectCodeDataListByNm" parameterType="String" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+  <select id="selectCodeDataListByNm" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdCodeDataVo">
         SELECT
              CODE_ID            as id
             ,CODE_GRP           as codeGrp
@@ -36,10 +38,11 @@
             TB_CODE_DATA
         WHERE 
             CODE_NM ILIKE '%' || #{codeNm} || '%'
+        <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
         ORDER BY CODE_NM, CODE_VAL
   </select>
 
-  <select id="selectCodeDataListByEngNm" parameterType="String" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+  <select id="selectCodeDataListByEngNm" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdCodeDataVo">
         SELECT
              CODE_ID            as id
             ,CODE_GRP           as codeGrp
@@ -55,6 +58,7 @@
             TB_CODE_DATA
         WHERE 
             CODE_ENG_NM = #{codeEngNm}
+        <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
         ORDER BY CODE_NM, CODE_VAL
   </select>
 
@@ -74,6 +78,7 @@
             TB_CODE_DATA
         WHERE 
             CODE_NM = #{codeNm} AND CODE_VAL = #{codeVal}
+        <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
         ORDER BY CODE_NM, CODE_VAL
   </select>
 

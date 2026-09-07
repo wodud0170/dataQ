@@ -54,6 +54,9 @@ public class DiagService implements Runnable {
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
 
+    @Autowired
+    private com.ndata.quality.service.StdDictService dictService;
+
     public DiagService(String diagJobId, String clctId, String dataModelId, String userId) {
         this.diagJobId    = diagJobId;
         this.clctId       = clctId;
@@ -96,7 +99,16 @@ public class DiagService implements Runnable {
             updateStatus("RUNNING");
 
             // 2. 전체 용어 메모리 로드 (영문명 기준 매칭)
-            List<StdTermsVo> allTerms = sqlSessionTemplate.selectList("terms.selectAllTermsForDiag");
+            // 98번 — 이 모델이 쓰는 사전의 용어만 로드한다. 다른 사전 용어가 섞이면
+            //        같은 이름의 남의 용어에 맞춰 "표준" 으로 판정된다.
+            String diagDictId = dictService.resolve(null, dataModelId);
+            Map<String, Object> dictJobParam = new HashMap<>();
+            dictJobParam.put("diagJobId", diagJobId);
+            dictJobParam.put("dictId", diagDictId);
+            sqlSessionTemplate.update("diag.updateDiagJobDict", dictJobParam);
+
+            List<StdTermsVo> allTerms = sqlSessionTemplate.selectList(
+                    "terms.selectAllTermsForDiag", dictService.dictParam(diagDictId));
             Map<String, StdTermsVo> termsByEng = new HashMap<>();
             for (StdTermsVo t : allTerms) {
                 if (t.getTermsEngAbrvNm() != null) termsByEng.put(t.getTermsEngAbrvNm(), t);

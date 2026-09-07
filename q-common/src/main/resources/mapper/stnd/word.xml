@@ -74,7 +74,9 @@
 						THEN ALLOPH_SYNM_LST
 						ELSE '{null}'::text[] END
 					) as ALLOPH_SYNM
-				from TB_WORD ) A
+				from TB_WORD
+				<if test="dictId != null and dictId != ''"> WHERE DICT_ID = #{dictId} </if>
+				) A
 			where 1=1
 			<if test="schNm != null">
 				AND (A.WORD_NM ILIKE '%' || #{schNm} || '%' OR A.ALLOPH_SYNM ILIKE '%' || #{schNm} || '%')
@@ -100,7 +102,7 @@
 			order by A.WORD_NM
 	</select>
 
-	<select id="selectWordInfoByNm" parameterType="String" resultMap="stdWordMap">
+	<select id="selectWordInfoByNm" parameterType="java.util.Map" resultMap="stdWordMap">
 			select distinct		
 				WORD_ID
 				,WORD_NM			
@@ -148,7 +150,7 @@
 						ELSE '{null}'::text[] END
 					) as ALLOPH_SYNM
 			    from TB_WORD ) A
-			where A.WORD_NM = #{wordNm} OR A.ALLOPH_SYNM = #{wordNm}
+			where (A.WORD_NM = #{wordNm} OR A.ALLOPH_SYNM = #{wordNm}) AND A.DICT_ID = #{dictId}
 	</select>
 
 	<select id="selectWordInfoById" parameterType="String" resultMap="stdWordMap">
@@ -177,7 +179,7 @@
 			where WORD_ID = #{id}
 	</select>
 	
-	<select id="selectWordByNm" parameterType="String" resultMap="stdWordMap">
+	<select id="selectWordByNm" parameterType="java.util.Map" resultMap="stdWordMap">
 			select 
 				WORD_ID
 				,WORD_NM			
@@ -200,7 +202,7 @@
 				,REQ_SYS_CD
 				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
 			from TB_WORD
-			where WORD_NM = #{wordNm} OR #{wordNm} = any(ALLOPH_SYNM_LST)
+			where (WORD_NM = #{wordNm} OR #{wordNm} = any(ALLOPH_SYNM_LST)) AND DICT_ID = #{dictId}
 	</select>
 
 	<select id="selectWordByEngAbrvNm" parameterType="java.util.Map" resultMap="stdWordMap">
@@ -231,7 +233,7 @@
 	</select>
 
 	<!-- 영문약어 목록으로 단어 일괄 조회 (용어 빠른 등록용) -->
-	<select id="selectWordsByEngAbrvNms" parameterType="java.util.List" resultMap="stdWordMap">
+	<select id="selectWordsByEngAbrvNms" parameterType="java.util.Map" resultMap="stdWordMap">
 			select
 				WORD_ID
 				,WORD_NM
@@ -241,8 +243,9 @@
 				,WORD_CLSF_YN
 				,DOMAIN_CLSF_NM
 			from TB_WORD
-			where WORD_ENG_ABRV_NM IN
-			<foreach collection="list" item="item" open="(" separator="," close=")">
+			where DICT_ID = #{dictId}
+			  and WORD_ENG_ABRV_NM IN
+			<foreach collection="engAbrvNms" item="item" open="(" separator="," close=")">
 				#{item}
 			</foreach>
 	</select>
@@ -358,7 +361,7 @@
 	</delete>
 
 	<!-- 전체 단어 조회 (추천 서비스용, 파라미터 없음) -->
-	<select id="selectAllWords" resultMap="stdWordMap">
+	<select id="selectAllWords" parameterType="java.util.Map" resultMap="stdWordMap">
 		SELECT
 			 WORD_ID
 			,WORD_NM
@@ -380,14 +383,18 @@
 			,APRV_STAT_UPDT_DT
 			,REQ_SYS_CD
 		FROM TB_WORD
+		WHERE 1=1
+		<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
 		ORDER BY WORD_NM
 	</select>
 
 	<!-- 단어 사용빈도 조회 -->
-	<select id="selectWordUsageCounts" resultType="java.util.HashMap">
+	<select id="selectWordUsageCounts" parameterType="java.util.Map" resultType="java.util.HashMap">
 		SELECT W.WORD_NM AS "wordNm", COUNT(*) AS "cnt"
 		FROM TB_WORD W
 		INNER JOIN TB_TERMS_WORDS TW ON W.WORD_ID = TW.WORD_ID
+		WHERE 1=1
+		<if test="dictId != null and dictId != ''"> AND W.DICT_ID = #{dictId} </if>
 		GROUP BY W.WORD_NM
 	</select>
 
@@ -402,10 +409,10 @@
 	</select>
 
 	<!-- 유사어로 등록된 단어 찾기: 입력 단어명이 기존 단어의 유사어 목록에 포함되는지 체크 -->
-	<select id="selectWordBySynonymNm" parameterType="String" resultType="java.util.HashMap">
+	<select id="selectWordBySynonymNm" parameterType="java.util.Map" resultType="java.util.HashMap">
 		SELECT WORD_NM AS "wordNm", WORD_ENG_ABRV_NM AS "wordEngAbrvNm"
 		FROM TB_WORD
-		WHERE #{wordNm} = ANY(ALLOPH_SYNM_LST)
+		WHERE #{wordNm} = ANY(ALLOPH_SYNM_LST) AND DICT_ID = #{dictId}
 		  AND APRV_YN = 'Y'
 		LIMIT 1
 	</select>
