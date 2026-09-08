@@ -1,4 +1,10 @@
-# build context 최소화 (q-center/q-executor Dockerfile 의 context = 프로젝트 루트)
+# build context minimization (q-center/q-executor Dockerfile context = project root)
+#
+# NOTE: keep every pattern ASCII-only.
+# BuildKit sends these patterns in a gRPC header and fails with
+#   header key "exclude-patterns" contains value with non-printable ASCII characters
+# if any entry has non-ASCII characters. Use wildcards for Korean-named
+# directories instead (e.g. dataQ*/ for the design-docs folder).
 .git/
 .idea/
 .vscode/
@@ -11,10 +17,11 @@ node_modules/
 **/target/maven-archiver/
 **/target/test-classes/
 **/target/site/
-dataQ설계/
+dataQ*/
+GS*/
 docker/dataq-db/pgdata/
 docker/dataq-db/initdb/
-CAMS표준화/
+ndata-quality-*/
 *.log
 logs/
 c:/temp/
