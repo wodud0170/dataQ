@@ -54,6 +54,9 @@ public class DiagScheduleController {
     @Autowired
     private SessionService sessionService;
 
+    @Autowired
+    private com.ndata.quality.service.StdDictService dictService;
+
     // ==================== 조회 ====================
 
     @GetMapping("/list")
@@ -303,6 +306,15 @@ public class DiagScheduleController {
                 && !"BOTH".equals(vo.getDiagType()))
             throw new IllegalArgumentException("진단 유형은 STANDARD/STRUCT/BOTH");
         if (vo.getDataModelId() == null) throw new IllegalArgumentException("데이터모델 필수");
+
+        // 98번 — 예약 실행에는 사전을 고를 사람이 없다. 모델에 사전이 없으면
+        // 실행 시점에 무엇으로 진단할지 정할 수 없으므로 등록 단계에서 막는다.
+        // (실행할 때 실패시키면 사용자가 원인을 알기 어렵다)
+        if (dictService.resolve(null, vo.getDataModelId()) == null) {
+            throw new IllegalArgumentException(
+                "이 데이터 모델에 표준사전이 지정되어 있지 않아 예약 진단을 등록할 수 없습니다."
+                + " [데이터 모델 관리] 에서 모델을 수정해 표준사전을 먼저 지정해 주세요.");
+        }
 
         String type = vo.getScheduleType() == null ? "SIMPLE" : vo.getScheduleType();
         if ("SIMPLE".equals(type)) {

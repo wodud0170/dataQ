@@ -25,6 +25,8 @@
 		<result property="dataModelDsId" column="DM_DS_ID"/>
 		<result property="dataModelDsNm" column="DM_DS_NM"/>
 		<result property="modelType" column="MODEL_TYPE"/>
+		<result property="dictId" column="DICT_ID"/>
+		<result property="dictNm" column="DICT_NM"/>
 		<result property="ver" column="VER"/>
 		<result property="structDiagYn" column="STRUCT_DIAG_YN"/>
 		<result property="structDiagDt" column="STRUCT_DIAG_DT_FMT"/>
@@ -94,6 +96,8 @@
             ,A.DM_DS_ID
             ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
             ,COALESCE(A.MODEL_TYPE, 'PHYSICAL') as MODEL_TYPE
+            ,A.DICT_ID
+            ,(select DICT_NM from TB_STD_DICT where dict_id = A.DICT_ID) as DICT_NM
             ,A.VER
             ,COALESCE(A.STRUCT_DIAG_YN, 'N') as STRUCT_DIAG_YN
             ,to_char(A.STRUCT_DIAG_DT, 'YYYY-MM-DD HH24:MI') as STRUCT_DIAG_DT_FMT
@@ -152,6 +156,8 @@
             ,A.DM_DS_ID
             ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
             ,COALESCE(A.MODEL_TYPE, 'PHYSICAL') as MODEL_TYPE
+            ,A.DICT_ID
+            ,(select DICT_NM from TB_STD_DICT where dict_id = A.DICT_ID) as DICT_NM
             ,A.VER
             ,(select count(*) from TB_DATA_MODEL_OBJ  where DM_ID = A.DM_ID and USE_YN='Y' and COALESCE(APRV_STATUS,'APPROVED')='APPROVED') as OBJ_CNT
             ,(select count(*) from TB_DATA_MODEL_ATTR where DM_ID = A.DM_ID and USE_YN='Y' and COALESCE(APRV_STATUS,'APPROVED')='APPROVED') as ATTR_CNT
@@ -629,6 +635,7 @@
             ,VER
             ,CRET_DT
             ,CRET_USER_ID
+            ,DICT_ID
            )
            VALUES
            (
@@ -640,6 +647,7 @@
             ,#{ver, jdbcType=VARCHAR}
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{cretUserId, jdbcType=VARCHAR}
+            ,#{dictId, jdbcType=VARCHAR}
            )
 	</insert>
 
@@ -650,6 +658,7 @@
             ,DM_SYS_CD = #{dataModelSysCd}
             ,DM_DS_ID = #{dataModelDsId}
             ,VER = #{ver, jdbcType=VARCHAR}
+            ,DICT_ID = #{dictId, jdbcType=VARCHAR}
             ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
             ,UPDT_USER_ID = #{updtUserId, jdbcType=VARCHAR}
            where DM_ID = #{dataModelId}

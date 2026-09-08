@@ -19,6 +19,18 @@
         @change="onModelChange"
       />
 
+      <!-- 98번 — 이 진단을 어느 사전으로 잴지. 기본값은 모델에 지정된 사전 -->
+      <span class="filterLabel">표준사전</span>
+      <v-select
+        v-model="dictId"
+        :items="dictList"
+        item-text="dictNm"
+        item-value="dictId"
+        dense outlined hide-details
+        placeholder="모델 기본"
+        style="width:180px; flex-grow:0;"
+      />
+
       <v-spacer />
 
       <!-- Job 상태 표시 -->
@@ -110,6 +122,9 @@ export default {
     return {
       dataModelList: [],
       selectedModel: null,
+      // 98번 — 진단에 쓸 표준사전. 비우면 모델에 지정된 사전을 쓴다.
+      dictId: null,
+      dictList: [],
       jobList: [],
       currentJob: null,
       starting: false,
@@ -121,6 +136,7 @@ export default {
       snackbarColor: 'info',
       jobHeaders: [
         { text: '데이터모델명',  value: 'dataModelNm',  width: '180px' },
+        { text: '표준사전',      value: 'dictNm',       width: '140px' },
         { text: '수집일시',      value: 'clctDt',       width: '160px' },
         { text: '상태',          value: 'status',       width: '90px'  },
         { text: '진행(컬럼)',    value: 'progress',     width: '110px' },
@@ -147,6 +163,7 @@ export default {
   mounted() {
     this.loadDataModelList();
     this.loadJobList();
+    this.loadDictList();
   },
   beforeDestroy() {
     this.stopPoll();
@@ -162,6 +179,15 @@ export default {
     },
     onModelChange(dmId) {
       if (!dmId) return;
+      // 98번 — 모델을 고르면 그 모델의 사전을 기본값으로 맞춘다.
+      // 사용자가 다른 사전으로 재보고 싶으면 그 자리에서 바꾸면 된다.
+      const m = this.dataModelList.find(x => x.dataModelId === dmId);
+      this.dictId = (m && m.dictId) || null;
+    },
+    loadDictList() {
+      axios.post(this.$APIURL.base + 'api/dict/list', {})
+        .then(res => { this.dictList = res.data || []; })
+        .catch(e => console.error('사전 목록 조회 실패', e));
     },
     loadJobList() {
       axios.post(this.$APIURL.base + 'api/diag/getDiagJobList').then(res => {
@@ -179,6 +205,7 @@ export default {
       this.starting = true;
       const body = {
         dataModelId: this.selectedModel,
+        dictId: this.dictId,
       };
       axios.post(this.$APIURL.base + 'api/diag/startDiag', body).then(res => {
         if (res.data && res.data.resultCode === 200) {

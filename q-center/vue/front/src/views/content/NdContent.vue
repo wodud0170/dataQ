@@ -258,6 +258,13 @@
                     <areaMgmt :key="areaMgmtKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 98번 — 표준사전 관리 -->
+            <div v-if="this.activeContent === 'stdDict'" id="tab_std_dict" class="tab_contents"
+                :class="{ active: this.activeContent === 'stdDict' }">
+                <keep-alive>
+                    <stdDict :key="stdDictKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <!-- 88번 §16 — 한글 변환 이력 -->
             <div v-if="this.activeContent === 'termResolveHistory'" id="tab_term_resolve_history" class="tab_contents"
                 :class="{ active: this.activeContent === 'termResolveHistory' }">
@@ -431,6 +438,7 @@ import MMDataModelApproval from "./../../components/MMDataModelApproval.vue"
 import MMMyDataModelChanges from "./../../components/MMMyDataModelChanges.vue"
 import MMDataModelChangeHistory from "./../../components/MMDataModelChangeHistory.vue"
 import MMBizSubjArea from "./../../components/MMBizSubjArea.vue"
+import MMStdDict from "./../../components/MMStdDict.vue"
 import DSTermResolveHistory from "./../../components/DSTermResolveHistory.vue"
 import MMDatasource from "./../../components/MMDatasource.vue"
 import DSScheduleManage from "./../../components/DSScheduleManage.vue"
@@ -514,6 +522,7 @@ export default {
             myDmChangesKey: this.createUUID(),
             dmHistoryKey: this.createUUID(),
             areaMgmtKey: this.createUUID(),
+            stdDictKey: this.createUUID(),
             termResolveHistoryKey: this.createUUID(),
             datasourceKey: this.createUUID(),
             scheduleManageKey: this.createUUID(),
@@ -573,6 +582,7 @@ export default {
         "myDmChanges": MMMyDataModelChanges,
         "dmHistory": MMDataModelChangeHistory,
         "areaMgmt": MMBizSubjArea,
+        "stdDict": MMStdDict,
         "termResolveHistory": DSTermResolveHistory,
         "datasource": MMDatasource,
         "scheduleManage": DSScheduleManage,

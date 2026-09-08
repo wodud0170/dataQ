@@ -7,6 +7,10 @@ public class StdDiagJobVo {
     private String diagJobId;
     private String clctId;
     private String dataModelId;
+    /** 98번 — 이 진단이 사용할/사용한 표준사전. */
+    private String dictId;
+    /** 98번 — 화면 표시용 사전명. */
+    private String dictNm;
     private String dataModelNm;   // joined
     private String clctDt;        // joined
     private String status;        // READY, RUNNING, DONE, STOPPED, ERROR

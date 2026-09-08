@@ -6,6 +6,8 @@ import lombok.Data;
 public class StdDataModelVo {
 	/** 98번 — 이 항목이 속한 표준사전. */
 	private String dictId;
+	/** 98번 — 화면 표시용 사전명. */
+	private String dictNm;
 	private String dataModelId;
 	private String dataModelNm;
 	private String dataModelSysCd;

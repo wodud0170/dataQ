@@ -50,6 +50,8 @@ public class DiagService implements Runnable {
     private String clctId;
     private String dataModelId;
     private String userId;
+    /** 98번 — 화면에서 고른 사전. 없으면 모델의 사전을 쓴다. */
+    private String dictId;
 
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
@@ -58,10 +60,15 @@ public class DiagService implements Runnable {
     private com.ndata.quality.service.StdDictService dictService;
 
     public DiagService(String diagJobId, String clctId, String dataModelId, String userId) {
+        this(diagJobId, clctId, dataModelId, userId, null);
+    }
+
+    public DiagService(String diagJobId, String clctId, String dataModelId, String userId, String dictId) {
         this.diagJobId    = diagJobId;
         this.clctId       = clctId;
         this.dataModelId  = dataModelId;
         this.userId       = userId;
+        this.dictId       = dictId;
     }
 
     /** q-executor DiagController가 호출 */
@@ -101,7 +108,7 @@ public class DiagService implements Runnable {
             // 2. 전체 용어 메모리 로드 (영문명 기준 매칭)
             // 98번 — 이 모델이 쓰는 사전의 용어만 로드한다. 다른 사전 용어가 섞이면
             //        같은 이름의 남의 용어에 맞춰 "표준" 으로 판정된다.
-            String diagDictId = dictService.resolve(null, dataModelId);
+            String diagDictId = dictService.resolve(dictId, dataModelId);
             Map<String, Object> dictJobParam = new HashMap<>();
             dictJobParam.put("diagJobId", diagJobId);
             dictJobParam.put("dictId", diagDictId);

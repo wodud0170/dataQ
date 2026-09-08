@@ -229,6 +229,18 @@
                   :menu-props="{ top: false, offsetY: true }" v-on:click="getDataSourceList()"></v-select>
               </v-col>
             </v-row>
+            <!-- 98번 — 이 모델을 진단할 때 쓸 표준사전 -->
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>표준사전</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-select dense clearable color="ndColor" v-model="add_dictId" :items="dictList"
+                  item-text="dictNm" item-value="dictId" no-data-text="사전이 없습니다."
+                  placeholder="미지정 시 예약 진단을 쓸 수 없습니다"
+                  :menu-props="{ top: false, offsetY: true }"></v-select>
+              </v-col>
+            </v-row>
             <!-- 버전 (선택, 미입력 시 '1.0') -->
             <v-row>
               <v-col cols="4">
@@ -270,6 +282,18 @@
                   item-text="dsn" name="update_dataSource" item-value="id" ref="update_dataSource" :placeholder="'선택 (논리모델이면 비워두기)'"
                   no-data-text="데이터 소스가 없습니다."
                   :menu-props="{ top: false, offsetY: true }" v-on:click="getDataSourceList()"></v-select>
+              </v-col>
+            </v-row>
+            <!-- 98번 — 이 모델을 진단할 때 쓸 표준사전 -->
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>표준사전</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-select dense clearable color="ndColor" v-model="update_dictId" :items="dictList"
+                  item-text="dictNm" item-value="dictId" no-data-text="사전이 없습니다."
+                  placeholder="미지정 시 예약 진단을 쓸 수 없습니다"
+                  :menu-props="{ top: false, offsetY: true }"></v-select>
               </v-col>
             </v-row>
             <!-- 버전 (선택, 미입력 시 '1.0') -->
@@ -367,6 +391,10 @@ export default {
     add_dataModelNm: null,
     add_ver: null,
     add_dataModelSysCd: null,
+    // 98번 — 이 모델이 쓸 표준사전
+    add_dictId: null,
+    update_dictId: null,
+    dictList: [],
     add_dataSource: null,
     // 수정 관련
     update_dataModelId: null,
@@ -378,6 +406,7 @@ export default {
     dataModelHeaders: [
       { text: '데이터 모델명', align: 'center', sortable: false, value: 'dataModelNm' },
       { text: '데이터소스', sortable: false, align: 'center', value: 'dataModelDsNm' },
+      { text: '표준사전', sortable: false, align: 'center', value: 'dictNm' },
       { text: '버전', sortable: false, align: 'center', value: 'dataModelVer' },
       { text: '수집 시작일시', align: 'center', sortable: false, value: 'clctStartDt' },
       { text: '수집 완료일시', align: 'center', sortable: false, value: 'clctEndDt' },
@@ -387,6 +416,7 @@ export default {
     detaileHeaders: [
       { text: '데이터 모델명', align: 'center', sortable: false, value: 'dataModelNm' },
       { text: '데이터소스', sortable: false, align: 'center', value: 'dataModelDsNm' },
+      { text: '표준사전', sortable: false, align: 'center', value: 'dictNm' },
       { text: '버전', sortable: false, align: 'center', value: 'dataModelVer' },
       { text: '수집 시작일시', align: 'center', sortable: false, value: 'clctStartDt' },
       { text: '수집 완료일시', align: 'center', sortable: false, value: 'clctEndDt' },
@@ -907,6 +937,7 @@ export default {
           'dataModelNm': this.add_dataModelNm,
           'dataModelSysCd': this.add_dataModelSysCd,
           'dataModelDsId': this.add_dataSource,
+          'dictId': this.add_dictId,
           'ver': _ver,
         };
 
@@ -951,6 +982,18 @@ export default {
         });
       }
     },
+    // 98번 — 모델 등록/수정 모달의 표준사전 선택지
+    getDictList() {
+      const self = this;
+      axios.post(self.$APIURL.base + 'api/dict/list', {})
+        .then(function (res) {
+          self.dictList = res.data || [];
+          // 신규 등록은 기본 사전을 미리 골라둔다
+          const def = self.dictList.find(function (d) { return d.defaultYn === 'Y'; });
+          if (def && !self.add_dictId) self.add_dictId = def.dictId;
+        })
+        .catch(function (e) { console.error('사전 목록 조회 실패', e); });
+    },
     updateDataModelInit() {
       // 초기화
       this.updateModalReset();
@@ -962,6 +1005,7 @@ export default {
       this.update_dataModelSysCd = this.selectedItem[0].dataModelSysCd;
       this.update_ver = this.selectedItem[0].dataModelVer;
       this.update_dataSource = this.selectedItem[0].dataModelDsId;
+      this.update_dictId = this.selectedItem[0].dictId;
     },
     updateDataModel() {
       try {
@@ -969,6 +1013,7 @@ export default {
         let dataModleData = {
           'dataModelId': this.update_dataModelId,
           'dataModelNm': this.update_dataModelNm,
+          'dictId': this.update_dictId,
           'dataModelSysCd': this.update_dataModelSysCd,
           'dataModelDsId': this.update_dataSource,
           'ver': _ver,
@@ -1086,6 +1131,7 @@ export default {
     // 데이터 표준 - 데이터 모델 - 데이터 모델 수집 메뉴 클릭 시 데이터 모델 목록 조회
     this.getDataModel();
     this.getSystemList();
+    this.getDictList();
     // WebSocket 수집 진행 메시지 구독
     eventBus.$on('NOTICE', this.onCollectionNotice);
     eventBus.$on('RELOAD', this.onCollectionReload);

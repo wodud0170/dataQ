@@ -52,6 +52,8 @@
         <result property="startDt"      column="START_DT"/>
         <result property="endDt"        column="END_DT"/>
         <result property="dbmsTp"       column="DBMS_TP"/>
+        <result property="dictId"       column="DICT_ID"/>
+        <result property="dictNm"       column="DICT_NM"/>
     </resultMap>
 
     <resultMap id="diagResultMap" type="com.ndata.quality.model.std.StdDiagResultVo">
@@ -71,11 +73,12 @@
         INSERT INTO TB_DIAG_JOB (
             DIAG_JOB_ID, DM_CLCT_ID, DM_ID, STATUS,
             TOTAL_CNT, PROCESS_CNT, RESULT_CNT,
-            CRET_DT, CRET_USER_ID
+            CRET_DT, CRET_USER_ID, DICT_ID
         ) VALUES (
             #{diagJobId}, #{clctId}, #{dataModelId}, 'READY',
             0, 0, 0,
-            to_char(now(), 'YYYYMMDDHH24MISS'), #{cretUserId, jdbcType=VARCHAR}
+            to_char(now(), 'YYYYMMDDHH24MISS'), #{cretUserId, jdbcType=VARCHAR},
+            #{dictId, jdbcType=VARCHAR}
         )
     </insert>
 
@@ -107,6 +110,8 @@
             ,J.DM_CLCT_ID
             ,J.DM_ID
             ,M.DM_NM
+            ,J.DICT_ID
+            ,(select DICT_NM from TB_STD_DICT where dict_id = J.DICT_ID) as DICT_NM
             ,to_char(to_timestamp(C.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
             ,J.STATUS
             ,J.TOTAL_CNT
@@ -148,6 +153,8 @@
             ,J.DM_CLCT_ID
             ,J.DM_ID
             ,M.DM_NM
+            ,J.DICT_ID
+            ,(select DICT_NM from TB_STD_DICT where dict_id = J.DICT_ID) as DICT_NM
             ,to_char(to_timestamp(C.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CLCT_DT
             ,J.STATUS
             ,J.TOTAL_CNT

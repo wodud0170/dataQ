@@ -28,10 +28,11 @@ public class DiagController extends DataControllerBase {
         String clctId       = params.get("clctId");
         String dataModelId  = params.get("dataModelId");
         String userId       = params.get("userId");
+        String dictId       = params.get("dictId");
 
         log.info(">> runDiag: jobId={}, clctId={}", diagJobId, clctId);
         try {
-            startService(new DiagService(diagJobId, clctId, dataModelId, userId));
+            startService(new DiagService(diagJobId, clctId, dataModelId, userId, dictId));
             result.setResultInfo(RestResult.CODE_200);
         } catch (Exception e) {
             log.error(">> runDiag failed", e);

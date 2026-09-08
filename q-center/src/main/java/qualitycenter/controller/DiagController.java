@@ -48,6 +48,9 @@ public class DiagController {
     private SessionService sessionService;
 
     @Autowired
+    private com.ndata.quality.service.StdDictService dictService;
+
+    @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
 
     @Autowired
@@ -96,6 +99,17 @@ public class DiagController {
                 return Mono.just(result);
             }
 
+            // 98번 — 이 진단을 어느 사전으로 잴지 확정한다.
+            // 사용자가 화면에서 고른 값이 있으면 그것을, 없으면 모델에 저장된 사전을 쓴다.
+            String diagDictId = dictService.resolve(jobVo.getDictId(), jobVo.getDataModelId());
+            if (diagDictId == null) {
+                result.setResultInfo(400,
+                    "이 데이터 모델에 표준사전이 지정되어 있지 않습니다."
+                    + " 진단에 사용할 표준사전을 선택하거나, 모델 수정에서 사전을 지정해 주세요.");
+                return Mono.just(result);
+            }
+            jobVo.setDictId(diagDictId);
+
             // Job 레코드 생성 (READY 상태)
             jobVo.setDiagJobId(StringUtils.getUUID());
             jobVo.setCretUserId(sessionService.getUserId());
@@ -107,6 +121,7 @@ public class DiagController {
             params.put("clctId",      jobVo.getClctId());
             params.put("dataModelId", jobVo.getDataModelId());
             params.put("userId",      sessionService.getUserId());
+            params.put("dictId",      diagDictId);
 
             WebClientHandler webClientHandler = new WebClientHandler(
                     NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/diag/runDiag");
