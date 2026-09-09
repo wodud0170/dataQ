@@ -120,6 +120,8 @@ public class DataModelService implements Runnable {
 			// 1. 수집테이블(TB_DATA_MODEL_CLCT) 입력
 			String clctId = StringUtils.getUUID();
 			String dataModelId = dataVo.getDataModelId();
+			// 98번 — 이 모델이 쓰는 사전. 수집 중 표준여부 판정에 쓴다.
+			final String clctDictId = dictService.resolve(null, dataModelId);
 			stdDataModelCollectVo.setClctId(clctId);
 			stdDataModelCollectVo.setDataModelId(dataModelId);
 			stdDataModelCollectVo.setClctType("DBMS");
@@ -199,7 +201,10 @@ public class DataModelService implements Runnable {
 					// 86번 #11 — 수집 단계 표준여부 검사. 진단(Diag) 에서도 다시 하지만, 수집 직후 화면에 표준 여부가 보이도록 일치화.
 					// 표준여부 체크 - 용어,도메인
 					String attrNmUp = stdDataModelAttrVo.getAttrNm() == null ? "" : stdDataModelAttrVo.getAttrNm().toUpperCase();
-					StdTermsVo stdTermsVo = session.selectOne("terms.selectApprovedTermsByEngNm", attrNmUp);
+					// 98번 — 수집 중인 이 모델의 사전에서 찾는다. 다른 사전 용어가 섞이면
+					//        수집 직후 화면의 표준여부 표시가 남의 사전 기준이 된다.
+					StdTermsVo stdTermsVo = session.selectOne("terms.selectApprovedTermsByEngNm",
+							dictService.nameParam(clctDictId, "termsEngAbrvNm", attrNmUp));
 					if (stdTermsVo != null) {
 						stdDataModelAttrVo.setTermsStndYn("Y");
 						stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");

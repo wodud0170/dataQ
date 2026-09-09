@@ -1705,8 +1705,11 @@ public class DataModelController {
 	 * 컬럼 추가 시 [표준 적용] 버튼에서 호출
 	 */
 	@RequestMapping(value = "/resolveStandard", method = RequestMethod.GET)
-	public Map<String, Object> resolveStandard(@RequestParam String termsNm) {
-		return resolveTermsInternal(termsNm);
+	public Map<String, Object> resolveStandard(@RequestParam String termsNm,
+			@RequestParam(required = false) String dmId,
+			@RequestParam(required = false) String dictId) {
+		// 98번 — 대상 모델이 오면 그 모델의 사전으로, 아니면 요청의 사전 / 기본 사전.
+		return resolveTermsInternal(termsNm, dictService.resolve(dictId, dmId));
 	}
 
 	/**
@@ -1874,7 +1877,9 @@ public class DataModelController {
 		String attrNmKr = attr.getAttrNmKr();
 		if (attrNmKr == null || attrNmKr.trim().isEmpty())
 			throw new IllegalStateException("한글명 없음");
-		Map<String, Object> resolved = resolveTermsInternal(attrNmKr);
+		// 98번 — 이 컬럼이 속한 모델의 사전으로 용어를 찾는다.
+		Map<String, Object> resolved = resolveTermsInternal(attrNmKr,
+				dictService.resolve(null, attr.getDataModelId()));
 		Boolean found = (Boolean) resolved.get("found");
 		if (found == null || !found)
 			throw new IllegalStateException((String) resolved.getOrDefault("message", "용어 미등록"));
@@ -1907,8 +1912,11 @@ public class DataModelController {
 		String engNm = attr.getAttrNm();
 		if (engNm == null || engNm.trim().isEmpty())
 			throw new IllegalStateException("영문명 없음");
+		// 98번 — 이 컬럼이 속한 모델의 사전에서 찾는다.
 		com.ndata.quality.model.std.StdTermsVo terms =
-			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm", engNm.trim());
+			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
+				dictService.nameParam(dictService.resolve(null, attr.getDataModelId()),
+						"termsEngAbrvNm", engNm.trim()));
 		if (terms == null)
 			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
 		Map<String, Object> item = new HashMap<>();
@@ -2564,7 +2572,7 @@ public class DataModelController {
 	 * 한글명 → 용어/도메인 조회 공통 로직. /resolveStandard 와 /resolveAttrs 가 공유.
 	 * 반환: {found, termsId, termsNm, termsEngAbrvNm, domainNm, domainId, dataType, dataLen, dataDecimalLen, domainMissing, message}
 	 */
-	private Map<String, Object> resolveTermsInternal(String termsNm) {
+	private Map<String, Object> resolveTermsInternal(String termsNm, String dictId) {
 		Map<String, Object> result = new HashMap<>();
 		if (termsNm == null || termsNm.trim().isEmpty()) {
 			result.put("found", false);
@@ -2573,7 +2581,8 @@ public class DataModelController {
 		}
 		try {
 			com.ndata.quality.model.std.StdTermsVo terms =
-				sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm", termsNm.trim());
+				sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm",
+					dictService.nameParam(dictId, "termsNm", termsNm.trim()));
 			if (terms == null) {
 				result.put("found", false);
 				result.put("message", "'" + termsNm + "' 에 해당하는 표준 용어가 없습니다.");
@@ -2615,7 +2624,9 @@ public class DataModelController {
 		if (attrNmKr == null || attrNmKr.trim().isEmpty())
 			throw new IllegalStateException("한글명 없음");
 
-		Map<String, Object> resolved = resolveTermsInternal(attrNmKr);
+		// 98번 — 이 컬럼이 속한 모델의 사전으로 용어를 찾는다.
+		Map<String, Object> resolved = resolveTermsInternal(attrNmKr,
+				dictService.resolve(null, attr.getDataModelId()));
 		Boolean found = (Boolean) resolved.get("found");
 		if (found == null || !found)
 			throw new IllegalStateException((String) resolved.getOrDefault("message", "용어 미등록"));
@@ -2736,8 +2747,11 @@ public class DataModelController {
 		if (engNm == null || engNm.trim().isEmpty())
 			throw new IllegalStateException("영문명 없음");
 
+		// 98번 — 이 컬럼이 속한 모델의 사전에서 찾는다.
 		com.ndata.quality.model.std.StdTermsVo terms =
-			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm", engNm.trim());
+			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
+				dictService.nameParam(dictService.resolve(null, attr.getDataModelId()),
+						"termsEngAbrvNm", engNm.trim()));
 		if (terms == null)
 			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
 
@@ -2799,8 +2813,11 @@ public class DataModelController {
 		}
 
 		// 영문명 기준 표준 용어 매칭 (TB_TERMS.TERMS_ENG_ABRV_NM = attrNm)
+		// 98번 — 이 컬럼이 속한 모델의 사전에서 찾는다.
 		com.ndata.quality.model.std.StdTermsVo term =
-			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm", attrNm.trim());
+			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
+				dictService.nameParam(dictService.resolve(null, attrVo.getDataModelId()),
+						"termsEngAbrvNm", attrNm.trim()));
 		if (term == null) {
 			throw new IllegalStateException("표준 미준수: '" + attrNm + "' 에 해당하는 표준 용어가 등록되어있지 않습니다.");
 		}

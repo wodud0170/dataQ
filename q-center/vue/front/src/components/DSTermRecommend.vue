@@ -13,6 +13,48 @@
       <!-- STEP 1: Input -->
       <v-stepper-content step="1">
         <v-card flat class="pa-4">
+          <!-- 98번 — 표준화 대상 먼저 정하기 -->
+          <v-card-title class="px-0 pt-0 pb-1">표준화 대상</v-card-title>
+          <v-card-subtitle class="px-0 pt-0">
+            어느 DB 를 표준화하고, 그 결과를 어느 표준사전에 등록할지 먼저 고릅니다.
+          </v-card-subtitle>
+          <v-sheet outlined rounded class="pa-3 mb-4">
+            <v-row dense align="center">
+              <v-col cols="12" md="6">
+                <v-select v-model="targetModelId" :items="dataModelList"
+                  item-text="dataModelNm" item-value="dataModelId"
+                  label="대상 데이터 모델 (DB)" placeholder="선택 안 함 — 사전만 골라 등록"
+                  color="ndColor" dense outlined clearable hide-details
+                  no-data-text="데이터 모델이 없습니다."
+                  @change="onTargetModelChange" />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select v-model="dictId" :items="dictList"
+                  item-text="dictNm" item-value="dictId"
+                  label="등록할 표준사전" color="ndColor"
+                  dense outlined hide-details
+                  no-data-text="사전이 없습니다."
+                  :error="!dictId" />
+              </v-col>
+            </v-row>
+            <div class="mt-2" style="font-size:.75rem; color:#78909C;">
+              <template v-if="targetModelId && modelDictMismatch">
+                <v-icon x-small color="orange darken-2">mdi-alert-outline</v-icon>
+                선택한 사전이 이 모델에 지정된 사전과 다릅니다.
+                등록은 고른 사전에 되고, 이 모델의 진단 기준은 바뀌지 않습니다.
+              </template>
+              <template v-else-if="!dictId">
+                <v-icon x-small color="red">mdi-alert-circle-outline</v-icon>
+                표준사전을 골라야 분석을 시작할 수 있습니다.
+              </template>
+              <template v-else>
+                분석과 등록이 모두 「{{ selectedDictNm }}」 사전 기준으로 이뤄집니다.
+              </template>
+            </div>
+          </v-sheet>
+
+          <v-divider class="mb-4"></v-divider>
+
           <div class="d-flex align-center px-0">
             <div>
               <v-card-title class="px-0 pt-0 pb-1">한글 컬럼명 입력</v-card-title>
@@ -45,7 +87,7 @@
 
           <div class="d-flex justify-space-between align-center mt-2">
             <span class="grey--text">입력: {{ parsedNames.length }}건</span>
-            <v-btn color="ndColor" class="white--text btn-wide-lg" :disabled="parsedNames.length === 0 || isAnalyzing" :loading="isAnalyzing" @click="startAnalysis">
+            <v-btn color="ndColor" class="white--text btn-wide-lg" :disabled="parsedNames.length === 0 || isAnalyzing || !dictId" :loading="isAnalyzing" @click="startAnalysis">
               <v-icon left>mdi-magnify</v-icon>분석 시작
             </v-btn>
           </div>
@@ -391,6 +433,14 @@ export default {
       isAnalyzing: false,
       isRegistering: false,
 
+      // 98번 — 표준화 대상. 어느 DB(모델)를 표준화하는지, 그 결과를 어느 사전에
+      // 등록하는지를 먼저 정하고 분석에 들어간다. 사전을 안 고르면 분석도 등록도
+      // 어느 사전 기준인지 알 수 없다.
+      dataModelList: [],
+      dictList: [],
+      targetModelId: null,
+      dictId: null,
+
       // Step 1
       inputText: '',
       fileName: '',
@@ -443,6 +493,18 @@ export default {
     };
   },
   computed: {
+    // 98번 — 화면 안내용
+    selectedDictNm: function() {
+      var d = this.dictList.find(function(x) { return x.dictId === this.dictId; }, this);
+      return d ? d.dictNm : '';
+    },
+    // 모델에 지정된 사전과 지금 고른 사전이 다른가.
+    // 다르다고 막지는 않는다 — 다른 사전으로 등록해 보는 경우가 있다. 알리기만 한다.
+    modelDictMismatch: function() {
+      if (!this.targetModelId || !this.dictId) return false;
+      var m = this.dataModelList.find(function(x) { return x.dataModelId === this.targetModelId; }, this);
+      return !!(m && m.dictId && m.dictId !== this.dictId);
+    },
     parsedNames: function() {
       if (!this.inputText) return [];
       return this.inputText.split('\n')
@@ -515,6 +577,29 @@ export default {
     },
   },
   methods: {
+    /** 98번 — 표준화 대상 후보 로드 (모델 목록 + 사전 목록) */
+    loadTargets: function() {
+      var self = this;
+      axios.post(self.$APIURL.base + 'api/dict/list', {})
+        .then(function(res) {
+          self.dictList = res.data || [];
+          if (!self.dictId) {
+            var def = self.dictList.find(function(d) { return d.defaultYn === 'Y'; });
+            self.dictId = def ? def.dictId : (self.dictList.length ? self.dictList[0].dictId : null);
+          }
+        })
+        .catch(function(e) { console.error('사전 목록 조회 실패', e); });
+
+      axios.post(self.$APIURL.base + 'api/dm/getDataModelList', {})
+        .then(function(res) { self.dataModelList = res.data || []; })
+        .catch(function(e) { console.error('데이터 모델 목록 조회 실패', e); });
+    },
+    /** 모델을 고르면 그 모델의 사전을 기본으로 맞춘다. 사용자가 바꿀 수 있다. */
+    onTargetModelChange: function(dmId) {
+      if (!dmId) return;
+      var m = this.dataModelList.find(function(x) { return x.dataModelId === dmId; });
+      if (m && m.dictId) this.dictId = m.dictId;
+    },
     /** 86번 #11 — 백엔드 raw exception 차단, 친화적 메세지 변환 */
     _friendlyErrText: function(err, fallback) {
       var status = (err && err.response && err.response.status) || 0;
@@ -608,7 +693,8 @@ export default {
       self.selectedItems = [];
 
       axios.post(self.$APIURL.base + 'api/std/analyzeTermsBatch', {
-        termNames: self.parsedNames
+        termNames: self.parsedNames,
+        dictId: self.dictId
       }).then(function(res) {
         if (res.data) {
           self.analysisResults = res.data;
@@ -827,7 +913,7 @@ export default {
           self.$swal.fire({ title: '등록된 단어입니다.', text: nm + ' → ' + info[0].wordEngAbrvNm, icon: 'success', timer: 1500, confirmButtonText: '확인' });
         } else {
           // 미등록 → DICT에서 추천 조회
-          axios.post(self.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm] }).then(function(res2) {
+          axios.post(self.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm], dictId: self.dictId }).then(function(res2) {
             var data = res2.data;
             if (data && data.length > 0 && data[0].words && data[0].words.length > 0) {
               var w = data[0].words[0];
@@ -970,7 +1056,8 @@ export default {
         wordEngAbrvNm: w.newWord.wordEngAbrvNm,
         wordEngNm: w.newWord.wordEngNm,
         wordDesc: w.wordNm,
-        domainClsfNm: w.newWord.domainClsfNm || ''
+        domainClsfNm: w.newWord.domainClsfNm || '',
+        dictId: self.dictId
       }).then(function(res) {
         self.$set(w, '_registering', false);
         if (res.data.success) {
@@ -1220,7 +1307,7 @@ export default {
         if (!result.value) return;
 
         self.isRegistering = true;
-        axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: items })
+        axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: items, dictId: self.dictId })
           .then(function(res) {
             self.registerResult = res.data;
             self.applyDetailsToRows(res.data && res.data.details, targetRows);
@@ -1252,7 +1339,7 @@ export default {
       }
       var payload = self.buildItemPayload(item);
       self.$set(item, '_registering', true);
-      axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: [payload] })
+      axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: [payload], dictId: self.dictId })
         .then(function(res) {
           self.applyDetailsToRows(res.data && res.data.details, [item]);
           var d = (res.data && res.data.details && res.data.details[0]) || {};
@@ -1288,6 +1375,7 @@ export default {
     axios.get(self.$APIURL.base + 'api/login/isAdmin', { params: { user: uid } })
       .then(function(res) { self.isAdmin = res.data === true; })
       .catch(function() { self.isAdmin = false; });
+    self.loadTargets();
   },
 };
 </script>

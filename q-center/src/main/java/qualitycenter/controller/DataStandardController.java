@@ -98,6 +98,18 @@ public class DataStandardController {
 	 * <code>&lt;if&gt;</code> 가 건너뛰어 <b>전 사전을 훑는</b> 결과가 나온다.
 	 * 그건 사전을 나눈 의미가 없으므로 여기서 반드시 채운다.</p>
 	 */
+	/**
+	 * 98번 — 요청 본문의 dictId 를 사전 id 로 확정한다.
+	 *
+	 * <p>비어 있으면 기본 사전. null 을 그대로 흘리면 INSERT 의 COALESCE 가
+	 * 'DEFAULT' 로 받아주긴 하지만, 어느 사전에 넣었는지 로그·응답에서
+	 * 확인할 수 없게 되므로 여기서 값을 정한다.</p>
+	 */
+	private String resolveDictOrDefault(Object raw) {
+		String v = (raw instanceof String) ? ((String) raw).trim() : null;
+		return (v == null || v.isEmpty()) ? dictService.defaultDictId() : v;
+	}
+
 	private NDQualityRetrieveCond withDict(NDQualityRetrieveCond cond) {
 		NDQualityRetrieveCond c = (cond != null) ? cond : new NDQualityRetrieveCond();
 		if (c.getDictId() == null || c.getDictId().trim().isEmpty()) {
@@ -150,6 +162,8 @@ public class DataStandardController {
 	public Mono<Response> createWord(@RequestBody StdWordVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
+		// 98번 — 어느 사전에 등록하는지. 화면이 안 보내면 기본 사전.
+		dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
 		// 사용자가 어드민인 경우에 자동승인 처리
 		if (sessionService.isAdmin()) {
 			dataVo.setAprvYn("Y");
@@ -176,13 +190,13 @@ public class DataStandardController {
 				return Mono.just(result);
 			}
 			// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
-			String forbiddenMsg = checkForbiddenWord(dataVo.getWordNm());
+			String forbiddenMsg = checkForbiddenWord(dataVo.getWordNm(), dataVo.getDictId());
 			if (forbiddenMsg != null) {
 				result.setResultInfo(RestResult.CODE_500.getCode(), forbiddenMsg);
 				return Mono.just(result);
 			}
 			// 유사어 체크: 경고만 (등록은 허용, warning 메시지를 resultMessage에 포함)
-			String synonymMsg = checkSynonymWord(dataVo.getWordNm());
+			String synonymMsg = checkSynonymWord(dataVo.getWordNm(), dataVo.getDictId());
 
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
 			String msg = synonymMsg;
@@ -489,7 +503,7 @@ public class DataStandardController {
 		try {
 			// 중복 체크: 동일 용어명이 이미 존재하면 승인 상태에 따라 메시지 분기
 			dataVo.setTermsNm(dataVo.getTermsNm().replaceAll("\\s", ""));
-			StdTermsVo existingTerms = session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm());
+			StdTermsVo existingTerms = session.selectOne("terms.selectTermsByNm", dictService.nameParam(dataVo.getDictId(), "termsNm", dataVo.getTermsNm()));
 			if (existingTerms != null) {
 				String dupMsg = "Y".equals(existingTerms.getAprvYn())
 						? "이미 승인된 용어명입니다."
@@ -685,12 +699,12 @@ public class DataStandardController {
 
 		try {
 			// 변경 전 값 조회
-			StdTermsVo prevTerms = session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm());
+			StdTermsVo prevTerms = session.selectOne("terms.selectTermsByNm", dictService.nameParam(dataVo.getDictId(), "termsNm", dataVo.getTermsNm()));
 			String prevValue = prevTerms != null ? prevTerms.toString() : null;
 
 			// 기존 용어를 이미 존재하는 용어로 업데이트하는 경우에는 Exception 발생시킨다.
 			dataVo.setTermsNm(dataVo.getTermsNm().replaceAll("\\s", ""));
-			StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByNm", dataVo.getTermsNm());
+			StdTermsVo stdTermsVo = session.selectOne("terms.selectTermsByNm", dictService.nameParam(dataVo.getDictId(), "termsNm", dataVo.getTermsNm()));
 			if (stdTermsVo != null && !dataVo.getId().equals(stdTermsVo.getId())) {
 				throw new Exception("previously registered terms can not be updated to existing terms("
 						+ dataVo.getTermsNm() + ")");
@@ -778,8 +792,9 @@ public class DataStandardController {
 	 * @return 해당 용어 정보 목록
 	 */
 	@RequestMapping(value = "/getTermsInfoByNm", method = RequestMethod.GET)
-	public List<StdTermsVo> getTermsInfoByNm(String termsNm) {
-		return sqlSessionTemplate.selectList("terms.selectTermsInfoByNm", termsNm);
+	public List<StdTermsVo> getTermsInfoByNm(String termsNm, String dictId) {
+		return sqlSessionTemplate.selectList("terms.selectTermsInfoByNm",
+				dictService.nameParam(dictId, "termsNm", termsNm));
 	}
 
 	/**
@@ -2116,6 +2131,8 @@ public class DataStandardController {
 		String wordEngNm = (String) body.get("wordEngNm");
 		String wordDesc = (String) body.get("wordDesc");
 		String domainClsfNm = (String) body.get("domainClsfNm");
+		// 98번 — 자동표준화가 어느 사전에 등록하는지. 화면에서 고른 값이 온다.
+		String dictId = resolveDictOrDefault(body.get("dictId"));
 
 		if (wordNm == null || wordNm.trim().isEmpty()
 				|| wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
@@ -2133,15 +2150,15 @@ public class DataStandardController {
 		}
 
 		// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
-		String forbiddenMsg = checkForbiddenWord(wordNm.trim());
+		String forbiddenMsg = checkForbiddenWord(wordNm.trim(), dictId);
 		if (forbiddenMsg != null) {
 			res.put("success", false);
 			res.put("message", forbiddenMsg);
 			return res;
 		}
 
-		// 중복 체크
-		List<StdWordVo> existing = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(null, "wordNm", wordNm.trim()));
+		// 중복 체크 — 같은 사전 안에서만 본다. 다른 사전의 동명 단어는 별개다.
+		List<StdWordVo> existing = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(dictId, "wordNm", wordNm.trim()));
 		if (existing != null && !existing.isEmpty()) {
 			// 이미 등록된 단어 → 기존 정보 반환
 			StdWordVo existWord = existing.get(0);
@@ -2157,7 +2174,7 @@ public class DataStandardController {
 		}
 
 		// 유사어 체크: 경고 메시지만 (등록은 진행)
-		String synonymMsg = checkSynonymWord(wordNm.trim());
+		String synonymMsg = checkSynonymWord(wordNm.trim(), dictId);
 
 		String userId = sessionService.getUserId();
 		boolean isAdmin = sessionService.isAdmin();
@@ -2165,6 +2182,7 @@ public class DataStandardController {
 		StdWordVo wordVo = new StdWordVo();
 		String wordId = StringUtils.getUUID();
 		wordVo.setId(wordId);
+		wordVo.setDictId(dictId);
 		wordVo.setWordNm(wordNm.trim());
 		wordVo.setWordEngAbrvNm(wordEngAbrvNm.trim().toUpperCase());
 		wordVo.setWordEngNm(wordEngNm.trim());
@@ -2226,6 +2244,8 @@ public class DataStandardController {
 
 		String userId = sessionService.getUserId();
 		boolean isAdmin = sessionService.isAdmin();
+		// 98번 — 이 일괄 등록이 들어갈 사전. 화면에서 고른 값이 온다.
+		String dictId = resolveDictOrDefault(body.get("dictId"));
 		int registeredTerms = 0;
 		int registeredWords = 0;
 		int skipped = 0;
@@ -2244,8 +2264,8 @@ public class DataStandardController {
 
 			SqlSession session = sqlSessionFactory.openSession();
 			try {
-				// 중복 체크
-				if (session.selectOne("terms.selectTermsByNm", termsNm) != null) {
+				// 중복 체크 — 같은 사전 안에서만. 다른 사전의 동명 용어는 별개다.
+				if (session.selectOne("terms.selectTermsByNm", dictService.nameParam(dictId, "termsNm", termsNm)) != null) {
 					skipped++;
 					Map<String, Object> detail = new HashMap<>();
 					detail.put("termsNm", termsNm);
@@ -2270,11 +2290,12 @@ public class DataStandardController {
 							throw new RuntimeException("신규 단어 필수 항목 누락: 한글명, 영문약어, 영문명은 필수입니다. (단어: " + wordNm + ")");
 						}
 						// 금칙어 체크
-						String forbiddenMsg = checkForbiddenWord(wordNm.trim());
+						String forbiddenMsg = checkForbiddenWord(wordNm.trim(), dictId);
 						if (forbiddenMsg != null) {
 							throw new RuntimeException(forbiddenMsg);
 						}
 						StdWordVo wordVo = new StdWordVo();
+						wordVo.setDictId(dictId);
 						String wordId = StringUtils.getUUID();
 						wordVo.setId(wordId);
 						wordVo.setWordNm((String) nw.get("wordNm"));
@@ -2318,7 +2339,7 @@ public class DataStandardController {
 
 				// 도메인 유효성 체크
 				if (domainNm != null && !domainNm.trim().isEmpty()) {
-					Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", domainNm.trim()));
+					Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(dictId, "domainNm", domainNm.trim()));
 					if (domainCheck == null) {
 						throw new RuntimeException("등록되지 않은 도메인입니다: " + domainNm);
 					}
@@ -2330,6 +2351,7 @@ public class DataStandardController {
 				StdTermsVo termsVo = new StdTermsVo();
 				String termsId = StringUtils.getUUID();
 				termsVo.setId(termsId);
+				termsVo.setDictId(dictId);
 				termsVo.setTermsNm(termsNm);
 				termsVo.setTermsEngAbrvNm(termsEngAbrvNm);
 				termsVo.setTermsDesc(termsDesc != null ? termsDesc : termsNm);
@@ -3150,9 +3172,9 @@ public class DataStandardController {
 	 * 입력된 단어명이 기존 단어의 금칙어 목록에 포함되는지 체크
 	 * @return 금칙어에 해당하면 에러 메시지, 아니면 null
 	 */
-	private String checkForbiddenWord(String wordNm) {
+	private String checkForbiddenWord(String wordNm, String dictId) {
 		if (wordNm == null || wordNm.trim().isEmpty()) return null;
-		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordByForbiddenNm", dictService.nameParam(null, "wordNm", wordNm.trim()));
+		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordByForbiddenNm", dictService.nameParam(dictId, "wordNm", wordNm.trim()));
 		if (found != null) {
 			String stdWordNm = (String) found.get("wordNm");
 			return "'" + wordNm.trim() + "'은(는) '" + stdWordNm + "'의 금칙어입니다. '" + stdWordNm + "'를 사용해주세요.";
@@ -3164,9 +3186,9 @@ public class DataStandardController {
 	 * 입력된 단어명이 기존 단어의 유사어 목록에 포함되는지 체크
 	 * @return 유사어에 해당하면 안내 메시지, 아니면 null
 	 */
-	private String checkSynonymWord(String wordNm) {
+	private String checkSynonymWord(String wordNm, String dictId) {
 		if (wordNm == null || wordNm.trim().isEmpty()) return null;
-		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordBySynonymNm", dictService.nameParam(null, "wordNm", wordNm.trim()));
+		Map<String, Object> found = sqlSessionTemplate.selectOne("word.selectWordBySynonymNm", dictService.nameParam(dictId, "wordNm", wordNm.trim()));
 		if (found != null) {
 			String stdWordNm = (String) found.get("wordNm");
 			return "'" + wordNm.trim() + "'은(는) '" + stdWordNm + "'의 유사어입니다. '" + stdWordNm + "' 사용을 권장합니다.";
