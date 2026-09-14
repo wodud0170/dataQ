@@ -109,6 +109,10 @@ public class DiagService implements Runnable {
             // 98번 — 이 모델이 쓰는 사전의 용어만 로드한다. 다른 사전 용어가 섞이면
             //        같은 이름의 남의 용어에 맞춰 "표준" 으로 판정된다.
             String diagDictId = dictService.resolve(dictId, dataModelId);
+            // 수동 실행은 DiagController 가 사전 없으면 막지만, 예약 등록 뒤 모델의 사전이
+            // 비워지면 여기로 null 이 온다. 그때 실제로는 기본 사전으로 로드되므로
+            // 기록도 기본 사전으로 맞춘다 — 기록과 실제가 어긋나면 이 컬럼의 의미가 없다.
+            if (diagDictId == null) diagDictId = dictService.defaultDictId();
             Map<String, Object> dictJobParam = new HashMap<>();
             dictJobParam.put("diagJobId", diagJobId);
             dictJobParam.put("dictId", diagDictId);

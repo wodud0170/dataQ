@@ -70,6 +70,19 @@ public class ExcelUploadService {
 		return p;
 	}
 
+	/**
+	 * 업로드 대상 사전을 확정한다. 각 업로드 메서드 첫 줄에서 부른다.
+	 *
+	 * <p>비어 있으면 기본 사전. <b>null 을 그대로 흘리면 안 된다</b> —
+	 * 매퍼의 <code>DICT_ID = #{dictId}</code> 가 SQL 에서 <code>DICT_ID = NULL</code>
+	 * 이 되어 항상 거짓이다. 그러면 중복 검사가 절대 안 걸려 기존 단어가 SKIP 이 아니라
+	 * 유니크 위반 FAIL 로 떨어지고, 용어의 구성단어 조회도 절대 안 걸려 모든 용어가
+	 * "단어가 유효하지 않음" 으로 실패한다. (2026-09-14 발견 — 화면이 사전을 안 보내던 상태)</p>
+	 */
+	private String resolveDict(String dictId) {
+		return (dictId == null || dictId.trim().isEmpty()) ? dictService.defaultDictId() : dictId.trim();
+	}
+
 	/** userId로 관리자 여부 조회 (TB_USER.ADM_YN) */
 	private boolean isAdminUser(SqlSession session, String userId) {
 		if (userId == null) return false;
@@ -88,6 +101,7 @@ public class ExcelUploadService {
 	 * @throws Exception Excel 파싱 실패 시
 	 */
 	public UploadResult uploadWords(String userId, String dictId, MultipartFile multiPart) throws Exception {
+		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
@@ -177,6 +191,7 @@ public class ExcelUploadService {
 	}
 
 	public UploadResult uploadTermsList(String userId, String dictId, MultipartFile multiPart, BiConsumer<Integer,Integer> progressCallback) throws Exception {
+		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
@@ -313,6 +328,7 @@ public class ExcelUploadService {
 	 * @throws Exception Excel 파싱 실패 시
 	 */
 	public UploadResult uploadCodeDataList(String userId, String dictId, MultipartFile multiPart) throws Exception {
+		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 
@@ -364,6 +380,7 @@ public class ExcelUploadService {
 	 * @throws Exception Excel 파싱 실패 시
 	 */
 	public UploadResult uploadDomains(String userId, String dictId, MultipartFile multiPart) throws Exception {
+		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
@@ -438,6 +455,7 @@ public class ExcelUploadService {
 	 * 컬럼: [No, 도메인그룹명, 표준여부]</p>
 	 */
 	public UploadResult uploadDomainGroups(String userId, String dictId, MultipartFile multiPart) throws Exception {
+		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 
@@ -486,6 +504,7 @@ public class ExcelUploadService {
 	 * 도메인 그룹이 없으면 FK 에러를 사용자가 이해할 수 있는 메시지로 변환.</p>
 	 */
 	public UploadResult uploadDomainClsfs(String userId, String dictId, MultipartFile multiPart) throws Exception {
+		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
 
