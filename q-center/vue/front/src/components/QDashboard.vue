@@ -568,7 +568,7 @@ export default {
     goToStructDiagResult(diagId) {
       if (!diagId) return;
       eventBus.pendingStructDiagId = diagId;
-      this.addTabItem('구조 변경 진단', 'structDiag');
+      this.addTabItem('진단 결과', 'structDiagResult');
     },
     getDashboardInfo() {
       try {

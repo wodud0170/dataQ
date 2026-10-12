@@ -421,7 +421,7 @@ export default {
         if (item.ruleType === 'RANGE') {
           this.rangeMin = p.min; this.rangeMax = p.max; this.rangeInteger = !!p.integer;
         } else if (item.ruleType === 'LENGTH') {
-          this.lenMin = p.min; this.lenMax = p.max;
+          this.lenMin = p.minLen; this.lenMax = p.maxLen;
         } else if (item.ruleType === 'REGEX') {
           this.regexPattern = p.pattern || '';
         } else if (item.ruleType === 'ENUM') {
@@ -442,9 +442,10 @@ export default {
       this.form.ruleParams = JSON.stringify(p);
     },
     syncLenParams() {
+      // 키는 executor RuleSqlBuilder 의 LENGTH 파라미터(minLen/maxLen)와 맞춘다.
       const p = {};
-      if (this.lenMin !== null && this.lenMin !== '') p.min = Number(this.lenMin);
-      if (this.lenMax !== null && this.lenMax !== '') p.max = Number(this.lenMax);
+      if (this.lenMin !== null && this.lenMin !== '') p.minLen = Number(this.lenMin);
+      if (this.lenMax !== null && this.lenMax !== '') p.maxLen = Number(this.lenMax);
       this.form.ruleParams = JSON.stringify(p);
     },
     syncRegexParams() {
@@ -467,7 +468,7 @@ export default {
             self.loadRules();
             self.loadTree();   // 룰 카운트 갱신
           } else {
-            self.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
+            self.$swal.fire({ icon: 'error', title: '실패', text: r.data.resultMessage });
           }
         })
         .catch(err => {
@@ -543,7 +544,7 @@ export default {
           self.loadRules();
           self.loadTree();
         } else {
-          self.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
+          self.$swal.fire({ icon: 'error', title: '실패', text: r.data.resultMessage });
         }
       }).catch(err => {
         console.error('카탈로그 매핑 실패:', err);
@@ -560,7 +561,7 @@ export default {
           self.catTab = 1;
           self.loadCatalog();
         } else {
-          self.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
+          self.$swal.fire({ icon: 'error', title: '실패', text: r.data.resultMessage });
         }
       }).catch(err => {
         console.error('카탈로그 복사 실패:', err);

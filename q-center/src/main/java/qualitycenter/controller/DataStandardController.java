@@ -1956,17 +1956,21 @@ public class DataStandardController {
 	 * @return 용어별 분석 결과 목록 (상태: AUTO/PARTIAL/FAILED/REGISTERED)
 	 */
 	@RequestMapping(value = "/analyzeTermsBatch", method = RequestMethod.POST)
-	public List<TermAnalysisResult> analyzeTermsBatch(@RequestBody Map<String, List<String>> body) {
-		List<String> termNames = body.get("termNames");
+	public List<TermAnalysisResult> analyzeTermsBatch(@RequestBody Map<String, Object> body) {
+		@SuppressWarnings("unchecked")
+		List<String> termNames = (List<String>) body.get("termNames");
 		if (termNames == null) termNames = new ArrayList<>();
-		log.info(">> analyzeTermsBatch started, count: {}", termNames.size());
+		// 98번 — 화면에서 고른 사전 안에서만 분석한다.
+		String dictId = resolveDictOrDefault(body.get("dictId"));
+		Map<String, Object> dp = dictService.dictParam(dictId);
+		log.info(">> analyzeTermsBatch started, count: {}, dictId: {}", termNames.size(), dictId);
 
-		// 캐시: 전체 용어/단어/도메인 로드
-		List<StdTermsVo> allTerms = sqlSessionTemplate.selectList("terms.selectAllTermsByNm");
+		// 캐시: 사전의 용어/단어/도메인 로드
+		List<StdTermsVo> allTerms = sqlSessionTemplate.selectList("terms.selectAllTermsByNm", dp);
 		Map<String, StdTermsVo> termsByNm = new HashMap<>();
 		for (StdTermsVo t : allTerms) { termsByNm.put(t.getTermsNm(), t); }
 
-		List<StdWordVo> allWords = sqlSessionTemplate.selectList("word.selectAllWords");
+		List<StdWordVo> allWords = sqlSessionTemplate.selectList("word.selectAllWords", dp);
 		Map<String, List<StdWordVo>> wordsByNm = new HashMap<>();
 		// 동의어 → 원본 단어 매핑 (예: 카테고리 → 범주)
 		Map<String, StdWordVo> synmToWord = new HashMap<>();
@@ -1981,7 +1985,7 @@ public class DataStandardController {
 			}
 		}
 
-		List<Map<String, Object>> usageCounts = sqlSessionTemplate.selectList("word.selectWordUsageCounts");
+		List<Map<String, Object>> usageCounts = sqlSessionTemplate.selectList("word.selectWordUsageCounts", dp);
 		Map<String, Integer> usageMap = new HashMap<>();
 		for (Map<String, Object> row : usageCounts) {
 			String nm = (String) row.get("wordNm");
@@ -1989,7 +1993,7 @@ public class DataStandardController {
 			if (nm != null && cnt != null) usageMap.put(nm, cnt.intValue());
 		}
 
-		List<StdDomainVo> allDomains = sqlSessionTemplate.selectList("domain.selectAllDomains");
+		List<StdDomainVo> allDomains = sqlSessionTemplate.selectList("domain.selectAllDomains", dp);
 		Map<String, List<StdDomainVo>> domainsByClsf = new HashMap<>();
 		for (StdDomainVo d : allDomains) {
 			String clsf = d.getDomainClsfNm() != null ? d.getDomainClsfNm() : "";

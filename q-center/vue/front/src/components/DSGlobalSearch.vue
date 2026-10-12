@@ -112,7 +112,7 @@ import { eventBus } from './../eventBus.js'
 
 export default {
   name: 'DSGlobalSearch',
-  props: ['isMobile'],
+  props: ['isMobile', 'addTabs'],
   data: () => ({
     keyword: '',
     loading: false,
@@ -190,7 +190,14 @@ export default {
       if (searchInfo) {
         eventBus.pendingSearch = { type: tabName, field: searchInfo.field, value: searchInfo.value };
       }
-      this.$emit('addTabItem', this.getTabTitle(tabName), tabName);
+      // 이미 열린 탭이면 그 탭으로 이동 (NdHaeder/QDashboard 와 동일)
+      let tab = this.addTabs.find(item => item.name === tabName);
+      if (!tab) {
+        this.$emit('addTabItem', this.getTabTitle(tabName), tabName, this.addTabs.length);
+      } else {
+        this.$emit('addActiveContent', tabName, tab.index);
+      }
+      this.$emit('navAndTabSync', tabName);
     },
     getTabTitle(name) {
       const map = {

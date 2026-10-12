@@ -99,10 +99,12 @@ export default {
         },
         showAlert() {
             window._skipBeforeUnload = true;
-            // 세션 삭제
-            sessionStorage.removeItem("loginStatus");
-            // 로그인 화면으로 이동
-            location.href = "/";
+            // 서버 세션 종료 (Spring Security /logout) 후 로컬 세션 삭제
+            axios.get(this.$APIURL.base + "logout").finally(() => {
+                sessionStorage.removeItem("loginStatus");
+                // 로그인 화면으로 이동
+                location.href = "/";
+            });
         },
         goToMain() {
             this.$swal.fire({

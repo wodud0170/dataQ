@@ -133,7 +133,11 @@ export default {
         if (!r.isConfirmed) return;
         axios.post(this.$APIURL.base + 'api/dmApproval/submit', {
           changeSeqList: seqList,
-        }).then(() => {
+        }).then(res => {
+          if (res.data.resultCode !== 200) {
+            this.$swal.fire({ title: '신청 실패', text: res.data.resultMessage || '', icon: 'error' });
+            return;
+          }
           this.$swal.fire({ title: '신청 완료', icon: 'success', timer: 1200, showConfirmButton: false });
           this.loadAll();
         }).catch((e) => this.$swal.fire({ title: '신청 실패', text: (e.response && e.response.data && e.response.data.resultMessage) || '', icon: 'error' }));
@@ -150,8 +154,13 @@ export default {
         if (!r.isConfirmed) return;
         Promise.all(seqList.map(seq =>
           axios.post(this.$APIURL.base + 'api/dmApproval/rollbackDraft', { changeSeq: seq })
-        )).then(() => {
-          this.$swal.fire({ title: '롤백 완료', icon: 'success', timer: 1200, showConfirmButton: false });
+        )).then(results => {
+          const failed = results.filter(res => res.data.resultCode !== 200);
+          if (failed.length > 0) {
+            this.$swal.fire({ title: `롤백 실패 ${failed.length}건`, text: failed[0].data.resultMessage || '', icon: 'error' });
+          } else {
+            this.$swal.fire({ title: '롤백 완료', icon: 'success', timer: 1200, showConfirmButton: false });
+          }
           this.loadAll();
         }).catch(() => this.$swal.fire({ title: '롤백 실패', icon: 'error' }));
       });

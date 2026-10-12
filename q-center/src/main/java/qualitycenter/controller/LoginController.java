@@ -83,7 +83,7 @@ public class LoginController {
 
   @RequestMapping(value = "/createUser", method = RequestMethod.POST)
   public Mono<Response> createUser(@RequestBody AdminVo user) throws Exception {
-    log.info(">> create user={}", user);
+    log.info(">> create user={}, name={}, admin={}", user.getId(), user.getName(), user.isAdmin());
     Response result = new Response();
 		try {
       if (sessionService.existUser(user.getId())) {
@@ -107,7 +107,7 @@ public class LoginController {
 
   @RequestMapping(value = "/updateUser", method = RequestMethod.POST)
   public Mono<Response> updateUser(@RequestBody AdminVo user) throws Exception {
-    log.info(">> update user={}", user);
+    log.info(">> update user={}, name={}, admin={}", user.getId(), user.getName(), user.isAdmin());
     Response result = new Response();
 		try {
 			sessionService.updateUser(user);

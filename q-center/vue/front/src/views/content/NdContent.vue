@@ -378,7 +378,8 @@
             <div v-if="this.activeContent === 'globalSearch'" id="tab_globalSearch" class="tab_contents"
                 :class="{ active: this.activeContent === 'globalSearch' }">
                 <keep-alive>
-                    <globalSearch :key="globalSearchKey" :isMobile="isMobile" @addTabItem="addTabItem" />
+                    <globalSearch :key="globalSearchKey" :isMobile="isMobile" :addTabs="addTabs" @addTabItem="addTabItem"
+                        @addActiveContent="addActiveContent" @navAndTabSync="navAndTabSync" />
                 </keep-alive>
             </div>
         </div>

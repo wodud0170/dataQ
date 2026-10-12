@@ -119,7 +119,11 @@ export default {
         if (!r.isConfirmed) return;
         axios.post(this.$APIURL.base + 'api/dmApproval/approve', {
           changeSeqList: seqList,
-        }).then(() => {
+        }).then(res => {
+          if (res.data.resultCode !== 200) {
+            this.$swal.fire({ title: '승인 실패', text: res.data.resultMessage || '', icon: 'error' });
+            return;
+          }
           this.$swal.fire({ title: '승인 완료', icon: 'success', timer: 1200, showConfirmButton: false });
           this.loadSubmissions();
           this.selectedSubmissionId = null;
@@ -142,7 +146,11 @@ export default {
         axios.post(this.$APIURL.base + 'api/dmApproval/reject', {
           changeSeqList: seqList,
           aprvComment: r.value || null,
-        }).then(() => {
+        }).then(res => {
+          if (res.data.resultCode !== 200) {
+            this.$swal.fire({ title: '반려 실패', text: res.data.resultMessage || '', icon: 'error' });
+            return;
+          }
           this.$swal.fire({ title: '반려 완료', icon: 'success', timer: 1200, showConfirmButton: false });
           this.loadSubmissions();
           this.selectedSubmissionId = null;

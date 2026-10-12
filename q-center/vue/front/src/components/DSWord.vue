@@ -784,7 +784,7 @@ export default {
       }
       axios.post(vm.$APIURL.base + 'api/std/getWordList', {
         'searchEngWord': abrvNm.trim(),
-        'schAprvYn': '',
+        'schAprvYn': null, // 승인/미승인 모두 중복 대상 ('' 이면 APRV_YN = '' 로 걸려 항상 0건)
         'dictId': vm.dictId
       }).then(function (res) {
         var found = false;

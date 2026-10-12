@@ -761,6 +761,13 @@ CREATE TABLE quality.tb_aprv_stats (
 
 
 --
+-- Name: COLUMN tb_aprv_stats.req_item_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_stats.req_item_nm IS '요청 항목명 (반려 시 원본 삭제되므로 이력 보존용)';
+
+
+--
 -- Name: tb_biz_area; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -1019,8 +1026,37 @@ CREATE TABLE quality.tb_data_model_attr (
     aprv_user_id character varying(50),
     aprv_dt character varying(14),
     aprv_comment character varying(500),
-    submission_id character varying(40)
+    submission_id character varying(40),
+    fk_parent_obj_owner character varying(100)
 );
+
+
+--
+-- Name: COLUMN tb_data_model_attr.attr_nm_kr; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.attr_nm_kr IS '컬럼 논리명 (편집 가능). 최초 수집 시 ATTR_COMMENT 값 복사';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.attr_comment; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.attr_comment IS 'DB에서 수집한 컬럼 코멘트 원본 (수집 시 자동, 읽기 전용)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.use_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.use_yn IS '사용여부 Y/N (N=소프트 삭제)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.deleted_dt IS '소프트 삭제 일시 YYYYMMDDHH24MISS';
 
 
 --
@@ -1169,6 +1205,34 @@ COMMENT ON TABLE quality.tb_data_model_clct IS '데이터수집';
 
 
 --
+-- Name: COLUMN tb_data_model_clct.clct_type; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_clct.clct_type IS '스냅샷 원천 (DBMS: 수집, MANUAL: 수동편집, ERWIN: ERwin 임포트)';
+
+
+--
+-- Name: COLUMN tb_data_model_clct.added_cnt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_clct.added_cnt IS '재수집 시 추가된 테이블·컬럼 합계';
+
+
+--
+-- Name: COLUMN tb_data_model_clct.deleted_cnt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_clct.deleted_cnt IS '재수집 시 삭제된 테이블·컬럼 합계';
+
+
+--
+-- Name: COLUMN tb_data_model_clct.modified_cnt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_clct.modified_cnt IS '재수집 시 변경된 테이블·컬럼 합계';
+
+
+--
 -- Name: tb_data_model_constraint; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -1199,6 +1263,20 @@ CREATE TABLE quality.tb_data_model_constraint (
 
 
 --
+-- Name: COLUMN tb_data_model_constraint.use_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_constraint.use_yn IS '사용 여부 (Y/N). soft-delete 대상은 N';
+
+
+--
+-- Name: COLUMN tb_data_model_constraint.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_constraint.deleted_dt IS 'soft-delete 시각 (YYYYMMDDHH24MISS)';
+
+
+--
 -- Name: tb_data_model_index; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -1223,6 +1301,20 @@ CREATE TABLE quality.tb_data_model_index (
     aprv_comment character varying(500),
     submission_id character varying(40)
 );
+
+
+--
+-- Name: COLUMN tb_data_model_index.use_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_index.use_yn IS '사용 여부 (Y/N). soft-delete 대상은 N';
+
+
+--
+-- Name: COLUMN tb_data_model_index.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_index.deleted_dt IS 'soft-delete 시각 (YYYYMMDDHH24MISS)';
 
 
 --
@@ -1283,6 +1375,34 @@ CREATE TABLE quality.tb_data_model_obj (
     biz_area_id character varying(40),
     subj_area_id character varying(40)
 );
+
+
+--
+-- Name: COLUMN tb_data_model_obj.obj_nm_kr; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.obj_nm_kr IS '테이블 논리명 (편집 가능). 최초 수집 시 OBJ_COMMENT 값 복사';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.obj_comment; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.obj_comment IS 'DB에서 수집한 테이블 코멘트 원본 (수집 시 자동, 읽기 전용)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.use_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.use_yn IS '사용여부 Y/N (N=소프트 삭제)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.deleted_dt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.deleted_dt IS '소프트 삭제 일시 YYYYMMDDHH24MISS';
 
 
 --
@@ -1394,7 +1514,8 @@ CREATE TABLE quality.tb_diag_result (
     diag_type character varying(50) NOT NULL,
     diag_detail text,
     std_value character varying(500),
-    actual_value character varying(500)
+    actual_value character varying(500),
+    obj_owner character varying(100)
 );
 
 
@@ -1638,7 +1759,8 @@ CREATE TABLE quality.tb_qual_col_rule (
     custom_rule_id character varying(40),
     exclude_yn character varying(1) DEFAULT 'N'::character varying,
     updt_user_id character varying(50),
-    updt_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updt_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    obj_owner character varying(100) DEFAULT ''::character varying NOT NULL
 );
 
 
@@ -1745,7 +1867,8 @@ CREATE TABLE quality.tb_qual_profile_result (
     min_len integer,
     max_len integer,
     top_values text,
-    updated_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    updated_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    obj_owner character varying(100)
 );
 
 
@@ -1839,7 +1962,8 @@ CREATE TABLE quality.tb_qual_rule_result (
     violation_cnt bigint,
     violation_rate numeric(7,4),
     sample_cnt integer,
-    error_msg text
+    error_msg text,
+    obj_owner character varying(100)
 );
 
 
@@ -1860,7 +1984,8 @@ CREATE TABLE quality.tb_qual_running_lock (
     attr_nm character varying(200) NOT NULL,
     diag_id character varying(50),
     user_id character varying(50),
-    start_dt character varying(14) NOT NULL
+    start_dt character varying(14) NOT NULL,
+    obj_owner character varying(100)
 );
 
 
@@ -1869,6 +1994,48 @@ CREATE TABLE quality.tb_qual_running_lock (
 --
 
 COMMENT ON TABLE quality.tb_qual_running_lock IS '품질 진단 컬럼 단위 동시 실행 방지 — application-level mutex (운영 DB 락 X). 83번';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.dm_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.dm_id IS '데이터 모델 ID';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.obj_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.obj_nm IS '테이블명';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.attr_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.attr_nm IS '컬럼명';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.diag_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.diag_id IS '진행 중 진단 ID';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.user_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.user_id IS '진단 트리거한 사용자';
+
+
+--
+-- Name: COLUMN tb_qual_running_lock.start_dt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_qual_running_lock.start_dt IS 'lock 획득 시각 (YYYYMMDDHH24MISS) — 30분 경과 시 stale 자동 정리';
 
 
 --
@@ -1882,7 +2049,8 @@ CREATE TABLE quality.tb_qual_violation_sample (
     attr_nm character varying(100) DEFAULT ''::character varying NOT NULL,
     seq integer NOT NULL,
     pk_values text,
-    violating_val character varying(500)
+    violating_val character varying(500),
+    obj_owner character varying(100)
 );
 
 
@@ -2850,7 +3018,7 @@ ALTER TABLE ONLY quality.tb_domain_rule
 --
 
 ALTER TABLE ONLY quality.tb_qual_col_rule
-    ADD CONSTRAINT pk_tb_qual_col_rule PRIMARY KEY (dm_id, obj_nm, attr_nm);
+    ADD CONSTRAINT pk_tb_qual_col_rule PRIMARY KEY (dm_id, obj_owner, obj_nm, attr_nm);
 
 
 --
@@ -3348,6 +3516,13 @@ CREATE INDEX idx_qual_rule_catalog_clsf ON quality.tb_qual_rule_catalog USING bt
 --
 
 CREATE INDEX imsi_comment_attr_name_idx ON quality.imsi_comment USING btree (attr_name);
+
+
+--
+-- Name: ix_diag_result_owner_obj; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_diag_result_owner_obj ON quality.tb_diag_result USING btree (diag_job_id, obj_owner, obj_nm, attr_nm);
 
 
 --

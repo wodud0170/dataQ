@@ -1464,9 +1464,8 @@ export default {
         // 용어 등록 도메인명 리스트 바인드
         // this.getDomainData();
       } else if (value === 'update') {
-        // 수정 모달은 단어 선택 단계가 없어 createTermEngAbrvNm(단어 watch) 의 도메인 로딩이
-        // 트리거되지 않음 → 모달 열 때 그 용어의 단어 구성을 로드해 마지막 형식단어 분류에
-        // 맞는 도메인만 노출 (등록 모달과 동일 정책).
+        // 수정 모달은 단어 선택 단계가 없다 → 모달 열 때 그 용어의 단어 구성을 로드해
+        // updateTerm_wordList 를 채운다 (저장 payload + 단어 watch 의 도메인 로딩, 등록 모달과 동일 정책).
         this.updateModalInit();
         this.loadUpdateDomainList(this.updateTerm_id);
         this.updateTermModalShow = true;
@@ -2053,18 +2052,17 @@ export default {
       }
     },
     /**
-     * 수정 모달 — 그 용어의 단어 구성을 로드해 마지막 형식단어(domainClsfNm)에 맞는
-     * 도메인만 도메인명 드롭다운에 노출. 분류가 없으면 전체 도메인.
+     * 수정 모달 — 그 용어의 단어 구성을 로드해 updateTerm_wordList 에 넣는다.
+     * 저장 시 이 목록이 wordList 로 나간다 (서버가 TB_TERMS_WORDS 를 지우고 다시 넣으므로 비면 실패).
+     * 도메인 드롭다운은 updateTerm_wordList watch(createTermEngAbrvNm) 가 등록 모달과 같은 정책으로 채운다.
      */
     loadUpdateDomainList(termsId) {
       if (!termsId) { this.getDomainData(); return; }
       axios.get(this.$APIURL.base + 'api/std/getTermsWordInfoList', { params: { termsId: termsId } })
         .then((res) => {
           var words = res.data || [];
-          var last = words.length ? words[words.length - 1] : null;
-          var clsf = last ? last.domainClsfNm : null;
-          if (clsf) this.getDomainInfoByClsfNm(clsf);
-          else this.getDomainData();
+          if (words.length === 0) { this.getDomainData(); return; }
+          this.updateTerm_wordList = this.createAddWordList(words);
         })
         .catch(() => { this.getDomainData(); });
     },

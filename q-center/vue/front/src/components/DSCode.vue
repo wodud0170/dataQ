@@ -187,7 +187,7 @@
             <v-sheet class="codeValTable_wrap">
               <!-- 페이지네이션 -->
               <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="codeValPageCount > 1">
-                <v-pagination v-model="page" :length="codeValPageCount" prev-icon="mdi-menu-left"
+                <v-pagination v-model="codeValPage" :length="codeValPageCount" prev-icon="mdi-menu-left"
                   next-icon="mdi-menu-right" color="ndColor" :total-visible="10"></v-pagination>
               </div>
             </v-sheet>
@@ -2140,7 +2140,7 @@ export default {
       this.updateTerm_termDesc = this.selectedItem[0].codeDesc;
       this.updateTerm_domainNm = this.selectedItem[0].domainNm;
       this.updateTerm_codeGrp = this.selectedItem[0].codeGrp;
-      this.updateTerm_chrgOrgcreateWordToTermCd = this.selectedItem[0].chrgOrg;
+      this.updateTerm_chrgOrg = this.selectedItem[0].chrgOrg;
       this.updateTerm_commStndYn = this.selectedItem[0].commStndYn;
       this.updateTerm_magntdOrd = this.selectedItem[0].magntdOrd;
       this.updateTerm_reqSysCd = this.selectedItem[0].reqSysCd;

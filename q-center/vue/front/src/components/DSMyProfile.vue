@@ -75,6 +75,7 @@ export default {
   data() {
     return {
       userId: '',
+      userName: null,
       userEmail: '',
       userPhone: '',
       isAdmin: false,
@@ -94,6 +95,7 @@ export default {
       axios.get(self.$APIURL.base + 'api/login/getUserDetail', { params: { userId: self.$loginStatusData.id } }).then(function(res) {
         if (res.data) {
           self.userId = res.data.id || '';
+          self.userName = res.data.name;
           self.isAdmin = res.data.admin || false;
           self.userEmail = res.data.email || '';
           self.userPhone = res.data.phone || '';
@@ -102,8 +104,11 @@ export default {
     },
     saveProfile() {
       this.saving = true;
+      // updateAdmin 은 NM/ADM_YN 까지 덮어쓰므로 기존 값을 그대로 보낸다.
       axios.post(this.$APIURL.base + 'api/login/updateUser', {
         id: this.userId,
+        name: this.userName,
+        admin: this.isAdmin,
         email: this.userEmail || '',
         phone: this.userPhone || ''
       })

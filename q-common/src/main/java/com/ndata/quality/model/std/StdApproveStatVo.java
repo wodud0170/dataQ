@@ -30,5 +30,6 @@ public class StdApproveStatVo {
 		private String aprvUserId;
 		private List<NDQualityApproveStat> statusList;
 		private int limit;
+		private String dictId;
 	}
 }

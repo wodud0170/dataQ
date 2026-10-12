@@ -13,5 +13,6 @@ public class StdCodeDataVo {
     private String cretDt;
     private String cretUserId;
     private String updtDt;
-    private String updtUserId;	
+    private String updtUserId;
+    private String dictId;
 }

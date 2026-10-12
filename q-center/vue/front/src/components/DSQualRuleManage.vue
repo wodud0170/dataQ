@@ -175,7 +175,7 @@ export default {
           this.dialog = false;
           this.loadRules();
         } else {
-          this.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
+          this.$swal.fire({ icon: 'error', title: '실패', text: r.data.resultMessage });
         }
       }).catch(err => {
         this.$swal.fire({ icon: 'error', title: '저장 실패', text: (err.response && err.response.data && err.response.data.message) || '서버 오류' });
@@ -202,7 +202,7 @@ export default {
             html: 'diagId: ' + r.data.contents + '<br>결과 화면에서 확인하세요'
           });
         } else {
-          this.$swal.fire({ icon: 'error', title: '실패', text: r.data.message });
+          this.$swal.fire({ icon: 'error', title: '실패', text: r.data.resultMessage });
         }
       }).catch(err => {
         this.$swal.fire({ icon: 'error', title: '진단 시작 실패', text: '서버 오류' });

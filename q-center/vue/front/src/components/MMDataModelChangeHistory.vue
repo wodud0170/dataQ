@@ -177,6 +177,10 @@ export default {
         axios.post(this.$APIURL.base + 'api/dmApproval/execDdl', {
           changeSeqList: [item.changeSeq], dsId: r.value,
         }).then(res => {
+          if (res.data.resultCode !== 200) {
+            this.$swal.fire({ title: 'DB 반영 실패', text: res.data.resultMessage || '', icon: 'error' });
+            return;
+          }
           const c = res.data && res.data.contents ? JSON.parse(res.data.contents) : {};
           this.$swal.fire({ title: `DB 반영: success ${c.success||0} / failed ${c.failed||0} / noPriv ${c.noPriv||0}`, icon: 'info' });
           this.load();

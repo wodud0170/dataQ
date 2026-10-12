@@ -136,35 +136,35 @@
     <!-- 상세 Drawer -->
     <v-dialog v-model="detailDialog" max-width="500">
       <v-card v-if="detailData">
-        <v-card-title>{{ detailData.objnm }} ({{ detailData.objnmkr }})</v-card-title>
+        <v-card-title>{{ detailData.objNm }} ({{ detailData.objNmKr }})</v-card-title>
         <v-card-text>
           <div class="mb-2"><strong>표준 진단 대상:</strong>
-            <v-chip x-small :color="detailData.stnddiagtargetyn==='Y'?'green':'red'" dark>
-              {{ detailData.stnddiagtargetyn==='Y' ? 'Y (대상)' : 'N (제외)' }}
+            <v-chip x-small :color="detailData.stndDiagTargetYn==='Y'?'green':'red'" dark>
+              {{ detailData.stndDiagTargetYn==='Y' ? 'Y (대상)' : 'N (제외)' }}
             </v-chip>
-            <div v-if="detailData.stnddiagtargetyn==='N'" class="text-caption">
-              사유: {{ detailData.stnddiagtargetreason || '(없음)' }}
+            <div v-if="detailData.stndDiagTargetYn==='N'" class="text-caption">
+              사유: {{ detailData.stndDiagTargetReason || '(없음)' }}
             </div>
           </div>
           <div class="mb-2"><strong>구조 변경 진단 대상:</strong>
-            <v-chip x-small :color="detailData.structdiagtargetyn==='Y'?'green':'red'" dark>
-              {{ detailData.structdiagtargetyn==='Y' ? 'Y (대상)' : 'N (제외)' }}
+            <v-chip x-small :color="detailData.structDiagTargetYn==='Y'?'green':'red'" dark>
+              {{ detailData.structDiagTargetYn==='Y' ? 'Y (대상)' : 'N (제외)' }}
             </v-chip>
-            <div v-if="detailData.structdiagtargetyn==='N'" class="text-caption">
-              사유: {{ detailData.structdiagtargetreason || '(없음)' }}
+            <div v-if="detailData.structDiagTargetYn==='N'" class="text-caption">
+              사유: {{ detailData.structDiagTargetReason || '(없음)' }}
             </div>
           </div>
           <div class="mb-2"><strong>품질 진단 대상:</strong>
-            <v-chip x-small :color="detailData.qualdiagtargetyn==='Y'?'green':'red'" dark>
-              {{ detailData.qualdiagtargetyn==='Y' ? 'Y (대상)' : 'N (제외)' }}
+            <v-chip x-small :color="detailData.qualDiagTargetYn==='Y'?'green':'red'" dark>
+              {{ detailData.qualDiagTargetYn==='Y' ? 'Y (대상)' : 'N (제외)' }}
             </v-chip>
-            <div v-if="detailData.qualdiagtargetyn==='N'" class="text-caption">
-              사유: {{ detailData.qualdiagtargetreason || '(없음)' }}
+            <div v-if="detailData.qualDiagTargetYn==='N'" class="text-caption">
+              사유: {{ detailData.qualDiagTargetReason || '(없음)' }}
             </div>
           </div>
           <v-divider class="my-2"></v-divider>
           <div class="text-caption">
-            마지막 변경: {{ detailData.diagtargetupdtdt || '-' }} / {{ detailData.diagtargetupdtuserid || '-' }}
+            마지막 변경: {{ detailData.diagTargetUpdtDt || '-' }} / {{ detailData.diagTargetUpdtUserId || '-' }}
           </div>
         </v-card-text>
         <v-card-actions><v-spacer></v-spacer><v-btn text @click="detailDialog=false">닫기</v-btn></v-card-actions>

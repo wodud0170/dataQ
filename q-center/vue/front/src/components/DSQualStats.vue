@@ -160,8 +160,9 @@ export default {
       this.profSeries[1].data = [];
       if (!this.dmId) return;
       var self = this;
-      axios.post(this.$APIURL.base + 'api/dm/getDataModelAttrList',
-                  { dataModelId: this.dmId })
+      // clctId 파라미터명은 CLCT 폐기 전 잔재 — 실제로는 DM_ID 로 조회한다.
+      axios.get(this.$APIURL.base + 'api/dm/getDataModelAttrListByClctId',
+                  { params: { clctId: this.dmId } })
         .then(function(r) {
           self.modelAttrs = r.data || [];
           var objs = {};

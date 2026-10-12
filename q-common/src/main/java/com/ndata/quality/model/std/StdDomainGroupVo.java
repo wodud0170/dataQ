@@ -11,8 +11,9 @@ public class StdDomainGroupVo {
     private String cretDt;
     private String cretUserId;
     private String updtDt;
-    private String updtUserId;	
+    private String updtUserId;
+    private String dictId;
 
 
-    
+
 }

@@ -344,6 +344,7 @@ public class ExcelUploadService {
 					stdCodeDataVo.setCodeNm(dataRow.get(2));
 					stdCodeDataVo.setCodeEngNm(dataRow.get(3));
 					stdCodeDataVo.setCodeVal(dataRow.get(4));
+					stdCodeDataVo.setDictId(dictId);
 					// 코드데이터가 이미 존재하는 경우에는 Skip 한다.
 					if (session.selectOne("codedata.selectCodeDataByNmAndVal", stdCodeDataVo) != null) {
 						result.addSkip();
@@ -478,6 +479,7 @@ public class ExcelUploadService {
 					vo.setDomainGrpNm(grpNm);
 					vo.setCommStndYn(dataRow.size() > 2 && checkInvalidVal(dataRow.get(2)) != null ? dataRow.get(2) : "N");
 					vo.setCretUserId(userId);
+					vo.setDictId(dictId);
 					session.insert("domain.insertDomainGroup", vo);
 					session.commit();
 					result.addSuccess();
@@ -532,6 +534,7 @@ public class ExcelUploadService {
 					vo.setDomainClsfNm(clsfNm);
 					vo.setCommStndYn(dataRow.size() > 3 && checkInvalidVal(dataRow.get(3)) != null ? dataRow.get(3) : "N");
 					vo.setCretUserId(userId);
+					vo.setDictId(dictId);
 					session.insert("domain.insertDomainClassification", vo);
 					session.commit();
 					result.addSuccess();

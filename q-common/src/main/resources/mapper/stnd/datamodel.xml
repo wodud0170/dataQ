@@ -175,10 +175,12 @@
 				,M.DM_DS_ID      as dataModelDsId
 				,(select DSN from ndata.TB_DATA_SOURCE where ds_id = M.DM_DS_ID) as dataModelDsNm
 				,M.VER           as dataModelVer
-				,to_char(to_timestamp(T.CLCT_START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as clctStartDt			
+				,M.DICT_ID       as dictId
+				,(select DICT_NM from TB_STD_DICT where dict_id = M.DICT_ID) as dictNm
+				,to_char(to_timestamp(T.CLCT_START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as clctStartDt
 				,to_char(to_timestamp(T.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS')   as clctEndDt
 				,T.CLCT_CMPTN_YN     as clctCmptnYn
-			from TB_DATA_MODEL M LEFT OUTER JOIN TB_DATA_MODEL_CLCT T on M.DM_ID = T.DM_ID 
+			from TB_DATA_MODEL M LEFT OUTER JOIN TB_DATA_MODEL_CLCT T on M.DM_ID = T.DM_ID
 			    and CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = M.DM_ID)
 			where M.USE_YN = 'Y'
 		<if test="schId != null">

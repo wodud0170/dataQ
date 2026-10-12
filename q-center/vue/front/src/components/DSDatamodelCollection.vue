@@ -681,7 +681,12 @@ export default {
     onCollectionReload(msg) {
       if (msg.data === 'DATA_MODEL_ATTR_RELOAD') {
         this.isCollecting = false;
-        this._addCollectionLog('DONE', '✔ 수집이 완료되었습니다.');
+        // 실패해도 서버는 RELOAD 를 보낸다 — 그 전에 ERROR 알림이 왔으면 실패로 표시
+        if (this.collectionLogs.some(l => l.level === 'ERROR')) {
+          this._addCollectionLog('ERROR', '✖ 수집에 실패했습니다.');
+        } else {
+          this._addCollectionLog('DONE', '✔ 수집이 완료되었습니다.');
+        }
         this.getDataModel();
       }
     },

@@ -114,7 +114,8 @@ public class SysInfoController {
 	@RequestMapping(value = "/createDataSource", method = RequestMethod.POST)
 	public Mono<Response> createDataSource(@RequestBody DataSourceVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
-		log.info(">> createDataSource : {}", dataVo);
+		log.info(">> createDataSource : id={}, dsn={}, dbmsTp={}, svrAddr={}:{}, userId={}",
+				dataVo.getId(), dataVo.getDsn(), dataVo.getDbmsTp(), dataVo.getSvrAddr(), dataVo.getPort(), dataVo.getUserId());
 
 		Response result = new Response();
 
@@ -132,7 +133,8 @@ public class SysInfoController {
 
 	@RequestMapping(value = "/updateDataSource", method = RequestMethod.POST)
 	public Mono<Response> updateDataSource(@RequestBody DataSourceVo dataVo) {
-		log.info(">> updateDataSource : {}", dataVo);
+		log.info(">> updateDataSource : id={}, dsn={}, dbmsTp={}, svrAddr={}:{}, userId={}",
+				dataVo.getId(), dataVo.getDsn(), dataVo.getDbmsTp(), dataVo.getSvrAddr(), dataVo.getPort(), dataVo.getUserId());
 		
 		Response result = new Response();
 
@@ -189,7 +191,8 @@ public class SysInfoController {
 		DBConnection dbConn = null;
 
 		try {
-			log.info(">> testDataSourceById : {}", dataVo);
+			log.info(">> testDataSourceById : id={}, dsn={}, dbmsTp={}, svrAddr={}:{}, userId={}",
+					dataVo.getId(), dataVo.getDsn(), dataVo.getDbmsTp(), dataVo.getSvrAddr(), dataVo.getPort(), dataVo.getUserId());
 			// Oracle/Tibero Service Name: driverName 임시 변경
 			if ("Service Name".equals(dataVo.getConnProps())) {
 				String dbmsTp = dataVo.getDbmsTp();
@@ -203,7 +206,7 @@ public class SysInfoController {
 				sqlSessionTemplate.update("sysinfo.updateDataSourceConnTest", dataVo.getId());
 			}
 			result.setResultInfo(RestResult.CODE_200);
-			log.info("test datasource success - data={}", dataVo);
+			log.info("test datasource success - id={}, dsn={}", dataVo.getId(), dataVo.getDsn());
 		} catch (Exception e) {
 			result.setResultInfo(RestResult.CODE_500.getCode(), translateDbError(e.getMessage()));
 			log.error("test datasource failed", e);

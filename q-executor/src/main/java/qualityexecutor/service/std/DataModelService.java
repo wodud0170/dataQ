@@ -108,11 +108,12 @@ public class DataModelService implements Runnable {
 		StdDataModelObjVo stdDataModelObjVo = new StdDataModelObjVo();
 
 		DBHandler dbHandler = null;
+		boolean collected = false;
 
 		try {
 			// 데이터소스 조회
 			DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dataVo.getDataModelDsId());
-			log.info(">> get dataSource={}", dataSource);
+			log.info(">> get dataSource id={}, dsn={}, dbmsTp={}", dataSource.getId(), dataSource.getDsn(), dataSource.getDbmsTp());
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "데이터소스 연결 중...");
 			// DB Handler 생성
 			dbHandler = dataSourceUtils.getDBHandler(dataSource);
@@ -218,7 +219,7 @@ public class DataModelService implements Runnable {
 					if (!attrNmUp.isEmpty()) {
 						for (String word : attrNmUp.split("_")) {
 							if (word.isEmpty()) continue;
-							StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", dictService.nameParam(null, "wordEngAbrvNm", word));
+							StdWordVo stdWordVo = session.selectOne("word.selectWordByEngAbrvNm", dictService.nameParam(clctDictId, "wordEngAbrvNm", word));
 							if (stdWordVo != null) {
 								wordLst.add(word + "(" + stdWordVo.getWordNm() + ")");
 								wordStndLst.add("Y");
@@ -326,6 +327,7 @@ public class DataModelService implements Runnable {
 			session.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
 			session.commit();
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "수집 완료!");
+			collected = true;
 		} catch (Exception e) {
 			session.rollback();
 			log.error("collect data model : {}", e.getMessage());
@@ -342,7 +344,10 @@ public class DataModelService implements Runnable {
 
 		stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> collectDataModel finished");
 		stompSessionService.sendReload(WsDestType.QUALITY_STANDARD, "DATA_MODEL_ATTR_RELOAD");
-		stompSessionService.sendNotice(WsNoticeLevel.INFO, "데이터모델이 수집되었습니다.");
+		// 실패 시에는 catch 의 ERROR 알림만 나간다.
+		if (collected) {
+			stompSessionService.sendNotice(WsNoticeLevel.INFO, "데이터모델이 수집되었습니다.");
+		}
 	}
 
 	private boolean isDomainStnd(StdTermsVo stdTermsVo, StdDataModelAttrVo stdDataModelAttrVo) {
