@@ -1,0 +1,1539 @@
+<meta charset="utf-8">
+<title>지티원 MetaMiner 비교</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 보고서형 본문(최대 900px) + 넓은 화면에서 왼쪽 고정 목차. 결론·결정을 앞에, 근거·회사 정보는 뒤와 부록에 */
+:root{
+  --bg:#F3F6F7; --surface:#FFFFFF; --sunken:#E9EFF1; --ink:#122029; --muted:#566874; --faint:#7F919C; --line:#D5DEE3;
+  --us:#0A6E7E; --us-soft:#DDF0F2; --them:#5B3FBF; --them-soft:#ECE8FA;
+  --good:#23803A; --good-soft:#E2F2E6; --even:#4F6575; --even-soft:#E6EDF1;
+  --bad:#C0392B; --bad-soft:#FAE5E2; --warn:#AD5C00; --warn-soft:#FCEFDD; --unk:#78868F; --unk-soft:#ECEFF1;
+  --cat-pub:#1C7ED6; --cat-fin:#AE3EC9; --cat-pri:#E07B00; --cat-ovs:#7C8A94;
+  --font-display:'Hahmlet','Noto Serif KR','Batang',serif;
+  --font-body:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --font-mono:'IBM Plex Mono','D2Coding',Consolas,ui-monospace,monospace;
+  --radius:6px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1417; --surface:#151D21; --sunken:#1C262B; --ink:#E4ECEF; --muted:#A0B0BA; --faint:#73858F; --line:#2A373D;
+    --us:#4CC6D6; --us-soft:#10303A; --them:#A890F7; --them-soft:#251E44;
+    --good:#5BC977; --good-soft:#13311D; --even:#9DB2C0; --even-soft:#1F2B32;
+    --bad:#FF7F73; --bad-soft:#3A1A17; --warn:#F2A54A; --warn-soft:#352612; --unk:#9AA7B0; --unk-soft:#222B30;
+    --cat-pub:#4DABF7; --cat-fin:#DA77F2; --cat-pri:#FFA94D; --cat-ovs:#ADB5BD;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1417; --surface:#151D21; --sunken:#1C262B; --ink:#E4ECEF; --muted:#A0B0BA; --faint:#73858F; --line:#2A373D;
+  --us:#4CC6D6; --us-soft:#10303A; --them:#A890F7; --them-soft:#251E44;
+  --good:#5BC977; --good-soft:#13311D; --even:#9DB2C0; --even-soft:#1F2B32;
+  --bad:#FF7F73; --bad-soft:#3A1A17; --warn:#F2A54A; --warn-soft:#352612; --unk:#9AA7B0; --unk-soft:#222B30;
+  --cat-pub:#4DABF7; --cat-fin:#DA77F2; --cat-pri:#FFA94D; --cat-ovs:#ADB5BD;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.72;word-break:keep-all;overflow-wrap:anywhere}
+table{font-size:inherit}
+a{color:var(--us);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--us);outline-offset:2px;border-radius:3px}
+code,.mono{font-family:var(--font-mono);font-size:.88em}
+code{background:var(--sunken);padding:1px 5px;border-radius:4px}
+[hidden]{display:none!important}
+
+.page{display:grid;grid-template-columns:minmax(0,1fr);max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:0 72px}
+@media (min-width:1100px){.page{grid-template-columns:210px minmax(0,1fr);column-gap:52px;padding-inline:32px}}
+
+.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:8px;overflow-x:auto}
+.toc ol{list-style:none;margin:0;padding:0;display:flex;gap:6px;white-space:nowrap}
+.toc a{display:block;text-decoration:none;color:var(--muted);font-size:13px;padding:4px 10px;border-radius:999px}
+.toc a:hover{color:var(--ink);background:var(--sunken)}
+.toc .n{font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-right:6px}
+@media (min-width:1100px){
+  .toc{align-self:start;max-height:100vh;border-bottom:0;padding-block:40px 24px;overflow:auto}
+  .toc ol{flex-direction:column;gap:1px;white-space:normal}
+  .toc a{border-radius:4px;padding:5px 10px}
+  .toc .grp{margin-top:14px;font-size:11px;letter-spacing:.08em;color:var(--faint);padding-left:10px}
+}
+@media (max-width:1099px){.toc .grp{display:none} section[id],h3[id],#dirMap{scroll-margin-top:56px}}
+
+.doc{min-width:0;max-width:900px}
+.hero{padding-block:48px 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--muted)}
+.hero h1{font-family:var(--font-display);font-weight:800;font-size:clamp(27px,4.4vw,44px);line-height:1.24;margin:12px 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.hero h1 .them{color:var(--them)} .hero h1 .us{color:var(--us)}
+.lede{font-size:17px;color:var(--muted);max-width:62ch;margin:0}
+
+.mature{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;margin-top:24px}
+.mature > div{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.mature .mt{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:8px}
+.mature .mt b{font-size:15px}
+.mature .them-c{border-top:3px solid var(--them)} .mature .us-c{border-top:3px solid var(--us)}
+.mature dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 14px;margin:0;font-size:13.5px}
+.mature dt{color:var(--muted);white-space:nowrap} .mature dd{margin:0}
+.badge{font-size:11.5px;font-weight:700;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.badge.sell{background:var(--them-soft);color:var(--them)} .badge.dev{background:var(--warn-soft);color:var(--warn)}
+
+.sec{padding-block:46px 10px;border-bottom:1px solid var(--line)}
+.sec-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:0 0 10px}
+.sec-h .no{font-family:var(--font-mono);font-size:13px;color:var(--faint);min-width:2ch}
+.sec-h h2{font-family:var(--font-display);font-weight:700;font-size:clamp(22px,3.2vw,29px);line-height:1.3;margin:0;text-wrap:balance}
+.abbr{font-family:var(--font-mono);font-size:11.5px;font-weight:500;letter-spacing:.06em;color:var(--us);background:var(--us-soft);padding:2px 7px;border-radius:4px;white-space:nowrap}
+.sec p,.sec li{max-width:70ch}
+.sec h3{font-size:18px;font-weight:700;line-height:1.4;margin:34px 0 8px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;text-wrap:balance}
+.sec h3 .no{font-family:var(--font-mono);font-size:12px;color:var(--faint);font-weight:500}
+.sum{font-size:16px}
+.next{background:var(--sunken);border-radius:var(--radius);padding:10px 14px;margin:10px 0 0;font-size:14px}
+.next b{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-right:8px}
+ul.tight,ol.tight{padding-left:20px;margin:8px 0} ul.tight li,ol.tight li{margin:3px 0}
+.appx{background:transparent}
+.appx .sec-h h2{font-size:clamp(20px,2.8vw,25px)}
+
+.tbl{overflow-x:auto;margin:14px 0 18px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.tbl table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums;line-height:1.6}
+.tbl th,.tbl td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl thead th{font-size:12px;font-weight:600;color:var(--muted);background:var(--sunken);white-space:nowrap}
+.tbl thead th.them{color:var(--them)} .tbl thead th.us{color:var(--us)}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl td.k{font-weight:600;min-width:7.5em}
+.tbl td.num,.tbl th.num{text-align:right;white-space:nowrap}
+.tbl td.c,.tbl th.c{text-align:center}
+.tbl tr.grp th{background:var(--surface);font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--faint);padding:14px 12px 6px}
+.cmp td:nth-child(2),.cmp td:nth-child(3){min-width:13em}
+.cmp td:nth-child(4){min-width:11em;color:var(--muted);font-size:13.5px}
+.dec td.k{min-width:9em}
+.dec td:nth-child(2){min-width:16em}
+.dec td:nth-child(3){min-width:15em}
+.sugg{display:block;margin-top:6px;font-size:12.5px;color:var(--us);font-weight:600}
+
+.st{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;line-height:1.5;padding:0 8px 0 6px;border-radius:999px;white-space:nowrap;margin-right:4px;vertical-align:1px;background:var(--sunken);color:var(--ink)}
+.st::before{content:"";width:9px;height:9px;border-radius:50%;flex:none;box-sizing:border-box}
+.st.y::before{background:var(--ink)}
+.st.t::before{border:1.5px solid var(--ink);background:radial-gradient(circle,var(--ink) 30%,transparent 36%)}
+.st.p::before{border:1.5px solid var(--ink);background:linear-gradient(90deg,var(--ink) 50%,transparent 50%)}
+.st.d{color:var(--muted)} .st.d::before{border:1.5px dotted var(--muted)}
+.st.n{color:var(--muted)} .st.n::before{border:1.5px solid var(--faint)}
+.st.off{color:var(--muted);background:var(--unk-soft)} .st.off::before{background:var(--unk)}
+.st.u{color:var(--unk);background:var(--unk-soft)} .st.u::before{border:1.5px dashed var(--unk)}
+
+.dir{display:inline-block;font-size:12px;font-weight:700;line-height:1.5;padding:1px 9px;border-radius:4px;white-space:nowrap;border:1.5px solid transparent}
+.dir.a{background:var(--bad-soft);color:var(--bad)}
+.dir.b{background:var(--warn-soft);color:var(--warn)}
+.dir.c{background:var(--us-soft);color:var(--us)}
+.dir.d{background:var(--unk-soft);color:var(--unk)}
+.dir.e{color:var(--ink);border-style:dashed;border-color:var(--muted)}
+
+.v{display:inline-block;font-size:12px;font-weight:700;line-height:1.5;padding:1px 9px;border-radius:4px;white-space:nowrap}
+.v.bad{background:var(--bad-soft);color:var(--bad)} .v.even{background:var(--even-soft);color:var(--even)} .v.unk{background:var(--unk-soft);color:var(--unk)}
+.src{font-family:var(--font-mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.dim{color:var(--muted)}
+.tag-us{color:var(--us);font-weight:700} .tag-them{color:var(--them);font-weight:700}
+
+.box{background:var(--sunken);border-radius:var(--radius);padding:14px 16px;margin:16px 0;font-size:14px}
+.box .lbl{display:block;font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+.box.warn{background:var(--warn-soft)} .box.warn .lbl{color:var(--warn)}
+.box p{margin:4px 0}
+
+.fig{margin:18px 0 24px;padding:16px 16px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);min-width:0}
+.fig .ttl{font-weight:700;font-size:14px;margin:0 0 2px}
+.fig .sub{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+.chart{position:relative;height:250px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:16px;margin:16px 0}
+.grid2 > .fig,.grid2 > .box{margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:8px 0 0}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+.bars{display:grid;gap:9px}
+.bar{display:grid;grid-template-columns:minmax(6.5em,9em) minmax(0,1fr) 4.2em;gap:10px;align-items:center;font-size:13px}
+.bar .track{height:14px;background:var(--sunken);border-radius:3px;overflow:hidden}
+.bar .fill{height:100%;background:var(--us);border-radius:3px}
+.bar .val{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-mono);font-size:12.5px}
+
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,124px),1fr));gap:10px;margin-top:14px}
+.tally button{font:inherit;color:inherit;text-align:left;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px 8px}
+.tally button:hover{border-color:var(--muted)}
+.tally button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.tally b{display:block;font-family:var(--font-display);font-weight:800;font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.tally span{font-size:12.5px;color:var(--muted)}
+.tally .a b{color:var(--bad)} .tally .b b{color:var(--warn)} .tally .c b{color:var(--us)} .tally .d b{color:var(--unk)} .tally .e b{color:var(--ink)}
+.map td.area a{color:inherit;text-decoration:none} .map td.area a:hover{text-decoration:underline}
+.map td.why{color:var(--muted);font-size:13px;min-width:16em}
+.map td:nth-child(2),.map td:nth-child(3){min-width:11em;font-size:13px}
+.filter-note{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,118px),1fr));gap:8px;margin:0}
+.stats div{background:var(--sunken);border-radius:var(--radius);padding:8px 10px}
+.stats dt{font-size:12px;color:var(--muted)} .stats dd{margin:0;font-family:var(--font-display);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+
+.risks{display:grid;gap:10px;margin:16px 0}
+.risk{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px}
+.sev{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.06em;padding:2px 8px;border-radius:4px;align-self:start;margin-top:3px;white-space:nowrap}
+.sev.h{background:var(--bad-soft);color:var(--bad)} .sev.m{background:var(--warn-soft);color:var(--warn)} .sev.l{background:var(--even-soft);color:var(--even)}
+.risk h4{margin:0;font-size:15px}
+.risk p{margin:2px 0 0;font-size:14px;color:var(--muted)}
+.risk .where{font-family:var(--font-mono);font-size:11.5px;color:var(--faint);margin-top:4px;overflow-wrap:anywhere}
+
+details.more{margin:12px 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+details.more > summary{cursor:pointer;padding:10px 14px;font-weight:600;font-size:14px}
+details.more[open] > summary{border-bottom:1px solid var(--line)}
+details.more .in{padding:6px 14px 10px}
+details.more .tbl{border:0;margin:0}
+
+.lineup{display:grid;gap:8px;margin:16px 0}
+.lu{display:grid;grid-template-columns:minmax(0,1fr) 56px minmax(0,1fr);align-items:stretch}
+.lu .l,.lu .r{border-radius:var(--radius);padding:9px 12px;font-size:13.5px;line-height:1.55;min-width:0}
+.lu .l{background:var(--them-soft)} .lu .l b{color:var(--them)}
+.lu .r{background:var(--us-soft)} .lu .r b{color:var(--us)}
+.lu .r.part{background:var(--surface);border:1.5px dashed var(--us)}
+.lu .r.gap{background:transparent;border:1.5px dashed var(--line);color:var(--faint)}
+.lu .r.gap b{color:var(--faint)}
+.lu .l.none{background:transparent;border:1.5px dashed var(--line);color:var(--faint)}
+.lu small{display:block;color:var(--muted);font-size:12px}
+.lu .mid{position:relative}
+.lu .mid::before{content:"";position:absolute;left:6px;right:6px;top:50%;border-top:2px solid var(--ink)}
+.lu .mid.partial::before{border-top-style:dashed;border-top-color:var(--muted)}
+.lu .mid.none::before{border-top:2px dotted var(--line)}
+.lu-head{display:grid;grid-template-columns:minmax(0,1fr) 56px minmax(0,1fr);font-size:12px;font-weight:600}
+.lu-head .t{color:var(--them)} .lu-head .u{color:var(--us)}
+@media (max-width:560px){
+  .lu,.lu-head{grid-template-columns:minmax(0,1fr)}
+  .lu-head .gapc,.lu-head .u{display:none}
+  .lu .mid{height:14px}
+  .lu .mid::before{left:18px;right:auto;top:0;bottom:0;border-top:0;border-left:2px solid var(--ink)}
+  .lu .mid.partial::before{border-top:0;border-left:2px dashed var(--muted)}
+  .lu .mid.none::before{border-top:0;border-left:2px dotted var(--line)}
+}
+
+.steps{list-style:none;counter-reset:s;padding:0;margin:16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,168px),1fr));gap:8px}
+.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:9px 12px;font-size:13.5px;line-height:1.55;max-width:none}
+.steps li::before{content:counter(s,decimal-leading-zero);font-family:var(--font-mono);font-size:11px;color:var(--us);display:block}
+.steps li small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.steps .claim{display:inline-block;margin-top:6px;font-size:11px;font-weight:600;color:var(--them);background:var(--them-soft);padding:0 6px;border-radius:3px}
+
+.flowfig{display:grid;gap:14px}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.flow .who{font-size:12px;font-weight:700;min-width:7.5em}
+.flow .node{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 11px;font-size:13px;white-space:nowrap}
+.flow .node.ok{border-color:var(--good);color:var(--good)} .flow .node.no{border-color:var(--bad);color:var(--bad)}
+.flow .node.wait{border-color:var(--warn);color:var(--warn)} .flow .node.run{border-color:var(--us);color:var(--us)}
+.flow .node.them{border-color:var(--them);color:var(--them)}
+.flow .arr{color:var(--faint);font-family:var(--font-mono);font-size:12px}
+
+.nest{display:grid;gap:0;margin:14px 0}
+.ring{border:1.5px solid var(--them);border-radius:10px;padding:10px 12px 12px;background:var(--them-soft)}
+.ring .ring{background:var(--surface);margin-top:8px}
+.ring .ring .ring{border-color:var(--us);background:var(--us-soft)}
+.ring .lbl{display:block;font-size:13px;font-weight:700}
+.ring .lbl small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+
+.dset{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;margin:14px 0}
+.dset .d{border:1.5px solid var(--us);border-radius:var(--radius);background:var(--surface);padding:10px 12px}
+.dset .d.plan{border-style:dashed}
+.dset .d h5{margin:0 0 2px;font-size:14px}
+.dset .rule{font-family:var(--font-mono);font-size:11.5px;color:var(--us)}
+.dset .models{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.dset .m{font-size:12px;border:1px solid var(--line);border-radius:4px;padding:0 7px;background:var(--sunken)}
+
+.act{display:grid;gap:8px;margin:14px 0}
+.act > div{display:grid;grid-template-columns:minmax(0,1fr) 20px minmax(0,1.3fr) 20px minmax(0,1fr);align-items:center;gap:4px}
+.act .a{background:var(--bad-soft);color:var(--bad);border-radius:var(--radius);padding:6px 10px;font-size:13px;font-weight:600}
+.act .b{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;font-size:13px}
+.act .c{background:var(--us-soft);border-radius:var(--radius);padding:6px 10px;font-size:13px}
+.act .ar{text-align:center;color:var(--faint);font-family:var(--font-mono)}
+@media (max-width:560px){.act > div{grid-template-columns:minmax(0,1fr)} .act .ar{transform:rotate(90deg);line-height:1}}
+
+.arch{display:grid;gap:5px}
+.arch .lyr{border:1.5px solid var(--line);border-radius:var(--radius);padding:7px 10px;font-size:13px;background:var(--surface);text-align:center;line-height:1.5}
+.arch .lyr small{display:block;color:var(--muted);font-size:11.5px}
+.arch.them .lyr.core{border-color:var(--them);background:var(--them-soft)}
+.arch.us .lyr.core{border-color:var(--us);background:var(--us-soft)}
+.arch .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,110px),1fr));gap:5px}
+.arch .dn{text-align:center;color:var(--faint);font-size:11px;line-height:1.2}
+
+.tl{list-style:none;margin:16px 0;padding:0;position:relative}
+.tl::before{content:"";position:absolute;left:5.6em;top:6px;bottom:6px;border-left:2px solid var(--line)}
+.tl li{display:grid;grid-template-columns:5.6em minmax(0,1fr);gap:0 18px;padding:5px 0;max-width:none;position:relative}
+.tl time{font-family:var(--font-mono);font-size:12px;color:var(--muted);text-align:right;padding-top:2px}
+.tl li::after{content:"";position:absolute;left:calc(5.6em - 5px);top:12px;width:12px;height:12px;border-radius:50%;background:var(--bg);border:2px solid var(--them)}
+.tl li.us::after{border-color:var(--us);background:var(--us)}
+.tl li.oth::after{border-color:var(--unk)}
+.tl .e{font-size:13.5px;padding-left:4px}
+.tl .who{font-size:11px;font-weight:700;margin-right:6px}
+.tl li .who{color:var(--them)} .tl li.us .who{color:var(--us)} .tl li.oth .who{color:var(--unk)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.chip{font-size:12.5px;background:var(--them-soft);padding:1px 10px;border-radius:999px;white-space:nowrap}
+.chip.us{background:var(--us-soft)}
+.cust h4{font-size:11.5px;font-family:var(--font-mono);font-weight:500;letter-spacing:.06em;color:var(--muted);margin:12px 0 2px}
+
+.prio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px;margin:16px 0}
+.prio > div{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:12px 14px}
+.prio > div.first{border-color:var(--bad);background:var(--bad-soft)}
+.prio h4{margin:0;font-size:14px} .prio .ax{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.prio ul{margin:6px 0 0;padding-left:18px;font-size:13.5px} .prio li{margin:2px 0}
+
+.quad{width:100%;height:auto;display:block;max-width:640px;margin:0 auto}
+.quad .bgq{fill:var(--sunken)} .quad .ax{stroke:var(--line);stroke-width:1.5}
+.quad .axl{fill:var(--muted);font-size:12px;font-family:var(--font-body)}
+.quad .pt-them{fill:var(--them)} .quad .pt-oth{fill:var(--unk)} .quad .pt-goal{fill:none;stroke:var(--us);stroke-width:2;stroke-dasharray:3 3}
+.quad .lab{fill:var(--ink);font-size:13px;font-weight:600;font-family:var(--font-body)}
+.quad .lab2{fill:var(--muted);font-size:11px;font-family:var(--font-body)}
+
+#dbmsHeat td[data-h]{text-align:center;font-size:12px;font-weight:600;min-width:4.5em}
+#dbmsHeat td[data-h="y"]{background:var(--us);color:var(--surface)}
+#dbmsHeat td[data-h="c"]{background:var(--warn-soft);color:var(--warn)}
+#dbmsHeat td[data-h="n"]{background:var(--sunken);color:var(--faint)}
+#dbmsHeat td[data-h="y"]::after{content:"수집"}
+#dbmsHeat td[data-h="c"]::after{content:"접속만"}
+#dbmsHeat td[data-h="n"]::after{content:"—"}
+
+footer.end{padding-block:32px 0;font-size:12.5px;color:var(--faint)}
+</style>
+
+<div class="page">
+<nav class="toc" aria-label="목차">
+  <ol>
+    <li><a href="#s1"><span class="n">1</span>한눈에</a></li>
+    <li><a href="#s2"><span class="n">2</span>진행 방향</a></li>
+    <li class="grp">개발 방향</li>
+    <li><a href="#s3"><span class="n">3</span>개발 방향 종합</a></li>
+    <li><a href="#s4"><span class="n">4</span>개발 우선순위</a></li>
+    <li><a href="#s5"><span class="n">5</span>개발 중 결함·위험</a></li>
+    <li class="grp">근거</li>
+    <li><a href="#s6"><span class="n">6</span>영역별 비교와 방향</a></li>
+    <li><a href="#s7"><span class="n">7</span>비기능</a></li>
+    <li><a href="#s8"><span class="n">8</span>시장 참고</a></li>
+    <li><a href="#s9"><span class="n">9</span>SMETA 자료 적재</a></li>
+    <li><a href="#s10"><span class="n">10</span>더 확인할 것</a></li>
+    <li class="grp">부록</li>
+    <li><a href="#sA"><span class="n">A</span>현재 구현 상태</a></li>
+    <li><a href="#sB"><span class="n">B</span>참고: 지티원</a></li>
+    <li><a href="#sC"><span class="n">C</span>비교 방법</a></li>
+    <li><a href="#sD"><span class="n">D</span>100번 정정</a></li>
+    <li><a href="#sE"><span class="n">E</span>출처</a></li>
+  </ol>
+</nav>
+
+<main class="doc">
+<header class="hero" id="top">
+  <div class="eyebrow">경쟁 제품 비교 · 개발 방향 · 2026-10-08</div>
+  <h1><span class="them">MetaMiner</span> 를 기준선으로 본 <span class="us">NavidM Meta</span> 개발 방향</h1>
+  <p class="lede">지티원 MetaMiner 는 2008년부터 팔려 온 제품이고, NavidM Meta V1.0 은 아직 개발 중이다. 이 보고서는 둘의 우열을 가리지 않는다. MetaMiner 를 시장 기준선으로 놓고, 우리 제품이 어디까지 와 있고 무엇부터 만들어야 하는지를 정리한다.</p>
+  <div class="mature">
+    <div class="them-c">
+      <div class="mt"><b class="tag-them">MetaMiner6</b><span class="badge sell">판매 중</span></div>
+      <dl>
+        <dt>출시</dt><dd>v3.0 GS 인증 2008-03 → 현재 버전 6 (2022~)</dd>
+        <dt>인증</dt><dd>GS 1등급 2024-06 (24-0275)</dd>
+        <dt>납품</dt><dd>공급 보도 62건 (2008~2026), 고객 로고 59개</dd>
+        <dt>조달몰</dt><dd>미등록 — 구축 사업 안에서 납품</dd>
+      </dl>
+    </div>
+    <div class="us-c">
+      <div class="mt"><b class="tag-us">NavidM Meta V1.0</b><span class="badge dev">개발 중</span></div>
+      <dl>
+        <dt>인증</dt><dd>GS 인증 준비 중 — KTR 양식 신청 서류 작성</dd>
+        <dt>납품</dt><dd>실사용 고객 없음 — 국가기록원 RAMS 진행 중</dd>
+        <dt>미해결</dt><dd>승인 우회 5경로, 보안 결함 2건, 보고서 미구현, 품질 모듈 꺼 둠</dd>
+        <dt>검증</dt><dd>기능 존재는 코드로 확인, 실데이터·GS 검증은 전</dd>
+      </dl>
+    </div>
+  </div>
+</header>
+
+<section class="sec" id="s1">
+  <div class="sec-h"><span class="no">1</span><h2>한눈에</h2><span class="abbr">SMRY</span></div>
+  <ul class="tight sum">
+    <li><b>같은 선에서 비교할 단계가 아니다.</b> MetaMiner 는 18년째 팔리며 GS 1등급과 공급 실적 62건을 가진 제품이다. NavidM Meta 는 GS 인증 준비 중이고 실사용 고객이 없으며, 승인 우회·보안 결함이 남아 있다.</li>
+    <li><b>그래서 MetaMiner 를 기준선으로 놓고 22개 영역의 개발 방향을 나눴다.</b> 따라잡기 8, 완성하기 7, 집중 후보(가설) 3, 범위 밖·보류 4.</li>
+    <li><b>가장 먼저 할 일.</b> 승인 우회·보안 결함 정리, Tibero 수집, 다단계 결재선, 그리고 GS 1등급. 이게 없으면 공공 입찰에서 걸린다.</li>
+    <li><b>집중 후보는 가설이다.</b> 공공 표준화 작업 쪽(사전별 규칙, 한글명 자동 표준화, 진단 → 조치). MetaMiner 공개 자료에 뚜렷하지 않은 영역이지만 우리 것도 검증 전이다. RAMS 실적재로 정확도를 잰 뒤 확정한다.</li>
+    <li><b>만들지 않을 것.</b> 소스 코드 리니지·카탈로그·자금세탁방지. 다국어·AI 는 보류.</li>
+    <li><b>진행 방향</b>은 §2 에 정리했다.</li>
+  </ul>
+
+  <h3>개발 방향 지도 <span class="abbr">DIR_MAP</span></h3>
+  <p class="dim" style="margin:0">타일을 누르면 그 방향만 남는다. 영역 이름을 누르면 상세 비교로 간다.</p>
+  <div class="tally" role="group" aria-label="개발 방향 집계 — 누르면 지도를 걸러 본다">
+    <button type="button" class="a" data-v="a" aria-pressed="false"><b id="tA">8</b><span>따라잡기</span></button>
+    <button type="button" class="b" data-v="b" aria-pressed="false"><b id="tB">7</b><span>완성하기</span></button>
+    <button type="button" class="c" data-v="c" aria-pressed="false"><b id="tC">3</b><span>집중 후보 (가설)</span></button>
+    <button type="button" class="d" data-v="d" aria-pressed="false"><b id="tD">4</b><span>범위 밖·보류</span></button>
+  </div>
+  <div class="tbl"><table class="map" id="dirMap">
+    <thead><tr><th>영역</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>개발 방향</th><th>무엇을 할지</th></tr></thead>
+    <tbody>
+      <tr class="grp"><th colspan="5">표준화</th></tr>
+      <tr data-v="b"><td class="area k"><a href="#f1">표준 사전 관리</a></td><td><span class="st y">있음</span>도메인·코드·금칙어</td><td><span class="st t">구현·미검증</span>지침 별표1 87.5%</td><td><span class="dir b">완성하기</span></td><td class="why">별표1 에서 빠진 5개 항목 채우기, 실데이터 적재로 검증</td></tr>
+      <tr data-v="c"><td class="area k"><a href="#f2">복수 사전·사전별 규칙</a></td><td><span class="st p">부분</span>"업무별 표준사전" 문구</td><td><span class="st t">구현·미검증</span>9월 개발, 규칙 1개뿐</td><td><span class="dir c">집중 후보</span></td><td class="why">일괄등록 사전 선택, 기본 사전으로 도는 조회 16곳 정리, RAMS 사전으로 검증</td></tr>
+      <tr data-v="c"><td class="area k"><a href="#f3">한글명 자동 표준화</a></td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>추천 사전 0건</td><td><span class="dir c">집중 후보</span></td><td class="why">추천 사전 복구, RAMS 컬럼으로 정확도 측정</td></tr>
+      <tr data-v="b"><td class="area k"><a href="#f6">표준 준수 진단</a></td><td><span class="st y">있음</span>Compliance Level</td><td><span class="st t">구현·미검증</span>4유형 + 준수율</td><td><span class="dir b">완성하기</span></td><td class="why">실데이터로 오판정 확인, 결과를 공공 양식 보고서로</td></tr>
+      <tr data-v="c"><td class="area k"><a href="#f7">진단 → 조치 → DB 반영</a></td><td><span class="st u">공개 자료 없음</span>진단 연동 미공개</td><td><span class="st t">구현·미검증</span>승인 우회 남음</td><td><span class="dir c">집중 후보</span></td><td class="why">승인 우회 차단 후 실 DB 적용 검증, DDL 문법 확대</td></tr>
+      <tr class="grp"><th colspan="5">수집·모델</th></tr>
+      <tr data-v="a"><td class="area k"><a href="#f4">메타 수집 DBMS 범위</a></td><td><span class="st y">있음</span>이기종 DBMS</td><td><span class="st p">부분 구현</span>전체 수집 2종</td><td><span class="dir a">따라잡기</span></td><td class="why">Tibero → MS-SQL 수집 쿼리 4종씩</td></tr>
+      <tr data-v="a"><td class="area k"><a href="#f5">CASE 툴 연계</a></td><td><span class="st y">있음</span>모델링 도구 안에서 표준 사용</td><td><span class="st p">부분 구현</span>파일 가져오기</td><td><span class="dir a">따라잡기</span></td><td class="why">ERwin XML 내보내기까지. 플러그인은 보류</td></tr>
+      <tr data-v="b"><td class="area k"><a href="#f5">데이터 모델 관리·DDL</a></td><td><span class="st y">있음</span></td><td><span class="st t">구현·미검증</span>논리 모델 구분 없음</td><td><span class="dir b">완성하기</span></td><td class="why">논리·물리 구분, 재수집 때 삭제 반영 여부 결정</td></tr>
+      <tr data-v="b"><td class="area k"><a href="#f8">구조 변경 감지</a></td><td><span class="st y">있음</span>동기화</td><td><span class="st t">구현·미검증</span>3축</td><td><span class="dir b">완성하기</span></td><td class="why">인덱스·제약 수집 DBMS 확대(수집과 함께)</td></tr>
+      <tr data-v="a"><td class="area k"><a href="#f8">모델 정합도·갭 분석</a></td><td><span class="st y">있음</span>정합도·유사도</td><td><span class="st n">미구현</span></td><td><span class="dir a">따라잡기</span></td><td class="why">논리↔물리, 모델↔DB 비교 지표 설계</td></tr>
+      <tr class="grp"><th colspan="5">거버넌스</th></tr>
+      <tr data-v="a"><td class="area k"><a href="#f9">워크플로우·결재</a></td><td><span class="st y">있음</span>엔진·디자이너</td><td><span class="st p">부분 구현</span>1단계 고정, 우회 5경로</td><td><span class="dir a">따라잡기</span></td><td class="why">다단계 결재선 설정, 우회 경로 차단</td></tr>
+      <tr data-v="b"><td class="area k"><a href="#f10">변경 이력</a></td><td><span class="st y">있음</span>라이프사이클</td><td><span class="st t">구현·미검증</span>PK·FK 변경 누락</td><td><span class="dir b">완성하기</span></td><td class="why">PK·FK·인덱스·제약 변경도 이력에</td></tr>
+      <tr data-v="a"><td class="area k"><a href="#f11">영향도·리니지</a></td><td><span class="st y">있음</span>흐름 영향도 + DataHawk</td><td><span class="st p">부분 구현</span>단어·도메인 → 용어·컬럼</td><td><span class="dir a">따라잡기</span></td><td class="why">역방향·모델 간 영향도까지. 소스 리니지는 만들지 않음</td></tr>
+      <tr class="grp"><th colspan="5">운영·확장 기능</th></tr>
+      <tr data-v="b"><td class="area k"><a href="#f8">예약 진단</a></td><td><span class="st y">있음</span>스케줄러</td><td><span class="st t">구현·미검증</span>CRON</td><td><span class="dir b">완성하기</span></td><td class="why">운영 환경에서 장기 실행 검증</td></tr>
+      <tr data-v="a"><td class="area k"><a href="#f12">보고서</a></td><td><span class="st y">있음</span>Report Center</td><td><span class="st d">설계만</span>92번</td><td><span class="dir a">따라잡기</span></td><td class="why">공공기관 DB 품질관리지침 양식 진단 보고서</td></tr>
+      <tr data-v="d"><td class="area k"><a href="#f13">데이터 품질</a></td><td><span class="st y">있음</span>DQMiner6 등 3종</td><td><span class="st off">꺼 둠</span>코드만</td><td><span class="dir d">별도 제품</span></td><td class="why">NavidM Meta 에는 넣지 않음(5/13 라인업 분리). 별도 제품은 GS 이후 검토</td></tr>
+      <tr data-v="d"><td class="area k"><a href="#f14">AI</a></td><td><span class="st y">있음</span>카탈로그 쪽 ML·LLM</td><td><span class="st n">미구현</span></td><td><span class="dir d">보류</span></td><td class="why">기본 기능 뒤에 표준화 보조용 로컬 LLM 검토</td></tr>
+      <tr data-v="d"><td class="area k"><a href="#sB">데이터 카탈로그</a></td><td><span class="st y">있음</span>MetaCatalog v3</td><td><span class="st n">미구현</span></td><td><span class="dir d">범위 밖</span></td><td class="why">만들지 않음</td></tr>
+      <tr data-v="d"><td class="area k"><a href="#f17">다국어·해외</a></td><td><span class="st y">있음</span>한·일·영</td><td><span class="st n">미구현</span></td><td><span class="dir d">보류</span></td><td class="why">해외 계획이 생기면</td></tr>
+      <tr class="grp"><th colspan="5">시장</th></tr>
+      <tr data-v="a"><td class="area k"><a href="#s8">GS 인증</a></td><td><span class="st y">있음</span>1등급 2024-06</td><td><span class="st p">준비 중</span>신청 서류 작성</td><td><span class="dir a">따라잡기</span></td><td class="why">1등급 완주. 제품명 표기 통일·결함 정리가 먼저</td></tr>
+      <tr data-v="a"><td class="area k"><a href="#s8">실사용 사례</a></td><td><span class="st y">있음</span>로고 59, 보도 62건</td><td><span class="st n">없음</span>RAMS 진행 중</td><td><span class="dir a">따라잡기</span></td><td class="why">RAMS 를 첫 실사용 사례로</td></tr>
+      <tr class="grp"><th colspan="5">보안</th></tr>
+      <tr data-v="b"><td class="area k"><a href="#f16">계정·보안</a></td><td><span class="st u">공개 자료 없음</span></td><td><span class="st p">부분 구현</span>보안 결함 2건</td><td><span class="dir b">완성하기</span></td><td class="why">해시 반복 상향, 암호화 키 외부화. SSO 는 RFP 요구 시</td></tr>
+    </tbody>
+  </table></div>
+  <p class="filter-note" id="filterNote" hidden></p>
+</section>
+
+<section class="sec" id="s2">
+  <div class="sec-h"><span class="no">2</span><h2>진행 방향</h2><span class="abbr">DIRECTION</span></div>
+  <p class="sum">비교 결과를 바탕으로 개발을 이렇게 진행한다.</p>
+  <div class="tbl"><table class="dec">
+    <thead><tr><th>항목</th><th>방향</th><th>근거</th></tr></thead>
+    <tbody>
+      <tr><td class="k">개발 순서</td><td>공공 입찰·GS 에 필요한 기준선(따라잡기 P1)과 결함 정리를 먼저 한다. 집중 후보 3개는 그다음, RAMS 실적재로 정확도를 잰 뒤 확정한다.</td><td>메타시스템 전체 기능 폭으로 MetaMiner·SMETA 를 따라가면 기준선을 맞추는 데만 오래 걸린다. 집중 후보는 아직 검증 전이다.</td></tr>
+      <tr><td class="k">GS 인증</td><td>검증된 핵심 기능 중심으로 범위를 잡고 1등급을 준비한다. 그 전에 승인 우회 경로·보안 결함·제품명 표기를 정리한다.</td><td>범위에 넣은 기능은 시험에서 문서대로 동작해야 한다. MetaMiner 6 도 GS 기록상 주요 기능이 3가지로 적혀 있다.</td></tr>
+      <tr><td class="k">데이터 품질</td><td>NavidM Meta 에는 넣지 않는다(2026-05-13 라인업 분리). 별도 제품은 NavidM Meta GS 이후에 검토하고, 그 전까지 영업 자료에서 뺀다.</td><td>경쟁사는 모두 메타·품질 2제품 체계다. 코드는 남아 있다.</td></tr>
+      <tr><td class="k">조달 등록</td><td>GS 인증 뒤, 인증 범위에 맞춰 메타 전체 또는 표준화 진단·정비 도구로 등록한다.</td><td>조달몰 메타 제품은 8,100만~1억 500만 원대, 지티원 진단 도구 DQXpress 는 3,850만 원이다(§8.4).</td></tr>
+      <tr><td class="k">만들지 않을 것</td><td>소스 코드 리니지·데이터 카탈로그·자금세탁방지는 만들지 않는다. 다국어·AI 는 보류한다.</td><td>지티원 제품군과 같은 폭으로 가지 않는다. 메타·표준화 하나를 먼저 완성한다.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sec" id="s3">
+  <div class="sec-h"><span class="no">3</span><h2>개발 방향 종합</h2><span class="abbr">DIR_SMRY</span></div>
+  <p class="sum">22개 영역을 여섯 묶음으로 나눠 방향을 셌다. 따라잡기와 완성하기가 15개로 대부분이다. 집중 후보는 표준화 묶음에만 3개 있고, 그것도 기준선을 맞춘 다음 이야기다.</p>
+  <figure class="fig">
+    <p class="ttl">묶음별 개발 방향</p>
+    <p class="sub">영역 수 · §1 방향 지도에서 그대로 센다</p>
+    <div class="chart" style="height:270px"><canvas id="cSummary" aria-label="묶음별 개발 방향 누적 막대"></canvas></div>
+  </figure>
+  <div class="grid2">
+    <div class="box"><span class="lbl">따라잡기 8 — 시장 기준선</span>
+      <ul class="tight">
+        <li>입찰 자격 — GS 인증, 첫 실사용 사례</li>
+        <li>수집 — Tibero·MS-SQL</li>
+        <li>거버넌스 — 다단계 결재선, 영향도 확대(역방향·모델 간)</li>
+        <li>모델 — ERwin 내보내기, 모델 정합도·갭 분석</li>
+        <li>보고서 — 공공기관 DB 품질관리지침 양식</li>
+      </ul>
+    </div>
+    <div class="box"><span class="lbl">완성하기 7 — 만들어 둔 것</span>
+      <ul class="tight">
+        <li>표준 사전 — 별표1 빠진 5개 항목</li>
+        <li>준수 진단, 구조 변경 감지, 예약 진단 — 실데이터 검증</li>
+        <li>모델 관리 — 논리·물리 구분</li>
+        <li>변경 이력 — PK·FK·인덱스·제약조건</li>
+        <li>보안 — 해시 반복, 암호화 키</li>
+      </ul>
+    </div>
+    <div class="box"><span class="lbl">집중 후보 3 — 가설</span>
+      <ul class="tight">
+        <li>사전별 규칙 (표준사전 세트)</li>
+        <li>한글명 자동 표준화</li>
+        <li>진단 → 조치 → DB 반영</li>
+      </ul>
+      <p>잘한다는 뜻이 아니다. MetaMiner 공개 자료에 뚜렷하지 않고 공공 표준화 작업에 직접 쓰여서 몰아줄 후보로 둔 것이다. RAMS 실적재로 정확도·처리 시간·사람이 고쳐야 한 비율을 재서 판단한다.</p>
+    </div>
+    <div class="box"><span class="lbl">범위 밖·보류 4</span>
+      <ul class="tight">
+        <li>범위 밖 — 데이터 카탈로그 (소스 리니지·프로그램 영향·자금세탁방지도 만들지 않음)</li>
+        <li>보류 — AI, 다국어</li>
+        <li>별도 제품 — 데이터 품질. NavidM Meta 에는 넣지 않고 GS 이후 검토 (§2)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="s4">
+  <div class="sec-h"><span class="no">4</span><h2>개발 우선순위</h2><span class="abbr">DEV_ROADMAP</span></div>
+  <p class="sum">영향과 노력으로 나눴다. 영향은 "공공 입찰·GS 시험에서 걸리느냐" 기준이다.</p>
+  <div class="prio">
+    <div class="first"><span class="ax">영향 큼 · 노력 작음</span><h4>먼저</h4>
+      <ul>
+        <li>승인 우회 5경로 차단 (§5)</li>
+        <li>보안 2건 — 해시 반복 상향, 암호화 키 외부화</li>
+        <li>Tibero 수집 쿼리 4종 — <code>dm-collect.xml</code></li>
+        <li>제품명 표기 통일 — 화면 탭·매뉴얼·API 문서를 NavidM Meta 로</li>
+        <li>엑셀 일괄등록 사전 선택 — RAMS 적재 선행 조건</li>
+        <li>추천 사전 시드 복구·초기화 스크립트 편입</li>
+        <li>지침 별표1 빠진 5개 항목</li>
+      </ul>
+    </div>
+    <div><span class="ax">영향 큼 · 노력 큼</span><h4>계획</h4>
+      <ul>
+        <li>GS 1등급 완주</li>
+        <li>공공 지침 진단 보고서 — 92번을 공공기관 DB 품질관리지침 양식으로 재설계</li>
+        <li>다단계 결재선</li>
+        <li>RAMS 실적재 + 자동 표준화·진단 정확도 측정 — 집중 후보 검증</li>
+        <li>모델 정합도 (논리·물리 구분 포함)</li>
+        <li>MS-SQL 수집</li>
+        <li>지원 종료 프레임워크 교체 (Vue 2 · Spring Boot 2.7)</li>
+      </ul>
+    </div>
+    <div><span class="ax">영향 작음 · 노력 작음</span><h4>틈날 때</h4>
+      <ul>
+        <li>ERwin XML 내보내기</li>
+        <li>코드 엑셀 양식</li>
+        <li>영향도 역방향 (컬럼 → 용어·단어·도메인)</li>
+      </ul>
+    </div>
+    <div><span class="ax">영향 작음 · 노력 큼</span><h4>미룸</h4>
+      <ul>
+        <li>AI (표준화 보조 로컬 LLM)</li>
+        <li>다국어 — 해외 진출 결정 뒤</li>
+        <li>노코드 결재 디자이너, CASE 툴 플러그인</li>
+        <li>소스 코드 리니지 — 범위 밖이라고 명시</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>순위</th><th>할 일</th><th>막히는 것</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><span class="v bad">P1</span></td><td>제품명 표기 통일 — 화면 탭·매뉴얼·API 문서(Swagger)를 NavidM Meta 로</td><td class="dim">—</td></tr>
+      <tr><td class="k"><span class="v bad">P1</span></td><td>GS 1등급 대비 — 승인 우회 차단, 보안 2건, 신청 서류와 제품 일치 확인</td><td class="dim">—</td></tr>
+      <tr><td class="k"><span class="v bad">P1</span></td><td>Tibero → MS-SQL 수집</td><td class="dim">—</td></tr>
+      <tr><td class="k"><span class="v bad">P1</span></td><td>다단계 결재선</td><td class="dim">—</td></tr>
+      <tr><td class="k"><span class="v bad">P1</span></td><td>엑셀 일괄등록 사전 선택 → RAMS 실적재</td><td>분류어 8개 도메인그룹 확정 (§9)</td></tr>
+      <tr><td class="k"><span class="v even">P2</span></td><td>공공 지침 진단 보고서 (92번 재설계)</td><td class="dim">—</td></tr>
+      <tr><td class="k"><span class="v even">P2</span></td><td>RAMS 로 자동 표준화·진단 정확도 측정 — 집중 후보를 유지할지 판단</td><td>RAMS 적재</td></tr>
+      <tr><td class="k"><span class="v even">P2</span></td><td>모델 정합도 (논리·물리 구분 포함)</td><td class="dim">—</td></tr>
+      <tr><td class="k"><span class="v unk">P3</span></td><td>데이터 품질 별도 제품 검토</td><td>NavidM Meta GS 이후</td></tr>
+      <tr><td class="k"><span class="v unk">P3</span></td><td>표준화 보조 로컬 LLM</td><td>기본 기능 이후</td></tr>
+      <tr><td class="k"><span class="v unk">P3</span></td><td>다국어</td><td>해외 진출 결정</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box"><span class="lbl">가격 기준선</span>
+    <p>조달몰의 공공 메타 제품 단가는 8,100만~1억 500만 원, 지티원 경량 진단 도구 DQXpress 는 3,850만 원이다. 메타 전체로 등록하면 앞쪽, 진단 도구로 등록하면 DQXpress 와 같은 선에 놓인다(§8.4).</p>
+  </div>
+</section>
+
+<section class="sec" id="s5">
+  <div class="sec-h"><span class="no">5</span><h2>개발 중 드러난 결함·위험</h2><span class="abbr">OWN_RISK</span></div>
+  <p class="sum">비교하려고 코드를 다시 확인하다 보인 것들이다. GS 시험이나 공공 보안 점검을 받기 전에 정리해야 한다.</p>
+  <div class="risks">
+    <div class="risk"><span class="sev h">높음</span><div>
+      <h4>승인을 거치지 않는 변경 경로 5개</h4>
+      <p>단건 컬럼 추가, PK·FK 생성·삭제 4종이 변경 이력·승인 절차를 거치지 않는다. 컬럼 삭제·수정은 8/23 에 고쳐졌지만 이 5개는 남아 있다. 매뉴얼은 이들을 승인 대상으로 적고 있어 GS 시험에서 문서-제품 불일치로 걸릴 수 있다.</p>
+      <div class="where">q-center/src/main/java/qualitycenter/controller/DataModelController.java — addAttr L1938 · createPk L1016 · createFk L1107 · deletePk L1225 · deleteFk L1328</div>
+    </div></div>
+    <div class="risk"><span class="sev h">높음</span><div>
+      <h4>설정값 암호화 키가 라이브러리에 고정값으로 들어 있다</h4>
+      <p>jasypt <code>PBEWithMD5AndDES</code> 를 쓰고, 키가 공용 jar 안에 박혀 있다. 공공 SW 보안약점 진단 기준의 "하드코드된 암호화 키" 에 해당할 수 있다.</p>
+      <div class="where">lib/common-0.0.1-SNAPSHOT.jar — com.ndata.bean.SecurityManager</div>
+    </div></div>
+    <div class="risk"><span class="sev m">중간</span><div>
+      <h4>비밀번호 해시 반복 횟수가 낮다</h4>
+      <p>SHA-256 으로 한 번 거른 뒤 PBKDF2-HMAC-SHA1 1,000회. 현행 권고 수준보다 반복 횟수가 크게 낮아 보안 점검에서 지적될 수 있다. 로그인 5회 실패 시 잠금, 세션 120분은 있다.</p>
+      <div class="where">같은 클래스 · q-center/src/main/java/qualitycenter/service/auth/SessionService.java:297-302 · q-center/src/main/resources/application.properties:6</div>
+    </div></div>
+    <div class="risk"><span class="sev m">중간</span><div>
+      <h4>자동 표준화 추천 사전이 개발 DB 에서 0건</h4>
+      <p><code>TB_WORD_DICT</code> 가 비어 있다(설계상 48,159건, 백업 테이블에 48,212건). 신규 환경 초기화 스크립트에도 시드가 없다. 집중 후보로 둔 자동 표준화(§6.3)의 전제가 지금 비어 있다는 뜻이다. 일부러 비운 것인지 확인이 필요하다.</p>
+      <div class="where">개발 DB 실측 · docker/dataq-db/initdb/ · dataQ설계/dict_seed_kengdic.sql (45,987건)</div>
+    </div></div>
+    <div class="risk"><span class="sev m">중간</span><div>
+      <h4>제품명 표기가 아직 통일되지 않았다</h4>
+      <p>GS 신청명은 NavidM Meta 인데 화면 탭·매뉴얼은 Navid Meta, API 문서는 Narae DataQ 로 남아 있다. GS 시험은 서류와 제품이 같은지를 본다. 표기를 바꾸는 작업만 남았다.</p>
+      <div class="where">q-center/vue/front/index.html · dataQ설계/manual/ · q-center/src/main/java/qualitycenter/config/SwaggerConfig.java:26</div>
+    </div></div>
+    <div class="risk"><span class="sev m">중간</span><div>
+      <h4>지원이 끝난 프레임워크 위에 서 있다</h4>
+      <p>Vue 2 는 2023-12-31 에 지원이 끝났고, Spring Boot 2.7 은 2023-11 에 오픈소스 지원이 끝났다. 공공 보안 점검에서 "지원 종료 구성요소" 로 지적될 수 있다.</p>
+      <div class="where">pom.xml (spring-boot 2.7.10) · q-center/vue/front/package.json (vue ^2.5.2)</div>
+    </div></div>
+    <div class="risk"><span class="sev l">낮음</span><div>
+      <h4>비밀번호가 Base64 로만 감싸져 전송된다</h4>
+      <p>HTTPS 가 전제다. 설치 가이드에 HTTPS 구성을 명시해야 한다.</p>
+      <div class="where">q-center/src/main/java/qualitycenter/security/CustomAuthenticationProvider.java:39</div>
+    </div></div>
+    <div class="risk"><span class="sev l">낮음</span><div>
+      <h4>단위 테스트가 적고 컨트롤러가 크다</h4>
+      <p>JUnit 7개, 회귀 검증은 Selenium 61개 파일에 기댄다. <code>DataModelController</code> 3,621줄, <code>DataStandardController</code> 3,296줄에 수정이 몰린다.</p>
+      <div class="where">dataQ설계/테스트/selenium/ · q-center/src/main/java/qualitycenter/controller/</div>
+    </div></div>
+    <div class="risk"><span class="sev l">낮음</span><div>
+      <h4>재수집 때 사라진 객체를 지우지 않는다</h4>
+      <p>수집은 병합만 한다. 운영 DB 에서 없어진 테이블·컬럼이 메타에 남는다. 구조 변경 진단이 그 차이를 잡아주긴 한다.</p>
+      <div class="where">q-executor/src/main/java/qualityexecutor/service/std/DataModelService.java (soft-delete 비활성)</div>
+    </div></div>
+  </div>
+</section>
+
+<section class="sec" id="s6">
+  <div class="sec-h"><span class="no">6</span><h2>영역별 비교와 개발 방향</h2><span class="abbr">FNCT_CMPR</span></div>
+  <p class="sum">MetaMiner 쪽은 제품 페이지·기사의 문구, 우리 쪽은 코드에서 확인한 현재 상태다. 영역마다 개발 방향과 "다음 할 일" 을 붙였다. 우리 쪽 "구현·미검증" 은 코드가 있다는 뜻이지 완성됐다는 뜻이 아니다.</p>
+
+  <h3 id="f1"><span class="no">6.1</span>표준 사전 관리 <span class="abbr">STD_DICT</span> <span class="dir b">완성하기</span></h3>
+  <p>기본 기능은 만들어져 있다. 공공 납품 기준인 행안부 지침 별표1 에서 빠진 항목을 채우고, 실데이터로 검증하는 게 남았다.</p>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">관리 대상</td><td><span class="st y">있음</span>"데이터 표준 관리(도메인·코드·금칙어)". GS 인증 기록에 "용어·단어·도메인 신청·등록 현황 조회" <span class="src">[공식·TTA]</span></td><td><span class="st t">구현·미검증</span>단어·용어·도메인·도메인 그룹·도메인 분류·코드</td><td>RAMS 실데이터 적재로 검증</td></tr>
+      <tr><td class="k">지침 별표1 관리항목</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st p">부분 구현</span>단어 9/9 · 도메인 12/12 · 코드 7/9 · 용어 7/10 (2026-04 점검)</td><td>빠진 5개 — 용어 영문명·관리부서·업무분야, 코드 관리부서·코드설명</td></tr>
+      <tr><td class="k">금칙어·이음동의어</td><td><span class="st p">부분</span>금칙어는 있다. 동의어는 MetaCatalog 용어사전에만</td><td><span class="st t">구현·미검증</span>금칙어 차단, 이음동의어 경고</td><td class="dim">—</td></tr>
+      <tr><td class="k">공통표준 사전</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>개발 DB 에 행안부 공통표준(단어 3,290 · 용어 13,159 · 도메인 126) 적재</td><td>설치 패키지에 기본 사전으로 넣을지 결정</td></tr>
+      <tr><td class="k">국어 사전 연동</td><td><span class="st y">있음</span>국립국어원 한국어기초사전·표준국어대사전 연동 (5.3, 2019) <span class="src">[기사]</span></td><td><span class="st p">부분 구현</span>영한 사전 기반 추천 사전. 개발 DB 에서 0건</td><td>추천 사전 복구, 국어사전 연동은 검토</td></tr>
+      <tr><td class="k">엑셀 일괄 등록</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>사전 6종 업로드·다운로드·양식. 사전은 고를 수 없음</td><td>일괄등록 사전 선택 (RAMS 적재 선행 조건)</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="fig">
+    <p class="ttl">공공기관 DB 표준화 지침 [별표1] 관리항목 — NavidM Meta 현재</p>
+    <p class="sub">2026-04-06 자체 점검 (25번 문서). MetaMiner 는 공개 자료가 없어 비교하지 못했다</p>
+    <div class="bars" id="guideBars"></div>
+    <figcaption>공공 RFP 가 별표1 준수를 요구하면 빠진 5개 항목이 그대로 결격 사유가 된다.</figcaption>
+  </figure>
+
+  <h3 id="f2"><span class="no">6.2</span>표준사전 세트와 사전별 규칙 <span class="abbr">DICT_SET</span> <span class="dir c">집중 후보</span></h3>
+  <p>한 시스템에 표준사전을 여러 벌 두고 사전마다 규칙을 달리하는 구조를 9월에 만들었다(98번). MetaMiner 공개 자료에는 "업무별 표준사전" 문구만 있다. 공공 기관마다 표준 관례가 달라서(행안부 공통표준, SMETA 관례 등) 개발을 몰아줄 후보로 둔다. 다만 지금 사전별 규칙은 속성 1개뿐이고, 일괄등록에서 사전을 고를 수 없으며, 실사용은 한 번도 없었다.</p>
+  <div class="dset">
+    <div class="d"><h5>기본 표준사전 (개발 DB)</h5><span class="rule">행안부 공통표준 · 용어 끝단어 형식단어 강제 ON</span><div class="models"><span class="m">개발용 모델</span></div></div>
+    <div class="d plan"><h5>RAMS 사전 — 적재 전</h5><span class="rule">SMETA 관례 · 분류어 696개를 형식단어로 (분석상)</span><div class="models"><span class="m">RAMS 설계 모델</span></div></div>
+  </div>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">사전 여러 벌</td><td><span class="st p">부분</span>"업무별 표준사전 구축", "단어·용어·NTT·속성 자동 관리" (5.3 기사) — 세부 공개 안 됨</td><td><span class="st t">구현·미검증</span>사전 단위 관리</td><td>RAMS 사전 실적재로 검증</td></tr>
+      <tr><td class="k">사전별 규칙</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st p">부분 구현</span>용어 끝단어 형식단어 강제 여부, 속성 1개</td><td>규칙 항목을 늘릴지 결정</td></tr>
+      <tr><td class="k">모델별 사전 지정</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>모델 등록·수정 때 선택, 사전 없는 모델은 스케줄 차단</td><td class="dim">—</td></tr>
+      <tr><td class="k">사전 범위 일관성</td><td class="dim">—</td><td><span class="st p">부분 구현</span>기본 사전으로 도는 조회 16곳</td><td>16곳 정리</td></tr>
+      <tr><td class="k">일괄 등록 사전 선택</td><td class="dim">—</td><td><span class="st n">미구현</span>엑셀 일괄등록은 무조건 기본 사전</td><td>화면·업로드 컨트롤러에 사전 선택</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f3"><span class="no">6.3</span>한글명 자동 표준화 <span class="abbr">AUTO_STND</span> <span class="dir c">집중 후보</span></h3>
+  <p>공공 표준화 작업에서 시간이 가장 많이 드는 곳이다. 지티원의 한·영·일 제품 페이지와 보도자료 143건에는 단어 분할·용어 자동 생성·약어 생성·도메인 추천이 출시로도 계획으로도 나오지 않는다(2019년 기사의 "자동 관리" 문구와 2020·2021년 광고의 MetaNorm 뿐). 그래서 개발을 몰아줄 후보로 둔다. 하지만 우리 엔진은 실데이터 정확도를 한 번도 재지 않았고, 미등록 단어 제안에 쓰는 추천 사전은 지금 비어 있다.</p>
+  <p class="dim" style="font-size:13.5px;margin-bottom:0">현재 구현된 흐름 — 검증 전</p>
+  <ol class="steps">
+    <li>대상 모델·사전 선택<small>98번 5단계</small></li>
+    <li>한글 컬럼명 입력<small>엑셀 끌어놓기·붙여넣기·직접 입력</small></li>
+    <li>형태소 분석 + 사전 기반 분리<small>토큰마다 감점해 덜 쪼개는 쪽을 고른다</small></li>
+    <li>미신뢰 구간 재검색·동의어 치환<small>"카테고리" → "범주"</small></li>
+    <li>미등록 단어 제안<small>추천 사전 — 지금 0건</small><span class="claim">MetaMiner: 국립국어원 연동</span></li>
+    <li>영문약어 조합<small>구성 단어 약어를 _ 로 연결</small></li>
+    <li>도메인 추천<small>마지막 형식단어의 분류로 후보·타입·길이</small></li>
+    <li>검토<small>기등록·자동완성·부분·미매칭, 차단 사유</small></li>
+    <li>일괄 등록 + 변환 이력<small>건별 트랜잭션, 매핑 정의서용 엑셀</small><span class="claim">MetaMiner: "자동 관리" 문구</span></li>
+  </ol>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">용어 → 단어 분리</td><td><span class="st u">공개 자료 없음</span>출시·계획 모두</td><td><span class="st t">구현·미검증</span>형태소 분석 + 동적 계획법 분리, 사용 빈도 점수</td><td>RAMS 컬럼으로 분리 정확도 측정</td></tr>
+      <tr><td class="k">미등록 단어 제안</td><td><span class="st p">부분</span>국립국어원 사전 연동 (2019)</td><td><span class="st p">부분 구현</span>추천 사전이 개발 DB 에서 0건</td><td>추천 사전 복구, 초기화 스크립트에 편입</td></tr>
+      <tr><td class="k">영문약어·도메인 추천</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span></td><td>정확도 측정에 포함</td></tr>
+      <tr><td class="k">검토 후 일괄 등록</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>건별 성공·건너뜀·실패</td><td class="dim">—</td></tr>
+      <tr><td class="k">모델 컬럼에 적용</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>한글명 기준·영문명 기준 표준화, 미리보기 모드</td><td class="dim">—</td></tr>
+      <tr><td class="k">LLM 활용</td><td><span class="st u">공개 자료 없음</span>출시·계획 모두</td><td><span class="st n">미구현</span>규칙·통계 기반</td><td>보류 — 폐쇄망 로컬 모델 전제</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box warn"><span class="lbl">이 영역의 다른 회사들</span>
+    <p>자동 표준화에는 지티원보다 <b>위세아이텍 WiseMeta 의 Data Butler</b>(GPT 기반 표준용어 추천, 2024-12, 10번 문서 — 원문 미확인)와 <b>엔코아 META# AI</b>(표준 사전 자동 구축, 컴퓨터월드 2025-07-31)가 먼저 들어와 있다. 둘 다 LLM 을 앞세운다. 규칙·통계 방식은 결과를 설명할 수 있고 폐쇄망에서 돈다는 성질이 있지만, 실데이터 정확도를 보여주지 못하면 의미가 없다.</p>
+  </div>
+
+  <h3 id="f4"><span class="no">6.4</span>메타 수집 범위 <span class="abbr">META_CLCT</span> <span class="dir a">따라잡기</span></h3>
+  <p>가장 먼저 메워야 할 구멍이다. 수집 쿼리가 있는 DBMS 는 4종(+Aurora MySQL)이고, 인덱스·제약조건까지 다 가져오는 건 Oracle·PostgreSQL 둘이다. 공공은 Tibero 비중이 크다.</p>
+  <figure class="fig">
+    <p class="ttl">DBMS 별 수집 범위 — NavidM Meta 현재</p>
+    <p class="sub">MetaMiner 는 "이기종 DBMS + CASE 툴" 이라고만 밝혀 목록을 비교할 수 없다. 공개된 건 5.1 의 Hive·BigSQL 추가와 2009판의 JDBC·ODBC·FTP 수집 정도다</p>
+    <div class="tbl" style="margin:0"><table id="dbmsHeat">
+      <thead><tr><th>DBMS</th><th class="c">접속</th><th class="c">테이블</th><th class="c">컬럼</th><th class="c">인덱스</th><th class="c">제약조건</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Oracle (SID·Service Name)</td><td data-h="y"></td><td data-h="y"></td><td data-h="y"></td><td data-h="y"></td><td data-h="y"></td></tr>
+        <tr><td class="k">PostgreSQL</td><td data-h="y"></td><td data-h="y"></td><td data-h="y"></td><td data-h="y"></td><td data-h="y"></td></tr>
+        <tr><td class="k">MariaDB · Aurora MySQL</td><td data-h="y"></td><td data-h="y"></td><td data-h="y"></td><td data-h="n"></td><td data-h="n"></td></tr>
+        <tr><td class="k">Cubrid</td><td data-h="y"></td><td data-h="y"></td><td data-h="y"></td><td data-h="n"></td><td data-h="n"></td></tr>
+        <tr><td class="k">Tibero (SID·Service Name)</td><td data-h="c"></td><td data-h="n"></td><td data-h="n"></td><td data-h="n"></td><td data-h="n"></td></tr>
+        <tr><td class="k">MS-SQL</td><td data-h="c"></td><td data-h="n"></td><td data-h="n"></td><td data-h="n"></td><td data-h="n"></td></tr>
+        <tr><td class="k">Altibase</td><td data-h="c"></td><td data-h="n"></td><td data-h="n"></td><td data-h="n"></td><td data-h="n"></td></tr>
+        <tr><td class="k">Goldilocks</td><td data-h="c"></td><td data-h="n"></td><td data-h="n"></td><td data-h="n"></td><td data-h="n"></td></tr>
+      </tbody>
+    </table></div>
+    <div class="legend"><span><i style="background:var(--us)"></i>수집 쿼리 있음 (실 DB 검증은 Oracle·PostgreSQL 위주)</span><span><i style="background:var(--warn-soft);box-shadow:inset 0 0 0 1px var(--warn)"></i>접속만 (드라이버만 있음)</span><span><i style="background:var(--sunken)"></i>안 됨</span></div>
+    <figcaption>근거: q-executor/src/main/resources/META-INF/dm-collect.xml (수집 쿼리 12개), lib/drivers.xml (드라이버 11개). 수집 쿼리는 "DBMS 유형 + GetObjs" 이름으로 찾기 때문에 쿼리가 없으면 접속 테스트까지만 된다.</figcaption>
+  </figure>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">수집 DBMS</td><td><span class="st y">있음</span>"이기종 DBMS" — 목록 비공개. 5.1 에서 Hive·BigSQL 추가 <span class="src">[공식·기사]</span></td><td><span class="st p">부분 구현</span>전체 수집 2종, 테이블·컬럼 2종, 접속만 4종</td><td>Tibero → MS-SQL 수집 쿼리 4종씩 (<code>dm-collect.xml</code>)</td></tr>
+      <tr><td class="k">수집 대상 종류</td><td><span class="st y">있음</span>프로그램·CASE 툴·DBMS·업무 규칙·문서·OLAP·ETL 7종 (아키텍처 그림) <span class="src">[공식]</span></td><td><span class="st p">부분 구현</span>DBMS 와 모델 파일(ERwin·XMI)만</td><td>당장은 DBMS 확대가 먼저</td></tr>
+      <tr><td class="k">재수집 처리</td><td><span class="st y">있음</span>"동기화"</td><td><span class="st p">부분 구현</span>병합만, 사라진 객체는 남음</td><td>삭제 반영을 켤지 결정</td></tr>
+      <tr><td class="k">수집 범위 선택</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>스키마 단위 체크</td><td class="dim">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f5"><span class="no">6.5</span>데이터 모델·CASE 툴 연계 <span class="abbr">MODEL_CASE</span> <span class="dir a">따라잡기</span> <span class="dir b">완성하기</span></h3>
+  <p>모델 편집·DDL·ERD 는 만들어 두었지만 논리 모델 구분이 없고, CASE 툴은 파일 가져오기뿐이다. ERwin 내보내기까지는 따라잡고, 모델링 도구 안에 표준을 심는 플러그인은 보류한다.</p>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">CASE 툴 연계</td><td><span class="st y">있음</span>모델러가 모델링 도구 안에서 MetaMiner 표준 메타를 바로 쓴다. 지원 툴 이름은 비공개 <span class="src">[공식]</span></td><td><span class="st p">부분 구현</span>ERwin XML·XMI 2.1 가져오기, XMI 내보내기</td><td>ERwin XML 내보내기. 플러그인은 보류</td></tr>
+      <tr><td class="k">비표준 차단</td><td><span class="st y">있음</span>표준화 이후 모델링엔 표준 메타만, 비표준은 시스템이 거부 (자사 주장)</td><td><span class="st p">부분 구현</span>용어 등록 때 검증. 모델 컬럼은 비표준도 저장한 뒤 진단으로 잡는다</td><td>차단할지 진단으로 둘지 정책 결정</td></tr>
+      <tr><td class="k">모델 뷰어·ERD</td><td><span class="st y">있음</span>Model Viewer, CASE 툴 없이 ERD 조회</td><td><span class="st t">구현·미검증</span>자동 배치 ERD, PNG·PDF</td><td class="dim">—</td></tr>
+      <tr><td class="k">DDL 생성</td><td><span class="st y">있음</span>스크립트 자동 생성, 5.1 뷰 디자이너·DDL 출력</td><td><span class="st p">부분 구현</span>Oracle·PostgreSQL 문법만</td><td>Tibero·MS-SQL 문법 (수집 확대와 함께)</td></tr>
+      <tr><td class="k">논리 모델</td><td><span class="st u">공개 자료 없음</span>정합도 지표는 있음</td><td><span class="st n">미구현</span>유형 선택 화면 없음, 항상 물리</td><td>논리·물리 구분 (정합도의 전제)</td></tr>
+      <tr><td class="k">업무·주제영역</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st p">부분 구현</span>업무영역 화면 있음, 주제영역은 API 만</td><td>주제영역 화면</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f6"><span class="no">6.6</span>표준 준수 진단 <span class="abbr">STND_DIAG</span> <span class="dir b">완성하기</span></h3>
+  <p>진단 엔진은 있다. 실데이터에서 판정이 맞는지 확인하고, 결과를 공공 양식 보고서로 내는 일(6.12)이 남았다.</p>
+  <div class="box"><span class="lbl">NavidM Meta 준수율 — 현재 산식</span>
+    <p class="mono" style="font-size:14px">준수율 = (전체 컬럼 − 이슈 컬럼) ÷ 전체 컬럼 × 100</p>
+    <p style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><span class="v bad">용어 미존재</span><span class="v bad">한글명 불일치</span><span class="v bad">타입 불일치</span><span class="v bad">길이 불일치</span></p>
+  </div>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">지표</td><td><span class="st y">있음</span>"Compliance Level for standard". GS 기록에 "메타데이터 표준 준수도 조회" <span class="src">[공식·TTA]</span></td><td><span class="st t">구현·미검증</span>이슈 컬럼 기준 준수율</td><td>산식 문서화</td></tr>
+      <tr><td class="k">판정 유형</td><td><span class="st p">부분</span>2009판 "데이터 정의 준수 체크·데이터 사전 준수 체크". 산식 비공개</td><td><span class="st t">구현·미검증</span>4유형 + VARCHAR·NUMBER 계열 동의어</td><td>RAMS 로 오판정 사례 수집</td></tr>
+      <tr><td class="k">운영 DB 부담</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>수집 스냅샷으로 진단, 운영 DB 무접속</td><td class="dim">—</td></tr>
+      <tr><td class="k">진단 제외</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>테이블·컬럼 단위 3종 토글, 사유 기록</td><td>패턴 규칙(79번)은 설계만</td></tr>
+      <tr><td class="k">다중 스키마</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>소유자(스키마)가 식별 키</td><td class="dim">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f7"><span class="no">6.7</span>진단 → 조치 → DB 반영 <span class="abbr">DIAG_ACTN</span> <span class="dir c">집중 후보</span></h3>
+  <p>진단 결과에서 바로 고치는 흐름은 코드로 이어져 있다. MetaMiner 공개 자료로는 진단과 스크립트 생성이 이어지는지 알 수 없다. 공공 표준화 작업에서 실제로 손이 많이 가는 곳이라 개발을 몰아줄 후보로 둔다. 다만 승인을 거치지 않는 경로 5개를 막기 전에는 [DB 반영] 을 내세울 수 없고, 실제 운영 DB 에 적용해 본 적도 없다.</p>
+  <p class="dim" style="font-size:13.5px;margin-bottom:0">현재 구현된 흐름 — 검증 전</p>
+  <div class="act">
+    <div><span class="a">용어 미존재</span><span class="ar">→</span><span class="b">진단 결과 화면에서 단어 분석 후 용어 바로 등록</span><span class="ar">→</span><span class="c">승인 후 재진단</span></div>
+    <div><span class="a">한글명 불일치</span><span class="ar">→</span><span class="b"><code>COMMENT ON</code> 스크립트 (단건·일괄)</span><span class="ar">→</span><span class="c">DBA 실행</span></div>
+    <div><span class="a">타입·길이 불일치</span><span class="ar">→</span><span class="b">RENAME·MODIFY 스크립트, DBMS 문법 4계열 (Oracle·Tibero / MySQL·MariaDB / MS-SQL / PostgreSQL)</span><span class="ar">→</span><span class="c">DBA 실행</span></div>
+    <div><span class="a" style="background:var(--us-soft);color:var(--us)">모델 변경 승인</span><span class="ar">→</span><span class="b">DDL 조각 자동 생성</span><span class="ar">→</span><span class="c">[DB 반영] — 성공·실패·권한 없음 기록</span></div>
+  </div>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">조치 스크립트</td><td><span class="st p">부분</span>"스크립트 자동 생성" — 진단 연동은 비공개</td><td><span class="st t">구현·미검증</span>이슈 유형별, DBMS 문법 4계열</td><td>실 DB 적용 검증</td></tr>
+      <tr><td class="k">진단 결과에서 용어 등록</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span></td><td class="dim">—</td></tr>
+      <tr><td class="k">승인 변경을 DB 에 실행</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>관리자 [DB 반영], 결과 3분류</td><td>승인 우회 5경로 차단이 먼저</td></tr>
+      <tr><td class="k">재진단</td><td><span class="st y">있음</span>스케줄러</td><td><span class="st t">구현·미검증</span>즉시 실행·스케줄</td><td class="dim">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f8"><span class="no">6.8</span>구조 정합·갭 분석·예약 진단 <span class="abbr">STRC_GAP</span> <span class="dir a">따라잡기</span> <span class="dir b">완성하기</span></h3>
+  <p>DB 와 메타의 차이를 잡는 기능은 만들어 두었다. MetaMiner 는 여기에 모델끼리 얼마나 맞는지 재는 지표와, 여러 테이블을 한 화면에서 맞대는 갭 분석을 더 갖고 있다. 공공 메타시스템에서 흔히 요구하는 "모델 ↔ DB 일치율" 은 우리에게 없다.</p>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">DB ↔ 메타 변경 감지</td><td><span class="st y">있음</span>메타데이터 수집 및 동기화</td><td><span class="st t">구현·미검증</span>수집 스냅샷 대 실제 DB, 컬럼·인덱스·제약조건 3축</td><td>인덱스·제약 수집 DBMS 확대</td></tr>
+      <tr><td class="k">모델 정합도·유사도</td><td><span class="st y">있음</span>"Alignment and Similarity Level for models", v3.0 GS 기능 "메타데이터 상호검증" <span class="src">[공식·TTA]</span></td><td><span class="st n">미구현</span></td><td>논리↔물리, 모델↔DB 비교 지표 설계</td></tr>
+      <tr><td class="k">여러 테이블 컬럼 갭</td><td><span class="st y">있음</span>6 버전 "갭 분석" <span class="src">[기사]</span></td><td><span class="st n">미구현</span></td><td>같은 이름 컬럼의 타입·길이 차이 화면</td></tr>
+      <tr><td class="k">예약 실행</td><td><span class="st y">있음</span>스케줄러(공식 주요 기능), 비표준 데이터 주기 점검(2009판)</td><td><span class="st t">구현·미검증</span>SIMPLE·CRON, 표준·구조·둘 다</td><td>운영 환경 장기 실행 검증</td></tr>
+      <tr><td class="k">실패 사유 분류</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>설정·DB·시간초과·데이터 없음·건너뜀 등</td><td class="dim">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f9"><span class="no">6.9</span>워크플로우·결재 <span class="abbr">APRV_FLOW</span> <span class="dir a">따라잡기</span></h3>
+  <p>공공 RFP 의 단골 요구가 다단계 결재선이다. 지금은 관리자 1인 승인으로 고정돼 있고, 승인을 거치지 않는 경로가 5개 남아 있다. 결재선 설정(노코드 디자이너까지는 아니어도 된다)과 우회 차단이 다음 일이다.</p>
+  <figure class="fig flowfig">
+    <div class="flow"><span class="who tag-them">MetaMiner</span><span class="node them">요청</span><span class="arr">→</span><span class="node them">결재 흐름 (디자이너로 구성)</span><span class="arr">→</span><span class="node ok">완료</span><span class="arr">/</span><span class="node wait">부분 승인·부분 반려</span><span class="dim" style="font-size:12px">코딩 없이 수정. 단계 구성 방식은 비공개</span></div>
+    <div class="flow"><span class="who tag-us">표준 사전 (지금)</span><span class="node">등록 (일반 사용자)</span><span class="arr">→</span><span class="node wait">승인 대기</span><span class="arr">→</span><span class="node ok">승인</span><span class="arr">/</span><span class="node no">반려</span><span class="arr">→</span><span class="node">재요청</span></div>
+    <div class="flow"><span class="who tag-us">데이터 모델 (지금)</span><span class="node">DRAFT</span><span class="arr">→</span><span class="node wait">SUBMITTED (묶음 신청)</span><span class="arr">→</span><span class="node ok">APPROVED</span><span class="arr">→</span><span class="node run">DB 반영</span><span class="arr">/</span><span class="node no">REJECTED (원복·전파)</span></div>
+    <figcaption>우리 쪽 두 흐름 모두 승인자는 관리자 1명이고, 관리자가 등록하면 바로 승인된다. 단건 컬럼 추가와 PK·FK 생성·삭제는 이 흐름을 아예 거치지 않는다.</figcaption>
+  </figure>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">결재 흐름 구성</td><td><span class="st y">있음</span>워크플로우 엔진·디자이너, 환경 설정만으로 구성 <span class="src">[공식·기사]</span></td><td><span class="st n">미구현</span>고정 흐름</td><td>결재선(단계·결재자) 설정</td></tr>
+      <tr><td class="k">결재 단계 수</td><td><span class="st u">공개 자료 없음</span>다단계 구성 방식 비공개</td><td><span class="st p">부분 구현</span>1단계</td><td>다단계</td></tr>
+      <tr><td class="k">부분 승인·부분 반려</td><td><span class="st y">있음</span>5.1 (2017) <span class="src">[기사]</span></td><td><span class="st t">구현·미검증</span>묶음 신청 안에서 항목별 선택</td><td class="dim">—</td></tr>
+      <tr><td class="k">반려 전파</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>단어 → 미승인 용어, 테이블 → 하위 컬럼, 컬럼 → FK 자식</td><td class="dim">—</td></tr>
+      <tr><td class="k">승인 우회 경로</td><td class="dim">—</td><td><span class="st p">부분 구현</span>5개 남음</td><td>차단 (§5)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f10"><span class="no">6.10</span>변경 이력 <span class="abbr">CHG_HIST</span> <span class="dir b">완성하기</span></h3>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">표준 사전 이력</td><td><span class="st y">있음</span>메타데이터 라이프사이클·연관관계 (6) <span class="src">[기사]</span></td><td><span class="st t">구현·미검증</span>등록·수정·삭제, 전후 비교, 일괄 등록 건별 결과</td><td class="dim">—</td></tr>
+      <tr><td class="k">모델 변경 이력</td><td><span class="st y">있음</span></td><td><span class="st p">부분 구현</span>테이블·컬럼은 기록. PK·FK·인덱스·제약조건 변경은 기록 안 됨</td><td>결재 우회 차단과 함께 채우기</td></tr>
+      <tr><td class="k">한글 변환 이력</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>매핑 정의서용 엑셀</td><td class="dim">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f11"><span class="no">6.11</span>영향도·리니지 <span class="abbr">IMPACT_LNG</span> <span class="dir a">따라잡기</span> <span class="dir d">일부 범위 밖</span></h3>
+  <p>범위가 한 단계씩 다르다. 우리는 표준을 바꿨을 때 영향받는 용어·컬럼까지만 본다. MetaMiner 는 데이터 흐름까지, DataHawk 는 소스 코드·ETL·BI 를 파싱해 컬럼 단위 흐름까지 본다. 역방향과 모델 간 영향도까지는 따라잡고, 소스 파싱 리니지는 만들지 않는다.</p>
+  <div class="nest" aria-label="영향도 범위 비교">
+    <div class="ring"><span class="lbl tag-them">DataHawk <small>컬럼 레벨 리니지 — SQL·PL/SQL·Java·C 파싱, Informatica·DataStage·MSTR, 80개 이상 언어</small></span>
+      <div class="ring"><span class="lbl tag-them">MetaMiner <small>데이터 플로우 기반 영향도 분석</small></span>
+        <div class="ring"><span class="lbl tag-us">NavidM Meta 지금 <small>단어·도메인을 바꾸면 영향받는 용어·컬럼</small></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner (+제품군)</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">단어·도메인 변경 영향</td><td><span class="st y">있음</span></td><td><span class="st t">구현·미검증</span>연관 용어·컬럼 건수와 목록</td><td class="dim">—</td></tr>
+      <tr><td class="k">코드·도메인그룹·분류 영향</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st n">미구현</span></td><td>추가</td></tr>
+      <tr><td class="k">역방향 (컬럼 → 용어·단어·도메인)</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st n">미구현</span></td><td>추가</td></tr>
+      <tr><td class="k">데이터 흐름 영향도</td><td><span class="st y">있음</span> <span class="src">[공식]</span></td><td><span class="st n">미구현</span></td><td>모델 간 영향도까지만</td></tr>
+      <tr><td class="k">소스 파싱 리니지</td><td><span class="st y">있음</span>DataHawk — 산출 규칙 자동 추출 <span class="src">[공식]</span></td><td><span class="st n">미구현</span></td><td>범위 밖 — 만들지 않는다</td></tr>
+      <tr><td class="k">DB 변경 → 프로그램 영향</td><td><span class="st y">있음</span>ChangeMiner 11 — Oracle·DB2·MS SQL·MySQL·Sybase·PostgreSQL, 80여 종 파서 <span class="src">[공식]</span></td><td><span class="st n">미구현</span></td><td>범위 밖</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f12"><span class="no">6.12</span>검색·대시보드·보고서 <span class="abbr">PORTAL_RPT</span> <span class="dir a">따라잡기</span></h3>
+  <p>보고서가 가장 큰 공백이다. 지티원은 DQXpress 로 공공기관 DB 품질관리지침 양식의 진단 보고서를 자동으로 만들어 조달몰에서 판다(3,850만 원). 우리 종합 분석 보고서(92번)는 설계만 있다. 공공 지침 양식에 맞춰 설계를 다시 잡고 만든다.</p>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">보고서</td><td><span class="st y">있음</span>Report Center 모듈, XML 보고서 템플릿 <span class="src">[공식]</span></td><td><span class="st d">설계만</span>목록 엑셀 다운로드뿐. 종합 보고서(20시트·5프리셋)는 설계</td><td>92번을 공공 지침 양식으로 재설계 후 구현</td></tr>
+      <tr><td class="k">검색·포털</td><td><span class="st y">있음</span>검색 기반 포털(ABL생명 2024), 데이터 거버넌스 포털 <span class="src">[공식 보도]</span></td><td><span class="st t">구현·미검증</span>헤더 통합 검색 — 단어·용어·도메인·컬럼</td><td class="dim">—</td></tr>
+      <tr><td class="k">대시보드</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>준수율·승인·진단 현황</td><td class="dim">—</td></tr>
+      <tr><td class="k">게시판</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>공지·Q&amp;A·첨부·댓글</td><td class="dim">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f13"><span class="no">6.13</span>데이터 품질 <span class="abbr">DATA_QLTY</span> <span class="dir d">별도 제품</span></h3>
+  <p>품질 진단 코드는 있지만 2026-05-13 영업 라인업 분리 결정으로 NavidM Meta 에서는 메뉴를 꺼 두었다. 고객이 쓸 수 없으니 지금은 없는 것과 같다. 경쟁사는 모두 메타·품질 2제품 체계다(지티원 MetaMiner/DQMiner, 위세아이텍 WiseMeta/WiseDQ, 비투엔 SMETA/SDQ). 별도 제품은 NavidM Meta GS 이후에 검토한다(§2). 아래 우리 쪽은 코드 기준이며 실사용 검증은 없었다.</p>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">DQMiner6 · DQXpress</th><th class="us">NavidM Meta 품질 모듈</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">제품 형태</td><td><span class="st y">있음</span>DQMiner6(1등급) · DQXpress V5 · DQ IoT v2, 모두 GS 인증</td><td><span class="st off">꺼 둠</span>같은 제품 안 모듈</td><td>NavidM Meta GS 이후 검토</td></tr>
+      <tr><td class="k">공공 지침 진단 보고서</td><td><span class="st y">있음</span>DQXpress — 표준·구조·값 진단 보고서 자동화, DQC-V 사전 검증</td><td><span class="st n">미구현</span></td><td>6.12 와 같은 일</td></tr>
+      <tr><td class="k">프로파일링</td><td><span class="st y">있음</span>자동 프로파일링 <span class="src">[기사]</span></td><td><span class="st off">꺼 둠</span>행수·NULL·유일값·MIN·MAX, 추이</td><td class="dim">—</td></tr>
+      <tr><td class="k">업무 규칙</td><td><span class="st y">있음</span>룰 관리</td><td><span class="st off">꺼 둠</span>8유형, 룰 카탈로그 43종, 도메인별 룰</td><td class="dim">—</td></tr>
+      <tr><td class="k">위반 데이터</td><td><span class="st y">있음</span>데이터 오디팅</td><td><span class="st off">꺼 둠</span>위반 샘플(PK + 위반값)</td><td class="dim">—</td></tr>
+      <tr><td class="k">상시 모니터링</td><td><span class="st y">있음</span></td><td><span class="st off">꺼 둠</span>추이 통계 3종. 스케줄 대상 아님</td><td class="dim">—</td></tr>
+      <tr><td class="k">품질 보고</td><td><span class="st y">있음</span>분석·보고, 다차원 분석</td><td><span class="st n">미구현</span></td><td class="dim">—</td></tr>
+      <tr><td class="k">원인 추적·정제</td><td><span class="st y">있음</span>ChangeMiner 연동 원인 추적, 클린징, DCMiner</td><td><span class="st n">미구현</span></td><td>범위 밖</td></tr>
+    </tbody>
+  </table></div>
+  <p class="next"><b>방향</b>별도 제품으로 나오기 전까지 품질 기능은 NavidM Meta 영업 자료에 넣지 않는다.</p>
+
+  <h3 id="f14"><span class="no">6.14</span>AI <span class="abbr">AI_FNCT</span> <span class="dir d">보류</span></h3>
+  <p>지티원에서 출시가 확인된 AI 는 MetaCatalog 쪽(ML 자동 분류, LLM 설명문)이다. MetaMiner 자체의 표준화 AI 는 출시도 계획도 찾지 못했다. 우리는 AI 기능이 없다. 기본 기능(6.4·6.9·6.12)을 먼저 메우고, AI 는 그 뒤에 표준화 보조(설명문·영문명 제안) 정도로 검토한다. 공공은 폐쇄망이 많아 로컬 모델이 전제다.</p>
+  <ol class="tl" aria-label="메타·품질 시장의 AI 발표 순서">
+    <li><time>2024-06</time><div class="e"><span class="who">지티원</span>MetaCatalog — AI 메타 자동 분류, 데이터 사양서 자동 생성 <span class="src">[컴퓨터월드]</span></div></li>
+    <li><time>2024-11</time><div class="e"><span class="who">지티원</span>AI 전략 발표 — 기사의 솔루션 목록에 MetaMiner 가 빠져 있다 <span class="src">[아이티데일리]</span></div></li>
+    <li class="oth"><time>2024-12</time><div class="e"><span class="who">위세아이텍</span>WiseMeta Data Butler — GPT 기반 표준용어 추천 <span class="src">[10번 문서, 원문 미확인]</span></div></li>
+    <li class="oth"><time>2025-07</time><div class="e"><span class="who">엔코아</span>META# AI — 표준 사전 자동 구축·모델 자동 현행화 <span class="src">[컴퓨터월드]</span></div></li>
+    <li><time>2025-09</time><div class="e"><span class="who">지티원</span>"AI 이네이블" MetaMiner·DQMiner — 업무 규칙 SQL 을 LLM 프롬프트로 검색·관리, 규칙 설명문 자동 작성(버전·출시 발표 없음). 에이전틱 AI 는 "내재화 계획" <span class="src">[컴퓨터월드·전자신문]</span></div></li>
+    <li><time>2026-02</time><div class="e"><span class="who">지티원</span>MetaCatalog v3 — 비정형 문서 메타 추출, ML 태깅, LLM 설명 자동 작성 <span class="src">[아이티데일리]</span></div></li>
+    <li><time>2026-05</time><div class="e"><span class="who">지티원</span>AI Workbench(AI 거버넌스) — 삼성SDS 를 거쳐 우리은행 공급 <span class="src">[공식]</span></div></li>
+    <li class="us"><time>2026-10</time><div class="e"><span class="who">NavidM Meta</span>AI 기능 없음. 자동 표준화는 규칙·통계 기반이고 검증 전</div></li>
+  </ol>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">지티원 제품군</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">ML 자동 분류</td><td><span class="st y">있음</span>MetaCatalog — 컬럼 태그 자동 분류·추천</td><td><span class="st n">미구현</span></td><td>범위 밖</td></tr>
+      <tr><td class="k">설명문 자동 작성</td><td><span class="st y">있음</span>업무 규칙 설명(LLM), MetaCatalog 설명문(ChatGPT 연계)</td><td><span class="st n">미구현</span></td><td>보류 — 표준 단어·용어 설명문 보조로 검토</td></tr>
+      <tr><td class="k">품질 규칙 생성</td><td><span class="st p">부분</span>업무 규칙 SQL 의 LLM 프롬프트화 — 기사 표현은 "가능해졌다"</td><td><span class="st n">미구현</span></td><td>품질 별도 제품 검토 뒤</td></tr>
+      <tr><td class="k">에이전틱 영향도</td><td><span class="st u">공개 자료 없음</span>"내재화 계획" 발표 단계</td><td><span class="st n">미구현</span></td><td class="dim">—</td></tr>
+      <tr><td class="k">표준화(단어·용어·도메인)에 AI</td><td><span class="st u">공개 자료 없음</span>출시·계획 모두</td><td><span class="st n">미구현</span></td><td>보류</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box warn"><span class="lbl">오인 주의</span>
+    <p>"표준 사전 자동 구축 · 모델 자동 현행화 · 주제별 자동 매핑" 은 MetaMiner 기능이 아니다. 같은 기획특집 기사에 실린 엔코아 META# AI 설명이다. 롯데카드 사례의 "데이터 모델 현행화" 도 컨설팅 서비스로 서술돼 있어 제품 기능의 근거가 아니다.</p>
+  </div>
+
+  <h3 id="f15"><span class="no">6.15</span>연계·확장 <span class="abbr">INTGR</span> <span class="dir b">완성하기</span></h3>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">자사 제품 연동</td><td><span class="st y">있음</span>DQMiner 실시간 연동(5.3), DataHawk·MetaCatalog</td><td class="dim">해당 없음 (단일 제품)</td><td class="dim">—</td></tr>
+      <tr><td class="k">XML 교환</td><td><span class="st y">있음</span>XML 기반 데이터 교환</td><td><span class="st p">부분 구현</span>XMI 2.1</td><td>ERwin 내보내기 (6.5)</td></tr>
+      <tr><td class="k">REST API</td><td><span class="st u">공개 자료 없음</span>같은 회사 ChangeMiner 11 은 REST API·JWT SSO</td><td><span class="st t">구현·미검증</span>내부용 약 260개, Swagger 문서</td><td>외부 공개 범위 정리, 문서 제목을 NavidM Meta 로</td></tr>
+      <tr><td class="k">엑셀</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>거의 모든 목록 업로드·다운로드</td><td class="dim">—</td></tr>
+      <tr><td class="k">리파지토리 DB 선택</td><td><span class="st y">있음</span>5.3 에서 DB2·MySQL 추가</td><td><span class="st n">미구현</span>PostgreSQL 13 전용</td><td>보류 — 수요 확인 뒤</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f16"><span class="no">6.16</span>사용자·권한·보안 <span class="abbr">SCRTY</span> <span class="dir b">완성하기</span></h3>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">권한 체계</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st p">부분 구현</span>관리자·일반 2단계. 역할 및 권한 화면은 숨김</td><td>역할 화면 정리</td></tr>
+      <tr><td class="k">로그인 보호</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st t">구현·미검증</span>5회 실패 잠금, 세션 120분</td><td class="dim">—</td></tr>
+      <tr><td class="k">비밀번호 저장</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st p">부분 구현</span>PBKDF2-SHA1 1,000회</td><td>반복 횟수 상향</td></tr>
+      <tr><td class="k">설정값 암호화</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st p">부분 구현</span>키가 공용 jar 에 고정값으로 들어 있음</td><td>키 외부화</td></tr>
+      <tr><td class="k">SSO·LDAP·GPKI</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st n">미구현</span></td><td>RFP 가 요구하면</td></tr>
+      <tr><td class="k">감사 기록</td><td><span class="st u">공개 자료 없음</span></td><td><span class="st p">부분 구현</span>표준·모델 변경 이력, 로그인 이벤트</td><td class="dim">—</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="f17"><span class="no">6.17</span>다국어·해외 <span class="abbr">GLBL</span> <span class="dir d">보류</span></h3>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>세부</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">다국어</td><td><span class="st y">있음</span>메타데이터 다국어, 한·일·영 동시 조회(2009판), 전 제품 한·중·일·영 동시 출시 체계(2013 대표 발언) <span class="src">[공식]</span></td><td><span class="st n">미구현</span>한국어 전용</td><td>보류</td></tr>
+      <tr><td class="k">해외 MetaMiner 고객</td><td><span class="st y">있음</span>BCC은행(카자흐스탄, 2010), KB부코핀(인도네시아, 2023), 일본 A사(2019), 일본 K통신사. 로고 SAPPORO·KDDI <span class="src">[공식]</span></td><td><span class="st n">없음</span></td><td class="dim">—</td></tr>
+      <tr><td class="k">해외 거점·실적</td><td><span class="st y">있음</span>도쿄·베이징 사무소, 해외 수출 누적 300억(회사 발표). 일본 판매는 ChangeMiner 중심, 대리점 12곳</td><td><span class="st n">없음</span></td><td class="dim">—</td></tr>
+    </tbody>
+  </table></div>
+  <p class="dim" style="font-size:13.5px">기사(2024-09)가 해외 고객으로 든 일본주택금융공사·간사이전력은 ChangeMiner 고객이고, NRI·히타치시스템·니콘은 지티원 고객 목록에서 확인되지 않는다. 일본어 뉴스 896건 중 일본 기업의 MetaMiner 도입 기사는 0건이다.</p>
+</section>
+
+<section class="sec" id="s7">
+  <div class="sec-h"><span class="no">7</span><h2>비기능 — 구조와 운영</h2><span class="abbr">NON_FNCT</span></div>
+  <p class="sum">MetaMiner 는 표준 메타모델(CWM) 위 중앙 리파지토리에 여러 제품이 붙는 구조다. 우리는 화면·API 서버와 수집·진단 워커 두 덩어리에 PostgreSQL 하나를 쓰는 구조다. 우리 쪽 프레임워크 일부는 공식 지원이 끝났다.</p>
+  <div class="grid2">
+    <figure class="fig">
+      <p class="ttl tag-them">MetaMiner — 제품 페이지 아키텍처 그림</p>
+      <p class="sub">공식 그림의 구성 요소를 옮겼다. 배치 세부는 공개되지 않았다</p>
+      <div class="arch them">
+        <div class="lyr">Admin Client · 웹 포털 · Model Viewer<small>과거 .NET 클라이언트 → 5.1(2017) ActiveX 제거 → 2021 웹 기반 시연</small></div>
+        <div class="dn">▼</div>
+        <div class="lyr core"><b>Meta Server (J2EE)</b><small>Data Dictionary · Data Structure · Impact Analyzer · App.Meta Manager · Report Center · Workflow Engine·Manager·Designer</small></div>
+        <div class="dn">▼</div>
+        <div class="lyr core"><b>Metadata Repository</b><small>OMG CWM 기반 · 2009판 Oracle 9.0.2 이상 · 5.3 에서 DB2·MySQL 추가</small></div>
+        <div class="dn">▲</div>
+        <div class="row"><div class="lyr">DB Info. Adapter<small>이기종 DBMS (JDBC·ODBC·FTP)</small></div><div class="lyr">Model Info. Adapter<small>CASE 툴</small></div></div>
+        <div class="dn">▲</div>
+        <div class="lyr">관리 대상 7종<small>Program · CASE Tool · DBMS · Biz Rule · Document · OLAP · ETL</small></div>
+      </div>
+    </figure>
+    <figure class="fig">
+      <p class="ttl tag-us">NavidM Meta — 코드로 그린 현재 구성</p>
+      <p class="sub">포트·개수는 실제 값</p>
+      <div class="arch us">
+        <div class="lyr">Vue 2 화면 (탭 유지형 SPA)<small>메뉴 41개</small></div>
+        <div class="dn">▼</div>
+        <div class="lyr core"><b>q-center</b> — Spring Boot 2.7, 포트 28091<small>API 컨트롤러 20개 · 실시간 진행 푸시</small></div>
+        <div class="dn">▼</div>
+        <div class="row"><div class="lyr">q-executor<small>수집·진단·스케줄 워커, 28098</small></div><div class="lyr core">PostgreSQL 13<small>메타 DB 52개 테이블</small></div></div>
+        <div class="dn">▼</div>
+        <div class="lyr">대상 DB<small>Oracle·PostgreSQL·MariaDB·Cubrid 수집 / 그 외 접속만</small></div>
+      </div>
+    </figure>
+  </div>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>항목</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">메타모델</td><td>OMG CWM 기반 <span class="src">[공식]</span></td><td>자체 스키마 (quality 52 테이블)</td><td class="dim">—</td></tr>
+      <tr><td class="k">서버</td><td>J2EE Meta Server, Unix·Windows·Linux <span class="src">[공식 그림]</span></td><td>Spring Boot 실행형 jar 2개 (Docker)</td><td class="dim">—</td></tr>
+      <tr><td class="k">리파지토리 DB</td><td>2009판 Oracle 9.0.2 이상, 5.3 에서 DB2·MySQL 추가</td><td>PostgreSQL 13 (TimescaleDB 2.10) 전용</td><td>보류</td></tr>
+      <tr><td class="k">클라이언트</td><td>과거 .NET → 5.1 ActiveX 제거 → 2021 웹 기반 시연</td><td>웹 (Vue 2 SPA)</td><td class="dim">—</td></tr>
+      <tr><td class="k">배포</td><td>설치형으로 보인다(CD 패키지, 구축 사업 납품) — 추정</td><td>Docker 이미지 2종, 묶음 699MB. DB 이미지 스냅샷은 4개월 낡음</td><td>DB 이미지 재생성, 폐쇄망 설치 가이드</td></tr>
+      <tr><td class="k">지원 종료 부품</td><td class="dim">공개 자료 없음</td><td>Vue 2 (2023-12-31 지원 종료), Spring Boot 2.7 (오픈소스 지원 2023-11 종료)</td><td>교체 계획 — 공공 보안 점검 일정에 맞춰</td></tr>
+      <tr><td class="k">다국어</td><td>있음</td><td>없음</td><td>보류</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sec" id="s8">
+  <div class="sec-h"><span class="no">8</span><h2>시장 참고 — 기준선의 맥락</h2><span class="abbr">MRKT_REF</span></div>
+  <p class="sum">MetaMiner 가 시장에서 어디에 서 있는지, 공공에는 어떻게 들어가는지를 정리했다. 우리가 따라잡을 기준선을 읽기 위한 배경이다. 우리 제품은 아직 시장에 없다.</p>
+
+  <h3><span class="no">8.1</span>시장 위치</h3>
+  <figure class="fig">
+    <p class="ttl">주력 시장 × 제품 폭</p>
+    <p class="sub">정성 배치 — 공개 기사와 경쟁사 문서(10번)에 근거한 판단이며 수치가 아니다</p>
+    <svg class="quad" viewBox="0 0 640 400" role="img" aria-label="MetaMiner 와 META# 는 금융 쪽 스위트, SMETA 는 공공, DQXpress 는 공공 단품 쪽. NavidM Meta 는 시장에 없고 목표 위치만 점선으로 표시">
+      <rect class="bgq" x="70" y="20" width="540" height="320" rx="6"/>
+      <line class="ax" x1="340" y1="20" x2="340" y2="340"/>
+      <line class="ax" x1="70" y1="180" x2="610" y2="180"/>
+      <text class="axl" x="80" y="362">← 금융 중심</text>
+      <text class="axl" x="600" y="362" text-anchor="end">공공 중심 →</text>
+      <text class="axl" x="60" y="34" text-anchor="end">스위트</text>
+      <text class="axl" x="60" y="338" text-anchor="end">단품</text>
+      <text class="lab2" x="340" y="392" text-anchor="middle">주력 시장</text>
+      <circle class="pt-them" cx="250" cy="52" r="11"/>
+      <text class="lab" x="268" y="50">MetaMiner</text><text class="lab2" x="268" y="66">지티원 · 제품 13개 이상 · 공공 로고 23</text>
+      <circle class="pt-oth" cx="300" cy="118" r="8"/>
+      <text class="lab" x="316" y="116">META#</text><text class="lab2" x="316" y="132">엔코아 · "2강"</text>
+      <circle class="pt-oth" cx="170" cy="150" r="8"/>
+      <text class="lab" x="186" y="148">MetaStream</text><text class="lab2" x="186" y="164">데이터스트림즈</text>
+      <circle class="pt-oth" cx="470" cy="104" r="8"/>
+      <text class="lab" x="486" y="102">WiseMeta</text><text class="lab2" x="486" y="118">위세아이텍</text>
+      <circle class="pt-oth" cx="560" cy="150" r="9"/>
+      <text class="lab" x="546" y="182" text-anchor="end">SMETA</text><text class="lab2" x="546" y="198" text-anchor="end">비투엔 · 조달몰 메타 67%</text>
+      <circle class="pt-them" cx="440" cy="292" r="8"/>
+      <text class="lab" x="426" y="290" text-anchor="end">DQXpress</text><text class="lab2" x="426" y="306" text-anchor="end">지티원 · 공공 진단 보고서</text>
+      <circle class="pt-goal" cx="545" cy="290" r="11"/>
+      <text class="lab" x="545" y="318" text-anchor="middle">NavidM Meta</text>
+      <text class="lab2" x="545" y="334" text-anchor="middle">목표 위치 (가설, 미출시)</text>
+    </svg>
+  </figure>
+  <div class="tbl"><table>
+    <thead><tr><th>회사</th><th>메타</th><th>품질</th><th>주력</th><th>GS</th><th>조달몰 메타 단가</th><th>표준화 AI</th></tr></thead>
+    <tbody>
+      <tr><td class="k tag-them">지티원</td><td>MetaMiner6</td><td>DQMiner6 · DQXpress</td><td>금융·민간, 공공 로고도 다수</td><td>1등급 (2024-06)</td><td>미등록 (DQXpress 3,850만)</td><td class="dim">없음 (품질 규칙 LLM 은 있음)</td></tr>
+      <tr><td class="k">엔코아</td><td>META# (DA#)</td><td class="dim">미확인</td><td>제2금융권·제조 — "2강"</td><td class="dim">미확인</td><td class="num">1억 500만 (v4.0)</td><td>META# AI (2025-07)</td></tr>
+      <tr><td class="k">비투엔</td><td>SMETA</td><td>SDQ</td><td>공공 — 디지털서비스몰 메타관리 67% (2023)</td><td>1등급</td><td class="num">8,580만 (1.0)</td><td class="dim">미확인</td></tr>
+      <tr><td class="k">데이터스트림즈</td><td>MetaStream</td><td>QualityStream</td><td>금융·산업</td><td class="dim">미확인</td><td class="num">8,100만 (V3.0)</td><td class="dim">미확인</td></tr>
+      <tr><td class="k">위세아이텍</td><td>WiseMeta</td><td>WiseDQ</td><td>공공·금융</td><td>1등급</td><td class="dim">미확인</td><td>Data Butler (2024-12, 원문 미확인)</td></tr>
+      <tr><td class="k">한국정보기술단</td><td>KS_META</td><td class="dim">미확인</td><td class="dim">미확인</td><td class="dim">미확인</td><td class="num">1억 (v1.0)</td><td class="dim">미확인</td></tr>
+      <tr><td class="k tag-us">NavidM Meta</td><td>개발 중</td><td>모듈, 꺼 둠</td><td>시장 진입 전 (RAMS 진행 중)</td><td>준비 중</td><td>미등록</td><td>없음</td></tr>
+    </tbody>
+  </table></div>
+  <p class="dim" style="font-size:13px">"2강" 은 디지털데일리 2026-03-29 의 정성 평가다(엔코아·지티원 2강, 데이터스트림즈·비투엔 추격). 업체별 점유율 수치는 어디에도 없다. 지티원이 스스로 "국내 1위" 라고 하는 분야는 데이터 품질·변경 영향 분석·자금세탁방지이고 메타데이터 관리는 빠져 있다.</p>
+  <div class="grid2">
+    <div class="box"><span class="lbl">금융</span><p>2024 년 이후 MetaMiner 공급 보도 19건 중 11건이 금융이다. 롯데카드·농협중앙회·부산은행은 MetaMiner·DQMiner·DataHawk 를 묶어 샀다. 단품으로 들어가기 어렵다. 개발 방향을 정할 때 금융은 대상에서 뺀다.</p></div>
+    <div class="box"><span class="lbl">공공</span><p>공공 기관에 필요한 건 메타시스템 자체보다 표준 준수율을 올리는 작업이다. 이 쪽으로 방향을 잡는다면 SMETA(메타 전체)·DQXpress(진단 보고서)와 무엇이 다른지를 실사용으로 보여줘야 한다. 그 전까지 이 방향은 가설이다. 노후 메타시스템 교체 수요(수협중앙회 2025 재구축 등)는 있다.</p></div>
+  </div>
+  <div class="box warn"><span class="lbl">MetaMiner 는 신기능보다 유지 단계로 보인다 — 추정</span>
+    <ul class="tight">
+      <li>MetaMiner 공식 페이지 문구가 2015년 웹 아카이브와 사실상 같다. 6 버전 신기능(갭 분석)은 기사에만 있다.</li>
+      <li>지티원 감사보고서의 개발비 자산화 항목(2016~2025)에 MetaMiner 가 없다. MetaCatalog·Meta Transformer·AI Governance·DLMiner 등이 있다.</li>
+      <li>2024-06 기획특집은 지티원 사업을 "메타 카탈로그 중심" 으로 소개했고, 2024-11 AI 전략 기사의 솔루션 목록에서 MetaMiner 가 빠졌다.</li>
+      <li>MetaMiner 6 정식 출시 기사가 없고(2022-09 첫 언급), 2026 고객의 날에도 MetaMiner 신기능 언급이 없다.</li>
+      <li>그래도 영업은 활발하다 — 2024 년 공급 보도 9건으로 연도별 최다.</li>
+    </ul>
+    <p>읽는 법: 우리가 따라잡을 기준선이 한동안 크게 바뀌지 않을 수 있다는 뜻으로만 읽는다. 이것만으로 기회라고 단정할 근거는 없다.</p>
+  </div>
+
+  <h3><span class="no">8.2</span>MetaMiner 와 NavidM Meta 연혁</h3>
+  <ol class="tl" aria-label="두 제품의 주요 일정">
+    <li><time>2008-01</time><div class="e"><span class="who">MetaMiner</span>지티원이 아이티플러스에서 MetaMiner·ChangeMiner 등 6개 제품 인수</div></li>
+    <li><time>2008-03</time><div class="e"><span class="who">MetaMiner</span>v3.0 GS 인증 (08-0066) <span class="src">[TTA]</span></div></li>
+    <li><time>2016-10</time><div class="e"><span class="who">MetaMiner</span>5.0 — 한 화면에서 쓰는 UI</div></li>
+    <li><time>2017-09</time><div class="e"><span class="who">MetaMiner</span>5.1 — ActiveX 제거, 뷰 디자이너·DDL 출력, 부분 승인·반려, Hive·BigSQL 수집</div></li>
+    <li><time>2019-09</time><div class="e"><span class="who">MetaMiner</span>5.3 — DQMiner 실시간 연동, 국립국어원 사전 연동, 리파지토리 DB2·MySQL</div></li>
+    <li><time>2022-09</time><div class="e"><span class="who">MetaMiner</span>6 첫 언급(더존 ERP 10 공동 공급). 12월 KB손보 첫 공급</div></li>
+    <li><time>2024-06</time><div class="e"><span class="who">MetaMiner</span>6 · DQMiner6 GS 1등급 (24-0275 · 24-0276) <span class="src">[TTA]</span></div></li>
+    <li><time>2025-09</time><div class="e"><span class="who">MetaMiner</span>"AI 이네이블" MetaMiner·DQMiner 발표</div></li>
+    <li class="us"><time>2026-04</time><div class="e"><span class="who">NavidM Meta</span>공공 DB 표준화 지침 별표1 자체 점검 — 87.5%</div></li>
+    <li class="us"><time>2026-05</time><div class="e"><span class="who">NavidM Meta</span>데이터 모델 변경 승인 흐름 개발(88번)</div></li>
+    <li class="us"><time>2026-08</time><div class="e"><span class="who">NavidM Meta</span>PostgreSQL 수집 추가, 결함 20건 수정</div></li>
+    <li class="us"><time>2026-09</time><div class="e"><span class="who">NavidM Meta</span>GS 신청 서류 작성(KTR 양식) · 표준사전 세트 개발 · RAMS SMETA 자료 분석</div></li>
+  </ol>
+  <div class="box"><span class="lbl">GS 범위를 정할 때 참고</span>
+    <p>MetaMiner 6 GS 1등급의 TTA 기록에 적힌 주요 기능은 세 가지다 — 용어·단어·도메인 신청과 등록 현황 조회, 테이블·스키마·ERD 모델 조회, 메타데이터 표준 준수도 조회. 우리 GS 범위를 정할 때 참고할 수 있다(§2). 그 전에 승인 우회 경로와 보안 결함, 제품명 표기를 정리해야 시험을 받을 수 있다. MetaMiner 5.x 는 GS 인증이 없다.</p>
+  </div>
+
+  <h3><span class="no">8.3</span>고객과 판매 방식</h3>
+  <div class="grid2">
+    <figure class="fig cust">
+      <p class="ttl">MetaMiner 제품 페이지 고객 로고 59개</p>
+      <p class="sub">2026-10-07 기준 · 업종 묶음은 조사 때 나눈 것</p>
+      <h4>공공 23</h4><div class="chips"><span class="chip">교육부</span><span class="chip">행정안전부</span><span class="chip">해양수산부</span><span class="chip">농림축산식품부</span><span class="chip">국가보훈처</span><span class="chip">금융위원회</span><span class="chip">헌법재판소</span><span class="chip">방위사업청</span><span class="chip">해양경찰청</span><span class="chip">국방과학연구소</span><span class="chip">국방기술품질원</span><span class="chip">근로복지공단</span><span class="chip">신용보증기금</span><span class="chip">예금보험공사</span><span class="chip">한국주택금융공사</span><span class="chip">한국가스기술공사</span><span class="chip">한국고용정보원</span><span class="chip">한국수자원공사</span><span class="chip">한국사회보장정보원</span><span class="chip">KISTI</span><span class="chip">한국기초과학지원연구원</span><span class="chip">기초과학연구원</span><span class="chip">행정공제회</span></div>
+      <h4>금융 17</h4><div class="chips"><span class="chip">KB국민은행</span><span class="chip">IBK기업은행</span><span class="chip">SC제일은행</span><span class="chip">한국수출입은행</span><span class="chip">BNK경남은행</span><span class="chip">MG새마을금고</span><span class="chip">OK저축은행</span><span class="chip">SBI저축은행</span><span class="chip">삼성증권</span><span class="chip">미래에셋증권</span><span class="chip">NH투자증권</span><span class="chip">신영증권</span><span class="chip">하나금융투자</span><span class="chip">메트라이프</span><span class="chip">NH농협생명</span><span class="chip">러시앤캐시</span><span class="chip">M캐피탈</span></div>
+      <h4>민간 16</h4><div class="chips"><span class="chip">삼성SDI</span><span class="chip">현대오토에버</span><span class="chip">현대제철</span><span class="chip">LF</span><span class="chip">SK planet</span><span class="chip">스타벅스</span><span class="chip">아모레퍼시픽</span><span class="chip">티머니</span><span class="chip">하나투어</span><span class="chip">KSNET</span><span class="chip">건설공제조합</span><span class="chip">더존</span><span class="chip">롯데멤버스</span><span class="chip">이크레더블</span><span class="chip">KCB</span><span class="chip">KGC인삼공사</span></div>
+      <h4>해외 3</h4><div class="chips"><span class="chip">BCC은행 (카자흐스탄)</span><span class="chip">SAPPORO</span><span class="chip">KDDI</span></div>
+      <h4>NavidM Meta</h4><div class="chips"><span class="chip us">실사용 고객 없음 — 국가기록원 RAMS 진행 중</span></div>
+    </figure>
+    <figure class="fig">
+      <p class="ttl">로고 59개의 업종</p>
+      <p class="sub">공공이 가장 많다</p>
+      <div class="chart" style="height:240px"><canvas id="cCust" aria-label="공공 23, 금융 17, 민간 16, 해외 3"></canvas></div>
+      <figcaption>다만 아래처럼 최근 공급은 금융·민간 쪽으로 기울었다.</figcaption>
+    </figure>
+  </div>
+  <figure class="fig">
+    <p class="ttl">보도된 MetaMiner 공급·구축 — 연도별 업종</p>
+    <p class="sub">건 · 지티원 보도자료 기준 62건 (2008 ~ 2026-07). 업종 묶음은 위 로고 분류를 따랐다</p>
+    <div class="chart" style="height:270px"><canvas id="cSupply" aria-label="연도별 공급 건수. 2024년 9건으로 가장 많고, 2024년 이후 19건 중 공공은 2건"></canvas></div>
+    <figcaption>2019~2021 년엔 방사청·해수부·해경·근로복지공단·한수원 등 공공이 많았다. 2024 년 이후 19건 중 공공은 국립전파연구원·LH 2건뿐이다.</figcaption>
+  </figure>
+  <div class="tbl"><table>
+    <thead><tr><th>고객</th><th>시기</th><th>내용</th><th>보이는 것</th></tr></thead>
+    <tbody>
+      <tr><td class="k">롯데카드</td><td>2025-03 → 2026-05</td><td>표준관리 체계 수립·표준화·모델 현행화 컨설팅 + MetaMiner 6 · DataHawk 5 · 포털</td><td>컨설팅 + 제품 묶음</td></tr>
+      <tr><td class="k">NH농협중앙회</td><td>2025-10</td><td>차세대 정보계 — MetaMiner · DQMiner · DataHawk 6</td><td>3제품 묶음</td></tr>
+      <tr><td class="k">BNK부산은행</td><td>2026-05</td><td>MetaMiner · DQMiner · DataHawk 6</td><td>3제품 묶음</td></tr>
+      <tr><td class="k">SGI서울보증</td><td>2023-04 → 2025-01</td><td>차세대 — DataHawk · DQMiner · MetaMiner · 포털</td><td>거버넌스 플랫폼</td></tr>
+      <tr><td class="k">보건복지부 행복e음</td><td>2012-07</td><td>통합 데이터 관리 포털 — MetaMiner · DQMiner · ChangeMiner</td><td>공공 묶음</td></tr>
+      <tr><td class="k">예금보험공사</td><td>2017-11</td><td>MetaMiner 기반 표준관리체계 수립, 데이터 품질대상 장관상</td><td>공공 표준화</td></tr>
+      <tr><td class="k">삼성SDI</td><td>2008 → 2021</td><td>이메일로 받던 용어·모델 신청을 MetaMiner 로 시스템화, 이후 MES 로 확대</td><td>장기 고객</td></tr>
+    </tbody>
+  </table></div>
+  <div class="box"><span class="lbl">지티원도 "제품 + 표준화 컨설팅" 을 판다</span>
+    <p>예보 표준관리체계(2017), KCB·하나투어·스타벅스·KGC 표준화(2018~19), LF(2020~22), NIA 교육 공공데이터 표준화(2022~23), 근로복지공단 기관 표준사전 재구축(2024), 롯데카드(2025). 제품과 표준화 서비스를 묶어 파는 방식만으로는 차이가 나지 않는다.</p>
+  </div>
+
+  <h3><span class="no">8.4</span>공공 조달</h3>
+  <div class="grid2">
+    <figure class="fig">
+      <p class="ttl">조달청 디지털서비스몰 등록 단가</p>
+      <p class="sub">만 원 · 계약상품 데이터(등록 2021-01 ~ 2026-03) 전수 검색</p>
+      <div class="chart" style="height:230px"><canvas id="cMall" aria-label="META# 1억 500만, KS_META 1억, SMETA 8,580만, Metastream 8,100만, DQXpress 3,850만"></canvas></div>
+      <figcaption>MetaMiner·DQMiner·DataHawk·MetaCatalog 는 등록이 없다. 지티원 품목은 DQXpress V5 하나다(1Server, 2024-05 ~ 2027-05 제3자단가계약). 규격 단위는 제품마다 다를 수 있다.</figcaption>
+    </figure>
+    <div class="box"><span class="lbl">읽는 법</span>
+      <p>공공 메타 제품의 조달몰 단가는 8,100만~1억 500만 원대다. GS 인증 뒤 조달 등록을 할 때 기준선이 된다(§2).</p>
+      <p>MetaMiner 는 조달몰이 아니라 구축 사업 안에 들어가는 방식으로 공공에 납품해 왔다. 조달몰에서 지티원이 미는 건 DQXpress — 공공기관 DB 품질관리지침의 표준·구조·값 진단 보고서를 자동으로 만드는 경량 도구다. 우리가 개발 중인 표준 진단·구조 진단과 기능이 겹친다.</p>
+    </div>
+  </div>
+
+  <h3><span class="no">8.5</span>지금 위치</h3>
+  <div class="tbl"><table class="cmp">
+    <thead><tr><th>항목</th><th class="them">MetaMiner</th><th class="us">NavidM Meta 지금</th><th>다음 할 일</th></tr></thead>
+    <tbody>
+      <tr><td class="k">GS 인증</td><td><span class="st y">있음</span>6 버전 1등급 (2024-06-24)</td><td><span class="st p">준비 중</span>신청 서류 작성(KTR 양식)</td><td>1등급 완주 — 제품명 표기 통일·결함 정리 먼저</td></tr>
+      <tr><td class="k">조달몰 등록</td><td><span class="st n">없음</span>구축 사업으로 납품</td><td><span class="st n">없음</span>GS 인증 뒤 가능</td><td>GS 범위에 맞춰 메타 전체 또는 진단 도구로 (§2)</td></tr>
+      <tr><td class="k">고객</td><td><span class="st y">있음</span>로고 59개, 공급 보도 62건</td><td><span class="st n">없음</span>RAMS 진행 중</td><td>RAMS 를 첫 실사용 사례로</td></tr>
+      <tr><td class="k">공공 고객</td><td><span class="st y">있음</span>로고 23개, 공급 보도 17건 (2024년 이후 2건)</td><td><span class="st n">없음</span></td><td>같음</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sec" id="s9">
+  <div class="sec-h"><span class="no">9</span><h2>SMETA 자료 적재 — 분석 결과와 남은 일</h2><span class="abbr">SMETA_LOAD</span></div>
+  <p class="sum">국가기록원 RAMS 신규 구축 자료(SMETA 등록자료 0908판)를 우리 표준사전 세트에 올리기 위해 먼저 분석했다. <b>아직 실제로 적재하지 않았다.</b> 아래 숫자는 자료 분석 결과이고, 적재 뒤 결과는 달라질 수 있다.</p>
+  <div class="grid2">
+    <figure class="fig">
+      <p class="ttl">SMETA 등록자료 규모</p>
+      <p class="sub">RAMS 0908판, 단위 건</p>
+      <div class="bars" id="smetaBars"></div>
+    </figure>
+    <figure class="fig">
+      <p class="ttl">용어 끝단어 정합 — 분석상</p>
+      <p class="sub">분류어 696개를 우리 사전의 형식단어로 두었을 때</p>
+      <div class="chart" style="height:210px"><canvas id="cTermFit" aria-label="용어 14,972건 중 14,965건 정합"></canvas></div>
+      <figcaption>14,972건 중 14,965건(99.95%)의 끝단어가 맞는다. 예외 7건은 <code>BKNM</code>(서명)·<code>DESCR</code>(기술) 두 단어가 분류어 목록에서 빠진 경우다.</figcaption>
+    </figure>
+  </div>
+  <div class="grid2">
+    <figure class="fig">
+      <p class="ttl">SMETA 분류어 696개를 우리 사전에 대 보면</p>
+      <p class="sub">기본 사전(행안부 공통표준) 기준 단어 분류</p>
+      <div class="chart" style="height:220px"><canvas id="cClsf" aria-label="형식단어 545, 형식단어 아님 110, 사전에 없음 41"></canvas></div>
+      <figcaption>110개는 SMETA 가 형식단어가 아닌 단어를 분류어로 쓰는 경우다. 사전별로 형식단어 집합을 달리 두는 표준사전 세트 구조(98번)로 담을 수 있게 설계했지만, 실제 적재로 확인하지는 않았다.</figcaption>
+    </figure>
+    <figure class="fig">
+      <p class="ttl">정해야 할 분류어 8개</p>
+      <p class="sub">도메인그룹이 둘 이상으로 갈리는 영문약어 · 제안은 미확정</p>
+      <div class="tbl" style="margin:0"><table>
+        <thead><tr><th>약어</th><th>단어</th><th>갈리는 그룹</th><th>제안</th></tr></thead>
+        <tbody>
+          <tr><td><code>CD</code></td><td>코드</td><td>코드 / 코드(공통표준)</td><td>코드</td></tr>
+          <tr><td><code>EN</code></td><td>유무</td><td>여부 / 코드(공통표준)</td><td>여부</td></tr>
+          <tr><td><code>EXTN</code></td><td>확장자</td><td>명칭 / 코드</td><td>코드</td></tr>
+          <tr><td><code>GRD</code></td><td>등급</td><td>번호 / 코드</td><td>코드</td></tr>
+          <tr><td><code>ID</code></td><td>ID</td><td>명칭 / 아이디</td><td>아이디</td></tr>
+          <tr><td><code>LV</code></td><td>레벨</td><td>번호 / 코드</td><td>코드</td></tr>
+          <tr><td><code>SYMBL</code></td><td>기호</td><td>번호 / 코드</td><td>코드</td></tr>
+          <tr><td><code>YN</code></td><td>여부</td><td>여부 / 코드 / 코드(공통표준)</td><td>여부</td></tr>
+        </tbody>
+      </table></div>
+    </figure>
+  </div>
+  <h3>실적재까지 남은 일</h3>
+  <ol class="tight">
+    <li>엑셀 일괄등록에서 사전 선택 — 지금은 무조건 기본 사전으로 들어간다 (미구현)</li>
+    <li>분류어 8개의 도메인그룹 확정 — 위 표</li>
+    <li>양식 변환 — 영문약어·영문명 열 순서가 반대, 형식단어 여부는 도메인 분류어에서 도출</li>
+    <li>단어 → 도메인 → 용어 → 테이블·컬럼 순서로 적재하고 진단·자동 표준화를 실측</li>
+  </ol>
+  <p class="next"><b>방향</b>SMETA 자료 가져오기를 제품 기능으로 만들지는 RAMS 실적재 결과를 보고 정한다.</p>
+</section>
+
+<section class="sec" id="s10">
+  <div class="sec-h"><span class="no">10</span><h2>더 확인할 것</h2><span class="abbr">NEXT_CHK</span></div>
+  <p class="sum">공개 자료로는 끝까지 나오지 않은 것들이다. 위 세 줄은 집중 후보를 유지할지에 직접 걸려 있어, MetaMiner 데모·매뉴얼(고객사·SI 파트너 경유)로 먼저 확인할 만하다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>항목</th><th>왜 필요한가</th><th>지금까지 확인된 것</th></tr></thead>
+    <tbody>
+      <tr><td class="k">단어 분할·약어 생성·도메인 추천</td><td>§6.3 을 집중 후보로 둘지</td><td>한·영·일 자료와 보도자료 143건에 없다. 2020 광고의 MetaNorm 은 실체 불명</td></tr>
+      <tr><td class="k">진단 결과와 스크립트 생성의 연결</td><td>§6.7 을 집중 후보로 둘지</td><td>5.1 의 DDL 스크립트 출력만 확인</td></tr>
+      <tr><td class="k">업무별 표준사전의 동작</td><td>§6.2 를 집중 후보로 둘지</td><td>"업무별 표준사전 구축" (2019 기사) 문구뿐</td></tr>
+      <tr><td class="k">수집 DBMS·CASE 툴 목록</td><td>따라잡을 범위</td><td>"이기종 DBMS", 5.1 Hive·BigSQL. 툴 이름은 공식 자료에 없다</td></tr>
+      <tr><td class="k">결재 단계 구성 방식</td><td>다단계 결재선을 어디까지 만들지</td><td>디자이너로 코딩 없이 수정, 부분 승인·반려(5.1)</td></tr>
+      <tr><td class="k">표준 준수율·정합도 산식</td><td>같은 잣대로 비교하려면</td><td>지표 이름만 공개</td></tr>
+      <tr><td class="k">라이선스·가격</td><td>가격 정책</td><td>MetaMiner 는 조달몰 미등록. 참고로 일본 ChangeMiner 는 1,000만 엔부터(2019, 대리점 발표)</td></tr>
+      <tr><td class="k">MetaMiner 6 정식 출시일·차기 버전</td><td>기준선이 언제 바뀌는지</td><td>2022-09 첫 언급, 이후 신버전 발표 없음</td></tr>
+      <tr><td class="k">메타 시장 점유율</td><td>시장 규모 산정</td><td>업체별 수치 없음. "2강" 정성 평가와 2023 조달몰 SMETA 67% 뿐</td></tr>
+      <tr><td class="k">나라장터 공공 사업 금액</td><td>공공 구축 사업 단가</td><td>지티원·MetaMiner 가 명시된 공고는 접근이 막혀 찾지 못함</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sec appx" id="sA">
+  <div class="sec-h"><span class="no">A</span><h2>부록 A. NavidM Meta 현재 구현 상태</h2><span class="abbr">IMPL_STAT</span></div>
+  <p class="sum">2026-10-07 코드 기준. 기능이 코드에 있는지를 본 목록이고, 실사용 검증이나 완성도와는 별개다. 전수 목록(321건)은 94번 문서에 있다.</p>
+  <div class="grid2">
+    <figure class="fig">
+      <p class="ttl">코드 규모</p>
+      <p class="sub">모듈별 줄 수</p>
+      <div class="bars" id="locBars"></div>
+    </figure>
+    <figure class="fig">
+      <p class="ttl">구성 요소</p>
+      <p class="sub">개수</p>
+      <dl class="stats">
+        <div><dt>API 매핑</dt><dd>284</dd></div>
+        <div><dt>Vue 컴포넌트</dt><dd>67</dd></div>
+        <div><dt>Selenium 시나리오</dt><dd>61</dd></div>
+        <div><dt>메타 DB 테이블</dt><dd>52</dd></div>
+        <div><dt>메뉴 항목</dt><dd>41</dd></div>
+        <div><dt>매퍼 파일</dt><dd>24</dd></div>
+        <div><dt>컨트롤러</dt><dd>20</dd></div>
+        <div><dt>JUnit</dt><dd>7</dd></div>
+      </dl>
+    </figure>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>메뉴 그룹</th><th class="num">화면</th><th>구현된 것</th><th>빠진 것·제약</th></tr></thead>
+    <tbody>
+      <tr><td class="k">대시보드</td><td class="num">1</td><td>표준 사전 건수·승인 현황, 모델별 용어·단어·도메인 준수율, 최근 표준·구조 진단, 변경 이력, 빠른 실행</td><td class="dim">—</td></tr>
+      <tr><td class="k">표준 사전</td><td class="num">7</td><td>용어·단어·코드·도메인·도메인 그룹·도메인 분류·변경 이력. 등록·수정·삭제, 엑셀 업로드·다운로드·양식, 금칙어 차단, 이음동의어 경고, 영문약어 중복 확인, 형식단어 강제(사전 속성), 단어·도메인 영향도, 변경 전후 비교, 화면별 사전 선택</td><td class="dim">코드 엑셀 양식 없음. 코드·도메인그룹·분류 영향도 없음. 일괄등록 사전 선택 없음</td></tr>
+      <tr><td class="k">데이터 모델</td><td class="num">12</td><td>수집(스키마 범위 선택), 테이블·컬럼 그리드 편집, 한글명·영문명 기준 표준화, PK·FK 생성·삭제, 인덱스·제약조건 조회, DDL 다운로드, ERwin XML·XMI 가져오기, XMI 내보내기, ERD(PNG·PDF), 진단 제외 관리, 변경 신청·이력, [DB 반영]</td><td class="dim">재수집 때 삭제 미반영. 논리·물리 유형 선택 없음. 승인 우회 5경로</td></tr>
+      <tr><td class="k">표준 진단</td><td class="num">2</td><td>4유형 판정 + 준수율, 결과에서 용어 바로 등록, COMMENT·ALTER 스크립트, 사전 선택, 중복 실행 차단</td><td class="dim">결과 보고서 없음</td></tr>
+      <tr><td class="k">구조 진단</td><td class="num">2</td><td>컬럼·인덱스·제약조건 3축 추가/변경/삭제, 엑셀 3종</td><td class="dim">인덱스·제약은 Oracle·PostgreSQL 에서만</td></tr>
+      <tr><td class="k">표준화 도구</td><td class="num">2</td><td>한글컬럼 일괄 표준화(대상 모델·사전 선택 → 분석 → 검토 → 일괄 등록), 한글 변환 이력</td><td class="dim">추천 사전 0건. 정확도 미측정</td></tr>
+      <tr><td class="k">스케줄</td><td class="num">2</td><td>SIMPLE·CRON, 표준·구조·둘 다, 즉시 실행, 다음 5회 미리보기, 실행 이력</td><td class="dim">사전 없는 모델은 등록 차단</td></tr>
+      <tr><td class="k">마이페이지</td><td class="num">3</td><td>내 정보, 표준 사전 변경 요청 현황, 내 변경 신청 / (관리자) 변경 승인</td><td class="dim">—</td></tr>
+      <tr><td class="k">커뮤니티</td><td class="num">2</td><td>공지·Q&amp;A, 첨부, 상단 고정, 댓글</td><td class="dim">—</td></tr>
+      <tr><td class="k">관리</td><td class="num">6</td><td>사용자, 표준 사전 변경 승인, 데이터 모델 변경 승인, 영역 관리, 표준사전 관리, 데이터 소스</td><td class="dim">권한 관리자/일반 2단계. 역할 및 권한 화면 숨김</td></tr>
+      <tr><td class="k">꺼 둔 것</td><td class="num">6</td><td>데이터 품질 진단 — 룰 카탈로그 43종, 값 프로파일링, 업무 규칙 8유형, 컬럼 규칙 매핑, 추이 통계</td><td class="dim">2026-05-13 라인업 분리로 메뉴 꺼 둠</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tbl"><table>
+    <thead><tr><th>일자</th><th>94번(8/22) 이후 바뀐 것</th><th>커밋</th></tr></thead>
+    <tbody>
+      <tr><td class="k">08-23</td><td>PostgreSQL 수집 쿼리 4종 추가. 94번 문서의 "PostgreSQL 수집 0건" 은 해소됐다</td><td><code>3389f4f</code></td></tr>
+      <tr><td class="k">08-23</td><td>단건 컬럼 삭제·수정에 승인 이력, 반려 시 원복, 일반 사용자 자기 승인 차단, 미승인 용어를 진단 기준에서 제외</td><td><code>3389f4f</code></td></tr>
+      <tr><td class="k">08-29</td><td>화면·매뉴얼 제품명 Narae Meta → Navid Meta</td><td><code>bac5b92</code></td></tr>
+      <tr><td class="k">09-03 ~ 09-09</td><td>표준사전 세트(98번) 1~5단계</td><td><code>4393879</code> ~ <code>48b7b29</code></td></tr>
+      <tr><td class="k">09-14</td><td>엑셀 일괄등록 사전 회귀 수정</td><td><code>46b542d</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sec appx" id="sB">
+  <div class="sec-h"><span class="no">B</span><h2>부록 B. 참고: 지티원 회사·제품군</h2><span class="abbr">GTONE_REF</span></div>
+  <p class="sum">기준선이 되는 제품을 만든 회사의 배경이다. 참고로만 둔다.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>항목</th><th class="them">(주)지티원 GTOne</th></tr></thead>
+    <tbody>
+      <tr><td class="k">출발</td><td>법인 설립 2008-01-02. 아이티플러스(1998)가 MetaMiner·ChangeMiner 등 6개 제품을 약 40억 원에 넘기며 솔루션사업부가 독립 <span class="src">[DART·기사]</span></td></tr>
+      <tr><td class="k">대표·지배구조</td><td>대표 이수용. 이수용 외 5인 41.4%. 비상장 — 2024-02 NH투자증권과 코스닥 상장 주관 계약(2년 내 목표), 이후 진척 기사 없음</td></tr>
+      <tr><td class="k">인원</td><td>161명 (2026-08, 국민연금 기준)</td></tr>
+      <tr><td class="k">소재</td><td>서울 영등포 본사, 도쿄(미나토구 도라노몬)·베이징 사무소</td></tr>
+      <tr><td class="k">사업 영역</td><td>Data Governance · Application Governance · AI Governance · Financial Compliance · Digital Transformation</td></tr>
+      <tr><td class="k">매출 (감사보고서)</td><td>2025년 276.7억 — 솔루션 213.7 · 유지보수 58.0 · 상품 5.0. 영업손실 24.8억. 정점은 2023년 297.9억. 연구개발비 27.2억(2025)</td></tr>
+      <tr><td class="k">GS 인증</td><td>회사 전체 12건(2005~2024)</td></tr>
+      <tr><td class="k">스스로 밝힌 1위 분야</td><td>데이터 품질, 애플리케이션 변경·영향 분석, 자금세탁방지. 메타데이터 관리는 목록에 없다 <span class="src">[컴퓨터월드 2025-10]</span></td></tr>
+      <tr><td class="k">판매 채널</td><td>우리금융정보시스템(WIN-META, 2008~), 더존비즈온(ERP 10 과 MetaMiner 6 공동 공급, 2022~), 일본 대리점 12곳(주로 ChangeMiner)</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="fig">
+    <p class="ttl">지티원 매출·영업이익 — 발표와 실적</p>
+    <p class="sub">억 원 · 막대는 감사보고서 실적, 점선은 회사가 언론에 밝힌 전망</p>
+    <div class="chart" style="height:230px"><canvas id="cRev" aria-label="매출은 2015년 162.5억에서 2023년 297.9억 정점, 2025년 276.7억. 발표 전망은 2024년 340억, 2025년 350억, 2026년 400억"></canvas></div>
+    <div class="chart" style="height:150px;margin-top:10px"><canvas id="cOp" aria-label="영업이익은 2022년 25.9억, 2025년 마이너스 24.8억"></canvas></div>
+    <figcaption>DART 감사보고서(2015~2025), 컴퓨터월드·전자신문. 2024·2025 전망은 실적보다 각각 51억·73억 높았고, 2025년은 영업손실이다.</figcaption>
+  </figure>
+
+  <h3>지티원 제품군과 NavidM Meta 쪽 대응</h3>
+  <p>같은 자리에 놓이는 건 MetaMiner6 하나다. 지티원 플랫폼 그림에서 MetaMiner 의 역할은 "데이터 표준화 / 메타데이터 관리" 다. 나머지 제품은 대응하는 게 없고, 금융권 고객은 이것들을 묶어서 산다.</p>
+  <div class="lu-head"><span class="t">지티원 (판매 중)</span><span class="gapc"></span><span class="u">NavidM Meta 쪽 (지금 상태)</span></div>
+  <div class="lineup">
+    <div class="lu"><div class="l"><b>MetaMiner6</b><small>메타데이터 관리 — 표준·모델·수집·영향도·워크플로우</small></div><div class="mid"></div><div class="r"><b>NavidM Meta V1.0</b><small>같은 자리. 개발 중</small></div></div>
+    <div class="lu"><div class="l"><b>DQMiner6 · DQ IoT</b><small>데이터 품질 — 프로파일링·업무 규칙·원인 추적·클린징·모니터링</small></div><div class="mid partial"></div><div class="r part"><b>품질 진단 모듈</b><small>코드만 있고 메뉴는 꺼 둠</small></div></div>
+    <div class="lu"><div class="l"><b>DQXpress V5</b><small>공공기관 DB 품질관리지침의 표준·구조·값 진단 보고서 자동화. 조달몰 3,850만 원</small></div><div class="mid partial"></div><div class="r part"><b>표준 진단 · 구조 진단</b><small>진단 기능은 겹친다(구현·미검증). 지침 양식 보고서는 설계만</small></div></div>
+    <div class="lu"><div class="l"><b>ChangeMiner</b><small>DB·메타 변경이 프로그램에 주는 영향 분석. 일본 판매의 주력</small></div><div class="mid partial"></div><div class="r part"><b>구조 변경 진단 (일부)</b><small>DB 구조 변경만 본다</small></div></div>
+    <div class="lu"><div class="l"><b>DataHawk</b><small>컬럼 레벨 리니지 — 80개 이상 언어·DB 파서</small></div><div class="mid none"></div><div class="r gap"><b>없음</b><small>만들지 않는다</small></div></div>
+    <div class="lu"><div class="l"><b>MetaCatalog v3</b><small>데이터 카탈로그 — 비정형 문서, ML 태깅, LLM 설명</small></div><div class="mid none"></div><div class="r gap"><b>없음</b><small>만들지 않는다</small></div></div>
+    <div class="lu"><div class="l"><b>DCMiner · Meta-Transformer</b><small>데이터 정제 · DBMS 변환</small></div><div class="mid none"></div><div class="r gap"><b>없음</b></div></div>
+    <div class="lu"><div class="l"><b>SQLMiner · CodePrism · SecurityPrism</b><small>SQL 분석 · 소스 코드 분석 · 보안 분석</small></div><div class="mid none"></div><div class="r gap"><b>없음</b></div></div>
+    <div class="lu"><div class="l"><b>AMLXpress</b><small>금융 컴플라이언스(자금세탁방지)</small></div><div class="mid none"></div><div class="r gap"><b>없음</b><small>범위 밖</small></div></div>
+    <div class="lu"><div class="l none"><b>MetaNorm (2020·2021 광고)</b><small>단어·용어·도메인 표준화 작업 지원. 지금 라인업에 없음</small></div><div class="mid partial"></div><div class="r part"><b>한글컬럼 일괄 표준화</b><small>같은 자리를 지티원도 한때 겨냥했다</small></div></div>
+  </div>
+  <p class="dim" style="font-size:13px">실선 = 같은 자리 · 점선 = 일부 겹침 · 점 = 대응 없음</p>
+
+  <details class="more">
+    <summary>지티원 GS 인증 12건 (TTA 인증제품 목록)</summary>
+    <div class="in"><div class="tbl"><table>
+      <thead><tr><th>제품</th><th>인증번호</th><th>인증일</th></tr></thead>
+      <tbody>
+        <tr><td class="k">메타마이너 6</td><td><code>24-0275</code></td><td>2024-06-24</td></tr>
+        <tr><td class="k">디큐마이너 6</td><td><code>24-0276</code></td><td>2024-06-24</td></tr>
+        <tr><td class="k">DQXpress V5</td><td><code>22-0155</code></td><td>2022-04-04</td></tr>
+        <tr><td class="k">체인지마이너 V10</td><td><code>21-0320</code></td><td>2021-06-28</td></tr>
+        <tr><td class="k">DQMiner for IoT v2</td><td><code>20-0354</code></td><td>2020-08-20</td></tr>
+        <tr><td class="k">아이폼 v2.0</td><td><code>11-0232</code></td><td>2011-12-12</td></tr>
+        <tr><td class="k">AMLExpress v1.0</td><td><code>09-0043</code></td><td>2009-03-09</td></tr>
+        <tr><td class="k">ChangeFlow v5.0</td><td><code>08-0139</code></td><td>2008-06-30</td></tr>
+        <tr><td class="k">MetaMiner v3.0</td><td><code>08-0066</code></td><td>2008-03-24</td></tr>
+        <tr><td class="k">jStar v2.3</td><td><code>08-0171</code></td><td>2008-01-29</td></tr>
+        <tr><td class="k">DQMiner v3.0</td><td><code>08-0170</code></td><td>2006-11-06</td></tr>
+        <tr><td class="k">ChangeMiner v3.2</td><td><code>08-0169</code></td><td>2005-06-17</td></tr>
+      </tbody>
+    </table></div>
+    <p class="dim" style="font-size:13px">2005·2006 인증은 아이티플러스 시절 것이 2008년 지티원 명의로 다시 등록된 것으로 보인다. MetaMiner 의 CC 인증·보안기능확인서는 없다(지티원 CC 는 SecurityPrism 건).</p></div>
+  </details>
+</section>
+
+<section class="sec appx" id="sC">
+  <div class="sec-h"><span class="no">C</span><h2>부록 C. 비교 방법</h2><span class="abbr">CMPR_MTHD</span></div>
+  <div class="tbl"><table>
+    <thead><tr><th>쪽</th><th>근거</th><th>무엇을 확인했나</th></tr></thead>
+    <tbody>
+      <tr><td class="k tag-them">MetaMiner</td><td>지티원 홈페이지(한·영·일), 보도자료 143건, 업계 기사(2008~2026), TTA 인증 목록, DART 감사보고서, 조달몰 계약 데이터</td><td>공개된 문구까지. 매뉴얼·데모·가격은 확보하지 못했다</td></tr>
+      <tr><td class="k tag-us">NavidM Meta</td><td>저장소 코드 직접 대조(커밋 <code>bbe4a24</code>), 개발 DB 실측</td><td>기능이 코드에 있는지까지. 실데이터·실사용·GS 시험은 아직 거치지 않았다</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>비교가 비대칭이다.</b> 상대는 판매 중인 제품의 공개 문구이고, 우리는 개발 중인 코드다. MetaMiner 의 "있음" 은 지티원이 공개 자료에 그렇게 적었다는 뜻이고, 우리의 "구현·미검증" 은 코드에 있지만 실사용과 GS 시험을 거치지 않았다는 뜻이다. 둘을 같은 무게로 읽으면 안 된다.</p>
+  <div class="grid2">
+    <div class="fig">
+      <p class="ttl">상태 표기</p>
+      <p style="margin:6px 0"><span class="tag-them" style="font-size:12px">MetaMiner</span> <span class="st y">있음</span> <span class="st p">부분</span> <span class="st u">공개 자료 없음</span></p>
+      <p style="margin:6px 0"><span class="tag-us" style="font-size:12px">NavidM Meta</span> <span class="st t">구현·미검증</span> <span class="st p">부분 구현</span> <span class="st d">설계만</span> <span class="st off">꺼 둠</span> <span class="st n">미구현</span></p>
+      <p class="sub" style="margin:8px 0 0">"공개 자료 없음" 은 없다는 뜻이 아니다. 찾지 못했다는 뜻이다.</p>
+    </div>
+    <div class="fig">
+      <p class="ttl">개발 방향 표기</p>
+      <ul class="tight" style="font-size:13.5px;margin:4px 0;padding-left:0;list-style:none">
+        <li><span class="dir a">따라잡기</span> 시장 기준선. 없으면 입찰·GS 에서 막힌다</li>
+        <li><span class="dir b">완성하기</span> 만들어 둔 게 있지만 미완성·미검증</li>
+        <li><span class="dir c">집중 후보</span> 개발을 몰아줄 후보. 검증 전 가설</li>
+        <li><span class="dir d">범위 밖·보류</span> 지금은 만들지 않는다 (별도 제품 포함)</li>
+      </ul>
+    </div>
+  </div>
+  <div class="box warn"><span class="lbl">원칙</span>
+    <p>한 기사에 여러 회사가 나오면 문단 단위로 어느 회사 이야기인지 확인했다. 검색 요약기가 만들어 낸 문구(예: "우리은행·신한은행 고객", "CWM 준거 구조정합성 보장")는 원문에 없어서 쓰지 않았다. 계획·비전 발표는 출시 기능과 따로 적었다.</p>
+  </div>
+</section>
+
+<section class="sec appx" id="sD">
+  <div class="sec-h"><span class="no">D</span><h2>부록 D. 100번 문서에서 바로잡은 것</h2><span class="abbr">ERRATA</span></div>
+  <ul class="tight">
+    <li>표현 — 100번은 개발 중인 우리 제품을 "이길 수 있는 곳"·"무기" 처럼 완성품 기준으로 적었다. 이 보고서는 개발 방향으로 바꿨다.</li>
+    <li>매출 — 회사 발표 예상치(2024 340억, 2025 350억) 대신 감사보고서 실적: 2024 289.4억, 2025 276.7억(영업손실 24.8억)</li>
+    <li>고객 — "금융 중심, 공공 MMS 수주 기사 없음" 이 아니다. 로고 59개 중 공공 23개, 공공 공급 보도 17건</li>
+    <li>고객 명단 — IBK투자증권·MG손해보험·수협은행·대신증권·한국은행은 공식 로고·보도에서 확인되지 않는다</li>
+    <li>일본 고객 6곳 — 대부분 ChangeMiner 고객이다. 일본어 뉴스 896건 중 일본 기업의 MetaMiner 도입 기사는 0건</li>
+    <li>예약 진단 — MetaMiner 에도 스케줄러와 비표준 데이터 주기 점검이 있다</li>
+    <li>제품 수 — 8개 이상이 아니라 13개 이상</li>
+  </ul>
+</section>
+
+<section class="sec appx" id="sE">
+  <div class="sec-h"><span class="no">E</span><h2>부록 E. 출처</h2><span class="abbr">SRC</span></div>
+  <p class="sum">확인일은 2026-10-07.</p>
+  <h3>지티원 공식</h3>
+  <ul class="tight">
+    <li>MetaMiner 제품 페이지 — <a href="https://www.gtone.co.kr/kr/metadata-management-system.php" target="_blank" rel="noopener">한국어</a> · <a href="https://www.gtone.co.kr/en/metadata-management-system.php" target="_blank" rel="noopener">영어</a> · <a href="https://www.gtone.co.kr/jp/metadata-management-system.php" target="_blank" rel="noopener">일본어</a></li>
+    <li><a href="https://www.gtone.co.kr/kr/data-governance.php" target="_blank" rel="noopener">데이터 거버넌스 플랫폼</a> · <a href="https://www.gtone.co.kr/kr/certification.php" target="_blank" rel="noopener">인증</a> · <a href="https://www.gtone.co.kr/en/partners.php" target="_blank" rel="noopener">파트너</a> · <a href="https://www.gtone.co.kr/en/company.php" target="_blank" rel="noopener">회사 소개</a></li>
+    <li><a href="https://gtone.co.kr/en/data-lineage.php" target="_blank" rel="noopener">DataHawk</a> · <a href="https://www.gtone.co.kr/en/data-quality-management-system.php" target="_blank" rel="noopener">DQMiner</a> · <a href="https://www.gtone.co.kr/en/data-quality-diagnosis-tool.php" target="_blank" rel="noopener">DQXpress</a> · <a href="https://www.gtone.co.kr/en/database-impact-analysis.php" target="_blank" rel="noopener">ChangeMiner</a></li>
+    <li>회사소식 게시판 (<code>board_read.php?dbname=news&amp;num=N</code>) — 롯데카드 1426·1514, 농협중앙회 1479, 부산은행 1544, SGI서울보증 1190·1417, 행복e음 185, 예보 520, 삼성SDI 862, 출범 6·10·12</li>
+    <li>2009 일본어 구판 제품 페이지 — <a href="http://web.archive.org/web/20090518170747/http://www.gtone.co.kr:80/jpn/main/ag/mg.php" target="_blank" rel="noopener">웹 아카이브</a></li>
+  </ul>
+  <h3>공시·인증·조달</h3>
+  <ul class="tight">
+    <li>DART 감사보고서 — <a href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20260331000115" target="_blank" rel="noopener">2025</a> · <a href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20240329001661" target="_blank" rel="noopener">2023</a> · <a href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=20170403001853" target="_blank" rel="noopener">2016</a></li>
+    <li><a href="https://cs.tta.or.kr/tta/notification/ttaCertProductListR.do" target="_blank" rel="noopener">TTA 인증제품 목록</a> — 기업명 지티원, 12건</li>
+    <li><a href="https://www.data.go.kr/data/15131726/fileData.do" target="_blank" rel="noopener">조달청 디지털서비스몰 계약상품정보</a> (공공데이터포털, 2026-03-06 기준)</li>
+    <li><a href="https://kdata.or.kr/kr/board/info_11/boardView.do?bbsIdx=38688" target="_blank" rel="noopener">K-DATA 2024 데이터산업현황조사</a></li>
+  </ul>
+  <h3>기사</h3>
+  <ul class="tight">
+    <li>컴퓨터월드 — <a href="https://www.comworld.co.kr/news/articleView.html?idxno=49095" target="_blank" rel="noopener">2016-10 (5.0)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=49321" target="_blank" rel="noopener">2017-09 (5.1)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=49727" target="_blank" rel="noopener">2019-09 (5.3)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=51168" target="_blank" rel="noopener">2024-06 (DQXpress 조달)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=51169" target="_blank" rel="noopener">2024-06 (메타카탈로그)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=51270" target="_blank" rel="noopener">2024-09 (갭 분석)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=51706" target="_blank" rel="noopener">2025-09 (AI)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=51798" target="_blank" rel="noopener">2025-10 (1위 분야)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=52217" target="_blank" rel="noopener">2026-09 (고객의 날)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=51635" target="_blank" rel="noopener">2025-07 (엔코아 META# AI)</a> · <a href="https://www.comworld.co.kr/news/articleView.html?idxno=51564" target="_blank" rel="noopener">2025-05 (수협중앙회)</a></li>
+    <li>전자신문 — <a href="https://www.etnews.com/20240626000355" target="_blank" rel="noopener">2024-06 (GS 1등급)</a> · <a href="https://www.etnews.com/20220929000125" target="_blank" rel="noopener">2022-09 (MetaMiner 6 첫 언급)</a> · <a href="https://www.etnews.com/20240206000103" target="_blank" rel="noopener">2024-02 (상장 주관사)</a> · <a href="https://www.etnews.com/20251117000196" target="_blank" rel="noopener">2025-11 (인터뷰)</a></li>
+    <li>아이티데일리 — <a href="https://www.itdaily.kr/news/articleView.html?idxno=217898" target="_blank" rel="noopener">2023-11</a> · <a href="https://www.itdaily.kr/news/articleView.html?idxno=228245" target="_blank" rel="noopener">2024-11</a> · <a href="https://www.itdaily.kr/news/articleView.html?idxno=238115" target="_blank" rel="noopener">2026-02 (MetaCatalog v3)</a></li>
+    <li><a href="https://www.digitaltoday.co.kr/news/articleView.html?idxno=2365" target="_blank" rel="noopener">디지털투데이 2008-01 (제품 인수)</a> · <a href="https://www.ddaily.co.kr/page/view/2026032621253854425" target="_blank" rel="noopener">디지털데일리 2026-03 (2강 구도)</a></li>
+    <li>일본 — <a href="http://web.archive.org/web/20160712221543/http://www.drinet.co.jp:80/press/09_04_22.html" target="_blank" rel="noopener">DRI 대리점 계약 2009</a> · <a href="https://www.ashisuto.co.jp/product/category/application-governance/changeminer/" target="_blank" rel="noopener">アシスト ChangeMiner</a> · <a href="https://www.atpress.ne.jp/news/182373" target="_blank" rel="noopener">ChangeMiner 가격 2019</a></li>
+  </ul>
+  <h3>사내 문서 (저장소 루트 기준)</h3>
+  <ul class="tight">
+    <li><code>dataQ설계/100_메타마이너_비교_및_제품화_제안_2026-10-02.md</code> — 이전 요약판 (부록 D 로 정정)</li>
+    <li><code>dataQ설계/94_기능명세_전수_2026-08-22.md</code> — 기능 321건 (코드 존재 기준)</li>
+    <li><code>dataQ설계/98_표준사전_세트_설계_2026-09-03.md</code> — 표준사전 세트</li>
+    <li><code>dataQ설계/25_공공DB표준화지침_준수현황.md</code> — 별표1 자체 점검</li>
+    <li><code>dataQ설계/경쟁사/10_경쟁사분석_및_TODO.md</code> — SMETA·WiseMeta·MetaStream</li>
+  </ul>
+</section>
+
+<footer class="end">작성 2026-10-07 · 수정 2026-10-08 · (주)나래데이터 내부 검토용 · 상대 제품 정보는 공개 자료 기준</footer>
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+  var css = function(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); };
+  var fmt = function(n){ return n.toLocaleString('ko-KR'); };
+
+  function bars(id, rows){
+    var el = document.getElementById(id); if(!el) return;
+    var max = Math.max.apply(null, rows.map(function(r){ return r[1]; }));
+    el.innerHTML = rows.map(function(r){
+      var w = (r[1] / max * 100).toFixed(1);
+      return '<div class="bar"><span>'+r[0]+'</span><div class="track"><div class="fill" style="width:'+w+'%"></div></div><span class="val">'+fmt(r[1])+'</span></div>';
+    }).join('');
+  }
+  function pbars(id, rows){
+    var el = document.getElementById(id); if(!el) return;
+    el.innerHTML = rows.map(function(r){
+      var c = r[2] || 'var(--us)';
+      return '<div class="bar"><span>'+r[0]+'</span><div class="track"><div class="fill" style="width:'+r[1]+'%;background:'+c+'"></div></div><span class="val">'+String(r[1])+'%</span></div>';
+    }).join('');
+  }
+  bars('smetaBars', [['용어',14972],['단어',3497],['분류어(고유)',696],['도메인',642]]);
+  bars('locBars', [['Vue 화면',36024],['q-center Java',17296],['매퍼 XML',7062],['q-executor Java',5238],['q-common Java',3251]]);
+  pbars('guideBars', [['단어 9/9',100],['도메인 12/12',100],['코드 7/9',77.8],['용어 7/10',70],['전체 35/40',87.5,'var(--ink)']]);
+
+  /* 개발 방향 지도 — 집계와 거르기 */
+  var map = document.getElementById('dirMap');
+  var groups = [];
+  if(map){
+    var rows = Array.prototype.slice.call(map.querySelectorAll('tbody tr[data-v]'));
+    var cnt = {a:0, b:0, c:0, d:0, e:0};
+    var cur = null;
+    Array.prototype.forEach.call(map.querySelectorAll('tbody tr'), function(tr){
+      if(tr.classList.contains('grp')){ cur = {name:tr.textContent.trim(), a:0, b:0, c:0, d:0, e:0}; groups.push(cur); return; }
+      var v = tr.getAttribute('data-v'); if(!v) return;
+      cnt[v]++; if(cur) cur[v]++;
+    });
+    ['a','b','c','d'].forEach(function(k){ var el = document.getElementById('t' + k.toUpperCase()); if(el) el.textContent = cnt[k]; });
+
+    var btns = Array.prototype.slice.call(document.querySelectorAll('.tally button'));
+    var grpRows = Array.prototype.slice.call(map.querySelectorAll('tbody tr.grp'));
+    var note = document.getElementById('filterNote');
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        var on = b.getAttribute('aria-pressed') !== 'true';
+        btns.forEach(function(x){ x.setAttribute('aria-pressed', 'false'); });
+        var v = on ? b.getAttribute('data-v') : null;
+        if(on) b.setAttribute('aria-pressed', 'true');
+        rows.forEach(function(r){ r.hidden = !!v && r.getAttribute('data-v') !== v; });
+        grpRows.forEach(function(g){
+          var n = g.nextElementSibling, any = false;
+          while(n && !n.classList.contains('grp')){ if(!n.hidden) any = true; n = n.nextElementSibling; }
+          g.hidden = !any;
+        });
+        if(note){
+          note.hidden = !on;
+          if(on) note.textContent = '"' + b.querySelector('span').textContent + '" 만 보는 중이다. 같은 타일을 다시 누르면 전체가 보인다.';
+        }
+        if(on){
+          var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          map.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block: 'start'});
+        }
+      });
+    });
+  }
+
+  if(!window.Chart) return;
+  var charts = [];
+  function build(){
+    charts.forEach(function(c){ c.destroy(); }); charts = [];
+    Chart.defaults.font.family = css('--font-body');
+    Chart.defaults.color = css('--muted');
+    Chart.defaults.borderColor = css('--line');
+    var el;
+    var won = function(v){ return v + '억'; };
+    var years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025'];
+
+    el = document.getElementById('cRev');
+    if(el) charts.push(new Chart(el, {
+      data:{
+        labels: years.concat(['2026']),
+        datasets:[
+          {type:'bar', label:'매출 (감사보고서)', data:[162.5,191.9,190.3,179.1,202.8,217.7,243.9,261.6,297.9,289.4,276.7,null], backgroundColor:css('--them'), borderRadius:3, order:2},
+          {type:'line', label:'회사가 밝힌 전망', data:[null,null,null,null,null,null,null,null,null,340,350,400], borderColor:css('--warn'), backgroundColor:css('--warn'), borderDash:[5,4], pointRadius:4, pointHoverRadius:5, order:1}
+        ]
+      },
+      options:{
+        maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom'}, tooltip:{callbacks:{label:function(c){ return c.raw == null ? '' : ' '+c.dataset.label+' '+c.raw+'억'; }}}},
+        scales:{y:{beginAtZero:true, suggestedMax:420, ticks:{callback:won}}, x:{grid:{display:false}}}
+      }
+    }));
+
+    el = document.getElementById('cOp');
+    var op = [18.1,25.8,4.4,-15.8,4.6,11.3,14.2,25.9,15.3,3.9,-24.8];
+    if(el) charts.push(new Chart(el, {
+      type:'bar',
+      data:{labels:years, datasets:[{label:'영업이익', data:op, backgroundColor:op.map(function(v){ return v < 0 ? css('--bad') : css('--even'); }), borderRadius:2}]},
+      options:{
+        maintainAspectRatio:false,
+        plugins:{legend:{display:false}, title:{display:true, text:'영업이익', align:'start', color:css('--muted'), font:{size:12, weight:'600'}}, tooltip:{callbacks:{label:function(c){ return ' 영업이익 '+c.raw+'억'; }}}},
+        scales:{y:{ticks:{callback:won}}, x:{grid:{display:false}}}
+      }
+    }));
+
+    var cats = [css('--cat-pub'), css('--cat-fin'), css('--cat-pri'), css('--cat-ovs')];
+
+    el = document.getElementById('cCust');
+    if(el) charts.push(new Chart(el, {
+      type:'doughnut',
+      data:{labels:['공공','금융','민간','해외'], datasets:[{data:[23,17,16,3], backgroundColor:cats, borderColor:css('--surface'), borderWidth:2}]},
+      options:{maintainAspectRatio:false, cutout:'58%', plugins:{legend:{position:'bottom'}, tooltip:{callbacks:{label:function(c){ return ' '+c.label+' '+c.raw+'곳'; }}}}}
+    }));
+
+    el = document.getElementById('cSupply');
+    if(el) charts.push(new Chart(el, {
+      type:'bar',
+      data:{
+        labels:['2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026 (7월)'],
+        datasets:[
+          {label:'공공', data:[0,0,2,1,1,0,0,1,0,1,1,4,2,2,0,0,2,0,0], backgroundColor:cats[0]},
+          {label:'금융', data:[2,2,2,0,0,0,0,1,0,0,0,1,1,1,1,2,5,5,1], backgroundColor:cats[1]},
+          {label:'민간', data:[2,1,0,0,0,2,0,0,0,0,1,1,4,2,0,0,2,3,1], backgroundColor:cats[2]},
+          {label:'해외', data:[0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0], backgroundColor:cats[3]}
+        ]
+      },
+      options:{
+        maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom'}, tooltip:{mode:'index', filter:function(i){ return i.raw > 0; }, callbacks:{label:function(c){ return ' '+c.dataset.label+' '+c.raw+'건'; }}}},
+        scales:{x:{stacked:true, grid:{display:false}}, y:{stacked:true, beginAtZero:true, ticks:{stepSize:1}}}
+      }
+    }));
+
+    el = document.getElementById('cMall');
+    if(el) charts.push(new Chart(el, {
+      type:'bar',
+      data:{
+        labels:['META# v4.0 (엔코아)','KS_META v1.0 (한국정보기술단)','SMETA 1.0 (비투엔)','Metastream V3.0 (데이터스트림즈)','DQXpress V5 (지티원 · 품질 진단)'],
+        datasets:[{label:'등록 단가', data:[10500,10000,8580,8100,3850], backgroundColor:[css('--unk'),css('--unk'),css('--unk'),css('--unk'),css('--them')], borderRadius:3}]
+      },
+      options:{
+        indexAxis:'y', maintainAspectRatio:false,
+        plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(c){ return ' '+c.raw.toLocaleString('ko-KR')+'만 원'; }}}},
+        scales:{x:{beginAtZero:true, ticks:{callback:function(v){ return v.toLocaleString('ko-KR')+'만'; }}}, y:{grid:{display:false}}}
+      }
+    }));
+
+    el = document.getElementById('cTermFit');
+    if(el) charts.push(new Chart(el, {
+      type:'doughnut',
+      data:{labels:['정합 (분석상)','예외 (BKNM·DESCR)'], datasets:[{data:[14965,7], backgroundColor:[css('--us'), css('--bad')], borderColor:css('--surface'), borderWidth:2}]},
+      options:{maintainAspectRatio:false, cutout:'72%', plugins:{legend:{position:'bottom'}, tooltip:{callbacks:{label:function(c){ return ' '+c.label+' '+fmt(c.raw)+'건'; }}}}}
+    }));
+
+    el = document.getElementById('cClsf');
+    if(el) charts.push(new Chart(el, {
+      type:'doughnut',
+      data:{labels:['우리 사전의 형식단어','형식단어 아님','우리 사전에 없음'], datasets:[{data:[545,110,41], backgroundColor:[css('--us'), css('--warn'), css('--unk')], borderColor:css('--surface'), borderWidth:2}]},
+      options:{maintainAspectRatio:false, cutout:'60%', plugins:{legend:{position:'bottom'}, tooltip:{callbacks:{label:function(c){ return ' '+c.label+' '+fmt(c.raw)+'개'; }}}}}
+    }));
+
+    el = document.getElementById('cSummary');
+    if(el && groups.length) charts.push(new Chart(el, {
+      type:'bar',
+      data:{
+        labels:groups.map(function(g){ return g.name; }),
+        datasets:[
+          {label:'따라잡기', data:groups.map(function(g){ return g.a; }), backgroundColor:css('--bad')},
+          {label:'완성하기', data:groups.map(function(g){ return g.b; }), backgroundColor:css('--warn')},
+          {label:'집중 후보 (가설)', data:groups.map(function(g){ return g.c; }), backgroundColor:css('--us')},
+          {label:'범위 밖·보류', data:groups.map(function(g){ return g.d; }), backgroundColor:css('--unk')}
+        ]
+      },
+      options:{
+        indexAxis:'y', maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom'}, tooltip:{mode:'index', filter:function(i){ return i.raw > 0; }, callbacks:{label:function(c){ return ' '+c.dataset.label+' '+c.raw; }}}},
+        scales:{x:{stacked:true, beginAtZero:true, ticks:{stepSize:1}}, y:{stacked:true, grid:{display:false}}}
+      }
+    }));
+  }
+  build();
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(build); }
+  try{
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', build);
+    new MutationObserver(build).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  }catch(e){}
+})();
+</script>
