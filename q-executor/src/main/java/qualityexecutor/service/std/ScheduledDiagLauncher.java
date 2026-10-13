@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.ndata.quality.model.std.DiagScheduleLogVo;
 import com.ndata.quality.model.std.DiagScheduleVo;
 import com.ndata.quality.model.std.StdDiagJobVo;
+import com.ndata.quality.service.GovMetaService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,6 +40,9 @@ public class ScheduledDiagLauncher {
 
     @Autowired
     private ApplicationContext appContext;
+
+    @Autowired
+    private GovMetaService govMetaService;
 
     /**
      * 스케줄 1건 실행. 이미 LOG_ID 가 있으면(runNow) 그 로그를 사용, 없으면 새로 생성.
@@ -77,6 +81,14 @@ public class ScheduledDiagLauncher {
                 p.put("logId",        logId);
                 p.put("structDiagId", structDiagId);
                 sql.update("diagSchedule.setLogStructDiagId", p);
+            }
+            // 104번 WP5-78 — 범정부 메타 생성 전 검증 (모델 = DB 단위). 파일 생성·전송은 규격을 받은 뒤
+            if ("GOV_META".equals(diagType)) {
+                String sendId = startGovMeta(sc, logId);
+                Map<String, Object> p = new HashMap<>();
+                p.put("logId",         logId);
+                p.put("govMetaSendId", sendId);
+                sql.update("diagSchedule.setLogGovMetaSendId", p);
             }
 
             return logId;
@@ -164,6 +176,17 @@ public class ScheduledDiagLauncher {
         t.setDaemon(true);
         t.start();
         return diagId;
+    }
+
+    /** GovMetaService.validate 를 별도 Thread 로 — 완료는 DiagSchedulerRunner 가 TB_GOV_META_SEND.STATUS 로 본다 */
+    private String startGovMeta(DiagScheduleVo sc, String logId) {
+        String sendId = GovMetaService.newSendId();
+        String userId = sc.getCretUserId() != null ? sc.getCretUserId() : "SCHEDULER";
+        Thread t = new Thread(() -> govMetaService.validate(sendId, "SCHEDULE", null, sc.getDataModelId(), logId, userId),
+                "GovMetaValidate-" + sendId.substring(0, 8));
+        t.setDaemon(true);
+        t.start();
+        return sendId;
     }
 
     /** 실패 메시지를 ERROR_MSG 형식(prefix + 한 줄)으로 요약 */

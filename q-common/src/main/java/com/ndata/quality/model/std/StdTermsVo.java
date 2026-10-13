@@ -21,6 +21,10 @@ public class StdTermsVo {
 	private String chrgOrg;
 	private String[] allophSynmLst;
 	private String commStndYn;
+	private String privYn;   // 104번 WP5-16 — 개인정보여부 (용어는 NULL 이면 도메인 값)
+	private String encrYn;   // 104번 WP5-16 — 암호화여부 (용어는 NULL 이면 도메인 값)
+	private String domainPrivYn;   // 조회 전용 — 용어 도메인의 개인정보여부
+	private String domainEncrYn;   // 조회 전용 — 용어 도메인의 암호화여부
 	private String magntdOrd;
 	private String aprvYn = "N";	// default : N
 	private String aprvUserId;

@@ -740,6 +740,7 @@
 			,APRV_USER_ID
 			,APRV_DT
 			,SUBMISSION_ID
+			,DBMS_DATA_TYPE
            )
            VALUES
            (
@@ -776,6 +777,7 @@
 			,#{aprvUserId, jdbcType=VARCHAR}
 			,#{aprvDt, jdbcType=VARCHAR}
 			,#{submissionId, jdbcType=VARCHAR}
+			,#{dbmsDataType, jdbcType=VARCHAR}
 		   )
 		   ON CONFLICT (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) DO UPDATE SET
 			ATTR_COMMENT = EXCLUDED.ATTR_COMMENT,
@@ -798,7 +800,9 @@
 			REQ_DT            = EXCLUDED.REQ_DT,
 			APRV_USER_ID      = EXCLUDED.APRV_USER_ID,
 			APRV_DT           = EXCLUDED.APRV_DT,
-			SUBMISSION_ID     = EXCLUDED.SUBMISSION_ID
+			SUBMISSION_ID     = EXCLUDED.SUBMISSION_ID,
+			<!-- 104번 WP5-78 — 수집 원본 타입. 화면 저장(값 없음)은 기존 값을 둔다 -->
+			DBMS_DATA_TYPE    = COALESCE(EXCLUDED.DBMS_DATA_TYPE, TB_DATA_MODEL_ATTR.DBMS_DATA_TYPE)
 	</insert>
 
 	<!-- OBJ UPSERT (MERGE): 수집 시 기존 행 갱신, 신규 행 삽입 -->

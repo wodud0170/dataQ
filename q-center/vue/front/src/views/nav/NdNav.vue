@@ -182,6 +182,16 @@
                         <v-list-item-title>데이터 모델 시각화</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 104번 WP5-16 개인정보 컬럼 -->
+                    <v-list-item link id="nav_privColumn" href="#tab_privColumn"
+                        active-class="ndColor--text" title="개인정보 컬럼"
+                        v-on:click.stop="addTabItem('개인정보 컬럼', 'privColumn');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>개인정보 컬럼</v-list-item-title>
+                    </v-list-item>
+
                     <v-list-item link id="nav_diagTargetMgmt" href="#tab_diagTargetMgmt"
                         active-class="ndColor--text" title="진단 제외 관리"
                         v-on:click.stop="addTabItem('진단 제외 관리', 'diagTargetMgmt');">
@@ -389,6 +399,48 @@
                     </v-list-item>
                 </v-list-group>
 
+                <!-- 104번 WP5-78 범정부 메타 -->
+                <v-list-group link v-cloak :value="navGovMetaGroup" prepend-icon="mdi-bank-transfer"
+                    active-class="ndColor--text" id="govMetaGroup" title="범정부 메타" v-on:click.stop="addNavGroupData('govMetaGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">범정부 메타</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_govMetaConf" href="#tab_govMetaConf" active-class="ndColor--text" title="설정"
+                        v-on:click.stop="addTabItem('범정부 메타 설정', 'govMetaConf');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>설정</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_govMetaSys" href="#tab_govMetaSys" active-class="ndColor--text" title="정보시스템·DB"
+                        v-on:click.stop="addTabItem('정보시스템·DB', 'govMetaSys');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>정보시스템·DB</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_govMetaItems" href="#tab_govMetaItems" active-class="ndColor--text" title="테이블·컬럼"
+                        v-on:click.stop="addTabItem('테이블·컬럼', 'govMetaItems');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>테이블·컬럼</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item link id="nav_govMetaSend" href="#tab_govMetaSend" active-class="ndColor--text" title="생성·전송"
+                        v-on:click.stop="addTabItem('생성·전송', 'govMetaSend');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>생성·전송</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
                 <!-- 마이페이지 -->
                 <v-list-group link v-cloak :value="navMyPageGroup" prepend-icon="mdi-account-circle"
                     active-class="ndColor--text" id="myPageGroup" title="마이페이지"
@@ -578,6 +630,7 @@ export default {
         'navCommunityGroup',
         'navScheduleGroup',
         'navQualGroup',
+        'navGovMetaGroup',
         'navMyPageGroup'],
     data: () => ({
         selectedList: null,
@@ -649,6 +702,10 @@ export default {
         eventBus.$on('openStructDiagResult', () => {
             this.addTabItem('진단 결과', 'structDiagResult');
         });
+        // 104번 WP5-78 — 생성·전송 검증 오류 → 테이블·컬럼 (대상은 eventBus.pendingGovMetaTarget)
+        eventBus.$on('openGovMetaItems', () => {
+            this.addTabItem('테이블·컬럼', 'govMetaItems');
+        });
         eventBus.$on('openColumnView', () => {
             this.addTabItem('컬럼', 'datamodelStatusColumn');
         });
@@ -657,6 +714,7 @@ export default {
         eventBus.$off('openDiagResult');
         eventBus.$off('openStructDiagResult');
         eventBus.$off('openColumnView');
+        eventBus.$off('openGovMetaItems');
     }
 }
 </script>

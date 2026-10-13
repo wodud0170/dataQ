@@ -118,6 +118,23 @@ public class DataModelService implements Runnable {
 			// DB Handler 생성
 			dbHandler = dataSourceUtils.getDBHandler(dataSource);
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "데이터소스 연결 완료");
+			// 104번 WP5-78 — DBMS 제품명·버전 (JDBC DatabaseMetaData) → TB_GOV_META_DB. 못 읽어도 수집은 계속한다
+			try {
+				java.sql.Connection conn = dbHandler.getConnection(true);
+				try {
+					java.sql.DatabaseMetaData md = conn.getMetaData();
+					java.util.Map<String, Object> p = new java.util.HashMap<>();
+					p.put("dsId", dataSource.getId());
+					p.put("dbmsNm", md.getDatabaseProductName());
+					p.put("dbmsVer", md.getDatabaseProductVersion());
+					p.put("userId", userId);
+					sqlSessionTemplate.insert("govMeta.upsertDbmsInfo", p);
+				} finally {
+					dbHandler.freeConnection(conn);
+				}
+			} catch (Exception e) {
+				log.warn(">> DBMS 제품 정보를 읽지 못했습니다 dsId={} : {}", dataSource.getId(), e.getMessage());
+			}
 			// 1. 수집테이블(TB_DATA_MODEL_CLCT) 입력
 			String clctId = StringUtils.getUUID();
 			String dataModelId = dataVo.getDataModelId();
@@ -192,6 +209,8 @@ public class DataModelService implements Runnable {
 					stdDataModelAttrVo.setAttrNmKr(attrDbComment);
 					stdDataModelAttrVo.setAttrComment(attrDbComment);
 					stdDataModelAttrVo.setDataType(rs.getString("dataType"));
+					// 104번 WP5-78 — 원본 타입 (DBMS 종속 타입명 그대로)
+					stdDataModelAttrVo.setDbmsDataType(rs.getString("dbmsDataType"));
 					stdDataModelAttrVo.setDataLen(rs.getLong("dataLen"));
 					stdDataModelAttrVo.setDataDecimalLen(rs.getShort("dataDecimalLen"));
 					stdDataModelAttrVo.setNullableYn(rs.getString("nullableYn"));

@@ -140,6 +140,36 @@
                     <datamodelVisualization :key="datamodelVisualizationKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'privColumn'" id="tab_privColumn" class="tab_contents"
+                :class="{ active: this.activeContent === 'privColumn' }">
+                <keep-alive>
+                    <privColumn :key="privColumnKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'govMetaConf'" id="tab_govMetaConf" class="tab_contents"
+                :class="{ active: this.activeContent === 'govMetaConf' }">
+                <keep-alive>
+                    <govMetaConf :key="govMetaConfKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'govMetaSys'" id="tab_govMetaSys" class="tab_contents"
+                :class="{ active: this.activeContent === 'govMetaSys' }">
+                <keep-alive>
+                    <govMetaSys :key="govMetaSysKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'govMetaItems'" id="tab_govMetaItems" class="tab_contents"
+                :class="{ active: this.activeContent === 'govMetaItems' }">
+                <keep-alive>
+                    <govMetaItems :key="govMetaItemsKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'govMetaSend'" id="tab_govMetaSend" class="tab_contents"
+                :class="{ active: this.activeContent === 'govMetaSend' }">
+                <keep-alive>
+                    <govMetaSend :key="govMetaSendKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'dataDiag'" id="tab_dataDiag" class="tab_contents"
                 :class="{ active: this.activeContent === 'dataDiag' }">
                 <keep-alive>
@@ -479,6 +509,11 @@ import DSScheduleLog from "./../../components/DSScheduleLog.vue"
 import MMSystem from "./../../components/MMSystem.vue"
 import MMDdlRule from "./../../components/MMDdlRule.vue"
 import DSAprvBox from "./../../components/DSAprvBox.vue"
+import DSPrivColumn from "./../../components/DSPrivColumn.vue"
+import MMGovMetaConf from "./../../components/MMGovMetaConf.vue"
+import DSGovMetaSys from "./../../components/DSGovMetaSys.vue"
+import DSGovMetaItems from "./../../components/DSGovMetaItems.vue"
+import DSGovMetaSend from "./../../components/DSGovMetaSend.vue"
 import MMAprvLine from "./../../components/MMAprvLine.vue"
 import MMOrg from "./../../components/MMOrg.vue"
 import ANDscurrent from "./../../components/ANDscurrent.vue"
@@ -534,6 +569,11 @@ export default {
             datamodelHistoryKey: this.createUUID(),
             erwinImportKey: this.createUUID(),
             datamodelVisualizationKey: this.createUUID(),
+            privColumnKey: this.createUUID(),
+            govMetaConfKey: this.createUUID(),
+            govMetaSysKey: this.createUUID(),
+            govMetaItemsKey: this.createUUID(),
+            govMetaSendKey: this.createUUID(),
             dataDiagKey: this.createUUID(),
             dataDiagResultKey: this.createUUID(),
             termRecommendKey: this.createUUID(),
@@ -603,6 +643,11 @@ export default {
         "structDiagResult": DSStructDiagResult,
         "erwinImport": DSErwinImport,
         "datamodelVisualization": DSDatamodelVisualization,
+        "privColumn": DSPrivColumn,
+        "govMetaConf": MMGovMetaConf,
+        "govMetaSys": DSGovMetaSys,
+        "govMetaItems": DSGovMetaItems,
+        "govMetaSend": DSGovMetaSend,
         "dqi": DQDQI,
         "ctq": DQCTQ,
         "dqbr": DQBR,
@@ -698,6 +743,21 @@ export default {
                     break;
                 case "erwinImport":
                     this.erwinImportKey = this.createUUID();
+                    break;
+                case "privColumn":
+                    this.privColumnKey = this.createUUID();
+                    break;
+                case "govMetaConf":
+                    this.govMetaConfKey = this.createUUID();
+                    break;
+                case "govMetaSys":
+                    this.govMetaSysKey = this.createUUID();
+                    break;
+                case "govMetaItems":
+                    this.govMetaItemsKey = this.createUUID();
+                    break;
+                case "govMetaSend":
+                    this.govMetaSendKey = this.createUUID();
                     break;
                 case "datamodelVisualization":
                     this.datamodelVisualizationKey = this.createUUID();

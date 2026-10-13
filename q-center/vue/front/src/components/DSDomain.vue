@@ -35,6 +35,21 @@
                 item-text="text" item-value="value"
                 dense outlined hide-details single-line :style="{ maxWidth: '110px' }">
               </v-select>
+              <!-- 104번 WP5-16 개인정보·암호화 필터 (줄이 넘쳐도 라벨과 칸이 갈라지지 않게 묶음) -->
+              <div class="d-flex align-center">
+                <span :style="{ fontSize: '.875rem', whiteSpace: 'nowrap' }">개인정보</span>
+                <v-select id="domainSchPrivYn" class="pr-4 pl-2" v-model="searchPrivYn" :items="commStndYnOptions"
+                  item-text="text" item-value="value"
+                  dense outlined hide-details single-line :style="{ maxWidth: '110px' }">
+                </v-select>
+              </div>
+              <div class="d-flex align-center">
+                <span :style="{ fontSize: '.875rem', whiteSpace: 'nowrap' }">암호화</span>
+                <v-select id="domainSchEncrYn" class="pr-4 pl-2" v-model="searchEncrYn" :items="commStndYnOptions"
+                  item-text="text" item-value="value"
+                  dense outlined hide-details single-line :style="{ maxWidth: '110px' }">
+                </v-select>
+              </div>
               <!-- 승인 여부 추가 -->
               <v-checkbox class="domainSearchApv" v-model="searchApproval" label="승인 여부" color="ndColor"
                 hide-details></v-checkbox>
@@ -320,6 +335,30 @@
 
               <v-row>
                 <v-col cols="4">
+                  <v-subheader>개인정보여부</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-radio-group id="addDomainPrivYn" v-model="addDomain_privYn" row mandatory dense hide-details>
+                    <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                    <v-radio color="ndColor" label="N" value="N"></v-radio>
+                  </v-radio-group>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>암호화여부</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-radio-group id="addDomainEncrYn" v-model="addDomain_encrYn" row mandatory dense hide-details>
+                    <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                    <v-radio color="ndColor" label="N" value="N"></v-radio>
+                  </v-radio-group>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col cols="4">
                   <v-subheader>제정차수</v-subheader>
                 </v-col>
                 <v-col cols="8">
@@ -497,6 +536,30 @@
 
             <v-row>
               <v-col cols="4">
+                <v-subheader>개인정보여부</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-radio-group id="updateDomainPrivYn" v-model="updateDomain_privYn" row mandatory dense hide-details>
+                  <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                  <v-radio color="ndColor" label="N" value="N"></v-radio>
+                </v-radio-group>
+              </v-col>
+            </v-row>
+
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>암호화여부</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-radio-group id="updateDomainEncrYn" v-model="updateDomain_encrYn" row mandatory dense hide-details>
+                  <v-radio color="ndColor" label="Y" value="Y"></v-radio>
+                  <v-radio color="ndColor" label="N" value="N"></v-radio>
+                </v-radio-group>
+              </v-col>
+            </v-row>
+
+            <v-row>
+              <v-col cols="4">
                 <v-subheader>제정차수</v-subheader>
               </v-col>
               <v-col cols="8">
@@ -617,6 +680,8 @@ export default {
     searchDataLen: '',
     // 검색 공통표준여부 (''=전체)
     searchCommStndYn: '',
+    searchPrivYn: '',
+    searchEncrYn: '',
     commStndYnOptions: [
       { text: '전체', value: '' },
       { text: 'Y', value: 'Y' },
@@ -672,6 +737,8 @@ export default {
     addDomain_allowValLst_count: 0,
     addDomain_reqSysCd: null,
     addDomain_commStndYn: null,
+    addDomain_privYn: 'N',
+    addDomain_encrYn: 'N',
     addDomain_magntdOrd: null,
     addDomain_aprvYn: "N",
     addDomain_aprvUserId: null,
@@ -698,6 +765,8 @@ export default {
     updateDomain_allowValLst_count: 0,
     updateDomain_reqSysCd: null,
     updateDomain_commStndYn: null,
+    updateDomain_privYn: 'N',
+    updateDomain_encrYn: 'N',
     updateDomain_magntdOrd: null,
     updateDomain_aprvYn: "N",
     updateDomain_aprvUserId: null,
@@ -733,6 +802,8 @@ export default {
       { text: '표현형식', sortable: false, align: 'center', value: 'exprFmtLst' },
       { text: '허용값', sortable: false, align: 'center', value: 'allowValLst' },
       { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn' },
+      { text: '개인정보여부', sortable: false, align: 'center', value: 'privYn' },
+      { text: '암호화여부', sortable: false, align: 'center', value: 'encrYn' },
       { text: '제정차수', sortable: false, align: 'center', value: 'magntdOrd' },
       { text: '승인여부', sortable: false, align: 'center', value: 'aprvYn' },
       { text: '승인상태수정일시', sortable: false, align: 'center', value: 'aprvStatUpdtDt' },
@@ -753,6 +824,8 @@ export default {
       this.searchDataType = '';
       this.searchDataLen = '';
       this.searchCommStndYn = '';
+      this.searchPrivYn = '';
+      this.searchEncrYn = '';
       this.searchApproval = true;
     },
     getSystemList() {
@@ -881,6 +954,8 @@ export default {
           'schDataType': this.searchDataType !== '' ? this.searchDataType : null,
           'schDataLen': this.searchDataLen !== '' ? this.searchDataLen : null,
           'schCommStndYn': this.searchCommStndYn || null,
+          'schPrivYn': this.searchPrivYn || null,
+          'schEncrYn': this.searchEncrYn || null,
           'dictId': this.dictId
         }).then(result => {
           let _data = result.data;
@@ -906,6 +981,8 @@ export default {
               // 'exprFmtLst': _data[i].exprFmtLst,
               // 'allowValLst': _data[i].allowValLst,
               'commStndYn': _data[i].commStndYn,
+              'privYn': _data[i].privYn,
+              'encrYn': _data[i].encrYn,
               'magntdOrd': _data[i].magntdOrd,
               'aprvYn': _data[i].aprvYn,
               'aprvUserId': _data[i].aprvUserId,
@@ -1177,6 +1254,8 @@ export default {
           "exprFmtLst": arr_exprFmtLst,
           "allowValLst": arr_allowValLst,
           'commStndYn': this.addDomain_commStndYn,
+          'privYn': this.addDomain_privYn,
+          'encrYn': this.addDomain_encrYn,
           'magntdOrd': this.addDomain_magntdOrd,
           'reqSysCd': this.addDomain_reqSysCd,
           'dictId': this.dictId,
@@ -1253,6 +1332,8 @@ export default {
           "exprFmtLst": arr_exprFmtLst,
           "allowValLst": arr_allowValLst,
           'commStndYn': this.updateDomain_commStndYn,
+          'privYn': this.updateDomain_privYn,
+          'encrYn': this.updateDomain_encrYn,
           'magntdOrd': this.updateDomain_magntdOrd,
           'reqSysCd': this.updateDomain_reqSysCd,
           'dictId': this.dictId,
@@ -1350,6 +1431,8 @@ export default {
       this.updateDomain_exprFmtLst_arr = exprFmtLst_data;
       this.updateDomain_allowValLst_arr = allowValLst_data;
       this.updateDomain_commStndYn = this.selectedItem[0].commStndYn;
+      this.updateDomain_privYn = this.selectedItem[0].privYn || 'N';
+      this.updateDomain_encrYn = this.selectedItem[0].encrYn || 'N';
       this.updateDomain_magntdOrd = this.selectedItem[0].magntdOrd;
       this.updateDomain_aprvYn = this.selectedItem[0].aprvYn;
       this.updateDomain_aprvUserId = this.selectedItem[0].aprvUserId;

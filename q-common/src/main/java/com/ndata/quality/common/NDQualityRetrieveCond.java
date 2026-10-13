@@ -15,6 +15,8 @@ public class NDQualityRetrieveCond {
     private String schAprvYn;
     private String schStndYn;
     private String schCommStndYn;
+    private String schPrivYn;   // 104번 WP5-16 — 개인정보여부 (용어는 도메인 값을 따른 실제 값)
+    private String schEncrYn;   // 104번 WP5-16 — 암호화여부
     private String schUseYn;
     private String from;//YYYYMMDDHH24MISS
 	private String to;	//YYYYMMDDHH24MISS

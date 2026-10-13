@@ -46,6 +46,22 @@
                 dense outlined hide-details single-line :style="{ width: '110px', flexGrow: 0 }">
               </v-select>
 
+              <!-- 104번 WP5-16 개인정보·암호화 필터 (도메인 값을 따른 실제 값 기준) -->
+              <div class="d-flex align-center">
+                <span :style="{ fontSize: '.875rem', whiteSpace: 'nowrap' }">개인정보</span>
+                <v-select id="termSchPrivYn" class="pl-2 mr-4" v-model="searchPrivYn" :items="commStndYnOptions"
+                  item-text="text" item-value="value"
+                  dense outlined hide-details single-line :style="{ width: '110px', flexGrow: 0 }">
+                </v-select>
+              </div>
+              <div class="d-flex align-center">
+                <span :style="{ fontSize: '.875rem', whiteSpace: 'nowrap' }">암호화</span>
+                <v-select id="termSchEncrYn" class="pl-2 mr-4" v-model="searchEncrYn" :items="commStndYnOptions"
+                  item-text="text" item-value="value"
+                  dense outlined hide-details single-line :style="{ width: '110px', flexGrow: 0 }">
+                </v-select>
+              </div>
+
               <!-- 등록일자 (범위) -->
               <span :style="{ fontSize: '.875rem' }">등록일자</span>
               <v-text-field class="pl-2" v-model="searchFromDt" type="date" dense outlined hide-details
@@ -519,6 +535,20 @@
                     </v-col>
                   </v-row>
                   <v-row align="center">
+                    <v-col cols="4"><v-subheader>개인정보여부</v-subheader></v-col>
+                    <v-col cols="8">
+                      <v-select id="addTermPrivYn" v-model="addTerm_privYn" :items="inheritYnOptions"
+                        item-text="text" item-value="value" dense color="ndColor" hide-details></v-select>
+                    </v-col>
+                  </v-row>
+                  <v-row align="center">
+                    <v-col cols="4"><v-subheader>암호화여부</v-subheader></v-col>
+                    <v-col cols="8">
+                      <v-select id="addTermEncrYn" v-model="addTerm_encrYn" :items="inheritYnOptions"
+                        item-text="text" item-value="value" dense color="ndColor" hide-details></v-select>
+                    </v-col>
+                  </v-row>
+                  <v-row align="center">
                     <v-col cols="4"><v-subheader>제정차수</v-subheader></v-col>
                     <v-col cols="8">
                       <v-text-field v-model="addTerm_magntdOrd" dense color="ndColor" placeholder="1차" hide-details></v-text-field>
@@ -686,6 +716,28 @@
                     <v-radio color="ndColor" label="Y" value="Y"></v-radio>
                     <v-radio color="ndColor" label="N" value="N"></v-radio>
                   </v-radio-group>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>개인정보여부</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-select id="updateTermPrivYn" v-model="updateTerm_privYn" :items="inheritYnOptions"
+                    item-text="text" item-value="value" dense color="ndColor"
+                    :hint="'도메인 값: ' + (updateTerm_domainPrivYn || 'N')" persistent-hint></v-select>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>암호화여부</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-select id="updateTermEncrYn" v-model="updateTerm_encrYn" :items="inheritYnOptions"
+                    item-text="text" item-value="value" dense color="ndColor"
+                    :hint="'도메인 값: ' + (updateTerm_domainEncrYn || 'N')" persistent-hint></v-select>
                 </v-col>
               </v-row>
 
@@ -876,6 +928,14 @@ export default {
     searchDomain: '',
     //검색 공통표준여부 (''=전체)
     searchCommStndYn: '',
+    searchPrivYn: '',
+    searchEncrYn: '',
+    // 104번 WP5-16 — 용어 개인정보·암호화: 비우면 도메인 값을 따른다
+    inheritYnOptions: [
+      { text: '도메인 값 따름', value: '' },
+      { text: 'Y', value: 'Y' },
+      { text: 'N', value: 'N' }
+    ],
     commStndYnOptions: [
       { text: '전체', value: '' },
       { text: 'Y', value: 'Y' },
@@ -935,6 +995,8 @@ export default {
     addTerm_codeGrp: null,
     addTerm_chrgOrg: null,
     addTerm_commStndYn: 'N',
+    addTerm_privYn: '',
+    addTerm_encrYn: '',
     addTerm_magntdOrd: null,
     addTerm_reqSysCd: null,
     addTerm_selected_word_list: [],
@@ -969,6 +1031,10 @@ export default {
     updateTerm_codeGrp: null,
     updateTerm_chrgOrg: null,
     updateTerm_commStndYn: null,
+    updateTerm_privYn: '',
+    updateTerm_encrYn: '',
+    updateTerm_domainPrivYn: null,
+    updateTerm_domainEncrYn: null,
     updateTerm_magntdOrd: null,
     updateTerm_reqSysCd: null,
     updateTerm_selected_word_list: [],
@@ -1009,6 +1075,8 @@ export default {
       { text: '코드그룹', sortable: false, align: 'center', value: 'codeGrp', width: '15%' },
       { text: '담당기관명', sortable: false, align: 'center', value: 'chrgOrg', width: '15%' },
       { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn', width: '15%' },
+      { text: '개인정보여부', sortable: false, align: 'center', value: 'privYnDisp' },
+      { text: '암호화여부', sortable: false, align: 'center', value: 'encrYnDisp' },
       { text: '제정차수', sortable: false, align: 'center', value: 'magntdOrd', width: '15%' },
       { text: '승인여부', sortable: false, align: 'center', value: 'aprvYn', width: '15%' },
       { text: '승인상태수정일시', sortable: false, align: 'center', value: 'aprvStatUpdtDt', width: '15%' },
@@ -1089,6 +1157,10 @@ export default {
     },
   },
   methods: {
+    /** 104번 WP5-16 — 용어 값이 있으면 그 값, 없으면 도메인 값 (도메인) */
+    inheritYnText(own, domainVal) {
+      return own ? own : (domainVal || 'N') + ' (도메인)';
+    },
     /** 86번 #11 — 백엔드 raw exception 차단, 친화적 메세지로 정리 */
     _friendlyErrText(err, fallback) {
       const status = (err && err.response && err.response.status) || 0;
@@ -1111,6 +1183,8 @@ export default {
       this.searchEngTermMode = 'contains';
       this.searchDomain = '';
       this.searchCommStndYn = '';
+      this.searchPrivYn = '';
+      this.searchEncrYn = '';
       this.searchFromDt = '';
       this.searchToDt = '';
       this.searchApproval = true;
@@ -1215,12 +1289,18 @@ export default {
           'searchDomain': searchDomain,
           'schAprvYn': schAprvYn,
           'schCommStndYn': this.searchCommStndYn || null,
+          'schPrivYn': this.searchPrivYn || null,
+          'schEncrYn': this.searchEncrYn || null,
           'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
           'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null,
           'dictId': this.dictId
         }).then((res) => {
           // console.log(res.data)
-          this.termItems = res.data;
+          // 104번 WP5-16 — 용어 값이 없으면 도메인 값을 따른다. 어디서 온 값인지 함께 보인다
+          this.termItems = res.data.map(t => Object.assign(t, {
+            privYnDisp: this.inheritYnText(t.privYn, t.domainPrivYn),
+            encrYnDisp: this.inheritYnText(t.encrYn, t.domainEncrYn),
+          }));
 
           // console 표시
           console.log("📃 Term LIST ↓↓↓")
@@ -1449,6 +1529,10 @@ export default {
         this.updateTerm_selectedCode = null;
       }
       this.updateTerm_commStndYn = this.selectedItem[0].commStndYn;
+      this.updateTerm_privYn = this.selectedItem[0].privYn || '';
+      this.updateTerm_encrYn = this.selectedItem[0].encrYn || '';
+      this.updateTerm_domainPrivYn = this.selectedItem[0].domainPrivYn;
+      this.updateTerm_domainEncrYn = this.selectedItem[0].domainEncrYn;
       this.updateTerm_magntdOrd = this.selectedItem[0].magntdOrd;
       this.updateTerm_reqSysCd = this.selectedItem[0].reqSysCd;
 
@@ -1507,6 +1591,8 @@ export default {
       this.addTerm_codeGrp = null;
       this.addTerm_chrgOrg = null;
       this.addTerm_commStndYn = 'N';
+      this.addTerm_privYn = '';
+      this.addTerm_encrYn = '';
       this.addTerm_magntdOrd = null;
       this.addTerm_reqSysCd = null;
       this.addTerm_selected_word_list = [];
@@ -1619,6 +1705,8 @@ export default {
           'codeGrp': _codeGrp,
           'chrgOrg': this.addTerm_chrgOrg,
           'commStndYn': this.addTerm_commStndYn,
+          'privYn': this.addTerm_privYn,
+          'encrYn': this.addTerm_encrYn,
           'magntdOrd': this.addTerm_magntdOrd,
           'reqSysCd': this.addTerm_reqSysCd,
           'wordList': this.addTerm_wordList,
@@ -1697,6 +1785,8 @@ export default {
           'codeGrp': _codeGrp,
           'chrgOrg': this.updateTerm_chrgOrg,
           'commStndYn': this.updateTerm_commStndYn,
+          'privYn': this.updateTerm_privYn,
+          'encrYn': this.updateTerm_encrYn,
           'magntdOrd': this.updateTerm_magntdOrd,
           'reqSysCd': this.updateTerm_reqSysCd,
           'wordList': this.updateTerm_wordList,

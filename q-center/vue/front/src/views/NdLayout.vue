@@ -13,7 +13,7 @@
                         :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                         :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
                         :navMyPageGroup="navMyPageGroup"
-                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup"
+                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup" :navGovMetaGroup="navGovMetaGroup"
                         @addTabItem="addTabItem" @addActiveContent="addActiveContent" @navAllGroupClose="navAllGroupClose"
                         @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                         @addNavSubGroupData="addNavSubGroupData" @resetSplit="resetSplit"
@@ -36,7 +36,7 @@
                 :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                 :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
                         :navMyPageGroup="navMyPageGroup"
-                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
+                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup" :navGovMetaGroup="navGovMetaGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
                 @navAllGroupClose="navAllGroupClose" @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                 @addNavSubGroupData="addNavSubGroupData" />
             <router-view name="content" :isMobile="isMobile" :tab="tab" :drawer="drawer" :activeContent="activeContent"
@@ -76,6 +76,7 @@ export default {
         navAutoStdGroup: null,
         navCommunityGroup: null,
         navScheduleGroup: null,
+        navGovMetaGroup: null,
         navQualGroup: null,
         navMyPageGroup: null,
         navApprovalStatus: []// 대시보드에서 승인 페이지 호출 시 승인 상태를 저장하는 변수
@@ -184,6 +185,7 @@ export default {
                 case "datamodelStatusTable":
                 case "datamodelStatusColumn":
                 case "erwinImport":
+                case "privColumn":
                     this._activateGroup("dsGroup");
                     break;
                 case "boardNotice":
@@ -194,6 +196,12 @@ export default {
                 case "myProfile":
                 case "aprvBox":
                     this._activateGroup("myPageGroup");
+                    break;
+                case "govMetaConf":
+                case "govMetaSys":
+                case "govMetaItems":
+                case "govMetaSend":
+                    this._activateGroup("govMetaGroup");
                     break;
                 case "dataDiag":
                 case "dataDiagResult":
@@ -384,11 +392,13 @@ export default {
                 } else if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory') {
                     this._activateGroup("dsGroup");
 
+                } else if (tabName === 'govMetaConf' || tabName === 'govMetaSys' || tabName === 'govMetaItems' || tabName === 'govMetaSend') {
+                    this._activateGroup("govMetaGroup");
                 } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
                     this._activateGroup("diagGroup");
                 } else if (tabName === 'structDiag' || tabName === 'structDiagResult') {
                     this._activateGroup("structDiagGroup");
-                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'erwinImport') {
+                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'erwinImport' || tabName === 'privColumn') {
                     this._activateGroup("dmGroup");
 
                 } else if (tabName === 'dqi' || tabName === 'ctq' || tabName === 'dqbr' || tabName === 'target' || tabName === 'qv' || tabName === 'rvi' || tabName === 'dqqvrt') {
@@ -425,6 +435,7 @@ export default {
             this.navMyPageGroup = null;
             this.navCommunityGroup = null;
             this.navScheduleGroup = null;
+            this.navGovMetaGroup = null;
             this.navQualGroup = null;
             this.navSubGropClose();
         },
@@ -543,6 +554,15 @@ export default {
                     }
                     break;
 
+                case "govMetaGroup":
+
+                    if (this.navGovMetaGroup === null) {
+                        this.navGovMetaGroup = false;
+                    } else {
+                        this.navGovMetaGroup = !this.navGovMetaGroup;
+                    }
+                    break;
+
                 case "qualGroup":
 
                     if (this.navQualGroup === null) {
@@ -595,13 +615,16 @@ export default {
             } else if (tabitem === 'termRecommend') {
                 this.navAutoStdGroup = true;
                 return;
+            } else if (tabitem === 'govMetaConf' || tabitem === 'govMetaSys' || tabitem === 'govMetaItems' || tabitem === 'govMetaSend') {
+                this.navGovMetaGroup = true;
+                return;
             } else if (tabitem === 'dataDiag' || tabitem === 'dataDiagResult') {
                 this.navDiagGroup = true;
                 return;
             } else if (tabitem === 'structDiag' || tabitem === 'structDiagResult') {
                 this.navStructDiagGroup = true;
                 return;
-            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'erwinImport') {
+            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'erwinImport' || tabitem === 'privColumn') {
                 this.navDmGroup = true;
                 return;
             } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification' || tabitem === 'changeHistory') {

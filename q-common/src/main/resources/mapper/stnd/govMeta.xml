@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="govMeta">
+
+	<!-- 104번 WP5-78 — 범정부 메타 연계 (구현 ①: 규격 없이 할 수 있는 것).
+	     기관·연계 설정(TB_GOV_META_CONF, 기관 1행 CONF_ID='DEFAULT'), 업무분류체계(TB_GOV_BRM),
+	     정보시스템(TB_GOV_META_SYS ← TB_SYS_INFO), DB(TB_GOV_META_DB ← ndata.TB_DATA_SOURCE),
+	     테이블·컬럼 항목(TB_DATA_MODEL_OBJ·ATTR 의 별표 4 컬럼), 코드 매핑, 생성 이력·검증 결과. -->
+
+	<!-- ===== 기관·연계 설정 ===== -->
+	<select id="selectConf" resultType="java.util.LinkedHashMap">
+		SELECT CONF_ID as "confId", INST_NM as "instNm", INST_CD as "instCd", SEND_SYS_CD as "sendSysCd",
+		       LINK_MTHD as "linkMthd", INST_META_USER_ID as "instMetaUserId",
+		       SFTP_HOST as "sftpHost", SFTP_PORT as "sftpPort", SFTP_USER_ID as "sftpUserId",
+		       CASE WHEN SFTP_PWD IS NULL OR SFTP_PWD = '' THEN 'N' ELSE 'Y' END as "sftpPwdSetYn",
+		       SFTP_DIR as "sftpDir", TMP_FILE_DIR as "tmpFileDir", META_FILE_DIR as "metaFileDir",
+		       FILE_KEEP_CNT as "fileKeepCnt", FILE_FMT as "fileFmt", FILE_ENCODING as "fileEncoding",
+		       DFLT_BRM_ID as "dfltBrmId", UPDT_DT as "updtDt", UPDT_USER_ID as "updtUserId"
+		  FROM TB_GOV_META_CONF
+		 WHERE CONF_ID = 'DEFAULT'
+	</select>
+
+	<!-- sftpPwd 가 null 이면 저장된 비밀번호를 그대로 둔다 (응답에 싣지 않으므로 화면 칸은 비어 있다) -->
+	<insert id="upsertConf" parameterType="java.util.Map">
+		INSERT INTO TB_GOV_META_CONF
+		     (CONF_ID, INST_NM, INST_CD, SEND_SYS_CD, LINK_MTHD, INST_META_USER_ID,
+		      SFTP_HOST, SFTP_PORT, SFTP_USER_ID, SFTP_PWD, SFTP_DIR, TMP_FILE_DIR, META_FILE_DIR,
+		      FILE_KEEP_CNT, FILE_FMT, FILE_ENCODING, DFLT_BRM_ID, CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+		VALUES
+		     ('DEFAULT', #{instNm, jdbcType=VARCHAR}, #{instCd, jdbcType=VARCHAR}, #{sendSysCd, jdbcType=VARCHAR},
+		      #{linkMthd, jdbcType=VARCHAR}, #{instMetaUserId, jdbcType=VARCHAR},
+		      #{sftpHost, jdbcType=VARCHAR}, #{sftpPort, jdbcType=INTEGER}, #{sftpUserId, jdbcType=VARCHAR},
+		      #{sftpPwd, jdbcType=VARCHAR}, #{sftpDir, jdbcType=VARCHAR}, #{tmpFileDir, jdbcType=VARCHAR}, #{metaFileDir, jdbcType=VARCHAR},
+		      #{fileKeepCnt, jdbcType=INTEGER}, #{fileFmt, jdbcType=VARCHAR}, #{fileEncoding, jdbcType=VARCHAR}, #{dfltBrmId, jdbcType=VARCHAR},
+		      to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+		ON CONFLICT (CONF_ID) DO UPDATE SET
+		      INST_NM = EXCLUDED.INST_NM, INST_CD = EXCLUDED.INST_CD, SEND_SYS_CD = EXCLUDED.SEND_SYS_CD,
+		      LINK_MTHD = EXCLUDED.LINK_MTHD, INST_META_USER_ID = EXCLUDED.INST_META_USER_ID,
+		      SFTP_HOST = EXCLUDED.SFTP_HOST, SFTP_PORT = EXCLUDED.SFTP_PORT, SFTP_USER_ID = EXCLUDED.SFTP_USER_ID,
+		      SFTP_PWD = COALESCE(EXCLUDED.SFTP_PWD, TB_GOV_META_CONF.SFTP_PWD),
+		      SFTP_DIR = EXCLUDED.SFTP_DIR, TMP_FILE_DIR = EXCLUDED.TMP_FILE_DIR, META_FILE_DIR = EXCLUDED.META_FILE_DIR,
+		      FILE_KEEP_CNT = EXCLUDED.FILE_KEEP_CNT, FILE_FMT = EXCLUDED.FILE_FMT, FILE_ENCODING = EXCLUDED.FILE_ENCODING,
+		      DFLT_BRM_ID = EXCLUDED.DFLT_BRM_ID, UPDT_DT = EXCLUDED.UPDT_DT, UPDT_USER_ID = EXCLUDED.UPDT_USER_ID
+	</insert>
+
+	<!-- ===== 업무분류체계(BRM) ===== -->
+	<select id="selectBrmList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT BRM_ID as "brmId", BRM_NM as "brmNm", PARENT_BRM_ID as "parentBrmId", BRM_LVL as "brmLvl",
+		       BRM_PATH as "brmPath", INST_CD as "instCd", BRM_SRC as "brmSrc", USE_YN as "useYn",
+		       (SELECT COUNT(*) FROM TB_GOV_BRM C WHERE C.PARENT_BRM_ID = B.BRM_ID) as "childCnt"
+		  FROM TB_GOV_BRM B
+		 WHERE 1 = 1
+		<if test="brmSrc != null and brmSrc != ''"> AND B.BRM_SRC = #{brmSrc} </if>
+		<if test="keyword != null and keyword != ''"> AND (B.BRM_NM ILIKE '%' || #{keyword} || '%' OR B.BRM_PATH ILIKE '%' || #{keyword} || '%') </if>
+		<if test="maxLvl != null"> AND B.BRM_LVL &lt;= #{maxLvl} </if>
+		 ORDER BY COALESCE(B.BRM_PATH, B.BRM_NM), B.BRM_ID
+	</select>
+
+	<select id="selectBrm" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT BRM_ID as "brmId", BRM_NM as "brmNm", PARENT_BRM_ID as "parentBrmId", BRM_LVL as "brmLvl",
+		       BRM_PATH as "brmPath", INST_CD as "instCd", BRM_SRC as "brmSrc", USE_YN as "useYn"
+		  FROM TB_GOV_BRM WHERE BRM_ID = #{brmId}
+	</select>
+
+	<!-- 정부기능분류체계 CSV 반입·기관 자체 BRM 저장 공용 -->
+	<insert id="upsertBrm" parameterType="java.util.Map">
+		INSERT INTO TB_GOV_BRM (BRM_ID, BRM_NM, PARENT_BRM_ID, BRM_LVL, BRM_PATH, INST_CD, BRM_SRC, USE_YN,
+		                        CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{brmId}, #{brmNm}, #{parentBrmId, jdbcType=VARCHAR}, #{brmLvl, jdbcType=INTEGER}, #{brmPath, jdbcType=VARCHAR},
+		        #{instCd, jdbcType=VARCHAR}, #{brmSrc}, COALESCE(#{useYn, jdbcType=CHAR}, 'Y'),
+		        to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+		ON CONFLICT (BRM_ID) DO UPDATE SET
+		        BRM_NM = EXCLUDED.BRM_NM, PARENT_BRM_ID = EXCLUDED.PARENT_BRM_ID, BRM_LVL = EXCLUDED.BRM_LVL,
+		        BRM_PATH = EXCLUDED.BRM_PATH, INST_CD = EXCLUDED.INST_CD, BRM_SRC = EXCLUDED.BRM_SRC,
+		        USE_YN = EXCLUDED.USE_YN, UPDT_DT = EXCLUDED.UPDT_DT, UPDT_USER_ID = EXCLUDED.UPDT_USER_ID
+	</insert>
+
+	<select id="countBrmUse" parameterType="String" resultType="int">
+		SELECT (SELECT COUNT(*) FROM TB_GOV_BRM WHERE PARENT_BRM_ID = #{brmId})
+		     + (SELECT COUNT(*) FROM TB_GOV_META_DB WHERE BRM_ID = #{brmId})
+		     + (SELECT COUNT(*) FROM TB_GOV_META_CONF WHERE DFLT_BRM_ID = #{brmId})
+	</select>
+
+	<delete id="deleteBrm" parameterType="String">
+		DELETE FROM TB_GOV_BRM WHERE BRM_ID = #{brmId}
+	</delete>
+
+	<!-- ===== 코드 매핑 ===== -->
+	<select id="selectCodeMapList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT CODE_GRP as "codeGrp", LOCAL_VAL as "localVal", GOV_CODE as "govCode", GOV_CODE_NM as "govCodeNm",
+		       SORT_ORDER as "sortOrder", USE_YN as "useYn", UPDT_DT as "updtDt", UPDT_USER_ID as "updtUserId"
+		  FROM TB_GOV_META_CODE_MAP
+		 WHERE 1 = 1
+		<if test="codeGrp != null and codeGrp != ''"> AND CODE_GRP = #{codeGrp} </if>
+		 ORDER BY CODE_GRP, SORT_ORDER, LOCAL_VAL
+	</select>
+
+	<insert id="upsertCodeMap" parameterType="java.util.Map">
+		INSERT INTO TB_GOV_META_CODE_MAP (CODE_GRP, LOCAL_VAL, GOV_CODE, GOV_CODE_NM, SORT_ORDER, USE_YN, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{codeGrp}, #{localVal}, #{govCode}, #{govCodeNm, jdbcType=VARCHAR}, COALESCE(#{sortOrder, jdbcType=INTEGER}, 0),
+		        COALESCE(#{useYn, jdbcType=CHAR}, 'Y'), to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+		ON CONFLICT (CODE_GRP, LOCAL_VAL) DO UPDATE SET
+		        GOV_CODE = EXCLUDED.GOV_CODE, GOV_CODE_NM = EXCLUDED.GOV_CODE_NM, SORT_ORDER = EXCLUDED.SORT_ORDER,
+		        USE_YN = EXCLUDED.USE_YN, UPDT_DT = EXCLUDED.UPDT_DT, UPDT_USER_ID = EXCLUDED.UPDT_USER_ID
+	</insert>
+
+	<delete id="deleteCodeMap" parameterType="java.util.Map">
+		DELETE FROM TB_GOV_META_CODE_MAP WHERE CODE_GRP = #{codeGrp} AND LOCAL_VAL = #{localVal}
+	</delete>
+
+	<!-- ===== 정보시스템 ===== -->
+	<!-- 시스템별 범정부 항목과 테이블 건수(그 시스템 모델의 사용 중·승인 테이블)·전송대상 건수 -->
+	<select id="selectGovSysList" resultType="java.util.LinkedHashMap">
+		SELECT S.SYS_CD as "sysCd", S.P_SYS_CD as "pSysCd", S.SYS_TP as "sysTp", S.SYS_NM as "sysNm",
+		       array_to_string(S.SYS_DS_LST, ',') as "sysDsLst",
+		       G.GOV_SYS_NM as "govSysNm", G.GOV_SYS_CD as "govSysCd", G.GOV_SYS_TP as "govSysTp", G.STD_DSTB_TP as "stdDstbTp",
+		       G.OPER_DEPT_NM as "operDeptNm", G.CHRG_USER_NM as "chrgUserNm", G.CHRG_TELNO as "chrgTelno", G.CHRG_EMAIL as "chrgEmail",
+		       G.RLT_LAW_CN as "rltLawCn", G.BLD_YM as "bldYm", G.LAST_UPGRD_YM as "lastUpgrdYm",
+		       COALESCE(G.SEND_YN, 'N') as "sendYn", G.UPDT_DT as "updtDt",
+		       (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ O JOIN TB_DATA_MODEL M ON M.DM_ID = O.DM_ID
+		         WHERE M.DM_SYS_CD = S.SYS_CD AND M.USE_YN = 'Y' AND COALESCE(M.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		           AND O.USE_YN = 'Y' AND COALESCE(O.APRV_STATUS, 'APPROVED') = 'APPROVED') as "tblCnt",
+		       (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ O JOIN TB_DATA_MODEL M ON M.DM_ID = O.DM_ID
+		         WHERE M.DM_SYS_CD = S.SYS_CD AND M.USE_YN = 'Y' AND COALESCE(M.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		           AND O.USE_YN = 'Y' AND COALESCE(O.APRV_STATUS, 'APPROVED') = 'APPROVED' AND O.GOV_SEND_YN = 'Y') as "sendTblCnt"
+		  FROM TB_SYS_INFO S
+		  LEFT JOIN TB_GOV_META_SYS G ON G.SYS_CD = S.SYS_CD
+	</select>
+
+	<insert id="upsertGovSys" parameterType="java.util.Map">
+		INSERT INTO TB_GOV_META_SYS (SYS_CD, GOV_SYS_NM, GOV_SYS_CD, GOV_SYS_TP, STD_DSTB_TP, OPER_DEPT_NM, CHRG_USER_NM,
+		                             CHRG_TELNO, CHRG_EMAIL, RLT_LAW_CN, BLD_YM, LAST_UPGRD_YM, SEND_YN,
+		                             CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{sysCd}, #{govSysNm, jdbcType=VARCHAR}, #{govSysCd, jdbcType=VARCHAR}, #{govSysTp, jdbcType=VARCHAR},
+		        #{stdDstbTp, jdbcType=VARCHAR}, #{operDeptNm, jdbcType=VARCHAR}, #{chrgUserNm, jdbcType=VARCHAR},
+		        #{chrgTelno, jdbcType=VARCHAR}, #{chrgEmail, jdbcType=VARCHAR}, #{rltLawCn, jdbcType=VARCHAR},
+		        #{bldYm, jdbcType=VARCHAR}, #{lastUpgrdYm, jdbcType=VARCHAR}, COALESCE(#{sendYn, jdbcType=CHAR}, 'N'),
+		        to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+		ON CONFLICT (SYS_CD) DO UPDATE SET
+		        GOV_SYS_NM = EXCLUDED.GOV_SYS_NM, GOV_SYS_CD = EXCLUDED.GOV_SYS_CD, GOV_SYS_TP = EXCLUDED.GOV_SYS_TP,
+		        STD_DSTB_TP = EXCLUDED.STD_DSTB_TP, OPER_DEPT_NM = EXCLUDED.OPER_DEPT_NM, CHRG_USER_NM = EXCLUDED.CHRG_USER_NM,
+		        CHRG_TELNO = EXCLUDED.CHRG_TELNO, CHRG_EMAIL = EXCLUDED.CHRG_EMAIL, RLT_LAW_CN = EXCLUDED.RLT_LAW_CN,
+		        BLD_YM = EXCLUDED.BLD_YM, LAST_UPGRD_YM = EXCLUDED.LAST_UPGRD_YM, SEND_YN = EXCLUDED.SEND_YN,
+		        UPDT_DT = EXCLUDED.UPDT_DT, UPDT_USER_ID = EXCLUDED.UPDT_USER_ID
+	</insert>
+
+	<!-- ===== DB ===== -->
+	<sql id="govDbCols">
+		       DS.DS_ID as "dsId", DS.DSN as "dsn", DS.DBMS_TP as "dbmsTp", DS.DB_NAME as "dbName",
+		       G.REP_DM_ID as "repDmId", G.DB_NM_KR as "dbNmKr", G.DB_NM_EN as "dbNmEn", G.DB_DESC as "dbDesc",
+		       G.DB_FORM_CD as "dbFormCd", G.BRM_ID as "brmId", B.BRM_PATH as "brmPath", B.BRM_NM as "brmNm",
+		       G.DBMS_NM as "dbmsNm", G.DBMS_VER as "dbmsVer", G.OS_NM as "osNm", G.OS_VER as "osVer",
+		       G.DBMS_INFO_CLCT_DT as "dbmsInfoClctDt", G.UPDT_DT as "updtDt"
+	</sql>
+
+	<!-- 시스템의 데이터소스(SYS_DS_LST)별 DB 항목 -->
+	<select id="selectGovDbList" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="govDbCols"/>
+		  FROM TB_SYS_INFO S
+		 CROSS JOIN LATERAL unnest(S.SYS_DS_LST) AS X(DS_ID)
+		  JOIN ndata.tb_data_source DS ON DS.DS_ID = X.DS_ID
+		  LEFT JOIN TB_GOV_META_DB G ON G.DS_ID = DS.DS_ID
+		  LEFT JOIN TB_GOV_BRM B ON B.BRM_ID = G.BRM_ID
+		 WHERE S.SYS_CD = #{sysCd}
+		 ORDER BY DS.DSN
+	</select>
+
+	<select id="selectGovDb" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="govDbCols"/>
+		  FROM ndata.tb_data_source DS
+		  LEFT JOIN TB_GOV_META_DB G ON G.DS_ID = DS.DS_ID
+		  LEFT JOIN TB_GOV_BRM B ON B.BRM_ID = G.BRM_ID
+		 WHERE DS.DS_ID = #{dsId}
+	</select>
+
+	<!-- 데이터소스를 쓰는 모델 — 대표 모델 고르기 -->
+	<select id="selectModelsByDs" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT M.DM_ID as "dmId", M.DM_NM as "dmNm", M.DM_DS_ID as "dsId", M.DM_SYS_CD as "sysCd"
+		  FROM TB_DATA_MODEL M
+		 WHERE M.USE_YN = 'Y' AND COALESCE(M.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		   AND M.DM_DS_ID IN
+		<foreach item="d" collection="dsIds" open="(" separator="," close=")">#{d}</foreach>
+		 ORDER BY M.DM_NM
+	</select>
+
+	<insert id="upsertGovDb" parameterType="java.util.Map">
+		INSERT INTO TB_GOV_META_DB (DS_ID, REP_DM_ID, DB_NM_KR, DB_NM_EN, DB_DESC, DB_FORM_CD, BRM_ID, OS_NM, OS_VER,
+		                            CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{dsId}, #{repDmId, jdbcType=VARCHAR}, #{dbNmKr, jdbcType=VARCHAR}, #{dbNmEn, jdbcType=VARCHAR},
+		        #{dbDesc, jdbcType=VARCHAR}, #{dbFormCd, jdbcType=VARCHAR}, #{brmId, jdbcType=VARCHAR},
+		        #{osNm, jdbcType=VARCHAR}, #{osVer, jdbcType=VARCHAR},
+		        to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+		ON CONFLICT (DS_ID) DO UPDATE SET
+		        REP_DM_ID = EXCLUDED.REP_DM_ID, DB_NM_KR = EXCLUDED.DB_NM_KR, DB_NM_EN = EXCLUDED.DB_NM_EN,
+		        DB_DESC = EXCLUDED.DB_DESC, DB_FORM_CD = EXCLUDED.DB_FORM_CD, BRM_ID = EXCLUDED.BRM_ID,
+		        OS_NM = EXCLUDED.OS_NM, OS_VER = EXCLUDED.OS_VER,
+		        UPDT_DT = EXCLUDED.UPDT_DT, UPDT_USER_ID = EXCLUDED.UPDT_USER_ID
+	</insert>
+
+	<!-- 수집 때 JDBC DatabaseMetaData 로 읽은 제품명·버전 (q-executor DataModelService) -->
+	<insert id="upsertDbmsInfo" parameterType="java.util.Map">
+		INSERT INTO TB_GOV_META_DB (DS_ID, DBMS_NM, DBMS_VER, DBMS_INFO_CLCT_DT, CRET_DT, CRET_USER_ID)
+		VALUES (#{dsId}, #{dbmsNm, jdbcType=VARCHAR}, #{dbmsVer, jdbcType=VARCHAR}, to_char(now(), 'YYYYMMDDHH24MISS'),
+		        to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR})
+		ON CONFLICT (DS_ID) DO UPDATE SET
+		        DBMS_NM = EXCLUDED.DBMS_NM, DBMS_VER = EXCLUDED.DBMS_VER, DBMS_INFO_CLCT_DT = EXCLUDED.DBMS_INFO_CLCT_DT
+	</insert>
+
+	<!-- ===== 테이블 항목 ===== -->
+	<select id="selectGovTblList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<if test="sysCd != null and sysCd != ''">
+		WITH RECURSIVE SYS (SYS_CD, DEPTH) AS (
+			SELECT SYS_CD, 0 FROM TB_SYS_INFO WHERE SYS_CD = #{sysCd}
+			UNION ALL
+			SELECT C.SYS_CD, SYS.DEPTH + 1 FROM TB_SYS_INFO C JOIN SYS ON C.P_SYS_CD = SYS.SYS_CD WHERE SYS.DEPTH &lt; 20
+		)
+		</if>
+		SELECT O.DM_ID as "dmId", M.DM_NM as "dmNm", M.DM_SYS_CD as "sysCd", S.SYS_NM as "sysNm",
+		       O.OBJ_OWNER as "objOwner", O.OBJ_NM as "objNm", O.OBJ_NM_KR as "objNmKr", O.OBJ_DESC as "objDesc",
+		       O.SUBJ_AREA_ID as "subjAreaId",
+		       COALESCE(O.GOV_SEND_YN, 'N') as "govSendYn", O.TBL_TP as "tblTp", O.OCCR_CYCLE as "occrCycle",
+		       O.OPEN_TP as "openTp", O.OPEN_LIMIT_REASON as "openLimitReason", O.OPEN_LIMIT_BASIS as "openLimitBasis",
+		       O.OPEN_DATA_LST_NM as "openDataLstNm",
+		       COALESCE(P.COL_CNT, 0) as "colCnt", COALESCE(P.PRIV_CNT, 0) as "privColCnt", COALESCE(P.UNENC_CNT, 0) as "unencPrivColCnt"
+		  FROM TB_DATA_MODEL_OBJ O
+		  JOIN TB_DATA_MODEL M
+		    ON M.DM_ID = O.DM_ID AND M.USE_YN = 'Y' AND COALESCE(M.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		  LEFT JOIN TB_SYS_INFO S ON S.SYS_CD = M.DM_SYS_CD
+		  LEFT JOIN (SELECT PC."dmId", PC."objOwner", PC."objNm",
+		                    COUNT(*) as COL_CNT,
+		                    COUNT(*) FILTER (WHERE PC."privYn" = 'Y') as PRIV_CNT,
+		                    COUNT(*) FILTER (WHERE PC."privYn" = 'Y' AND PC."encrYn" = 'N') as UNENC_CNT
+		               FROM (<include refid="privCol.privColBody"/>
+		                     <if test="dmId != null and dmId != ''"> AND A.DM_ID = #{dmId} </if>) PC
+		              GROUP BY PC."dmId", PC."objOwner", PC."objNm") P
+		    ON P."dmId" = O.DM_ID AND P."objOwner" = O.OBJ_OWNER AND P."objNm" = O.OBJ_NM
+		 WHERE O.USE_YN = 'Y' AND COALESCE(O.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		<if test="sysCd != null and sysCd != ''"> AND M.DM_SYS_CD IN (SELECT SYS_CD FROM SYS) </if>
+		<if test="dmId != null and dmId != ''"> AND O.DM_ID = #{dmId} </if>
+		<if test="objOwner != null and objOwner != ''"> AND O.OBJ_OWNER = #{objOwner} </if>
+		<if test="subjAreaId != null and subjAreaId != ''"> AND O.SUBJ_AREA_ID = #{subjAreaId} </if>
+		<if test="objNm != null and objNm != ''"> AND (O.OBJ_NM ILIKE '%' || #{objNm} || '%' OR O.OBJ_NM_KR ILIKE '%' || #{objNm} || '%') </if>
+		<if test="govSendYn != null and govSendYn != ''"> AND COALESCE(O.GOV_SEND_YN, 'N') = #{govSendYn} </if>
+		<if test="openTp != null and openTp != ''">
+			<choose>
+				<when test="openTp == '(없음)'"> AND O.OPEN_TP IS NULL </when>
+				<otherwise> AND O.OPEN_TP = #{openTp} </otherwise>
+			</choose>
+		</if>
+		<if test="tblTp != null and tblTp != ''"> AND O.TBL_TP = #{tblTp} </if>
+		<if test="privYn == 'Y'.toString()"> AND COALESCE(P.PRIV_CNT, 0) &gt; 0 </if>
+		<if test="privYn == 'N'.toString()"> AND COALESCE(P.PRIV_CNT, 0) = 0 </if>
+		<if test="unencOnly == 'Y'.toString()"> AND COALESCE(P.UNENC_CNT, 0) &gt; 0 </if>
+		 ORDER BY S.SYS_NM, M.DM_NM, O.OBJ_OWNER, O.OBJ_NM
+	</select>
+
+	<!-- 선택 테이블 일괄 적용 — 보낸 항목만 바꾼다 (빈 문자열은 지움) -->
+	<update id="updateGovTbls" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ
+		<set>
+			<if test="govSendYn != null">GOV_SEND_YN = #{govSendYn},</if>
+			<if test="tblTp != null">TBL_TP = NULLIF(#{tblTp}, ''),</if>
+			<if test="occrCycle != null">OCCR_CYCLE = NULLIF(#{occrCycle}, ''),</if>
+			<if test="openTp != null">OPEN_TP = NULLIF(#{openTp}, ''),</if>
+			<if test="openLimitReason != null">OPEN_LIMIT_REASON = NULLIF(#{openLimitReason}, ''),</if>
+			<if test="openLimitBasis != null">OPEN_LIMIT_BASIS = NULLIF(#{openLimitBasis}, ''),</if>
+			<if test="openDataLstNm != null">OPEN_DATA_LST_NM = NULLIF(#{openDataLstNm}, ''),</if>
+		</set>
+		 WHERE (DM_ID, OBJ_OWNER, OBJ_NM) IN
+		<foreach item="k" collection="keys" open="(" separator="," close=")">(#{k.dmId}, #{k.objOwner}, #{k.objNm})</foreach>
+	</update>
+
+	<!-- ===== 컬럼 항목 ===== -->
+	<select id="selectGovColList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT PC.*,
+		       A.DBMS_DATA_TYPE as "dbmsDataType", A.NULLABLE_YN as "nullableYn", A.PK_YN as "pkYn", A.FK_YN as "fkYn",
+		       A.DEFAULT_VAL as "defaultVal", A.ATTR_COMMENT as "attrComment",
+		       A.OPEN_TP as "openTp", A.OPEN_LIMIT_REASON as "openLimitReason", A.CNSTR_DESC as "cnstrDesc",
+		       (SELECT MIN(C.COLUMN_POS) FROM TB_DATA_MODEL_CONSTRAINT C
+		         WHERE C.DM_ID = A.DM_ID AND C.OBJ_OWNER = A.OBJ_OWNER AND C.TABLE_NM = A.OBJ_NM AND C.COLUMN_NM = A.ATTR_NM
+		           AND C.CONSTRAINT_TYPE = 'P' AND COALESCE(C.USE_YN, 'Y') = 'Y') as "pkPos",
+		       COALESCE((SELECT string_agg(DISTINCT C.REF_TABLE_NM || '.' || C.REF_COLUMN_NM, ', ')
+		                   FROM TB_DATA_MODEL_CONSTRAINT C
+		                  WHERE C.DM_ID = A.DM_ID AND C.OBJ_OWNER = A.OBJ_OWNER AND C.TABLE_NM = A.OBJ_NM AND C.COLUMN_NM = A.ATTR_NM
+		                    AND C.CONSTRAINT_TYPE = 'R' AND COALESCE(C.USE_YN, 'Y') = 'Y' AND C.REF_TABLE_NM IS NOT NULL),
+		                CASE WHEN A.FK_PARENT_OBJ_NM IS NOT NULL THEN A.FK_PARENT_OBJ_NM || '.' || COALESCE(A.FK_PARENT_ATTR_NM, A.ATTR_NM) END) as "fkRef",
+		       (SELECT string_agg(DISTINCT C.SEARCH_CONDITION, ' / ')
+		          FROM TB_DATA_MODEL_CONSTRAINT C
+		         WHERE C.DM_ID = A.DM_ID AND C.OBJ_OWNER = A.OBJ_OWNER AND C.TABLE_NM = A.OBJ_NM AND C.COLUMN_NM = A.ATTR_NM
+		           AND C.CONSTRAINT_TYPE = 'C' AND COALESCE(C.USE_YN, 'Y') = 'Y'
+		           AND C.SEARCH_CONDITION IS NOT NULL AND C.SEARCH_CONDITION NOT ILIKE '%IS NOT NULL') as "chkCond"
+		  FROM (<include refid="privCol.privColBody"/>
+		           AND A.DM_ID = #{dmId}
+		           <if test="objOwner != null"> AND A.OBJ_OWNER = #{objOwner} </if>
+		           <if test="objNm != null"> AND A.OBJ_NM = #{objNm} </if>) PC
+		  JOIN TB_DATA_MODEL_ATTR A
+		    ON A.DM_ID = PC."dmId" AND A.OBJ_OWNER = PC."objOwner" AND A.OBJ_NM = PC."objNm" AND A.ATTR_NM = PC."attrNm"
+		 ORDER BY PC."objOwner", PC."objNm", PC."attrOrd", PC."attrNm"
+	</select>
+
+	<!-- 선택 컬럼 적용 — 보낸 항목만 바꾼다 (빈 문자열은 지움) -->
+	<update id="updateGovCols" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR
+		<set>
+			<if test="openTp != null">OPEN_TP = NULLIF(#{openTp}, ''),</if>
+			<if test="openLimitReason != null">OPEN_LIMIT_REASON = NULLIF(#{openLimitReason}, ''),</if>
+			<if test="cnstrDesc != null">CNSTR_DESC = NULLIF(#{cnstrDesc}, ''),</if>
+		</set>
+		 WHERE (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) IN
+		<foreach item="k" collection="keys" open="(" separator="," close=")">(#{k.dmId}, #{k.objOwner}, #{k.objNm}, #{k.attrNm})</foreach>
+	</update>
+
+	<!-- ===== 생성 대상 (105번 §6.4 1) ===== -->
+	<!-- 전송대상 정보시스템 — sysCd 를 주면 그 시스템과 하위 -->
+	<select id="selectSendSysList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<if test="sysCd != null and sysCd != ''">
+		WITH RECURSIVE SYS (SYS_CD, DEPTH) AS (
+			SELECT SYS_CD, 0 FROM TB_SYS_INFO WHERE SYS_CD = #{sysCd}
+			UNION ALL
+			SELECT C.SYS_CD, SYS.DEPTH + 1 FROM TB_SYS_INFO C JOIN SYS ON C.P_SYS_CD = SYS.SYS_CD WHERE SYS.DEPTH &lt; 20
+		)
+		</if>
+		SELECT S.SYS_CD as "sysCd", S.SYS_NM as "sysNm", S.SYS_TP as "sysTp", array_to_string(S.SYS_DS_LST, ',') as "sysDsLst",
+		       G.GOV_SYS_NM as "govSysNm", G.GOV_SYS_CD as "govSysCd", G.GOV_SYS_TP as "govSysTp",
+		       G.OPER_DEPT_NM as "operDeptNm", COALESCE(G.SEND_YN, 'N') as "sendYn"
+		  FROM TB_SYS_INFO S
+		  LEFT JOIN TB_GOV_META_SYS G ON G.SYS_CD = S.SYS_CD
+		 WHERE 1 = 1
+		<if test="sysCd != null and sysCd != ''"> AND S.SYS_CD IN (SELECT SYS_CD FROM SYS) </if>
+		<if test="sysCdExact != null and sysCdExact != ''"> AND S.SYS_CD = #{sysCdExact} </if>
+		 ORDER BY S.SYS_NM
+	</select>
+
+	<select id="selectModel" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT DM_ID as "dmId", DM_NM as "dmNm", DM_SYS_CD as "sysCd", DM_DS_ID as "dsId", MODEL_TYPE as "modelType"
+		  FROM TB_DATA_MODEL WHERE DM_ID = #{dmId}
+	</select>
+
+	<!-- 대상 모델의 전송대상 테이블 -->
+	<select id="selectSendTblList" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT O.DM_ID as "dmId", O.OBJ_OWNER as "objOwner", O.OBJ_NM as "objNm", O.OBJ_NM_KR as "objNmKr",
+		       O.TBL_TP as "tblTp", O.OCCR_CYCLE as "occrCycle", O.OPEN_TP as "openTp",
+		       O.OPEN_LIMIT_REASON as "openLimitReason", O.OPEN_LIMIT_BASIS as "openLimitBasis"
+		  FROM TB_DATA_MODEL_OBJ O
+		 WHERE O.DM_ID = #{dmId} AND O.USE_YN = 'Y' AND COALESCE(O.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		   AND O.GOV_SEND_YN = 'Y'
+		 ORDER BY O.OBJ_OWNER, O.OBJ_NM
+	</select>
+
+	<!-- 대상 모델의 전송대상 테이블에 속한 컬럼 (개인정보·암호화는 실제 값) -->
+	<select id="selectSendColList" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT PC."objOwner", PC."objNm", PC."attrNm", PC."attrNmKr", PC."privYn", PC."encrYn",
+		       A.OPEN_TP as "openTp", A.OPEN_LIMIT_REASON as "openLimitReason", A.FK_PARENT_OBJ_NM as "fkParentObjNm",
+		       A.FK_PARENT_OBJ_OWNER as "fkParentObjOwner",
+		       (SELECT string_agg(DISTINCT COALESCE(C.REF_OWNER, '') || '|' || C.REF_TABLE_NM, ',')
+		          FROM TB_DATA_MODEL_CONSTRAINT C
+		         WHERE C.DM_ID = A.DM_ID AND C.OBJ_OWNER = A.OBJ_OWNER AND C.TABLE_NM = A.OBJ_NM AND C.COLUMN_NM = A.ATTR_NM
+		           AND C.CONSTRAINT_TYPE = 'R' AND COALESCE(C.USE_YN, 'Y') = 'Y' AND C.REF_TABLE_NM IS NOT NULL) as "fkRefTbls"
+		  FROM (<include refid="privCol.privColBody"/> AND A.DM_ID = #{dmId}) PC
+		  JOIN TB_DATA_MODEL_ATTR A
+		    ON A.DM_ID = PC."dmId" AND A.OBJ_OWNER = PC."objOwner" AND A.OBJ_NM = PC."objNm" AND A.ATTR_NM = PC."attrNm"
+		  JOIN TB_DATA_MODEL_OBJ O
+		    ON O.DM_ID = A.DM_ID AND O.OBJ_OWNER = A.OBJ_OWNER AND O.OBJ_NM = A.OBJ_NM AND O.GOV_SEND_YN = 'Y'
+		   AND O.USE_YN = 'Y' AND COALESCE(O.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		 ORDER BY PC."objOwner", PC."objNm", PC."attrOrd"
+	</select>
+
+	<select id="selectCodeMapAll" resultType="java.util.LinkedHashMap">
+		SELECT CODE_GRP as "codeGrp", LOCAL_VAL as "localVal", GOV_CODE as "govCode"
+		  FROM TB_GOV_META_CODE_MAP WHERE USE_YN = 'Y'
+	</select>
+
+	<!-- ===== 생성 이력·검증 결과 ===== -->
+	<insert id="insertSend" parameterType="java.util.Map">
+		INSERT INTO TB_GOV_META_SEND (SEND_ID, DM_ID, SYS_CD, DS_ID, TRIGGER_TYPE, SCHEDULE_LOG_ID, STATUS, START_DT, LINK_MTHD, CRET_USER_ID)
+		VALUES (#{sendId}, #{dmId, jdbcType=VARCHAR}, #{sysCd, jdbcType=VARCHAR}, #{dsId, jdbcType=VARCHAR}, #{triggerType},
+		        #{scheduleLogId, jdbcType=VARCHAR}, #{status}, to_char(now(), 'YYYYMMDDHH24MISS'),
+		        #{linkMthd, jdbcType=VARCHAR}, #{userId, jdbcType=VARCHAR})
+	</insert>
+
+	<update id="finishSend" parameterType="java.util.Map">
+		UPDATE TB_GOV_META_SEND
+		   SET STATUS = #{status}, END_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
+		       SYS_CNT = #{sysCnt}, DB_CNT = #{dbCnt}, TBL_CNT = #{tblCnt}, COL_CNT = #{colCnt},
+		       ERR_CNT = #{errCnt}, WARN_CNT = #{warnCnt}, SEND_MSG = #{sendMsg, jdbcType=VARCHAR}
+		 WHERE SEND_ID = #{sendId}
+	</update>
+
+	<insert id="insertSendErrs" parameterType="java.util.Map">
+		INSERT INTO TB_GOV_META_SEND_ERR (SEND_ID, ERR_SEQ, ERR_LVL, SEV, SYS_CD, DS_ID, OBJ_OWNER, OBJ_NM, ATTR_NM, ITEM_NM, ERR_MSG)
+		VALUES
+		<foreach item="e" collection="errs" separator=",">
+		(#{sendId}, #{e.errSeq}, #{e.errLvl}, #{e.sev}, #{e.sysCd, jdbcType=VARCHAR}, #{e.dsId, jdbcType=VARCHAR},
+		 #{e.objOwner, jdbcType=VARCHAR}, #{e.objNm, jdbcType=VARCHAR}, #{e.attrNm, jdbcType=VARCHAR},
+		 #{e.itemNm, jdbcType=VARCHAR}, #{e.errMsg})
+		</foreach>
+	</insert>
+
+	<select id="selectSendList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT G.SEND_ID as "sendId", G.DM_ID as "dmId", M.DM_NM as "dmNm", G.SYS_CD as "sysCd", S.SYS_NM as "sysNm",
+		       G.DS_ID as "dsId", G.TRIGGER_TYPE as "triggerType", G.SCHEDULE_LOG_ID as "scheduleLogId", G.STATUS as "status",
+		       G.START_DT as "startDt", G.END_DT as "endDt", G.SYS_CNT as "sysCnt", G.DB_CNT as "dbCnt",
+		       G.TBL_CNT as "tblCnt", G.COL_CNT as "colCnt", G.ERR_CNT as "errCnt", G.WARN_CNT as "warnCnt",
+		       G.FILE_NM as "fileNm", G.LINK_MTHD as "linkMthd", G.SEND_STATUS as "sendStatus", G.SEND_MSG as "sendMsg",
+		       G.CRET_USER_ID as "cretUserId"
+		  FROM TB_GOV_META_SEND G
+		  LEFT JOIN TB_DATA_MODEL M ON M.DM_ID = G.DM_ID
+		  LEFT JOIN TB_SYS_INFO S ON S.SYS_CD = G.SYS_CD
+		 WHERE 1 = 1
+		<if test="sendId != null and sendId != ''"> AND G.SEND_ID = #{sendId} </if>
+		 ORDER BY G.START_DT DESC
+		 LIMIT 200
+	</select>
+
+	<select id="selectSendErrList" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT E.ERR_SEQ as "errSeq", E.ERR_LVL as "errLvl", E.SEV as "sev", E.SYS_CD as "sysCd", S.SYS_NM as "sysNm",
+		       E.DS_ID as "dsId", DS.DSN as "dsn", E.OBJ_OWNER as "objOwner", E.OBJ_NM as "objNm", E.ATTR_NM as "attrNm",
+		       E.ITEM_NM as "itemNm", E.ERR_MSG as "errMsg", G.DM_ID as "dmId"
+		  FROM TB_GOV_META_SEND_ERR E
+		  JOIN TB_GOV_META_SEND G ON G.SEND_ID = E.SEND_ID
+		  LEFT JOIN TB_SYS_INFO S ON S.SYS_CD = E.SYS_CD
+		  LEFT JOIN ndata.tb_data_source DS ON DS.DS_ID = E.DS_ID
+		 WHERE E.SEND_ID = #{sendId}
+		 ORDER BY E.ERR_SEQ
+	</select>
+</mapper>

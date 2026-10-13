@@ -2,12 +2,12 @@
 104번 WP2 — 역할·권한 (관리자가 아닌 사용자에게 역할로 권한을 준다)
 
 검증:
-  R1. myPerms — 관리자(space) 14개 전부 / 일반 사용자(jyjang) 없음
+  R1. myPerms — 관리자(space) 권한 코드 전부(/api/role/perms 목록 수) / 일반 사용자(jyjang) 없음
   R2. UI — 관리자: 관리 > 역할 및 권한 화면에 내장 역할 3개
   R3. 표준 담당 지정 → 일반 사용자 UI: [관리] 그룹에 '표준 사전 변경 승인'·'표준사전 관리'만 (사용자·역할 및 권한·데이터 소스 없음)
   R4. 표준 담당 해제 → 일반 사용자 UI: [관리] 그룹 미표시
 """
-import base64, subprocess, sys, time, traceback
+import base64, json, subprocess, sys, time, traceback
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -52,9 +52,10 @@ def main():
         pa = sa.get(BASE + "/api/login/myPerms", timeout=10).json()
         pu = su.get(BASE + "/api/login/myPerms", timeout=10).json()
         print(f"  space admin={pa.get('admin')} perms={len(pa.get('perms', {}))} / jyjang admin={pu.get('admin')} perms={pu.get('perms')}")
-        assert pa.get("admin") is True and len(pa.get("perms", {})) == 14
+        cat = json.loads(sa.get(BASE + "/api/role/perms", timeout=10).json()["contents"])
+        assert pa.get("admin") is True and len(pa.get("perms", {})) == len(cat), f"권한 코드 {len(cat)}개와 다름"
         assert pu.get("admin") is False and pu.get("perms") == {}
-    step("R1. myPerms — 관리자 14개 / 일반 사용자 없음", _r1)
+    step("R1. myPerms — 관리자 전부 / 일반 사용자 없음", _r1)
 
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")

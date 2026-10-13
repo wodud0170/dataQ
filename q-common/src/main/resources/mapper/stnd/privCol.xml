@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="privCol">
+
+	<!-- 104번 WP5-16 — 컬럼의 개인정보여부·암호화여부.
+	     실제 값 = 컬럼 값(TB_DATA_MODEL_ATTR) → 컬럼에 맞는 승인 용어 값 → 그 용어 도메인 값 → 'N'.
+	     컬럼에 맞는 용어 = 모델 표준사전에서 영문약어명이 컬럼 영문명과 같은 승인 용어 (표준화 진단과 같은 기준).
+	     같은 영문약어명의 승인 용어가 여럿이면 용어명 순 첫 번째. -->
+	<sql id="privColBody">
+		SELECT M.DM_SYS_CD           as "sysCd"
+		      ,S.SYS_NM              as "sysNm"
+		      ,M.DM_ID               as "dmId"
+		      ,M.DM_NM               as "dmNm"
+		      ,A.OBJ_OWNER           as "objOwner"
+		      ,A.OBJ_NM              as "objNm"
+		      ,O.OBJ_NM_KR           as "objNmKr"
+		      ,A.ATTR_NM             as "attrNm"
+		      ,A.ATTR_NM_KR          as "attrNmKr"
+		      ,A.DATA_TYPE           as "dataType"
+		      ,A.DATA_LEN            as "dataLen"
+		      ,A.DATA_DECIMAL_LEN    as "dataDecimalLen"
+		      ,A.ATTR_ORD            as "attrOrd"
+		      ,A.PRIV_YN             as "attrPrivYn"
+		      ,A.ENCR_YN             as "attrEncrYn"
+		      ,T.TERMS_NM            as "termsNm"
+		      ,T.PRIV_YN             as "termsPrivYn"
+		      ,T.ENCR_YN             as "termsEncrYn"
+		      ,T.DOMAIN_NM           as "domainNm"
+		      ,D.PRIV_YN             as "domainPrivYn"
+		      ,D.ENCR_YN             as "domainEncrYn"
+		      ,COALESCE(A.PRIV_YN, T.PRIV_YN, D.PRIV_YN, 'N') as "privYn"
+		      ,CASE WHEN A.PRIV_YN IS NOT NULL THEN 'COLUMN'
+		            WHEN T.PRIV_YN IS NOT NULL THEN 'TERMS'
+		            WHEN D.PRIV_YN IS NOT NULL THEN 'DOMAIN'
+		            ELSE 'NONE' END  as "privSrc"
+		      ,COALESCE(A.ENCR_YN, T.ENCR_YN, D.ENCR_YN, 'N') as "encrYn"
+		      ,CASE WHEN A.ENCR_YN IS NOT NULL THEN 'COLUMN'
+		            WHEN T.ENCR_YN IS NOT NULL THEN 'TERMS'
+		            WHEN D.ENCR_YN IS NOT NULL THEN 'DOMAIN'
+		            ELSE 'NONE' END  as "encrSrc"
+		  FROM TB_DATA_MODEL_ATTR A
+		  JOIN TB_DATA_MODEL M
+		    ON M.DM_ID = A.DM_ID
+		   AND M.USE_YN = 'Y'
+		   AND COALESCE(M.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		  LEFT JOIN TB_DATA_MODEL_OBJ O
+		    ON O.DM_ID = A.DM_ID AND O.OBJ_OWNER = A.OBJ_OWNER AND O.OBJ_NM = A.OBJ_NM
+		  LEFT JOIN TB_SYS_INFO S
+		    ON S.SYS_CD = M.DM_SYS_CD
+		  LEFT JOIN (SELECT DISTINCT ON (DICT_ID, TERMS_ENG_ABRV_NM)
+		                    DICT_ID, TERMS_ENG_ABRV_NM, TERMS_NM, DOMAIN_NM, PRIV_YN, ENCR_YN
+		               FROM TB_TERMS
+		              WHERE APRV_YN = 'Y'
+		              ORDER BY DICT_ID, TERMS_ENG_ABRV_NM, TERMS_NM) T
+		    ON T.DICT_ID = M.DICT_ID AND T.TERMS_ENG_ABRV_NM = TRIM(A.ATTR_NM)
+		  LEFT JOIN TB_DOMAIN D
+		    ON D.DICT_ID = T.DICT_ID AND D.DOMAIN_NM = T.DOMAIN_NM
+		 WHERE A.USE_YN = 'Y'
+		   AND COALESCE(A.APRV_STATUS, 'APPROVED') = 'APPROVED'
+	</sql>
+
+	<!-- 개인정보 컬럼 목록. sysCd 는 하위 시스템까지 포함한다 -->
+	<select id="selectPrivColList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<if test="sysCd != null and sysCd != ''">
+		WITH RECURSIVE SYS (SYS_CD, DEPTH) AS (
+			SELECT SYS_CD, 0 FROM TB_SYS_INFO WHERE SYS_CD = #{sysCd}
+			UNION ALL
+			SELECT C.SYS_CD, SYS.DEPTH + 1
+			  FROM TB_SYS_INFO C
+			  JOIN SYS ON C.P_SYS_CD = SYS.SYS_CD
+			 WHERE SYS.DEPTH &lt; 20
+		)
+		</if>
+		SELECT * FROM (
+			<include refid="privColBody"/>
+			<if test="sysCd != null and sysCd != ''">
+			   AND M.DM_SYS_CD IN (SELECT SYS_CD FROM SYS)
+			</if>
+			<if test="dmId != null and dmId != ''">
+			   AND A.DM_ID = #{dmId}
+			</if>
+			<if test="objOwner != null and objOwner != ''">
+			   AND A.OBJ_OWNER = #{objOwner}
+			</if>
+			<if test="objNm != null and objNm != ''">
+			   AND (A.OBJ_NM ILIKE '%' || #{objNm} || '%' OR O.OBJ_NM_KR ILIKE '%' || #{objNm} || '%')
+			</if>
+			<if test="attrNm != null and attrNm != ''">
+			   AND (A.ATTR_NM ILIKE '%' || #{attrNm} || '%' OR A.ATTR_NM_KR ILIKE '%' || #{attrNm} || '%')
+			</if>
+		) X
+		 WHERE 1 = 1
+		<if test="privOnly == 'Y'.toString()">
+		   AND X."privYn" = 'Y'
+		</if>
+		<if test="unencOnly == 'Y'.toString()">
+		   AND X."privYn" = 'Y' AND X."encrYn" = 'N'
+		</if>
+		 ORDER BY X."sysNm", X."dmNm", X."objOwner", X."objNm", X."attrOrd", X."attrNm"
+	</select>
+
+	<!-- 컬럼 단위 지정. val 이 null 이면 상속으로 되돌린다 (용어 → 도메인 값) -->
+	<update id="updateAttrPrivYn" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR
+		   SET PRIV_YN = #{val, jdbcType=CHAR}
+		 WHERE (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) IN
+		<foreach item="k" collection="keys" open="(" separator="," close=")">
+		       (#{k.dmId}, #{k.objOwner}, #{k.objNm}, #{k.attrNm})
+		</foreach>
+	</update>
+
+	<update id="updateAttrEncrYn" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR
+		   SET ENCR_YN = #{val, jdbcType=CHAR}
+		 WHERE (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) IN
+		<foreach item="k" collection="keys" open="(" separator="," close=")">
+		       (#{k.dmId}, #{k.objOwner}, #{k.objNm}, #{k.attrNm})
+		</foreach>
+	</update>
+
+	<!-- 필터 — 모델(시스템 하위 포함), 소유자 -->
+	<select id="selectModelOptions" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT M.DM_ID as "dmId", M.DM_NM as "dmNm", M.DM_SYS_CD as "sysCd"
+		  FROM TB_DATA_MODEL M
+		 WHERE M.USE_YN = 'Y'
+		   AND COALESCE(M.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		 ORDER BY M.DM_NM
+	</select>
+
+	<select id="selectOwnerOptions" parameterType="String" resultType="String">
+		SELECT DISTINCT OBJ_OWNER
+		  FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dmId} AND USE_YN = 'Y'
+		 ORDER BY OBJ_OWNER
+	</select>
+</mapper>

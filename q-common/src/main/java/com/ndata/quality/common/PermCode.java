@@ -29,7 +29,8 @@ public enum PermCode {
 	USER_ADMIN("사용자·권한 관리", "사용자를 추가·삭제·수정하고 역할과 권한을 관리한다", false),
 	DS_ADMIN("데이터 소스 관리", "데이터 소스를 등록·수정·삭제하고 연결을 시험한다", false),
 	SYS_ADMIN("시스템 관리", "시스템 트리를 등록·수정·삭제한다", false),
-	QUAL_ADMIN("품질 규칙 관리", "데이터 품질 규칙을 삭제하고 카탈로그에서 가져온다", false);
+	QUAL_ADMIN("품질 규칙 관리", "데이터 품질 규칙을 삭제하고 카탈로그에서 가져온다", false),
+	GOV_META_ADMIN("범정부 메타 관리", "범정부 메타 설정·정보시스템·DB·테이블·컬럼 항목을 관리하고 검증·생성한다", false);
 
 	public final String label;
 	public final String desc;

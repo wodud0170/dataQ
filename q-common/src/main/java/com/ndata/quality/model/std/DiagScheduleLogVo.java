@@ -19,6 +19,7 @@ public class DiagScheduleLogVo {
     private String diagType;           // STANDARD | STRUCT
     private String diagJobId;          // STANDARD → TB_DIAG_JOB
     private String structDiagId;       // STRUCT → TB_STRUCT_DIAG_HISTORY
+    private String govMetaSendId;      // GOV_META → TB_GOV_META_SEND (104번 WP5-78)
 
     private String errorMsg;           // prefix 예: [CONFIG] / [DB] / [TIMEOUT] / [DATA_NOT_FOUND] / [UNKNOWN]
     private Integer execDurationSec;

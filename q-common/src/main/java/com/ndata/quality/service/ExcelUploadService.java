@@ -236,6 +236,9 @@ public class ExcelUploadService {
 					if (dataRow.size() > 13) {
 						stdTermsVo.setCommStndYn(dataRow.get(13));
 					}
+					// 104번 WP5-16 — 빈칸이면 도메인 값을 따른다
+					stdTermsVo.setPrivYn(ynCell(dataRow, 14, "개인정보여부"));
+					stdTermsVo.setEncrYn(ynCell(dataRow, 15, "암호화여부"));
 					stdTermsVo.setMagntdOrd(dataRow.get(1));
 					stdTermsVo.setCretUserId(userId);
 					stdTermsVo.setUpdtUserId(userId);
@@ -437,6 +440,9 @@ public class ExcelUploadService {
 					if (dataRow.size() > 14) {
 						stdDomainVo.setCommStndYn(dataRow.get(14));
 					}
+					// 104번 WP5-16 — 빈칸이면 'N' (insertDomain 의 COALESCE)
+					stdDomainVo.setPrivYn(ynCell(dataRow, 15, "개인정보여부"));
+					stdDomainVo.setEncrYn(ynCell(dataRow, 16, "암호화여부"));
 					stdDomainVo.setMagntdOrd(dataRow.get(1));
 					stdDomainVo.setCretUserId(userId);
 					stdDomainVo.setUpdtUserId(userId);
@@ -696,5 +702,20 @@ public class ExcelUploadService {
 		} else {
 			return str;
 		}
+	}
+
+	/**
+	 * 104번 WP5-16 — 양식 끝의 개인정보여부·암호화여부 칸. 열이 없는 예전 양식·빈칸은 null.
+	 * Y·N 이 아니면 그 행을 실패로 남긴다.
+	 */
+	private String ynCell(List<String> dataRow, int idx, String label) throws Exception {
+		if (dataRow.size() <= idx) return null;
+		String v = checkInvalidVal(dataRow.get(idx) == null ? "" : dataRow.get(idx).trim());
+		if (v == null) return null;
+		v = v.toUpperCase();
+		if (!"Y".equals(v) && !"N".equals(v)) {
+			throw new Exception(label + "는 Y 또는 N 이어야 합니다 (현재: " + dataRow.get(idx) + ")");
+		}
+		return v;
 	}
 }

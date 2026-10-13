@@ -115,6 +115,10 @@
           <div style="font-size:.75rem; color:#546E7A;">연결된 구조변경 진단 ID</div>
           <code style="font-size:.7rem;">{{ detail.structDiagId }}</code>
         </v-card>
+        <v-card v-if="detail.govMetaSendId" outlined class="pa-3 mt-3">
+          <div style="font-size:.75rem; color:#546E7A;">연결된 범정부 메타 생성 이력 ([범정부 메타 > 생성·전송] 이력에서 검증 결과를 봅니다)</div>
+          <code style="font-size:.7rem;">{{ detail.govMetaSendId }}</code>
+        </v-card>
 
         <v-card v-if="detail.errorMsg" outlined class="pa-3 mt-3" color="#FFEBEE">
           <div style="font-size:.75rem; color:#B71C1C; font-weight:bold;">실패 사유</div>
@@ -181,10 +185,10 @@ export default {
       this.drawerOpen = true;
     },
     diagTypeLabel(t) {
-      return { STANDARD: '표준화', STRUCT: '구조변경', BOTH: '전체' }[t] || t || '-';
+      return { STANDARD: '표준화', STRUCT: '구조변경', BOTH: '전체', GOV_META: '범정부 메타' }[t] || t || '-';
     },
     diagTypeColor(t) {
-      return { STANDARD: 'blue', STRUCT: 'deep-purple', BOTH: 'teal' }[t] || 'grey';
+      return { STANDARD: 'blue', STRUCT: 'deep-purple', BOTH: 'teal', GOV_META: 'brown' }[t] || 'grey';
     },
     statusColor(s) {
       return { DONE: 'green', ERROR: 'red', SKIPPED: 'grey', RUNNING: 'blue' }[s] || 'grey';

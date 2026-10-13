@@ -42,6 +42,60 @@ public class ExcelDownloadService {
 	@Autowired
 	private ExcelExportHandler excelExportHandler;
 	
+    // 104번 WP5-16 — 개인정보 컬럼 (실제 값과 출처)
+    public void getPrivColExcel(Map<String, Object> filter, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        List<Map<String, Object>> rows = sqlSessionTemplate.selectList("privCol.selectPrivColList", filter);
+        List<String[]> headers = Arrays.asList(
+            new String[]{"No","6","RIGHT"},
+            new String[]{"시스템","20","LEFT"},
+            new String[]{"데이터 모델","25","LEFT"},
+            new String[]{"소유자","15","LEFT"},
+            new String[]{"테이블","25","LEFT"},
+            new String[]{"테이블 한글명","25","LEFT"},
+            new String[]{"컬럼","25","LEFT"},
+            new String[]{"컬럼 한글명","25","LEFT"},
+            new String[]{"데이터타입","15","CENTER"},
+            new String[]{"용어","20","LEFT"},
+            new String[]{"도메인","20","LEFT"},
+            new String[]{"개인정보여부","12","CENTER"},
+            new String[]{"개인정보여부 출처","15","CENTER"},
+            new String[]{"암호화여부","12","CENTER"},
+            new String[]{"암호화여부 출처","15","CENTER"}
+        );
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            Map<String, Object> r = rows.get(i);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("HEADER1",  i + 1);
+            m.put("HEADER2",  r.get("sysNm"));
+            m.put("HEADER3",  r.get("dmNm"));
+            m.put("HEADER4",  r.get("objOwner"));
+            m.put("HEADER5",  r.get("objNm"));
+            m.put("HEADER6",  r.get("objNmKr"));
+            m.put("HEADER7",  r.get("attrNm"));
+            m.put("HEADER8",  r.get("attrNmKr"));
+            m.put("HEADER9",  r.get("dataType"));
+            m.put("HEADER10", r.get("termsNm"));
+            m.put("HEADER11", r.get("domainNm"));
+            m.put("HEADER12", r.get("privYn"));
+            m.put("HEADER13", privSrcNm((String) r.get("privSrc")));
+            m.put("HEADER14", r.get("encrYn"));
+            m.put("HEADER15", privSrcNm((String) r.get("encrSrc")));
+            list.add(m);
+        }
+        String fileName = "개인정보컬럼_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
+    private static String privSrcNm(String src) {
+        if ("COLUMN".equals(src)) return "컬럼";
+        if ("TERMS".equals(src)) return "용어";
+        if ("DOMAIN".equals(src)) return "도메인";
+        return "기본값";
+    }
+
     // 88번 §16 — 한글 변환 이력 (매핑 정의서)
     public void getTermResolveHistoryExcel(Map<String, Object> filter, HttpServletRequest request, HttpServletResponse response) throws Exception {
         List<Map<String, Object>> rows = sqlSessionTemplate.selectList("termResolve.selectList", filter);
@@ -176,7 +230,9 @@ public class ExcelDownloadService {
         	new String[]{"소관기관명","15","LEFT"},
             new String[]{"이음동의어목록","15","CENTER"},
         	new String[]{"요청시스템","15","LEFT"},
-        	new String[]{"표준여부","10","CENTER"}
+        	new String[]{"표준여부","10","CENTER"},
+        	new String[]{"개인정보여부","12","CENTER"},
+        	new String[]{"암호화여부","12","CENTER"}
         );
         
         // 데이터 리스트
@@ -200,6 +256,9 @@ public class ExcelDownloadService {
             tempMap.put("HEADER12", dataVo.getAllophSynmLst() == null ? null : String.join(",", dataVo.getAllophSynmLst()));
             tempMap.put("HEADER13", dataVo.getReqSysNm());
             tempMap.put("HEADER14", dataVo.getCommStndYn());
+            // 104번 WP5-16 — 용어 값 그대로 (빈칸 = 도메인 값 따름, 다시 올려도 그대로 유지)
+            tempMap.put("HEADER15", dataVo.getPrivYn());
+            tempMap.put("HEADER16", dataVo.getEncrYn());
             list.add(tempMap);
         }
         log.info(">> excel export size={}", list.size());
@@ -356,7 +415,9 @@ public class ExcelDownloadService {
         	new String[]{"단위","15","LEFT"},
         	new String[]{"허용값","30","LEFT"},
             new String[]{"요청시스템","15","LEFT"},
-        	new String[]{"표준여부","10","CENTER"}
+        	new String[]{"표준여부","10","CENTER"},
+        	new String[]{"개인정보여부","12","CENTER"},
+        	new String[]{"암호화여부","12","CENTER"}
         );
         
         // 데이터 리스트
@@ -381,6 +442,8 @@ public class ExcelDownloadService {
             tempMap.put("HEADER13", dataVo.getAllowValLst() == null ? null : String.join("\\n", dataVo.getAllowValLst()));//String 배열을 '\\n' 로 연결한 스트링으로 변환
             tempMap.put("HEADER14", dataVo.getReqSysNm());
             tempMap.put("HEADER15", dataVo.getCommStndYn());
+            tempMap.put("HEADER16", dataVo.getPrivYn());
+            tempMap.put("HEADER17", dataVo.getEncrYn());
             list.add(tempMap);
         }
         log.info(">> excel export size={}", list.size());

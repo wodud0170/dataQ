@@ -85,6 +85,7 @@ GROUPS = [
         "test_wp2_role_perm.py",     # 104 WP2 — 역할·권한
         "test_wp3_ddl_rule.py",      # 104 WP3 — DBMS 별 DDL·DB 반영
         "test_wp1_aprv.py",          # 104 WP1 — 결재선·알림·결재함
+        "test_wp5_gov_meta.py",      # 104 WP5 — 개인정보 컬럼·범정부 메타
         "test_crud_std_dict.py",
     ]),
     ("표준 사전 (단어/용어/도메인)", [

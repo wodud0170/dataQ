@@ -17,6 +17,8 @@
     <result property="exprFmtLst" column="EXPR_FMT_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
     <result property="allowValLst" column="ALLOW_VAL_LST" typeHandler="com.ndata.common.handler.ArrayTypeHandler"/>
     <result property="commStndYn" column="COMM_STND_YN"/>
+    <result property="privYn" column="PRIV_YN"/>
+    <result property="encrYn" column="ENCR_YN"/>
     <result property="magntdOrd" column="MAGNTD_ORD"/>
     <result property="aprvYn" column="APRV_YN"/>
     <result property="aprvUserId" column="APRV_USER_ID"/>
@@ -44,6 +46,8 @@
 				,EXPR_FMT_LST		
 				,ALLOW_VAL_LST	
 				,COMM_STND_YN	
+				,PRIV_YN
+				,ENCR_YN
 				,MAGNTD_ORD		
 				,APRV_YN			
 				,APRV_USER_ID	
@@ -65,6 +69,13 @@
 			</if>
 			<if test="schCommStndYn != null and schCommStndYn != ''">
 				AND COMM_STND_YN = #{schCommStndYn}
+			</if>
+			<!-- 104번 WP5-16 — 개인정보·암호화 -->
+			<if test="schPrivYn != null and schPrivYn != ''">
+				AND COALESCE(PRIV_YN, 'N') = #{schPrivYn}
+			</if>
+			<if test="schEncrYn != null and schEncrYn != ''">
+				AND COALESCE(ENCR_YN, 'N') = #{schEncrYn}
 			</if>
 			<if test="schDomainGrpNm != null">
 				AND DOMAIN_GRP_NM ILIKE '%' || #{schDomainGrpNm} || '%'
@@ -93,6 +104,8 @@
 				,EXPR_FMT_LST		
 				,ALLOW_VAL_LST	
 				,COMM_STND_YN	
+				,PRIV_YN
+				,ENCR_YN
 				,MAGNTD_ORD		
 				,APRV_YN			
 				,APRV_USER_ID	
@@ -124,6 +137,8 @@
 				,EXPR_FMT_LST
 				,ALLOW_VAL_LST
 				,COMM_STND_YN
+				,PRIV_YN
+				,ENCR_YN
 				,MAGNTD_ORD
 				,APRV_YN
 				,APRV_USER_ID
@@ -153,6 +168,8 @@
 				,EXPR_FMT_LST		
 				,ALLOW_VAL_LST	
 				,COMM_STND_YN	
+				,PRIV_YN
+				,ENCR_YN
 				,MAGNTD_ORD		
 				,APRV_YN			
 				,APRV_USER_ID	
@@ -184,6 +201,8 @@
       ,EXPR_FMT_LST
       ,ALLOW_VAL_LST
       ,COMM_STND_YN
+				,PRIV_YN
+				,ENCR_YN
       ,MAGNTD_ORD
       ,APRV_YN
       ,APRV_USER_ID
@@ -214,12 +233,14 @@
             ,STOR_FMT 		
             ,EXPR_FMT_LST			
             ,ALLOW_VAL_LST	
-            ,COMM_STND_YN	
-            ,MAGNTD_ORD		
-            ,APRV_YN			
-            ,APRV_USER_ID	
-            ,CRET_DT			
-            ,CRET_USER_ID	
+            ,COMM_STND_YN
+            ,PRIV_YN
+            ,ENCR_YN
+            ,MAGNTD_ORD
+            ,APRV_YN
+            ,APRV_USER_ID
+            ,CRET_DT
+            ,CRET_USER_ID
             ,APRV_STAT_UPDT_DT
             ,REQ_SYS_CD
             ,DICT_ID
@@ -239,6 +260,8 @@
             ,#{exprFmtLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
             ,#{allowValLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
             ,#{commStndYn, jdbcType=VARCHAR}
+            ,COALESCE(#{privYn, jdbcType=VARCHAR}, 'N')
+            ,COALESCE(#{encrYn, jdbcType=VARCHAR}, 'N')
             ,#{magntdOrd, jdbcType=VARCHAR}
             ,#{aprvYn, jdbcType=VARCHAR}
             ,#{aprvUserId, jdbcType=VARCHAR}
@@ -266,6 +289,8 @@
               EXPR_FMT_LST = #{exprFmtLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler},
               ALLOW_VAL_LST = #{allowValLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler},
               <if test="commStndYn != null">COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR},</if>
+              <if test="privYn != null">PRIV_YN = #{privYn},</if>
+              <if test="encrYn != null">ENCR_YN = #{encrYn},</if>
               MAGNTD_ORD = #{magntdOrd, jdbcType=VARCHAR},
               UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
               UPDT_USER_ID = #{updtUserId},

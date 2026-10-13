@@ -10,6 +10,7 @@
                     , B.ATTR_NAME   AS attrNm
                     , B.COMMENT     AS attrNmKr
                     , CASE WHEN B.DATA_TYPE = 'STRING' THEN 'VARCHAR' ELSE B.DATA_TYPE END AS dataType
+                    , B.DATA_TYPE AS dbmsDataType
                     , B.PREC        AS dataLen
                     , B.SCALE       AS dataDecimalLen
                     , CASE WHEN B.IS_NULLABLE = 'YES' THEN 'Y' END AS nullableYn
@@ -80,6 +81,7 @@
                          WHEN A.DATA_TYPE like 'TIMESTAMP%' THEN 'TIMESTAMP'
                          ELSE A.DATA_TYPE 
                     END AS dataType,
+                    A.DATA_TYPE AS dbmsDataType,
                     A.LEN AS dataLen,
                     A.DATA_SCALE AS dataDecimalLen,
                     A.NULLABLE AS nullableYn,   
@@ -255,6 +257,7 @@
                          WHEN A.DATA_TYPE like 'TIMESTAMP%' THEN 'TIMESTAMP'
                          ELSE A.DATA_TYPE
                     END AS dataType,
+                    A.DATA_TYPE AS dbmsDataType,
                     A.LEN AS dataLen,
                     A.DATA_SCALE AS dataDecimalLen,
                     A.NULLABLE AS nullableYn,
@@ -418,6 +421,7 @@
 	                    WHEN t2.is_nullable = 'NO' THEN 'N'
 	                 END          AS nullableYn
 	                ,t2.DATA_TYPE AS dataType
+	                ,t2.DATA_TYPE AS dbmsDataType
 	                ,CASE WHEN t2.NUMERIC_PRECISION is not null THEN t2.NUMERIC_PRECISION
 	                 ELSE t2.CHARACTER_MAXIMUM_LENGTH END AS dataLen
 	                ,t2.NUMERIC_SCALE AS dataDecimalLen
@@ -505,6 +509,7 @@
                            WHEN t.typname IN ('bytea')                          THEN 'BLOB'
                            ELSE upper(t.typname)
                         END                                          AS dataType
+                       ,format_type(a.atttypid, NULL)                AS dbmsDataType
                        ,CASE
                            WHEN t.typname IN ('varchar','bpchar','char') AND a.atttypmod > 4
                                 THEN a.atttypmod - 4

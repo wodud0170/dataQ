@@ -1175,7 +1175,13 @@ CREATE TABLE quality.tb_data_model_attr (
     aprv_dt character varying(14),
     aprv_comment character varying(500),
     submission_id character varying(40),
-    fk_parent_obj_owner character varying(100)
+    fk_parent_obj_owner character varying(100),
+    priv_yn character(1),
+    encr_yn character(1),
+    dbms_data_type character varying(100),
+    open_tp character varying(10),
+    open_limit_reason character varying(500),
+    cnstr_desc character varying(1000)
 );
 
 
@@ -1275,6 +1281,48 @@ COMMENT ON COLUMN quality.tb_data_model_attr.fk_parent_obj_nm IS '85번 — FK �
 --
 
 COMMENT ON COLUMN quality.tb_data_model_attr.fk_parent_attr_nm IS '85번 — FK 일 때 참조 부모 컬럼 (없으면 부모 PK 추정)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.priv_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.priv_yn IS '개인정보여부 — NULL 이면 용어 → 도메인 값 (104번 WP5-16)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.encr_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.encr_yn IS '암호화여부 — NULL 이면 용어 → 도메인 값 (104번 WP5-16)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.dbms_data_type; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.dbms_data_type IS '수집 원본 데이터타입 (DBMS 종속 타입명, 104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.open_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.open_tp IS '컬럼 공개/비공개여부 (별표 4)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.open_limit_reason; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.open_limit_reason IS '컬럼 비공개 사유 (별표 4)';
+
+
+--
+-- Name: COLUMN tb_data_model_attr.cnstr_desc; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_attr.cnstr_desc IS '제약조건 — 허용범위·구분값·기본값 등 (별표 4)';
 
 
 --
@@ -1529,7 +1577,14 @@ CREATE TABLE quality.tb_data_model_obj (
     submission_id character varying(40),
     tablespace_nm character varying(100),
     biz_area_id character varying(40),
-    subj_area_id character varying(40)
+    subj_area_id character varying(40),
+    gov_send_yn character(1) DEFAULT 'N'::bpchar,
+    tbl_tp character varying(20),
+    occr_cycle character varying(20),
+    open_tp character varying(10),
+    open_limit_reason character varying(500),
+    open_limit_basis character varying(500),
+    open_data_lst_nm character varying(500)
 );
 
 
@@ -1615,6 +1670,55 @@ COMMENT ON COLUMN quality.tb_data_model_obj.diag_target_updt_user_id IS '진단 
 --
 
 COMMENT ON COLUMN quality.tb_data_model_obj.diag_target_updt_dt IS '진단 대상 마지막 변경일시 (YYYYMMDDHH24MISS)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.gov_send_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.gov_send_yn IS '범정부 메타 전송대상 (104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.tbl_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.tbl_tp IS '테이블유형 (별표 4)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.occr_cycle; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.occr_cycle IS '발생주기 (별표 4)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.open_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.open_tp IS '공개/비공개여부 — 공개·부분공개·비공개 (별표 4)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.open_limit_reason; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.open_limit_reason IS '부분공개·비공개 사유 (별표 4)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.open_limit_basis; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.open_limit_basis IS '부분공개·비공개 관련근거 (별표 4)';
+
+
+--
+-- Name: COLUMN tb_data_model_obj.open_data_lst_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_obj.open_data_lst_nm IS '개방데이터목록 (별표 4)';
 
 
 --
@@ -1783,7 +1887,7 @@ COMMENT ON TABLE quality.tb_diag_schedule IS '진단 스케줄 정의 (65번 문
 -- Name: COLUMN tb_diag_schedule.diag_type; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_diag_schedule.diag_type IS 'STANDARD | STRUCT | BOTH';
+COMMENT ON COLUMN quality.tb_diag_schedule.diag_type IS 'STANDARD | STRUCT | BOTH | GOV_META';
 
 
 --
@@ -1830,7 +1934,8 @@ CREATE TABLE quality.tb_diag_schedule_log (
     struct_diag_id character varying(40),
     schedule_nm_snapshot character varying(200),
     error_msg character varying(2000),
-    exec_duration_sec integer
+    exec_duration_sec integer,
+    gov_meta_send_id character varying(40)
 );
 
 
@@ -1863,6 +1968,13 @@ COMMENT ON COLUMN quality.tb_diag_schedule_log.error_msg IS '실패 원인 요�
 
 
 --
+-- Name: COLUMN tb_diag_schedule_log.gov_meta_send_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_diag_schedule_log.gov_meta_send_id IS '범정부 메타 생성 이력 (TB_GOV_META_SEND.SEND_ID, DIAG_TYPE=GOV_META, 104번 WP5-78)';
+
+
+--
 -- Name: tb_domain; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -1890,8 +2002,24 @@ CREATE TABLE quality.tb_domain (
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
     use_yn character(1) DEFAULT 'Y'::bpchar,
-    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL,
+    priv_yn character(1) DEFAULT 'N'::bpchar,
+    encr_yn character(1) DEFAULT 'N'::bpchar
 );
+
+
+--
+-- Name: COLUMN tb_domain.priv_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_domain.priv_yn IS '개인정보여부 (104번 WP5-16)';
+
+
+--
+-- Name: COLUMN tb_domain.encr_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_domain.encr_yn IS '암호화여부 (104번 WP5-16)';
 
 
 --
@@ -1952,6 +2080,309 @@ CREATE TABLE quality.tb_domain_rule (
 --
 
 COMMENT ON TABLE quality.tb_domain_rule IS '도메인별 룰 정의 (1:N) — 70번';
+
+
+--
+-- Name: tb_gov_brm; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_gov_brm (
+    brm_id character varying(40) NOT NULL,
+    brm_nm character varying(300) NOT NULL,
+    parent_brm_id character varying(40),
+    brm_lvl integer,
+    brm_path character varying(1000),
+    inst_cd character varying(20),
+    brm_src character varying(10) NOT NULL,
+    use_yn character(1) DEFAULT 'Y'::bpchar NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_gov_brm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_gov_brm IS '업무분류체계(BRM) — 정부기능분류체계 반입 또는 기관 자체 (104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_gov_brm.brm_src; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_brm.brm_src IS 'GOV(정부기능분류체계 반입), INST(기관 자체)';
+
+
+--
+-- Name: tb_gov_meta_code_map; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_gov_meta_code_map (
+    code_grp character varying(30) NOT NULL,
+    local_val character varying(100) NOT NULL,
+    gov_code character varying(50) NOT NULL,
+    gov_code_nm character varying(200),
+    sort_order integer DEFAULT 0 NOT NULL,
+    use_yn character(1) DEFAULT 'Y'::bpchar NOT NULL,
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_gov_meta_code_map; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_gov_meta_code_map IS '우리 값 → 범정부 코드 (104번 WP5-78). 그룹: DB_FORM, DBMS, DBMS_VER, OS, OS_VER, TBL_TP, OCCR_CYCLE, OPEN_TP';
+
+
+--
+-- Name: tb_gov_meta_conf; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_gov_meta_conf (
+    conf_id character varying(20) NOT NULL,
+    inst_nm character varying(200),
+    inst_cd character varying(20),
+    send_sys_cd character varying(50),
+    link_mthd character varying(20),
+    inst_meta_user_id character varying(100),
+    sftp_host character varying(200),
+    sftp_port integer,
+    sftp_user_id character varying(100),
+    sftp_pwd character varying(500),
+    sftp_dir character varying(500),
+    tmp_file_dir character varying(500),
+    meta_file_dir character varying(500),
+    file_keep_cnt integer,
+    file_fmt character varying(20),
+    file_encoding character varying(20),
+    dflt_brm_id character varying(40),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_gov_meta_conf; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_gov_meta_conf IS '범정부 메타 기관·연계 설정 (기관 1행, 104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_gov_meta_conf.link_mthd; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_conf.link_mthd IS '연계 방식 — INST_META(기관메타 업로드), CENTRAL(중앙메타), SFTP';
+
+
+--
+-- Name: COLUMN tb_gov_meta_conf.sftp_pwd; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_conf.sftp_pwd IS 'SFTP 비밀번호 (암호화 저장, 조회 응답에 넣지 않음)';
+
+
+--
+-- Name: tb_gov_meta_db; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_gov_meta_db (
+    ds_id character varying(50) NOT NULL,
+    rep_dm_id character varying(22),
+    db_nm_kr character varying(200),
+    db_nm_en character varying(200),
+    db_desc character varying(1000),
+    db_form_cd character varying(20),
+    brm_id character varying(40),
+    dbms_nm character varying(100),
+    dbms_ver character varying(100),
+    os_nm character varying(100),
+    os_ver character varying(100),
+    dbms_info_clct_dt character varying(14),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_gov_meta_db; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_gov_meta_db IS '범정부 메타 DB 항목 (ndata.TB_DATA_SOURCE 단위, 104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_gov_meta_db.rep_dm_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_db.rep_dm_id IS '대표 모델 — 한 DB 를 여러 모델이 쓸 때 테이블·컬럼을 가져올 모델 (104번 §3.3 결정)';
+
+
+--
+-- Name: COLUMN tb_gov_meta_db.dbms_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_db.dbms_nm IS 'DBMS 제품명 (수집 때 JDBC 로 읽음)';
+
+
+--
+-- Name: COLUMN tb_gov_meta_db.dbms_ver; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_db.dbms_ver IS 'DBMS 버전 (수집 때 JDBC 로 읽음)';
+
+
+--
+-- Name: tb_gov_meta_send; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_gov_meta_send (
+    send_id character varying(40) NOT NULL,
+    dm_id character varying(22),
+    sys_cd character varying(22),
+    ds_id character varying(50),
+    trigger_type character varying(20) NOT NULL,
+    schedule_log_id character varying(40),
+    status character varying(20) NOT NULL,
+    start_dt character varying(14),
+    end_dt character varying(14),
+    sys_cnt integer DEFAULT 0,
+    db_cnt integer DEFAULT 0,
+    tbl_cnt integer DEFAULT 0,
+    col_cnt integer DEFAULT 0,
+    err_cnt integer DEFAULT 0,
+    warn_cnt integer DEFAULT 0,
+    file_nm character varying(300),
+    file_path character varying(1000),
+    link_mthd character varying(20),
+    send_dt character varying(14),
+    send_status character varying(20),
+    send_msg character varying(2000),
+    cret_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_gov_meta_send; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_gov_meta_send IS '범정부 메타 생성·전송 이력 (104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_gov_meta_send.trigger_type; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_send.trigger_type IS 'MANUAL(화면), SCHEDULE(예약 실행)';
+
+
+--
+-- Name: COLUMN tb_gov_meta_send.status; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_send.status IS 'READY, RUNNING, DONE, ERROR';
+
+
+--
+-- Name: tb_gov_meta_send_err; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_gov_meta_send_err (
+    send_id character varying(40) NOT NULL,
+    err_seq integer NOT NULL,
+    err_lvl character varying(10) NOT NULL,
+    sev character varying(10) NOT NULL,
+    sys_cd character varying(22),
+    ds_id character varying(50),
+    obj_owner character varying(100),
+    obj_nm character varying(255),
+    attr_nm character varying(255),
+    item_nm character varying(100),
+    err_msg character varying(1000) NOT NULL
+);
+
+
+--
+-- Name: TABLE tb_gov_meta_send_err; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_gov_meta_send_err IS '범정부 메타 생성 전 검증 결과 (104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_gov_meta_send_err.err_lvl; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_send_err.err_lvl IS 'SYS, DB, TBL, COL';
+
+
+--
+-- Name: COLUMN tb_gov_meta_send_err.sev; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_send_err.sev IS 'ERROR(생성 불가), WARN(규격 확인 전까지 경고)';
+
+
+--
+-- Name: tb_gov_meta_sys; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_gov_meta_sys (
+    sys_cd character varying(22) NOT NULL,
+    gov_sys_nm character varying(200),
+    gov_sys_cd character varying(20),
+    gov_sys_tp character varying(20),
+    std_dstb_tp character varying(20),
+    oper_dept_nm character varying(200),
+    chrg_user_nm character varying(100),
+    chrg_telno character varying(50),
+    chrg_email character varying(200),
+    rlt_law_cn character varying(1000),
+    bld_ym character varying(6),
+    last_upgrd_ym character varying(6),
+    send_yn character(1) DEFAULT 'N'::bpchar NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_gov_meta_sys; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_gov_meta_sys IS '범정부 메타 정보시스템 항목 (TB_SYS_INFO 시스템 노드, 104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_gov_meta_sys.gov_sys_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_sys.gov_sys_nm IS '정보시스템명 — IRM 등록명과 같게';
+
+
+--
+-- Name: COLUMN tb_gov_meta_sys.gov_sys_cd; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_sys.gov_sys_cd IS '정보시스템코드 — 기관코드 7자리 + "_" + 일련번호 5자리';
+
+
+--
+-- Name: COLUMN tb_gov_meta_sys.send_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_gov_meta_sys.send_yn IS '전송대상';
 
 
 --
@@ -2886,8 +3317,24 @@ CREATE TABLE quality.tb_terms (
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
     use_yn character(1) DEFAULT 'Y'::bpchar,
-    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL,
+    priv_yn character(1),
+    encr_yn character(1)
 );
+
+
+--
+-- Name: COLUMN tb_terms.priv_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_terms.priv_yn IS '개인정보여부 — NULL 이면 도메인 값 (104번 WP5-16)';
+
+
+--
+-- Name: COLUMN tb_terms.encr_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_terms.encr_yn IS '암호화여부 — NULL 이면 도메인 값 (104번 WP5-16)';
 
 
 --
@@ -3705,6 +4152,62 @@ ALTER TABLE ONLY quality.tb_domain
 
 
 --
+-- Name: tb_gov_brm tb_gov_brm_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_gov_brm
+    ADD CONSTRAINT tb_gov_brm_pk PRIMARY KEY (brm_id);
+
+
+--
+-- Name: tb_gov_meta_code_map tb_gov_meta_code_map_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_gov_meta_code_map
+    ADD CONSTRAINT tb_gov_meta_code_map_pk PRIMARY KEY (code_grp, local_val);
+
+
+--
+-- Name: tb_gov_meta_conf tb_gov_meta_conf_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_gov_meta_conf
+    ADD CONSTRAINT tb_gov_meta_conf_pk PRIMARY KEY (conf_id);
+
+
+--
+-- Name: tb_gov_meta_db tb_gov_meta_db_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_gov_meta_db
+    ADD CONSTRAINT tb_gov_meta_db_pk PRIMARY KEY (ds_id);
+
+
+--
+-- Name: tb_gov_meta_send_err tb_gov_meta_send_err_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_gov_meta_send_err
+    ADD CONSTRAINT tb_gov_meta_send_err_pk PRIMARY KEY (send_id, err_seq);
+
+
+--
+-- Name: tb_gov_meta_send tb_gov_meta_send_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_gov_meta_send
+    ADD CONSTRAINT tb_gov_meta_send_pk PRIMARY KEY (send_id);
+
+
+--
+-- Name: tb_gov_meta_sys tb_gov_meta_sys_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_gov_meta_sys
+    ADD CONSTRAINT tb_gov_meta_sys_pk PRIMARY KEY (sys_cd);
+
+
+--
 -- Name: tb_notification tb_notification_pk; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -4088,6 +4591,20 @@ CREATE INDEX ix_diag_schedule_log_schedule ON quality.tb_diag_schedule_log USING
 --
 
 CREATE INDEX ix_domain_rule_dom ON quality.tb_domain_rule USING btree (domain_id, sort_ord);
+
+
+--
+-- Name: ix_gov_brm_parent; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_gov_brm_parent ON quality.tb_gov_brm USING btree (parent_brm_id);
+
+
+--
+-- Name: ix_gov_meta_send_dt; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_gov_meta_send_dt ON quality.tb_gov_meta_send USING btree (start_dt);
 
 
 --
@@ -4647,6 +5164,14 @@ ALTER TABLE ONLY quality.tb_domain
 
 ALTER TABLE ONLY quality.tb_domain
     ADD CONSTRAINT tb_domain_fk_2 FOREIGN KEY (dict_id, domain_clsf_nm) REFERENCES quality.tb_domain_clsf(dict_id, domain_clsf_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: tb_gov_meta_send_err tb_gov_meta_send_err_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_gov_meta_send_err
+    ADD CONSTRAINT tb_gov_meta_send_err_fk FOREIGN KEY (send_id) REFERENCES quality.tb_gov_meta_send(send_id) ON DELETE CASCADE;
 
 
 --

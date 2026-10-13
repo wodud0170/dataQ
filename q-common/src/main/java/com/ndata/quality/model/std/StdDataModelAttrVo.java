@@ -49,4 +49,6 @@ public class StdDataModelAttrVo {
 	private String aprvDt;
 	private String aprvComment;
 	private String submissionId;
+	/** 104번 WP5-78 — 수집 원본 데이터타입 (DBMS 종속 타입명). 공통명은 dataType */
+	private String dbmsDataType;
 }

@@ -304,14 +304,21 @@ public class DiagScheduleController {
             throw new IllegalArgumentException("스케줄명 필수");
         if (vo.getDiagType() == null) throw new IllegalArgumentException("진단 유형 필수");
         if (!"STANDARD".equals(vo.getDiagType()) && !"STRUCT".equals(vo.getDiagType())
-                && !"BOTH".equals(vo.getDiagType()))
-            throw new IllegalArgumentException("진단 유형은 STANDARD/STRUCT/BOTH");
+                && !"BOTH".equals(vo.getDiagType()) && !"GOV_META".equals(vo.getDiagType()))
+            throw new IllegalArgumentException("진단 유형은 STANDARD/STRUCT/BOTH/GOV_META");
         if (vo.getDataModelId() == null) throw new IllegalArgumentException("데이터모델 필수");
 
-        // 98번 — 예약 실행에는 사전을 고를 사람이 없다. 모델에 사전이 없으면
-        // 실행 시점에 무엇으로 진단할지 정할 수 없으므로 등록 단계에서 막는다.
-        // (실행할 때 실패시키면 사용자가 원인을 알기 어렵다)
-        if (dictService.resolve(null, vo.getDataModelId()) == null) {
+        if ("GOV_META".equals(vo.getDiagType())) {
+            // 104번 WP5-78 — 범정부 메타는 표준사전 대신 기관 설정과 모델 데이터소스(= DB)가 있어야 한다
+            if (sqlSessionTemplate.selectOne("govMeta.selectConf") == null)
+                throw new IllegalArgumentException("범정부 메타 기관 설정이 없습니다. [범정부 메타 > 설정] 에서 먼저 저장해 주세요.");
+            java.util.Map<String, Object> dm = sqlSessionTemplate.selectOne("govMeta.selectModel", vo.getDataModelId());
+            if (dm == null || dm.get("dsId") == null || String.valueOf(dm.get("dsId")).trim().isEmpty())
+                throw new IllegalArgumentException("데이터소스가 없는 모델은 범정부 메타 대상이 아닙니다.");
+        } else if (dictService.resolve(null, vo.getDataModelId()) == null) {
+            // 98번 — 예약 실행에는 사전을 고를 사람이 없다. 모델에 사전이 없으면
+            // 실행 시점에 무엇으로 진단할지 정할 수 없으므로 등록 단계에서 막는다.
+            // (실행할 때 실패시키면 사용자가 원인을 알기 어렵다)
             throw new IllegalArgumentException(
                 "이 데이터 모델에 표준사전이 지정되어 있지 않아 예약 진단을 등록할 수 없습니다."
                 + " [데이터 모델 관리] 에서 모델을 수정해 표준사전을 먼저 지정해 주세요.");

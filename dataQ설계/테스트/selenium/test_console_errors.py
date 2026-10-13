@@ -42,6 +42,7 @@ MENUS = [
     "nav_approval", "nav_dm_approval", "nav_area_mgmt", "nav_datasource", "nav_user",
     "nav_roles", "nav_system", "nav_ddlRule",   # 104 WP2·WP3
     "nav_org", "nav_aprvLine", "nav_aprvBox",   # 104 WP1
+    "nav_privColumn", "nav_govMetaConf", "nav_govMetaSys", "nav_govMetaItems", "nav_govMetaSend",   # 104 WP5
 ]
 
 results = []

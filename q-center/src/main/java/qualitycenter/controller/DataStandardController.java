@@ -2687,11 +2687,12 @@ public class DataStandardController {
 	}
 
 	/**
-	 * 용어 일괄등록 양식 다운로드 (resources/templates/term_template.xlsx).
+	 * 용어 일괄등록 양식 다운로드 — 헤더만 있는 빈 xlsx (용어 내려받기 헤더와 같다).
+	 * 104번 WP5-16 에서 끝에 개인정보여부·암호화여부를 붙이며 정적 파일 대신 동적 생성으로 바꿨다.
 	 */
 	@GetMapping(value = "/downloadTermTemplate")
 	public void downloadTermTemplate(HttpServletResponse res) throws Exception {
-		streamTemplate(res, "templates/term_template.xlsx", "용어_일괄등록_템플릿.xlsx");
+		writeHeaderOnlyTemplate(res, TERM_HEADERS, "용어_일괄등록_템플릿.xlsx", "Sheet1");
 	}
 
 	/**
@@ -2717,7 +2718,12 @@ public class DataStandardController {
 	private static final String[] DOMAIN_HEADERS = {
 		"No", "제정차수", "도메인그룹명", "도메인분류명", "도메인명", "도메인설명",
 		"데이터타입", "데이터길이", "데이터소수점길이", "저장형식", "표현형식", "단위",
-		"허용값", "요청시스템", "표준여부"
+		"허용값", "요청시스템", "표준여부", "개인정보여부", "암호화여부"
+	};
+	private static final String[] TERM_HEADERS = {
+		"No", "제정차수", "용어명", "용어설명", "용어영문약어명", "도메인명",
+		"허용값", "저장형식", "표현형식", "코드그룹명", "소관기관명", "이음동의어목록",
+		"요청시스템", "표준여부", "개인정보여부", "암호화여부"
 	};
 	private static final String[] DOMAIN_GROUP_HEADERS = {
 		"No", "도메인그룹명", "표준여부"

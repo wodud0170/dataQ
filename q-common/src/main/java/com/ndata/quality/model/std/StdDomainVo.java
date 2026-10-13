@@ -19,6 +19,8 @@ public class StdDomainVo {
 	private String[] exprFmtLst;
 	private String[] allowValLst;
 	private String commStndYn;
+	private String privYn;   // 104번 WP5-16 — 개인정보여부 (용어는 NULL 이면 도메인 값)
+	private String encrYn;   // 104번 WP5-16 — 암호화여부 (용어는 NULL 이면 도메인 값)
 	private String magntdOrd;
 	private String aprvYn = "N";	// default : N
 	private String aprvUserId;

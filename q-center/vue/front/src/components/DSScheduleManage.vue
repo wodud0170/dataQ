@@ -172,6 +172,7 @@ export default {
         { label: '표준화 진단',          value: 'STANDARD' },
         { label: '구조 변경 진단',        value: 'STRUCT' },
         { label: '전체 (표준화 + 구조)', value: 'BOTH' },
+        { label: '범정부 메타 (검증)',   value: 'GOV_META' },
       ],
       cycleOptions: [
         { label: '매일',  value: 'DAILY' },
@@ -362,10 +363,10 @@ export default {
         });
     },
     diagTypeLabel(t) {
-      return { STANDARD: '표준화', STRUCT: '구조변경', BOTH: '전체' }[t] || t;
+      return { STANDARD: '표준화', STRUCT: '구조변경', BOTH: '전체', GOV_META: '범정부 메타' }[t] || t;
     },
     diagTypeColor(t) {
-      return { STANDARD: 'blue', STRUCT: 'deep-purple', BOTH: 'teal' }[t] || 'grey';
+      return { STANDARD: 'blue', STRUCT: 'deep-purple', BOTH: 'teal', GOV_META: 'brown' }[t] || 'grey';
     },
     formatSchedule(s) {
       if (s.scheduleType === 'CRON') return '[CRON] ' + (s.cronExpr || '');
