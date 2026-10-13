@@ -16,6 +16,8 @@
 		       word_eng_nm_dup_yn     as "wordEngNmDupYn",
 		       term_eng_max_len       as "termEngMaxLen",
 		       old_std_yn             as "oldStdYn",
+		       COALESCE(dict_tp, 'ORG') as "dictTp",
+		       parent_dict_id         as "parentDictId",
 		       cret_dt                as "cretDt",
 		       cret_user_id           as "cretUserId",
 		       updt_dt                as "updtDt",
@@ -51,6 +53,11 @@
 		 WHERE dm_id = #{dmId}
 	</select>
 
+	<!-- 104번 WP5-14 — 항목 하나가 속한 사전 (참조 사전 쓰기 막기용). table·idCol 은 코드 상수만 넘긴다 -->
+	<select id="selectDictIdOf" parameterType="java.util.Map" resultType="java.lang.String">
+		SELECT DICT_ID FROM ${table} WHERE ${idCol} = #{id}
+	</select>
+
 	<!-- 사전별 등록 건수 (사전 관리 화면) -->
 	<select id="selectDictStats" parameterType="java.lang.String" resultType="java.util.Map">
 		SELECT (SELECT count(*) FROM tb_word   WHERE dict_id = #{dictId}) as "wordCnt",
@@ -62,7 +69,7 @@
 	<insert id="insertDict" parameterType="java.util.Map">
 		INSERT INTO tb_std_dict
 		  (dict_id, dict_nm, dict_desc, default_yn, use_yn,
-		   term_last_word_clsf_yn, upper_yn, word_eng_nm_dup_yn, term_eng_max_len, old_std_yn,
+		   term_last_word_clsf_yn, upper_yn, word_eng_nm_dup_yn, term_eng_max_len, old_std_yn, dict_tp, parent_dict_id,
 		   cret_dt, cret_user_id, updt_dt, updt_user_id)
 		VALUES
 		  (#{dictId}, #{dictNm}, #{dictDesc, jdbcType=VARCHAR},
@@ -70,6 +77,7 @@
 		   COALESCE(#{termLastWordClsfYn, jdbcType=VARCHAR}, 'N'),
 		   COALESCE(#{upperYn, jdbcType=VARCHAR}, 'Y'), COALESCE(#{wordEngNmDupYn, jdbcType=VARCHAR}, 'Y'),
 		   #{termEngMaxLen, jdbcType=INTEGER}, COALESCE(#{oldStdYn, jdbcType=VARCHAR}, 'N'),
+		   COALESCE(#{dictTp, jdbcType=VARCHAR}, 'ORG'), NULLIF(#{parentDictId, jdbcType=VARCHAR}, ''),
 		   to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR},
 		   to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR})
 	</insert>
@@ -84,6 +92,9 @@
 		       <!-- 104번 WP6-13 — 최대 길이는 비우면 제한 없음(NULL) 이라 보낸 값 그대로 -->
 		       term_eng_max_len       = #{termEngMaxLen, jdbcType=INTEGER},
 		       old_std_yn             = COALESCE(#{oldStdYn, jdbcType=VARCHAR}, old_std_yn),
+		       <!-- 104번 WP5-14·11 — 참조 사전 여부, 상위 사전(비우면 없음) -->
+		       dict_tp                = COALESCE(#{dictTp, jdbcType=VARCHAR}, dict_tp),
+		       parent_dict_id         = NULLIF(#{parentDictId, jdbcType=VARCHAR}, ''),
 		       updt_dt                = to_char(now(), 'YYYYMMDDHH24MISS'),
 		       updt_user_id           = #{userId, jdbcType=VARCHAR}
 		 WHERE dict_id = #{dictId}

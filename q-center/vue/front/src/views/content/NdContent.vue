@@ -152,6 +152,12 @@
                     <unusedStd :key="unusedStdKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'stdImport'" id="tab_stdImport" class="tab_contents"
+                :class="{ active: this.activeContent === 'stdImport' }">
+                <keep-alive>
+                    <stdImport :key="stdImportKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'privColumn'" id="tab_privColumn" class="tab_contents"
                 :class="{ active: this.activeContent === 'privColumn' }">
                 <keep-alive>
@@ -524,6 +530,7 @@ import DSAprvBox from "./../../components/DSAprvBox.vue"
 import DSPrivColumn from "./../../components/DSPrivColumn.vue"
 import DSStdMap from "./../../components/DSStdMap.vue"
 import DSUnusedStd from "./../../components/DSUnusedStd.vue"
+import DSStdImport from "./../../components/DSStdImport.vue"
 import MMGovMetaConf from "./../../components/MMGovMetaConf.vue"
 import DSGovMetaSys from "./../../components/DSGovMetaSys.vue"
 import DSGovMetaItems from "./../../components/DSGovMetaItems.vue"
@@ -586,6 +593,7 @@ export default {
             privColumnKey: this.createUUID(),
             stdMapKey: this.createUUID(),
             unusedStdKey: this.createUUID(),
+            stdImportKey: this.createUUID(),
             govMetaConfKey: this.createUUID(),
             govMetaSysKey: this.createUUID(),
             govMetaItemsKey: this.createUUID(),
@@ -662,6 +670,7 @@ export default {
         "privColumn": DSPrivColumn,
         "stdMap": DSStdMap,
         "unusedStd": DSUnusedStd,
+        "stdImport": DSStdImport,
         "govMetaConf": MMGovMetaConf,
         "govMetaSys": DSGovMetaSys,
         "govMetaItems": DSGovMetaItems,
@@ -767,6 +776,9 @@ export default {
                     break;
                 case "unusedStd":
                     this.unusedStdKey = this.createUUID();
+                    break;
+                case "stdImport":
+                    this.stdImportKey = this.createUUID();
                     break;
                 case "privColumn":
                     this.privColumnKey = this.createUUID();

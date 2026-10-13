@@ -35,11 +35,13 @@
 		<result property="aprvStatUpdtDt" column="APRV_STAT_UPDT_DT"/>
 		<result property="reqSysCd" column="REQ_SYS_CD"/>
 		<result property="reqSysNm" column="REQ_SYS_NM"/>
+		<result property="dictId" column="DICT_ID"/>
 	</resultMap>
 
 	<select id="selectTermsList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdTermsMap">
             select distinct
 					 A.TERMS_ID
+					,A.DICT_ID
 					,A.TERMS_NM			
 					,A.TERMS_ENG_ABRV_NM
 					,A.TERMS_DESC		
@@ -82,7 +84,11 @@
 							ELSE '{null}'::text[] END
 						) as ALLOPH_SYNM from TB_TERMS T LEFT OUTER JOIN TB_DOMAIN D on T.DOMAIN_NM = D.DOMAIN_NM AND T.DICT_ID = D.DICT_ID) A
 				where 1=1
-				<if test="dictId != null and dictId != ''"> AND A.DICT_ID = #{dictId} </if>
+				<choose>
+					<!-- 104번 WP5-11 — 상위 사전 포함 -->
+					<when test="dictIds != null and dictIds.size() > 0"> AND A.DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach> </when>
+					<when test="dictId != null and dictId != ''"> AND A.DICT_ID = #{dictId} </when>
+				</choose>
 				<if test="schNm != null">
 					<choose>
 						<when test="schNmMode == 'exact'">
@@ -293,7 +299,14 @@
 		     필터가 없으면 승인 대기 중인 용어에 맞춘 컬럼이 '표준' 으로 판정되고,
 		     그 용어가 반려되는 순간 준수율이 소급해서 틀어진다. -->
 		WHERE T.APRV_YN = 'Y'
-		<if test="dictId != null and dictId != ''"> AND T.DICT_ID = #{dictId} </if>
+		<choose>
+			<!-- 104번 WP5-11 — 사전과 상위 사전들. 먼 사전부터 내보내 호출부 맵에서 가까운 사전이 덮어쓴다 -->
+			<when test="dictIds != null and dictIds.size() > 0">
+				AND T.DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+				ORDER BY array_position(ARRAY[<foreach collection="dictIds" item="d" separator=",">#{d}</foreach>]::varchar[], T.DICT_ID) DESC
+			</when>
+			<when test="dictId != null and dictId != ''"> AND T.DICT_ID = #{dictId} </when>
+		</choose>
 	</select>
 
 	<!-- 전체 용어 한글명 기준 조회 (추천 서비스용, 파라미터 없음) -->
@@ -591,6 +604,14 @@
 			where A.CODE_GRP is not null AND (A.TERMS_NM = #{codeNm} OR #{codeNm} = any(A.ALLOPH_SYNM_LST))
 	</select>
 
+	<!-- 104번 WP5-11 — dictIds(사전 + 상위 사전)가 오면 그 사전들, 아니면 dictId 하나 -->
+	<sql id="dictIn">
+		<choose>
+			<when test="dictIds != null and dictIds.size() > 0">T.DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach></when>
+			<otherwise>T.DICT_ID = #{dictId}</otherwise>
+		</choose>
+	</sql>
+
 	<!-- ===== 104번 WP7-23·24 — 컬럼에 쓸 승인 용어 찾기 (도메인 타입·길이 포함) ===== -->
 	<sql id="termWithDomainCols">
 		SELECT T.TERMS_ID          as "termsId"
@@ -600,9 +621,10 @@
 		      ,D.DATA_TYPE         as "dataType"
 		      ,D.DATA_LEN          as "dataLen"
 		      ,D.DATA_DECIMAL_LEN  as "dataDecimalLen"
+		      ,T.DICT_ID           as "dictId"
 		  FROM TB_TERMS T
 		  LEFT JOIN TB_DOMAIN D ON D.DICT_ID = T.DICT_ID AND D.DOMAIN_NM = T.DOMAIN_NM
-		 WHERE T.DICT_ID = #{dictId}
+		 WHERE <include refid="dictIn"/>
 		   AND T.APRV_YN = 'Y'
 	</sql>
 

@@ -29,6 +29,7 @@
     <result property="aprvStatUpdtDt" column="APRV_STAT_UPDT_DT"/>
     <result property="reqSysCd" column="REQ_SYS_CD"/>
 		<result property="reqSysNm" column="REQ_SYS_NM"/>
+		<result property="dictId" column="DICT_ID"/>
   </resultMap>
 
   <select id="selectDomainList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDomainMap">
@@ -57,10 +58,15 @@
 				,UPDT_USER_ID	
 				,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
         ,REQ_SYS_CD
+				,DICT_ID
 				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
 			from TB_DOMAIN
       where 1=1
-			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
+			<choose>
+				<!-- 104번 WP5-11 — 상위 사전 포함 -->
+				<when test="dictIds != null and dictIds.size() > 0"> AND DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach> </when>
+				<when test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </when>
+			</choose>
 			<if test="schNm != null">
 				AND DOMAIN_NM ILIKE '%' || #{schNm} || '%'
 			</if>

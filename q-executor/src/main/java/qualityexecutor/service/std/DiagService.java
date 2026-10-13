@@ -119,7 +119,7 @@ public class DiagService implements Runnable {
             sqlSessionTemplate.update("diag.updateDiagJobDict", dictJobParam);
 
             List<StdTermsVo> allTerms = sqlSessionTemplate.selectList(
-                    "terms.selectAllTermsForDiag", dictService.dictParam(diagDictId));
+                    "terms.selectAllTermsForDiag", dictService.lineageParam(diagDictId));   // 104번 WP5-11 — 상위 사전 포함, 가까운 사전이 이긴다
             Map<String, StdTermsVo> termsByEng = new HashMap<>();
             for (StdTermsVo t : allTerms) {
                 if (t.getTermsEngAbrvNm() != null) termsByEng.put(t.getTermsEngAbrvNm(), t);

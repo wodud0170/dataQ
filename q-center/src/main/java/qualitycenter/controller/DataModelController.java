@@ -1897,6 +1897,32 @@ public class DataModelController {
 	 * 한글명으로 표준 용어 조회 → 영문약어명 + 도메인(타입/길이) 반환
 	 * 컬럼 추가 시 [표준 적용] 버튼에서 호출
 	 */
+	// ===== 104번 WP5-11 — 사전과 상위 사전에서 승인 용어 찾기 (가까운 사전 우선, 찾은 사전을 dictId 에) =====
+
+	private com.ndata.quality.model.std.StdTermsVo approvedTermByEng(String dictId, String eng) {
+		for (String d : dictService.lineage(dictId)) {
+			com.ndata.quality.model.std.StdTermsVo t = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
+					dictService.nameParam(d, "termsEngAbrvNm", eng));
+			if (t != null) {
+				t.setDictId(d);
+				return t;
+			}
+		}
+		return null;
+	}
+
+	private com.ndata.quality.model.std.StdTermsVo approvedTermByNm(String dictId, String nm) {
+		for (String d : dictService.lineage(dictId)) {
+			com.ndata.quality.model.std.StdTermsVo t = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm",
+					dictService.nameParam(d, "termsNm", nm));
+			if (t != null) {
+				t.setDictId(d);
+				return t;
+			}
+		}
+		return null;
+	}
+
 	// ===== 104번 WP7-26 — 컬럼 → 용어·단어·도메인·코드 (역방향 영향도) =====
 
 	/**
@@ -1908,11 +1934,10 @@ public class DataModelController {
 			@RequestParam(required = false) String attrNmKr) {
 		String dictId = dictService.resolve(null, dmId);
 		Map<String, Object> out = new HashMap<>();
-		com.ndata.quality.model.std.StdTermsVo term = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
-				dictService.nameParam(dictId, "termsEngAbrvNm", attrNm.trim()));
+		com.ndata.quality.model.std.StdTermsVo term = approvedTermByEng(dictId, attrNm.trim());
 		String matchType = "ENG";
 		if (term == null && attrNmKr != null && !attrNmKr.trim().isEmpty()) {
-			term = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm", dictService.nameParam(dictId, "termsNm", attrNmKr.trim()));
+			term = approvedTermByNm(dictId, attrNmKr.trim());
 			matchType = "KR";
 		}
 		out.put("dictId", dictId);
@@ -1927,7 +1952,7 @@ public class DataModelController {
 			out.put("words", sqlSessionTemplate.selectList("impact.selectTermWords", term.getId()));
 			if (term.getDomainNm() != null) {
 				com.ndata.quality.model.std.StdDomainVo d = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm",
-						dictService.nameParam(dictId, "domainNm", term.getDomainNm()));
+						dictService.nameParam(term.getDictId(), "domainNm", term.getDomainNm()));
 				if (d != null) {
 					Map<String, Object> dm = new LinkedHashMap<>();
 					dm.put("domainNm", d.getDomainNm());
@@ -1955,9 +1980,10 @@ public class DataModelController {
 	public List<Map<String, Object>> termSuggest(@RequestParam String dmId, @RequestParam String q) {
 		String kw = q == null ? "" : q.trim();
 		if (kw.isEmpty()) return new ArrayList<>();
-		Map<String, Object> p = dictService.dictParam(dictService.resolve(null, dmId));
+		Map<String, Object> p = dictService.lineageParam(dictService.resolve(null, dmId));   // 104번 WP5-11 — 상위 사전 포함
 		p.put("q", kw);
-		List<Map<String, Object>> list = sqlSessionTemplate.selectList("terms.selectTermSuggest", p);
+		List<Map<String, Object>> raw = sqlSessionTemplate.selectList("terms.selectTermSuggest", p);
+		List<Map<String, Object>> list = nearestByEng(raw, p.get("dictIds"));
 		for (Map<String, Object> t : list) {
 			String nm = (String) t.get("termsNm");
 			if (nm != null && !nm.toLowerCase().contains(kw.toLowerCase())) {
@@ -1968,6 +1994,26 @@ public class DataModelController {
 			}
 		}
 		return list;
+	}
+
+	/** 104번 WP5-11 — 같은 영문약어 용어가 사전과 상위 사전에 다 있으면 가까운 사전 것만 (순서는 그대로). 상위 사전 것에는 inheritedDictNm */
+	private List<Map<String, Object>> nearestByEng(List<Map<String, Object>> rows, Object dictIds) {
+		@SuppressWarnings("unchecked")
+		List<String> lin = (List<String>) dictIds;
+		Map<String, Map<String, Object>> best = new LinkedHashMap<>();
+		for (Map<String, Object> t : rows) {
+			String key = (String) t.get("termsEngAbrvNm");
+			Map<String, Object> prev = best.get(key);
+			if (prev == null || lin.indexOf(t.get("dictId")) < lin.indexOf(prev.get("dictId"))) best.put(key, t);
+		}
+		List<Map<String, Object>> out = new ArrayList<>(best.values());
+		for (Map<String, Object> t : out) {
+			if (!lin.get(0).equals(t.get("dictId"))) {
+				Object id = t.get("dictId");
+				t.put("inheritedDictNm", dictService.list().stream().filter(x -> id.equals(x.get("dictId"))).map(x -> x.get("dictNm")).findFirst().orElse(id));
+			}
+		}
+		return out;
 	}
 
 	// ===== 104번 WP7-23 — 컬럼별 표준 용어 후보 =====
@@ -2025,9 +2071,9 @@ public class DataModelController {
 	private List<Map<String, Object>> termCandidates(String dictId, String kr, com.ndata.quality.model.std.TermAnalysisResult r) {
 		Map<String, Map<String, Object>> found = new LinkedHashMap<>();
 		// ① 용어명·이음동의어
-		com.ndata.quality.model.std.StdTermsVo t = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm", dictService.nameParam(dictId, "termsNm", kr));
+		com.ndata.quality.model.std.StdTermsVo t = approvedTermByNm(dictId, kr);
 		if (t != null) {
-			Map<String, Object> p = dictService.nameParam(dictId, "termsEngAbrvNm", t.getTermsEngAbrvNm());
+			Map<String, Object> p = dictService.nameParam(t.getDictId(), "termsEngAbrvNm", t.getTermsEngAbrvNm());
 			for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByEng", p)) {
 				if (!t.getId().equals(c.get("termsId"))) continue;
 				boolean exact = kr.equals(t.getTermsNm());
@@ -2038,8 +2084,9 @@ public class DataModelController {
 			boolean allMatched = r.getWords().stream().allMatch(w -> "MATCHED".equals(w.getStatus()) && w.getSelected() != null);
 			// ② 단어 분석 영문약어
 			if (allMatched && r.getRecommendedEngAbrvNm() != null && !r.getRecommendedEngAbrvNm().isEmpty()) {
-				for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByEng",
-						dictService.nameParam(dictId, "termsEngAbrvNm", r.getRecommendedEngAbrvNm()))) {
+				Map<String, Object> ep = dictService.lineageParam(dictId);
+				ep.put("termsEngAbrvNm", r.getRecommendedEngAbrvNm());
+				for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByEng", ep)) {
 					addCand(found, c, "단어 분석 영문약어 일치 (" + r.getRecommendedEngAbrvNm() + ")", 90);
 				}
 			}
@@ -2053,7 +2100,7 @@ public class DataModelController {
 				}
 			}
 			if (!wordIds.isEmpty()) {
-				Map<String, Object> p = dictService.dictParam(dictId);
+				Map<String, Object> p = dictService.lineageParam(dictId);
 				p.put("wordIds", wordIds);
 				p.put("wordCnt", wordIds.size());
 				for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByWords", p)) {
@@ -2062,7 +2109,7 @@ public class DataModelController {
 			}
 		}
 		// ④ 이름 일부 일치
-		Map<String, Object> p = dictService.dictParam(dictId);
+		Map<String, Object> p = dictService.lineageParam(dictId);
 		p.put("kr", kr);
 		for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByContains", p)) {
 			addCand(found, c, "이름 일부 일치", 50);
@@ -2073,8 +2120,8 @@ public class DataModelController {
 	}
 
 	private static void addCand(Map<String, Map<String, Object>> found, Map<String, Object> c, String reason, int score) {
-		String id = (String) c.get("termsId");
-		if (found.containsKey(id)) return;   // 먼저 찾은(점수가 높은) 이유를 남긴다
+		String id = (String) c.get("termsEngAbrvNm");
+		if (found.containsKey(id)) return;   // 먼저 찾은(점수가 높은) 이유를 남긴다 (같은 영문약어는 상위 사전 용어여도 한 번만)
 		Map<String, Object> m = new LinkedHashMap<>(c);
 		m.put("reason", reason);
 		m.put("score", score);
@@ -2293,10 +2340,7 @@ public class DataModelController {
 		if (engNm == null || engNm.trim().isEmpty())
 			throw new IllegalStateException("영문명 없음");
 		// 98번 — 이 컬럼이 속한 모델의 사전에서 찾는다.
-		com.ndata.quality.model.std.StdTermsVo terms =
-			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
-				dictService.nameParam(dictService.resolve(null, attr.getDataModelId()),
-						"termsEngAbrvNm", engNm.trim()));
+		com.ndata.quality.model.std.StdTermsVo terms = approvedTermByEng(dictService.resolve(null, attr.getDataModelId()), engNm.trim());
 		if (terms == null)
 			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
 		Map<String, Object> item = new HashMap<>();
@@ -3000,9 +3044,16 @@ public class DataModelController {
 			return result;
 		}
 		try {
-			com.ndata.quality.model.std.StdTermsVo terms =
-				sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm",
-					dictService.nameParam(dictId, "termsNm", termsNm.trim()));
+			// 104번 WP5-11 — 사전에 없으면 상위 사전 (가까운 사전 우선). 도메인은 용어를 찾은 사전에서
+			com.ndata.quality.model.std.StdTermsVo terms = null;
+			for (String d : dictService.lineage(dictId)) {
+				terms = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm",
+					dictService.nameParam(d, "termsNm", termsNm.trim()));
+				if (terms != null) {
+					dictId = d;
+					break;
+				}
+			}
 			if (terms == null) {
 				result.put("found", false);
 				result.put("message", "'" + termsNm + "' 에 해당하는 표준 용어가 없습니다.");
@@ -3171,10 +3222,7 @@ public class DataModelController {
 			throw new IllegalStateException("영문명 없음");
 
 		// 98번 — 이 컬럼이 속한 모델의 사전에서 찾는다.
-		com.ndata.quality.model.std.StdTermsVo terms =
-			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
-				dictService.nameParam(dictService.resolve(null, attr.getDataModelId()),
-						"termsEngAbrvNm", engNm.trim()));
+		com.ndata.quality.model.std.StdTermsVo terms = approvedTermByEng(dictService.resolve(null, attr.getDataModelId()), engNm.trim());
 		if (terms == null)
 			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
 
@@ -3239,9 +3287,13 @@ public class DataModelController {
 		}
 
 		// 영문명 기준 표준 용어 매칭 (TB_TERMS.TERMS_ENG_ABRV_NM = attrNm)
-		com.ndata.quality.model.std.StdTermsVo term =
-			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
-				dictService.nameParam(dictId, "termsEngAbrvNm", attrNm.trim()));
+		// 104번 WP5-11 — 사전에 없으면 상위 사전 (가까운 사전 우선)
+		com.ndata.quality.model.std.StdTermsVo term = null;
+		for (String d : dictService.lineage(dictId)) {
+			term = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
+				dictService.nameParam(d, "termsEngAbrvNm", attrNm.trim()));
+			if (term != null) break;
+		}
 		if (term == null) {
 			throw new IllegalStateException("표준 미준수: '" + attrNm + "' 에 해당하는 표준 용어가 등록되어있지 않습니다.");
 		}
@@ -3301,10 +3353,13 @@ public class DataModelController {
 	private List<String> findMissingWords(List<String> tokens, String dictId) {
 		List<String> missing = new ArrayList<>();
 		if (tokens.isEmpty()) return missing;
-		List<StdWordVo> found = sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", dictService.listParam(dictId, "engAbrvNms", tokens));
 		java.util.Set<String> foundSet = new java.util.HashSet<>();
-		for (StdWordVo w : found) {
-			if (w.getWordEngAbrvNm() != null) foundSet.add(w.getWordEngAbrvNm().toUpperCase());
+		// 104번 WP5-11 — 사전과 상위 사전들의 단어
+		for (String d : dictService.lineage(dictId)) {
+			List<StdWordVo> found = sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", dictService.listParam(d, "engAbrvNms", tokens));
+			for (StdWordVo w : found) {
+				if (w.getWordEngAbrvNm() != null) foundSet.add(w.getWordEngAbrvNm().toUpperCase());
+			}
 		}
 		for (String t : tokens) {
 			if (!foundSet.contains(t)) missing.add(t);

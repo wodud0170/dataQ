@@ -184,7 +184,8 @@ export default {
                 { text: "관리자 승인", value: "ADMIN_APPROVE" },
                 { text: "관리자 반려", value: "ADMIN_REJECT" },
                 { text: "일괄등록", value: "BULK_UPLOAD" },
-                { text: "자동 추천", value: "AUTO_RECOMMEND" }
+                { text: "자동 추천", value: "AUTO_RECOMMEND" },
+                { text: "공통표준 가져오기", value: "STD_IMPORT" }
             ],
             // 등록 경로 컬럼은 saveChangeHistory 가 changeSource 를 안 넘겨 항상 '-' 라
             // 한동안 빼두었다. 2026-08-23 서버에서 값을 채우도록 고쳐 되살린다.
@@ -286,7 +287,7 @@ export default {
             axios
                 .post(this.$APIURL.base + "api/std/getChangeHistoryList", this.filter)
                 .then(res => {
-                    var sourceMap = { ADMIN_DIRECT: '관리자 직접', USER_REQUEST: '사용자 신청', ADMIN_APPROVE: '관리자 승인', ADMIN_REJECT: '관리자 반려', BULK_UPLOAD: '일괄등록', AUTO_RECOMMEND: '자동 추천' };
+                    var sourceMap = { ADMIN_DIRECT: '관리자 직접', USER_REQUEST: '사용자 신청', ADMIN_APPROVE: '관리자 승인', ADMIN_REJECT: '관리자 반려', BULK_UPLOAD: '일괄등록', AUTO_RECOMMEND: '자동 추천', STD_IMPORT: '공통표준 가져오기' };
                     this.historyList = (res.data || []).map(function(h) {
                         h.changeSourceLabel = sourceMap[h.changeSource] || h.changeSource || '-';
                         return h;

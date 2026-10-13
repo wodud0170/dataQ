@@ -77,6 +77,22 @@ public class StdDictController {
 				if (v < 1) throw new IllegalArgumentException("용어 영문약어명 최대 길이는 1 이상이어야 합니다.");
 				p.put("termEngMaxLen", v);
 			}
+			// 104번 WP5-14 — 참조 사전(읽기 전용). 기본 사전은 참조 사전이 될 수 없다 (신규 모델·예약 진단의 기본값)
+			String dictTp = body.get("dictTp") == null ? null : String.valueOf(body.get("dictTp"));
+			if (dictTp != null && !"ORG".equals(dictTp) && !"REF".equals(dictTp)) throw new IllegalArgumentException("사전 유형이 올바르지 않습니다: " + dictTp);
+			boolean isDefault = "Y".equals(body.get("defaultYn"))
+					|| (id != null && !id.trim().isEmpty() && id.trim().equals(dictService.defaultDictId()));
+			if ("REF".equals(dictTp) && isDefault) throw new IllegalArgumentException("기본 사전은 참조 사전으로 둘 수 없습니다.");
+			// 104번 WP5-11 — 상위 사전: 있는 사전, 자기 자신·자기 하위 아님, 5단계까지
+			String parent = body.get("parentDictId") == null ? "" : String.valueOf(body.get("parentDictId")).trim();
+			if (!parent.isEmpty()) {
+				java.util.List<String> up = dictService.lineage(parent);
+				if (!up.get(0).equals(parent) || dictService.list().stream().noneMatch(d -> parent.equals(d.get("dictId")))) {
+					throw new IllegalArgumentException("상위 사전을 찾을 수 없습니다: " + parent);
+				}
+				if (id != null && up.contains(id.trim())) throw new IllegalArgumentException("자기 자신이나 하위 사전을 상위 사전으로 둘 수 없습니다.");
+				if (up.size() >= 5) throw new IllegalArgumentException("상위 사전은 5단계까지입니다.");
+			}
 			if (id == null || id.trim().isEmpty()) {
 				p.put("dictId", UUID.randomUUID().toString().replace("-", "").substring(0, 22));
 				dictService.create(p);

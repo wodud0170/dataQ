@@ -257,6 +257,7 @@
                   <v-list-item-subtitle>
                     {{ t.domainNm || '도메인 없음' }}<span v-if="t.dataType"> · {{ t.dataType }}<span v-if="t.dataLen">({{ t.dataLen }}{{ t.dataDecimalLen ? ',' + t.dataDecimalLen : '' }})</span></span>
                     <span v-if="t.synonym" class="orange--text"> · 유사어 {{ t.synonym }}</span>
+                    <span v-if="t.inheritedDictNm" class="indigo--text"> · 상위 사전 {{ t.inheritedDictNm }}</span>
                   </v-list-item-subtitle>
                 </v-list-item-content>
               </v-list-item>

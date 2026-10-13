@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 104번 WP5-14 — 공통표준 가져오기: 원본 사전(참조 사전 등)의 단어·용어·도메인을 기관 사전으로 복사한다.
+     사전 간 이름 참조 FK(98번) 때문에 용어는 구성 단어·도메인(그룹·분류)을 먼저 대상 사전에 만든다. -->
+<mapper namespace="stdImport">
+
+	<!-- ===== 화면 목록 — 원본 사전의 항목과 대상 사전에 이미 있는지 ===== -->
+	<select id="selectSourceWords" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT S.WORD_ID AS "id", S.WORD_NM AS "nm", S.WORD_ENG_ABRV_NM AS "engAbrvNm",
+		       S.WORD_ENG_NM AS "extra", COALESCE(S.COMM_STND_YN, 'N') AS "commStndYn",
+		       CASE WHEN EXISTS (SELECT 1 FROM TB_WORD T WHERE T.DICT_ID = #{targetDictId} AND (T.WORD_NM = S.WORD_NM OR T.WORD_ENG_ABRV_NM = S.WORD_ENG_ABRV_NM)) THEN 'Y' ELSE 'N' END AS "existYn"
+		  FROM TB_WORD S
+		 WHERE S.DICT_ID = #{sourceDictId} AND S.APRV_YN = 'Y'
+		<if test='commOnly == "Y"'> AND S.COMM_STND_YN = 'Y' </if>
+		<if test="keyword != null and keyword != ''"> AND (S.WORD_NM ILIKE '%' || #{keyword} || '%' OR S.WORD_ENG_ABRV_NM ILIKE '%' || #{keyword} || '%') </if>
+		 ORDER BY S.WORD_NM
+		 LIMIT 2000
+	</select>
+
+	<select id="selectSourceTerms" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT S.TERMS_ID AS "id", S.TERMS_NM AS "nm", S.TERMS_ENG_ABRV_NM AS "engAbrvNm",
+		       COALESCE(S.DOMAIN_NM, '') || CASE WHEN S.CODE_GRP IS NOT NULL THEN ' (코드 ' || S.CODE_GRP || ')' ELSE '' END AS "extra",
+		       COALESCE(S.COMM_STND_YN, 'N') AS "commStndYn",
+		       CASE WHEN EXISTS (SELECT 1 FROM TB_TERMS T WHERE T.DICT_ID = #{targetDictId} AND (T.TERMS_NM = S.TERMS_NM OR T.TERMS_ENG_ABRV_NM = S.TERMS_ENG_ABRV_NM)) THEN 'Y' ELSE 'N' END AS "existYn"
+		  FROM TB_TERMS S
+		 WHERE S.DICT_ID = #{sourceDictId} AND S.APRV_YN = 'Y'
+		<if test='commOnly == "Y"'> AND S.COMM_STND_YN = 'Y' </if>
+		<if test="keyword != null and keyword != ''"> AND (S.TERMS_NM ILIKE '%' || #{keyword} || '%' OR S.TERMS_ENG_ABRV_NM ILIKE '%' || #{keyword} || '%') </if>
+		 ORDER BY S.TERMS_NM
+		 LIMIT 2000
+	</select>
+
+	<select id="selectSourceDomains" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT S.DOMAIN_ID AS "id", S.DOMAIN_NM AS "nm", '' AS "engAbrvNm",
+		       S.DATA_TYPE || CASE WHEN S.DATA_LEN IS NOT NULL THEN '(' || S.DATA_LEN || CASE WHEN COALESCE(S.DATA_DECIMAL_LEN, 0) > 0 THEN ',' || S.DATA_DECIMAL_LEN ELSE '' END || ')' ELSE '' END AS "extra",
+		       COALESCE(S.COMM_STND_YN, 'N') AS "commStndYn",
+		       CASE WHEN EXISTS (SELECT 1 FROM TB_DOMAIN T WHERE T.DICT_ID = #{targetDictId} AND T.DOMAIN_NM = S.DOMAIN_NM) THEN 'Y' ELSE 'N' END AS "existYn"
+		  FROM TB_DOMAIN S
+		 WHERE S.DICT_ID = #{sourceDictId} AND S.APRV_YN = 'Y'
+		<if test='commOnly == "Y"'> AND S.COMM_STND_YN = 'Y' </if>
+		<if test="keyword != null and keyword != ''"> AND S.DOMAIN_NM ILIKE '%' || #{keyword} || '%' </if>
+		 ORDER BY S.DOMAIN_NM
+		 LIMIT 2000
+	</select>
+
+	<!-- ===== 원본 한 건 ===== -->
+	<select id="selectWord" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT WORD_ID AS "id", WORD_NM AS "nm", WORD_ENG_ABRV_NM AS "engAbrvNm", WORD_ENG_NM AS "engNm",
+		       WORD_CLSF_YN AS "clsfYn", DOMAIN_CLSF_NM AS "domainClsfNm", DICT_ID AS "dictId"
+		  FROM TB_WORD WHERE WORD_ID = #{id}
+	</select>
+	<select id="selectTerm" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT TERMS_ID AS "id", TERMS_NM AS "nm", TERMS_ENG_ABRV_NM AS "engAbrvNm", DOMAIN_NM AS "domainNm",
+		       CODE_GRP AS "codeGrp", CODE_TP AS "codeTp", PARENT_CODE_GRP AS "parentCodeGrp", DICT_ID AS "dictId"
+		  FROM TB_TERMS WHERE TERMS_ID = #{id}
+	</select>
+	<select id="selectDomain" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT DOMAIN_ID AS "id", DOMAIN_NM AS "nm", DOMAIN_GRP_NM AS "grpNm", DOMAIN_CLSF_NM AS "clsfNm", DICT_ID AS "dictId"
+		  FROM TB_DOMAIN WHERE DOMAIN_ID = #{id}
+	</select>
+	<select id="selectDomainIdByNm" parameterType="java.util.Map" resultType="String">
+		SELECT DOMAIN_ID FROM TB_DOMAIN WHERE DICT_ID = #{dictId} AND DOMAIN_NM = #{nm}
+	</select>
+	<select id="selectTermWords" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT WORD_ID AS "wordId", WORD_NM AS "wordNm", WORD_ORD AS "wordOrd" FROM TB_TERMS_WORDS WHERE TERMS_ID = #{id} ORDER BY WORD_ORD
+	</select>
+
+	<!-- ===== 대상 사전에 이미 있는지 ===== -->
+	<select id="selectTargetWordByNm" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT WORD_ID AS "id", WORD_NM AS "nm", WORD_ENG_ABRV_NM AS "engAbrvNm" FROM TB_WORD WHERE DICT_ID = #{dictId} AND WORD_NM = #{nm}
+	</select>
+	<select id="countTargetWordByEng" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_WORD WHERE DICT_ID = #{dictId} AND WORD_ENG_ABRV_NM = #{engAbrvNm}
+	</select>
+	<select id="countTargetTerm" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_TERMS WHERE DICT_ID = #{dictId} AND (TERMS_NM = #{nm} OR TERMS_ENG_ABRV_NM = #{engAbrvNm})
+	</select>
+	<select id="countTargetGrp" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DOMAIN_GRP WHERE DICT_ID = #{dictId} AND DOMAIN_GRP_NM = #{nm}
+	</select>
+	<select id="countTargetClsf" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DOMAIN_CLSF WHERE DICT_ID = #{dictId} AND DOMAIN_CLSF_NM = #{nm}
+	</select>
+	<select id="countTargetCode" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_TERMS WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+	</select>
+
+	<!-- ===== 복사 (승인 Y·공통표준여부 Y·등록자 = 실행 사용자) ===== -->
+	<insert id="copyWord" parameterType="java.util.Map">
+		INSERT INTO TB_WORD (WORD_ID, WORD_NM, WORD_ENG_ABRV_NM, WORD_ENG_NM, WORD_DESC, WORD_CLSF_YN, DOMAIN_CLSF_NM,
+		       ALLOPH_SYNM_LST, FORBDN_WORD_LST, COMM_STND_YN, MAGNTD_ORD, APRV_YN, APRV_USER_ID,
+		       CRET_DT, CRET_USER_ID, APRV_STAT_UPDT_DT, USE_YN, DICT_ID)
+		SELECT #{newId}, WORD_NM, WORD_ENG_ABRV_NM, WORD_ENG_NM, WORD_DESC, WORD_CLSF_YN, DOMAIN_CLSF_NM,
+		       ALLOPH_SYNM_LST, FORBDN_WORD_LST, 'Y', MAGNTD_ORD, 'Y', #{userId},
+		       to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), USE_YN, #{targetDictId}
+		  FROM TB_WORD WHERE WORD_ID = #{srcId}
+	</insert>
+
+	<!-- 그룹 — 원본 그룹이 있으면 그 값으로 (상위 그룹은 두지 않는다), 없으면 이름만 (insertGrp) -->
+	<insert id="copyGrp" parameterType="java.util.Map">
+		INSERT INTO TB_DOMAIN_GRP (DOMAIN_GRP_ID, DOMAIN_GRP_NM, COMM_STND_YN, CRET_DT, CRET_USER_ID, DICT_ID, DFLT_DATA_TYPE, CLSF_WORD_NM, SORT_ORDER)
+		SELECT #{newId}, DOMAIN_GRP_NM, 'Y', to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, #{targetDictId}, DFLT_DATA_TYPE, CLSF_WORD_NM, COALESCE(SORT_ORDER, 0)
+		  FROM TB_DOMAIN_GRP WHERE DICT_ID = #{sourceDictId} AND DOMAIN_GRP_NM = #{nm}
+	</insert>
+
+	<insert id="insertGrp" parameterType="java.util.Map">
+		INSERT INTO TB_DOMAIN_GRP (DOMAIN_GRP_ID, DOMAIN_GRP_NM, COMM_STND_YN, CRET_DT, CRET_USER_ID, DICT_ID, SORT_ORDER)
+		VALUES (#{newId}, #{nm}, 'Y', to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, #{targetDictId}, 0)
+	</insert>
+
+	<insert id="insertClsf" parameterType="java.util.Map">
+		INSERT INTO TB_DOMAIN_CLSF (DOMAIN_CLSF_ID, DOMAIN_CLSF_NM, DOMAIN_GRP_NM, COMM_STND_YN, CRET_DT, CRET_USER_ID, DICT_ID)
+		VALUES (#{newId}, #{nm}, #{grpNm}, 'Y', to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, #{targetDictId})
+	</insert>
+
+	<select id="selectSourceClsfGrp" parameterType="java.util.Map" resultType="String">
+		SELECT DOMAIN_GRP_NM FROM TB_DOMAIN_CLSF WHERE DICT_ID = #{sourceDictId} AND DOMAIN_CLSF_NM = #{nm}
+	</select>
+
+	<insert id="copyDomain" parameterType="java.util.Map">
+		INSERT INTO TB_DOMAIN (DOMAIN_ID, DOMAIN_NM, DOMAIN_GRP_NM, DOMAIN_CLSF_NM, DOMAIN_DESC, DATA_TYPE, DATA_LEN, DATA_DECIMAL_LEN,
+		       DATA_UNIT, STOR_FMT, EXPR_FMT_LST, COMM_STND_YN, ALLOW_VAL_LST, MAGNTD_ORD, APRV_YN, APRV_USER_ID,
+		       CRET_DT, CRET_USER_ID, APRV_STAT_UPDT_DT, USE_YN, DICT_ID, PRIV_YN, ENCR_YN)
+		SELECT #{newId}, DOMAIN_NM, DOMAIN_GRP_NM, DOMAIN_CLSF_NM, DOMAIN_DESC, DATA_TYPE, DATA_LEN, DATA_DECIMAL_LEN,
+		       DATA_UNIT, STOR_FMT, EXPR_FMT_LST, 'Y', ALLOW_VAL_LST, MAGNTD_ORD, 'Y', #{userId},
+		       to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), USE_YN, #{targetDictId}, PRIV_YN, ENCR_YN
+		  FROM TB_DOMAIN WHERE DOMAIN_ID = #{srcId}
+	</insert>
+
+	<insert id="copyTerm" parameterType="java.util.Map">
+		INSERT INTO TB_TERMS (TERMS_ID, TERMS_NM, TERMS_ENG_ABRV_NM, TERMS_DESC, DOMAIN_NM, CODE_GRP, CHRG_ORG, ALLOPH_SYNM_LST,
+		       COMM_STND_YN, MAGNTD_ORD, APRV_YN, APRV_USER_ID, CRET_DT, CRET_USER_ID, APRV_STAT_UPDT_DT, USE_YN, DICT_ID,
+		       PRIV_YN, ENCR_YN, CODE_TP, PARENT_CODE_GRP)
+		SELECT #{newId}, TERMS_NM, #{engAbrvNm}, TERMS_DESC, DOMAIN_NM, CODE_GRP, CHRG_ORG, ALLOPH_SYNM_LST,
+		       'Y', MAGNTD_ORD, 'Y', #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), USE_YN, #{targetDictId},
+		       PRIV_YN, ENCR_YN, #{codeTp, jdbcType=VARCHAR}, #{parentCodeGrp, jdbcType=VARCHAR}
+		  FROM TB_TERMS WHERE TERMS_ID = #{srcId}
+	</insert>
+
+	<insert id="insertTermWord" parameterType="java.util.Map">
+		INSERT INTO TB_TERMS_WORDS (TERMS_ID, WORD_ID, WORD_NM, WORD_ORD) VALUES (#{termsId}, #{wordId}, #{wordNm}, #{wordOrd})
+	</insert>
+
+	<!-- 코드면 코드값도 (대상에 같은 코드명·코드값이 있으면 건너뜀) -->
+	<insert id="copyCodeData" parameterType="java.util.Map">
+		INSERT INTO TB_CODE_DATA (CODE_ID, CODE_GRP, CODE_NM, CODE_ENG_NM, CODE_VAL, CODE_VAL_DESC, PARENT_CODE_VAL, CRET_DT, CRET_USER_ID, DICT_ID)
+		SELECT substr(md5(random()::text || S.CODE_ID), 1, 22), S.CODE_GRP, S.CODE_NM, S.CODE_ENG_NM, S.CODE_VAL, S.CODE_VAL_DESC, S.PARENT_CODE_VAL,
+		       to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, #{targetDictId}
+		  FROM TB_CODE_DATA S
+		 WHERE S.DICT_ID = #{sourceDictId} AND S.CODE_GRP = #{codeGrp}
+		   AND NOT EXISTS (SELECT 1 FROM TB_CODE_DATA T WHERE T.DICT_ID = #{targetDictId} AND T.CODE_NM = S.CODE_NM AND T.CODE_VAL = S.CODE_VAL)
+	</insert>
+
+</mapper>

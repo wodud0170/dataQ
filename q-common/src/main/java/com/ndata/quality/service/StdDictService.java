@@ -101,6 +101,62 @@ public class StdDictService {
 		return d == null || !"N".equalsIgnoreCase(String.valueOf(d.get("upperYn")));
 	}
 
+	/** 104번 WP5-14 — 참조 사전(읽기 전용)인가 */
+	public boolean isRef(String dictId) {
+		Map<String, Object> d = snapshot().get(dictId == null ? DEFAULT_DICT_ID : dictId);
+		return d != null && "REF".equals(d.get("dictTp"));
+	}
+
+	/**
+	 * 104번 WP5-14 — 참조 사전이면 고치지 못하게 막는다. 등록·수정·삭제·일괄등록 경로가 부른다.
+	 *
+	 * @throws IllegalArgumentException 참조 사전일 때 (메시지는 화면에 그대로 보인다)
+	 */
+	public void checkWritable(String dictId) {
+		if (isRef(dictId)) {
+			Map<String, Object> d = snapshot().get(dictId);
+			throw new IllegalArgumentException("참조 사전은 고칠 수 없습니다 (" + d.get("dictNm") + "). 기관 사전으로 가져와(표준 사전 > 공통표준 가져오기) 쓰세요.");
+		}
+	}
+
+	/** 104번 WP5-14 — 항목(단어·용어·도메인 등) 하나의 사전으로 checkWritable. 행이 없으면 넘어간다 */
+	public void checkWritableOf(String table, String idCol, String id) {
+		if (id == null) return;
+		Map<String, Object> p = new HashMap<>();
+		p.put("table", table);
+		p.put("idCol", idCol);
+		p.put("id", id);
+		try (SqlSession session = sqlSessionFactory.openSession()) {
+			String dictId = session.selectOne("stddict.selectDictIdOf", p);
+			if (dictId != null) checkWritable(dictId);
+		}
+	}
+
+	/**
+	 * 104번 WP5-11 — 사전과 그 상위 사전들 (자기 자신이 먼저, 가까운 순). 5단계까지, 순환은 끊는다.
+	 * dictId 가 null 이면 기본 사전부터.
+	 */
+	public java.util.List<String> lineage(String dictId) {
+		java.util.List<String> out = new java.util.ArrayList<>();
+		String cur = (dictId == null || dictId.trim().isEmpty()) ? defaultDictId() : dictId.trim();
+		Map<String, Map<String, Object>> all = snapshot();
+		while (cur != null && !out.contains(cur) && out.size() < 6) {
+			out.add(cur);
+			Map<String, Object> d = all.get(cur);
+			cur = d == null ? null : (String) d.get("parentDictId");
+		}
+		return out;
+	}
+
+	/** 104번 WP5-11 — 사전과 상위 사전들을 함께 보는 쿼리 파라미터 (dictId = 자기, dictIds = 자기 + 상위, 가까운 순) */
+	public Map<String, Object> lineageParam(String dictId) {
+		java.util.List<String> ids = lineage(dictId);
+		Map<String, Object> p = new HashMap<>();
+		p.put("dictId", ids.get(0));
+		p.put("dictIds", ids);
+		return p;
+	}
+
 	/** 104번 WP6-13 — 단어 영문명 중복을 허용하는가. 기본 Y */
 	public boolean isWordEngNmDupAllowed(String dictId) {
 		Map<String, Object> d = snapshot().get(dictId == null ? DEFAULT_DICT_ID : dictId);

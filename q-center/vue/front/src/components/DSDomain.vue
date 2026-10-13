@@ -8,7 +8,12 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px 0px 6px 0px' }">
-              <DictSelector v-model="dictId" @change="getDomainData" />
+              <DictSelector v-model="dictId" @change="getDomainData" @meta="dictMeta = $event; if (!$event || !$event.parentDictId) inclParentYn = 'N'" />
+              <!-- 104번 WP5-14·11 — 참조 사전은 읽기 전용, 상위 사전이 있으면 목록에 함께 볼 수 있다 -->
+              <v-chip v-if="refDict" id="refDictChipDomain" small color="indigo" text-color="white" class="mr-3"
+                title="참조 사전은 고칠 수 없습니다. [표준 사전 > 공통표준 가져오기] 로 기관 사전에 가져와 쓰세요.">참조 사전 — 읽기 전용</v-chip>
+              <v-checkbox v-if="dictMeta && dictMeta.parentDictId" id="inclParentDomain" v-model="inclParentYn" true-value="Y" false-value="N"
+                label="상위 사전 포함" color="ndColor" dense hide-details class="mt-0 pt-0 mr-3" @change="getDomainData" />
               <span :style="{ fontSize: '.875rem' }">도메인명</span>
               <v-text-field class="pr-4 pl-4" v-model="searchDomain" v-on:keyup.enter="getDomainData"
                 @click:clear="clearMessage" clearable prepend-icon="" clear-icon="mdi-close-circle" type="text"
@@ -64,7 +69,7 @@
           <!-- 86번 #11 — 한 줄 유지, 엑셀 관련은 드롭다운으로 묶음 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
             class="d-flex flex-nowrap align-center" style="gap: 6px;">
-            <v-btn class="gradient" v-on:click="showModal('add')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="editable" class="gradient" v-on:click="showModal('add')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
             <v-btn v-if="canManage" class="gradient" v-on:click="domainRemoveItem()" title="삭제">삭제</v-btn>
             <v-btn v-if="canManage" class="gradient" color="red lighten-4" v-on:click="domainBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
             <!-- 엑셀 드롭다운 (업로드 / 양식 / 다운로드) -->
@@ -114,6 +119,7 @@
             <span class="ndColor--text" :style="{ cursor: 'pointer' }" @click="showDetail(item)">{{
               item.domainNm
             }}</span>
+            <v-chip v-if="item.dictId && item.dictId !== dictId" x-small outlined color="indigo" class="ml-1" title="상위 사전 항목">상위</v-chip>
           </template>
           <!-- 데이터 없음 -->
           <template #top>
@@ -694,9 +700,14 @@ export default {
   props: ['isMobile'],
   computed: {
     // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE): 즉시 등록·수정·삭제·엑셀 업로드
-    canManage() { return this.$can('STD_MANAGE'); },
+    canManage() { return this.$can('STD_MANAGE') && this.editable; },
+    // 104번 WP5-14·11 — 참조 사전이거나 상위 사전 포함으로 보는 동안은 등록·수정·삭제하지 않는다
+    refDict() { return !!(this.dictMeta && this.dictMeta.dictTp === 'REF'); },
+    editable() { return !this.refDict && this.inclParentYn !== 'Y'; },
   },
   data: () => ({
+    dictMeta: null,        // 104번 WP5-14·11 — 고른 사전 속성 (DictSelector @meta)
+    inclParentYn: 'N',     // 104번 WP5-11 — 목록에 상위 사전 항목도
     // 98번 — 조회할 표준사전
     dictId: null,
     // 도메인 목록 리스트
@@ -981,6 +992,7 @@ export default {
         axios.post(_url, {
           'schNm': schNm,
           'schAprvYn': schAprvYn,
+              'inclParentYn': this.inclParentYn,   // 104번 WP5-11
           'schDomainGrpNm': this.searchDomainGrpNm !== '' ? this.searchDomainGrpNm : null,
           'schDataType': this.searchDataType !== '' ? this.searchDataType : null,
           'schDataLen': this.searchDataLen !== '' ? this.searchDataLen : null,
@@ -1009,6 +1021,7 @@ export default {
               'storFmt': _data[i].storFmt,
               'reqSysCd': _data[i].reqSysCd,
               'reqSysNm': _data[i].reqSysNm,
+              'dictId': _data[i].dictId,   // 104번 WP5-11 — 상위 사전 항목 표시
               // 'exprFmtLst': _data[i].exprFmtLst,
               // 'allowValLst': _data[i].allowValLst,
               'commStndYn': _data[i].commStndYn,
@@ -1910,7 +1923,7 @@ export default {
         this.searchDataLen = '';
       }
     }
-    this.getDomainData();
+    // 104번 WP5 — 첫 조회는 DictSelector 가 사전을 정한 뒤 change 로 건다. 여기서 먼저 부르면 기본 사전 목록이 늦게 도착해 고른 사전 목록을 덮어쓴다
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
   },

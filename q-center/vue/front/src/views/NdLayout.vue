@@ -181,6 +181,7 @@ export default {
                 case "changeHistory":
                 case "stdMap":
                 case "unusedStd":
+                case "stdImport":
                 case "datamodelStatus":
                 case "datamodelCollection":
                 case "datamodelHistory":
@@ -391,7 +392,7 @@ export default {
                     this._activateGroup("communityGroup");
                 } else if (tabName === 'myRequest' || tabName === 'myProfile' || tabName === 'aprvBox') {
                     this._activateGroup("myPageGroup");
-                } else if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory' || tabName === 'stdMap' || tabName === 'unusedStd') {
+                } else if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory' || tabName === 'stdMap' || tabName === 'unusedStd' || tabName === 'stdImport') {
                     this._activateGroup("dsGroup");
 
                 } else if (tabName === 'govMetaConf' || tabName === 'govMetaSys' || tabName === 'govMetaItems' || tabName === 'govMetaSend') {
@@ -629,7 +630,7 @@ export default {
             } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'erwinImport' || tabitem === 'privColumn') {
                 this.navDmGroup = true;
                 return;
-            } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification' || tabitem === 'changeHistory' || tabitem === 'stdMap' || tabitem === 'unusedStd') {
+            } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification' || tabitem === 'changeHistory' || tabitem === 'stdMap' || tabitem === 'unusedStd' || tabitem === 'stdImport') {
                 this.navDsGroup = true;
                 return;
             } else if (tabitem === 'dqi' || tabitem === 'ctq' || tabitem === 'dqbr') {

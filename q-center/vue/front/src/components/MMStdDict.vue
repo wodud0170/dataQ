@@ -28,6 +28,12 @@
       <template v-slot:item.defaultYn="{ item }">
         <v-chip v-if="item.defaultYn === 'Y'" x-small color="primary" text-color="white">기본</v-chip>
       </template>
+      <!-- 104번 WP5-14·11 -->
+      <template v-slot:item.dictTp="{ item }">
+        <v-chip v-if="item.dictTp === 'REF'" x-small color="indigo" text-color="white">참조</v-chip>
+        <span v-else>기관</span>
+        <span v-if="item.parentDictId" class="dict-opt-desc ml-1">· 상위 {{ dictNm(item.parentDictId) }}</span>
+      </template>
       <template v-slot:item.termLastWordClsfYn="{ item }">
         <span>{{ item.termLastWordClsfYn === 'Y' ? '필수' : '미적용' }}</span>
       </template>
@@ -49,7 +55,7 @@
     </v-data-table>
 
     <!-- 등록 / 수정 -->
-    <v-dialog max-width="600" v-model="modal">
+    <v-dialog max-width="600" v-model="modal" scrollable>
       <v-card>
         <v-card-title>{{ editing ? '표준사전 수정' : '표준사전 추가' }}</v-card-title>
         <v-card-text>
@@ -75,6 +81,14 @@
           <v-switch id="dictOldStdYn" v-model="form.oldStdYn" true-value="Y" false-value="N" dense hide-details
             label="구표준 사용 — 옛 표준 → 새 표준 매핑" />
           <div class="ml-8 mb-2 dict-opt-desc">켜면 표준 사전 > 표준 매핑에 옛 표준을 등록하고, 표준 진단 결과가 옛 표준을 쓰는 컬럼에 새 표준을 안내합니다.</div>
+          <!-- 104번 WP5-14·11 참조 사전·상위 사전 -->
+          <div class="dict-opt-title">참조·상속</div>
+          <v-switch id="dictRefTp" v-model="form.dictTp" true-value="REF" false-value="ORG" dense hide-details
+            :disabled="form.defaultYn === 'Y'" label="참조 사전 (읽기 전용)" />
+          <div class="ml-8 mb-2 dict-opt-desc">켜면 이 사전의 단어·용어·도메인·코드를 고칠 수 없고, 표준 사전 > 공통표준 가져오기의 원본으로 씁니다. 기본 사전은 참조 사전으로 둘 수 없습니다.</div>
+          <v-select id="dictParent" v-model="form.parentDictId" :items="parentOptions" item-text="dictNm" item-value="dictId"
+            label="상위 사전 (비우면 없음)" dense clearable class="mt-2" />
+          <div class="ml-8 mb-2 dict-opt-desc">상위 사전을 두면 표준 진단·컬럼 표준 검사·자동완성이 상위 사전 용어도 쓰고(같은 영문약어는 이 사전이 우선), 단어·용어·도메인 목록에서 "상위 사전 포함" 으로 함께 볼 수 있습니다.</div>
           <v-switch v-model="form.defaultYn" true-value="Y" false-value="N" dense
             label="기본 사전으로 지정 (신규 모델에 미리 선택됨)" />
         </v-card-text>
@@ -103,12 +117,13 @@ export default {
       selectedRows: [],
       modal: false,
       editing: false,
-      form: { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', defaultYn: 'N' },
+      form: { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', dictTp: 'ORG', parentDictId: null, defaultYn: 'N' },
       snackbar: false, snackbarMsg: '', snackbarColor: 'info',
       headers: [
         { text: '사전명', value: 'dictNm', width: '180px' },
         { text: '설명', value: 'dictDesc' },
         { text: '기본', value: 'defaultYn', width: '70px', align: 'center' },
+        { text: '유형·상위 사전', value: 'dictTp', width: '170px', sortable: false },
         { text: '형식단어 강제', value: 'termLastWordClsfYn', width: '110px', align: 'center' },
         { text: '운영 옵션', value: 'opts', sortable: false },
         { text: '보유 건수', value: 'counts', width: '320px', sortable: false },
@@ -117,9 +132,15 @@ export default {
   },
   computed: {
     selected() { return this.selectedRows.length ? this.selectedRows[0] : null; },
+    // 104번 WP5-11 — 상위 사전 후보: 자기 자신 빼고
+    parentOptions() { return this.dicts.filter(d => d.dictId !== this.form.dictId); },
   },
   mounted() { this.load(); },
   methods: {
+    dictNm(id) {
+      const d = this.dicts.find(x => x.dictId === id);
+      return d ? d.dictNm : id;
+    },
     load() {
       axios.post(this.$APIURL.base + 'api/dict/list', {}).then(res => {
         this.dicts = res.data || [];
@@ -134,7 +155,7 @@ export default {
     onSelect() { /* v-model 로 처리 */ },
     openAdd() {
       this.editing = false;
-      this.form = { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', defaultYn: 'N' };
+      this.form = { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', dictTp: 'ORG', parentDictId: null, defaultYn: 'N' };
       this.modal = true;
     },
     openEdit() {

@@ -52,6 +52,9 @@ public class NDQualityRetrieveCond {
      * 기본 사전을 채워 넣으므로, 실제로 전역 조회가 나가는 경로는 없다.</p>
      */
     private String dictId;
+    /** 104번 WP5-11 — 목록에 상위 사전 항목도 (Y). withDict 가 dictIds(사전 + 상위 사전)를 채운다 */
+    private String inclParentYn;
+    private java.util.List<String> dictIds;
 
 }
 

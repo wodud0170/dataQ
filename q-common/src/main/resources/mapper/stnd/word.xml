@@ -24,11 +24,13 @@
 		<result property="aprvStatUpdtDt" column="APRV_STAT_UPDT_DT"/>
 		<result property="reqSysCd" column="REQ_SYS_CD"/>
 		<result property="reqSysNm" column="REQ_SYS_NM"/>
+		<result property="dictId" column="DICT_ID"/>
 	</resultMap>
 
 	<select id="selectWordList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdWordMap">
 			select distinct		
 				WORD_ID
+				,DICT_ID
 				,WORD_NM			
 				,WORD_ENG_ABRV_NM
 				,WORD_ENG_NM		
@@ -68,6 +70,7 @@
 					,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
 					,UPDT_USER_ID
 					,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+					,DICT_ID
 					,REQ_SYS_CD
 					,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
 					,UNNEST(CASE WHEN array_length(ALLOPH_SYNM_LST, 1) >= 1
@@ -75,7 +78,11 @@
 						ELSE '{null}'::text[] END
 					) as ALLOPH_SYNM
 				from TB_WORD
-				<if test="dictId != null and dictId != ''"> WHERE DICT_ID = #{dictId} </if>
+				<choose>
+					<!-- 104번 WP5-11 — 상위 사전 포함 -->
+					<when test="dictIds != null and dictIds.size() > 0"> WHERE DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach> </when>
+					<when test="dictId != null and dictId != ''"> WHERE DICT_ID = #{dictId} </when>
+				</choose>
 				) A
 			where 1=1
 			<if test="schNm != null">

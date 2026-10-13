@@ -113,11 +113,45 @@ public class DataStandardController {
 		return (v == null || v.isEmpty()) ? dictService.defaultDictId() : v;
 	}
 
+	// ===== 104번 WP5-14 — 참조 사전은 고치지 못한다 =====
+
+	/** 사전이 참조 사전이면 오류 응답, 아니면 null */
+	private Response refBlocked(Object dictId) {
+		try {
+			dictService.checkWritable(resolveDictOrDefault(dictId));
+			return null;
+		} catch (IllegalArgumentException e) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			return r;
+		}
+	}
+
+	/** 항목들 중 하나라도 참조 사전에 있으면 오류 응답, 아니면 null */
+	private Response refBlockedOf(String table, String idCol, java.util.Collection<String> ids) {
+		try {
+			for (String id : ids) dictService.checkWritableOf(table, idCol, id);
+			return null;
+		} catch (IllegalArgumentException e) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			return r;
+		}
+	}
+
+	private static <T> List<String> ids(List<T> vos, java.util.function.Function<T, String> f) {
+		List<String> out = new ArrayList<>();
+		if (vos != null) for (T v : vos) out.add(f.apply(v));
+		return out;
+	}
+
 	private NDQualityRetrieveCond withDict(NDQualityRetrieveCond cond) {
 		NDQualityRetrieveCond c = (cond != null) ? cond : new NDQualityRetrieveCond();
 		if (c.getDictId() == null || c.getDictId().trim().isEmpty()) {
 			c.setDictId(dictService.defaultDictId());
 		}
+		// 104번 WP5-11 — 목록에 상위 사전 항목도
+		if ("Y".equals(c.getInclParentYn())) c.setDictIds(dictService.lineage(c.getDictId()));
 		return c;
 	}
 
@@ -137,6 +171,9 @@ public class DataStandardController {
 			r.setResultInfo(RestResult.CODE_500.getCode(), "사용할 수 없는 표준사전입니다: " + dictId);
 			return Mono.just(r);
 		}
+		// 104번 WP5-14 — 참조 사전에는 일괄등록하지 않는다
+		Response rb0 = refBlocked(dictId);
+		if (rb0 != null) return Mono.just(rb0);
 		log.info(">> forward {} file : {}, dictId : {}", path, excelFile.getOriginalFilename(), dictId);
 		WebClientHandler webClientHandler = new WebClientHandler(
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + path + "?dictId=" + dictId, MediaType.MULTIPART_FORM_DATA_VALUE);
@@ -210,6 +247,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/createWord", method = RequestMethod.POST)
 	public Mono<Response> createWord(@RequestBody StdWordVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlocked(dataVo.getDictId());
+		if (rb0 != null) return Mono.just(rb0);
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
 		// 98번 — 어느 사전에 등록하는지. 화면이 안 보내면 기본 사전.
@@ -305,6 +345,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateWord", method = RequestMethod.POST)
 	public Mono<Response> updateWord(@RequestBody StdWordVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_WORD", "WORD_ID", java.util.Collections.singletonList(dataVo.getId()));
+		if (rb0 != null) return Mono.just(rb0);
 		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
 			r.setResultInfo(RestResult.CODE_500.getCode(), "수정 권한이 없습니다 (표준 직접 관리 권한 필요).");
@@ -351,6 +394,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteWords", method = RequestMethod.POST)
 	public Mono<Response> deleteWords(@RequestBody List<StdWordVo> dataVos) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_WORD", "WORD_ID", ids(dataVos, StdWordVo::getId));
+		if (rb0 != null) return Mono.just(rb0);
 		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
 			r.setResultInfo(RestResult.CODE_500.getCode(), "삭제 권한이 없습니다 (표준 직접 관리 권한 필요).");
@@ -587,6 +633,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/createTerms", method = RequestMethod.POST)
 	public Mono<Response> createTerms(@RequestBody StdTermsVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlocked(dataVo.getDictId());
+		if (rb0 != null) return Mono.just(rb0);
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
 		// 98번 — 어느 사전에 등록하는지. 용어 화면은 고른 사전, 진단 결과 화면은 그 진단의 사전을 보낸다.
@@ -799,6 +848,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateTerms", method = RequestMethod.POST)
 	public Mono<Response> updateTerms(@RequestBody StdTermsVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_TERMS", "TERMS_ID", java.util.Collections.singletonList(dataVo.getId()));
+		if (rb0 != null) return Mono.just(rb0);
 		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
 			r.setResultInfo(RestResult.CODE_500.getCode(), "수정 권한이 없습니다 (표준 직접 관리 권한 필요).");
@@ -855,6 +907,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteTermsList", method = RequestMethod.POST)
 	public Mono<Response> deleteTermsList(@RequestBody List<StdTermsVo> dataVos) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_TERMS", "TERMS_ID", ids(dataVos, StdTermsVo::getId));
+		if (rb0 != null) return Mono.just(rb0);
 		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
 			r.setResultInfo(RestResult.CODE_500.getCode(), "삭제 권한이 없습니다 (표준 직접 관리 권한 필요).");
@@ -996,6 +1051,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/createCode", method = RequestMethod.POST)
 	public Mono<Response> createCode(@RequestBody StdTermsVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlocked(dataVo.getDictId());
+		if (rb0 != null) return Mono.just(rb0);
 		Mono<Response> resp = createTerms(dataVo);
 		// 코드 이력을 별도로 저장 (관리자 즉시 승인 시에만)
 		if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
@@ -1013,6 +1071,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateCode", method = RequestMethod.POST)
 	public Mono<Response> updateCode(@RequestBody StdTermsVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_TERMS", "TERMS_ID", java.util.Collections.singletonList(dataVo.getId()));
+		if (rb0 != null) return Mono.just(rb0);
 		Mono<Response> resp = updateTerms(dataVo);
 		saveChangeHistory("UPDATE", "CODE", dataVo.getId(), dataVo.getTermsNm(),
 				null, dataVo.toString(), "코드 수정: " + dataVo.getTermsNm());
@@ -1027,6 +1088,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteCodeList", method = RequestMethod.POST)
 	public Mono<Response> deleteCodeList(@RequestBody List<StdTermsVo> dataVos) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_TERMS", "TERMS_ID", ids(dataVos, StdTermsVo::getId));
+		if (rb0 != null) return Mono.just(rb0);
 		List<String> deletedNames = new ArrayList<>();
 		for (StdTermsVo vo : dataVos) {
 			if (vo.getTermsNm() != null) deletedNames.add(vo.getTermsNm());
@@ -1140,6 +1204,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/createCodeData", method = RequestMethod.POST)
 	public Mono<Response> createCodeData(@RequestBody StdCodeDataVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlocked(dataVo.getDictId());
+		if (rb0 != null) return Mono.just(rb0);
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
 		// 98번 — 코드 화면에서 고른 사전에 넣는다.
@@ -1176,6 +1243,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateCodeData", method = RequestMethod.POST)
 	public Mono<Response> updateCodeData(@RequestBody StdCodeDataVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_CODE_DATA", "CODE_ID", java.util.Collections.singletonList(dataVo.getId()));
+		if (rb0 != null) return Mono.just(rb0);
 		dataVo.setUpdtUserId(sessionService.getUserId());
 		log.info(">> updateCodeData : {}", dataVo);
 
@@ -1215,6 +1285,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteCodeDatas", method = RequestMethod.POST)
 	public Mono<Response> deleteCodeDatas(@RequestBody List<StdCodeDataVo> dataVos) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_CODE_DATA", "CODE_ID", ids(dataVos, StdCodeDataVo::getId));
+		if (rb0 != null) return Mono.just(rb0);
 		Response result = new Response();
 		try {
 			List<String> deletedNames = new ArrayList<>();
@@ -1304,6 +1377,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/createDomain", method = RequestMethod.POST)
 	public Mono<Response> createDomain(@RequestBody StdDomainVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlocked(dataVo.getDictId());
+		if (rb0 != null) return Mono.just(rb0);
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
 		// 98번 — 도메인 화면에서 고른 사전에 넣는다.
@@ -1478,6 +1554,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateDomain", method = RequestMethod.POST)
 	public Mono<Response> updateDomain(@RequestBody StdDomainVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_DOMAIN", "DOMAIN_ID", java.util.Collections.singletonList(dataVo.getId()));
+		if (rb0 != null) return Mono.just(rb0);
 		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
 			r.setResultInfo(RestResult.CODE_500.getCode(), "수정 권한이 없습니다 (표준 직접 관리 권한 필요).");
@@ -1518,6 +1597,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteDomains", method = RequestMethod.POST)
 	public Mono<Response> deleteDomains(@RequestBody List<StdDomainVo> dataVos) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_DOMAIN", "DOMAIN_ID", ids(dataVos, StdDomainVo::getId));
+		if (rb0 != null) return Mono.just(rb0);
 		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
 			r.setResultInfo(RestResult.CODE_500.getCode(), "삭제 권한이 없습니다 (표준 직접 관리 권한 필요).");
@@ -1587,6 +1669,9 @@ public class DataStandardController {
 	@RequestMapping(value = "/createDomainGroup", method = RequestMethod.POST)
 	@ResponseBody
 	public Response createDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlocked(dataVo.getDictId());
+		if (rb0 != null) return rb0;
 
 		Response result = new Response();
 
@@ -1661,6 +1746,9 @@ public class DataStandardController {
 	@RequestMapping(value = "/updateDomainGroup", method = RequestMethod.POST)
 	@ResponseBody
 	public Response updateDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_DOMAIN_GRP", "DOMAIN_GRP_ID", java.util.Collections.singletonList(dataVo.getId()));
+		if (rb0 != null) return rb0;
 
 		Response result = new Response();
 
@@ -1705,6 +1793,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteDomainGroups", method = RequestMethod.POST)
 	public Mono<Response> deleteDomainGroups(@RequestBody List<StdDomainGroupVo> dataVos) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_DOMAIN_GRP", "DOMAIN_GRP_ID", ids(dataVos, StdDomainGroupVo::getId));
+		if (rb0 != null) return Mono.just(rb0);
 		Response result = new Response();
 		try {
 			// 104번 WP6-4 — 하위 그룹·분류·도메인이 있는 그룹은 지우지 않는다 (선택한 하위 그룹을 함께 지우는 경우는 허용)
@@ -1754,6 +1845,9 @@ public class DataStandardController {
 	@RequestMapping(value = "/createDomainClassification", method = RequestMethod.POST)
 	@ResponseBody
 	public Response createDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlocked(dataVo.getDictId());
+		if (rb0 != null) return rb0;
 
 		Response result = new Response();
 
@@ -1795,6 +1889,9 @@ public class DataStandardController {
 	@RequestMapping(value = "/updateDomainClassification", method = RequestMethod.POST)
 	@ResponseBody
 	public Response updateDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_DOMAIN_CLSF", "DOMAIN_CLSF_ID", java.util.Collections.singletonList(dataVo.getId()));
+		if (rb0 != null) return rb0;
 		Response result = new Response();
 		try {
 			if (dataVo.getId() == null || dataVo.getId().isEmpty()) {
@@ -1823,6 +1920,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteDomainClassifications", method = RequestMethod.POST)
 	public Mono<Response> deleteDomainClassifications(@RequestBody List<StdDomainClassificationVo> dataVos) {
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		Response rb0 = refBlockedOf("TB_DOMAIN_CLSF", "DOMAIN_CLSF_ID", ids(dataVos, StdDomainClassificationVo::getId));
+		if (rb0 != null) return Mono.just(rb0);
 		Response result = new Response();
 		try {
 			sqlSessionTemplate.delete("domain.deleteDomainClassifications", dataVos);
@@ -2420,6 +2520,12 @@ public class DataStandardController {
 		String domainClsfNm = (String) body.get("domainClsfNm");
 		// 98번 — 자동표준화가 어느 사전에 등록하는지. 화면에서 고른 값이 온다.
 		String dictId = resolveDictOrDefault(body.get("dictId"));
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		if (dictService.isRef(dictId)) {
+			res.put("success", false);
+			res.put("message", refBlocked(dictId).getResultMessage());
+			return res;
+		}
 
 		if (wordNm == null || wordNm.trim().isEmpty()
 				|| wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
@@ -2558,6 +2664,25 @@ public class DataStandardController {
 		boolean directApprove = sessionService.hasPerm(PermCode.STD_MANAGE);
 		// 98번 — 이 일괄 등록이 들어갈 사전. 화면에서 고른 값이 온다.
 		String dictId = resolveDictOrDefault(body.get("dictId"));
+		// 104번 WP5-14 — 참조 사전에는 등록하지 않는다 (항목마다 실패)
+		if (dictService.isRef(dictId)) {
+			String msg = refBlocked(dictId).getResultMessage();
+			List<Map<String, Object>> fails = new ArrayList<>();
+			for (Map<String, Object> it : items) {
+				Map<String, Object> d = new HashMap<>();
+				d.put("termsNm", it.get("termsNm"));
+				d.put("status", "FAIL");
+				d.put("message", msg);
+				fails.add(d);
+			}
+			Map<String, Object> res = new HashMap<>();
+			res.put("registeredTerms", 0);
+			res.put("registeredWords", 0);
+			res.put("skipped", 0);
+			res.put("failed", items.size());
+			res.put("details", fails);
+			return res;
+		}
 		int registeredTerms = 0;
 		int registeredWords = 0;
 		int skipped = 0;

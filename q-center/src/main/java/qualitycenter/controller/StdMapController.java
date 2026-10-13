@@ -82,6 +82,10 @@ public class StdMapController {
 		String oldNm = s(body.get("oldNm"));
 		String oldEng = s(body.get("oldEngAbrvNm"));
 		String newId = s(body.get("newId"));
+		// 104번 WP5-14 — 참조 사전은 고치지 못한다
+		if (dictService.isRef(dictId)) {
+			try { dictService.checkWritable(dictId); } catch (IllegalArgumentException e) { return Mono.just(result(RestResult.CODE_500.getCode(), e.getMessage(), null)); }
+		}
 		if (!dictService.isOldStdUsed(dictId)) {
 			return Mono.just(result(RestResult.CODE_500.getCode(), "이 사전은 구표준을 쓰지 않습니다. 관리 > 표준사전 관리에서 '구표준 사용' 을 켜세요.", null));
 		}
@@ -127,6 +131,11 @@ public class StdMapController {
 		@SuppressWarnings("unchecked")
 		List<String> ids = (List<String>) body.get("mapIds");
 		if (ids == null || ids.isEmpty()) return Mono.just(result(RestResult.CODE_500.getCode(), "지울 매핑을 골라 주세요.", null));
+		try {
+			for (String id : ids) dictService.checkWritableOf("TB_STD_MAP", "MAP_ID", id);   // 104번 WP5-14
+		} catch (IllegalArgumentException e) {
+			return Mono.just(result(RestResult.CODE_500.getCode(), e.getMessage(), null));
+		}
 		int n = sqlSessionTemplate.delete("stdMap.delete", ids);
 		return Mono.just(result(RestResult.CODE_200.getCode(), "OK", n));
 	}

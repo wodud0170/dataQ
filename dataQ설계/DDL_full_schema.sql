@@ -2284,7 +2284,9 @@ CREATE TABLE quality.tb_std_dict (
     upper_yn character(1) DEFAULT 'Y'::bpchar,
     word_eng_nm_dup_yn character(1) DEFAULT 'Y'::bpchar,
     term_eng_max_len integer,
-    old_std_yn character(1) DEFAULT 'N'::bpchar
+    old_std_yn character(1) DEFAULT 'N'::bpchar,
+    dict_tp character varying(10) DEFAULT 'ORG'::character varying,
+    parent_dict_id character varying(22)
 );
 
 
@@ -2335,6 +2337,20 @@ COMMENT ON COLUMN quality.tb_std_dict.term_eng_max_len IS '용어 영문약어�
 --
 
 COMMENT ON COLUMN quality.tb_std_dict.old_std_yn IS '구표준 사용 — 옛 표준 → 새 표준 매핑 (104번 WP6-13·15)';
+
+
+--
+-- Name: COLUMN tb_std_dict.dict_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.dict_tp IS 'ORG(기관 사전) / REF(참조 사전 — 읽기 전용, 공통표준 가져오기의 원본) (104번 WP5-14)';
+
+
+--
+-- Name: COLUMN tb_std_dict.parent_dict_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.parent_dict_id IS '상위 사전 — 진단·컬럼 표준 검사·목록이 상위 사전 항목도 본다 (가까운 사전 우선, 104번 WP5-11)';
 
 
 --
@@ -4032,6 +4048,14 @@ ALTER TABLE ONLY quality.tb_org
 
 ALTER TABLE ONLY quality.tb_role_perm
     ADD CONSTRAINT tb_role_perm_role_fk FOREIGN KEY (role_id) REFERENCES quality.tb_role(role_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_std_dict tb_std_dict_fk_parent; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_std_dict
+    ADD CONSTRAINT tb_std_dict_fk_parent FOREIGN KEY (parent_dict_id) REFERENCES quality.tb_std_dict(dict_id);
 
 
 --

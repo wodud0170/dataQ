@@ -8,7 +8,10 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px' }">
-              <DictSelector v-model="dictId" @change="getCodeData" />
+              <DictSelector v-model="dictId" @change="getCodeData" @meta="dictMeta = $event" />
+              <!-- 104번 WP5-14·11 — 참조 사전은 읽기 전용, 상위 사전이 있으면 목록에 함께 볼 수 있다 -->
+              <v-chip v-if="refDict" id="refDictChipCode" small color="indigo" text-color="white" class="mr-3"
+                title="참조 사전은 고칠 수 없습니다. [표준 사전 > 공통표준 가져오기] 로 기관 사전에 가져와 쓰세요.">참조 사전 — 읽기 전용</v-chip>
               <span :style="{ fontSize: '.875rem' }">코드명</span>
               <!-- 코드명 입력 필드 -->
               <v-text-field class="pr-4 pl-4" v-model="searchCode" v-on:keyup.enter="getCodeData"
@@ -39,7 +42,7 @@
             class="d-flex flex-nowrap" style="gap: 6px;">
             <v-btn :style="{ width: '150px' }" class="gradient" v-on:click="showModal('managingCodeval')"
               title="코드 항목 관리">코드 항목 관리</v-btn>
-            <v-btn class="gradient" v-on:click="showModal('codeAdd')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="editable" class="gradient" v-on:click="showModal('codeAdd')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
             <v-btn v-if="canManage" class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="codeListDownload()" title="다운로드">다운로드</v-btn>
             <v-btn v-if="canManage" class="gradient" v-on:click="codeRemoveItem()" title="삭제">삭제</v-btn>
@@ -1011,9 +1014,14 @@ export default {
   },
   computed: {
     // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE): 즉시 등록·수정·삭제·일괄 등록
-    canManage() { return this.$can('STD_MANAGE'); },
+    canManage() { return this.$can('STD_MANAGE') && this.editable; },
+    // 104번 WP5-14·11 — 참조 사전이거나 상위 사전 포함으로 보는 동안은 등록·수정·삭제하지 않는다
+    refDict() { return !!(this.dictMeta && this.dictMeta.dictTp === 'REF'); },
+    editable() { return !this.refDict && this.inclParentYn !== 'Y'; },
   },
   data: () => ({
+    dictMeta: null,        // 104번 WP5-14·11 — 고른 사전 속성 (DictSelector @meta)
+    inclParentYn: 'N',     // 104번 WP5-11 — 목록에 상위 사전 항목도
     impactShow: false,   // 104번 WP7-26
     // 98번 — 조회할 표준사전
     dictId: null,
@@ -3053,7 +3061,7 @@ export default {
     }
   },
   created() {
-    this.getCodeData();
+    // 104번 WP5 — 첫 조회는 DictSelector 가 사전을 정한 뒤 change 로 건다. 여기서 먼저 부르면 기본 사전 목록이 늦게 도착해 고른 사전 목록을 덮어쓴다
     this.getCodeDataList();
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);

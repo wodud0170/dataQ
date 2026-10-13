@@ -9,7 +9,12 @@
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <!-- 검색 1줄: 용어명 / 용어영문약어명 / 도메인명 -->
             <v-row :style="{ alignItems: 'center', margin: '0px', flexWrap: 'wrap', rowGap: '10px' }" class="mb-2">
-              <DictSelector v-model="dictId" @change="getTermData" />
+              <DictSelector v-model="dictId" @change="getTermData" @meta="dictMeta = $event; if (!$event || !$event.parentDictId) inclParentYn = 'N'" />
+              <!-- 104번 WP5-14·11 — 참조 사전은 읽기 전용, 상위 사전이 있으면 목록에 함께 볼 수 있다 -->
+              <v-chip v-if="refDict" id="refDictChipTerm" small color="indigo" text-color="white" class="mr-3"
+                title="참조 사전은 고칠 수 없습니다. [표준 사전 > 공통표준 가져오기] 로 기관 사전에 가져와 쓰세요.">참조 사전 — 읽기 전용</v-chip>
+              <v-checkbox v-if="dictMeta && dictMeta.parentDictId" id="inclParentTerm" v-model="inclParentYn" true-value="Y" false-value="N"
+                label="상위 사전 포함" color="ndColor" dense hide-details class="mt-0 pt-0 mr-3" @change="getTermData" />
               <!-- 용어명 검색 -->
               <span :style="{ fontSize: '.875rem' }">용어명</span>
               <v-select v-model="searchTermMode" :items="searchModeOptions" item-text="label" item-value="value"
@@ -87,7 +92,7 @@
           <!-- 86번 #35 — DSDomain 패턴 따라 엑셀 관련은 드롭다운으로 묶음 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
             class="d-flex flex-nowrap align-center" style="gap: 6px;">
-            <v-btn class="gradient" v-on:click="showModal('add')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="editable" class="gradient" v-on:click="showModal('add')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
             <v-btn v-if="canManage" class="gradient" v-on:click="termRemoveItem()" title="선택 삭제" :disabled="removeItems.length === 0">선택 삭제</v-btn>
             <v-btn v-if="canManage" class="gradient" color="red lighten-4" v-on:click="termBulkRemove()" title="전체 삭제">전체 삭제</v-btn>
             <v-menu offset-y>
@@ -137,6 +142,7 @@
             <span class="ndColor--text" :style="{ cursor: 'pointer' }" @click="showDetail(item)">{{
               item.termsNm
             }}</span>
+            <v-chip v-if="item.dictId && item.dictId !== dictId" x-small outlined color="indigo" class="ml-1" title="상위 사전 항목">상위</v-chip>
           </template>
 
           <template #top>
@@ -907,6 +913,8 @@ export default {
     }
   },
   data: () => ({
+    dictMeta: null,        // 104번 WP5-14·11 — 고른 사전 속성 (DictSelector @meta)
+    inclParentYn: 'N',     // 104번 WP5-11 — 목록에 상위 사전 항목도
     impactShow: false,   // 104번 WP7-26
     // 98번 — 조회할 표준사전
     dictId: null,
@@ -1120,7 +1128,10 @@ export default {
   }),
   computed: {
     // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE): 즉시 등록·수정·삭제·엑셀 업로드
-    canManage() { return this.$can('STD_MANAGE'); },
+    canManage() { return this.$can('STD_MANAGE') && this.editable; },
+    // 104번 WP5-14·11 — 참조 사전이거나 상위 사전 포함으로 보는 동안은 등록·수정·삭제하지 않는다
+    refDict() { return !!(this.dictMeta && this.dictMeta.dictTp === 'REF'); },
+    editable() { return !this.refDict && this.inclParentYn !== 'Y'; },
     /** 86번 #41 — 최종 용어명 footer 의 도메인+타입 라벨. 코드면 코드명/그룹, 일반이면 도메인V타입(길이) */
     addTerm_finalDomainLabel() {
       if (this.addTerm_domainType === 'code' && this.addTerm_selectedCode) {
@@ -1298,6 +1309,7 @@ export default {
           'searchEngTermMode': this.searchEngTermMode,
           'searchDomain': searchDomain,
           'schAprvYn': schAprvYn,
+              'inclParentYn': this.inclParentYn,   // 104번 WP5-11
           'schCommStndYn': this.searchCommStndYn || null,
           'schPrivYn': this.searchPrivYn || null,
           'schEncrYn': this.searchEncrYn || null,
@@ -2962,7 +2974,7 @@ export default {
         this.searchDomain = '';
       }
     }
-    this.getTermData();
+    // 104번 WP5 — 첫 조회는 DictSelector 가 사전을 정한 뒤 change 로 건다. 여기서 먼저 부르면 기본 사전 목록이 늦게 도착해 고른 사전 목록을 덮어쓴다
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
   },

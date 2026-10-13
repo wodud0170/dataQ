@@ -344,7 +344,7 @@ export default {
   },
   created() {
     // 데이터 표준 메뉴의 도메인 - 도메인 그룹 선택 시 domainGroup data를 불러온다.
-    this.getDomainGroupData();
+    // 104번 WP5 — 첫 조회는 DictSelector 가 사전을 정한 뒤 change 로 건다. 여기서 먼저 부르면 기본 사전 목록이 늦게 도착해 고른 사전 목록을 덮어쓴다
     eventBus.$on('NOTICE', this.onUploadNotice);
   },
   beforeDestroy() {

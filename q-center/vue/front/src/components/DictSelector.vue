@@ -5,7 +5,7 @@
   고른 사전은 세션스토리지에 남아 탭을 옮겨도 유지된다.
 
   사용:
-    <DictSelector v-model="dictId" @change="조회함수" />
+    <DictSelector v-model="dictId" @change="조회함수" @meta="고른 사전 속성(dictTp·parentDictId)" />
 -->
 <template>
   <v-sheet class="d-flex align-center" :style="{ background: 'transparent' }">
@@ -17,6 +17,7 @@
       <template v-slot:item="{ item }">
         <span>{{ item.dictNm }}</span>
         <v-chip v-if="item.defaultYn === 'Y'" x-small class="ml-2">기본</v-chip>
+        <v-chip v-if="item.dictTp === 'REF'" x-small class="ml-2" color="indigo" text-color="white">참조</v-chip>
       </template>
     </v-select>
   </v-sheet>
@@ -73,6 +74,8 @@ export default {
       this.$emit('input', v);
       // 최초 로드에서도 부모가 조회를 걸 수 있게 change 를 쏜다.
       this.$emit('change', v, fromUser);
+      // 104번 WP5-14·11 — 고른 사전의 속성 (참조 사전 여부·상위 사전)
+      this.$emit('meta', this.dicts.find(function (d) { return d.dictId === v; }) || null);
     },
     readStored() {
       try { return window.sessionStorage.getItem(STORAGE_KEY); } catch (e) { return null; }

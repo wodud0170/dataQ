@@ -8,7 +8,12 @@
           <!-- 검색 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
             <v-row :style="{ alignItems: 'center', margin: '0px' }">
-              <DictSelector v-model="dictId" @change="getWordData" />
+              <DictSelector v-model="dictId" @change="getWordData" @meta="dictMeta = $event; if (!$event || !$event.parentDictId) inclParentYn = 'N'" />
+              <!-- 104번 WP5-14·11 — 참조 사전은 읽기 전용, 상위 사전이 있으면 목록에 함께 볼 수 있다 -->
+              <v-chip v-if="refDict" id="refDictChipWord" small color="indigo" text-color="white" class="mr-3"
+                title="참조 사전은 고칠 수 없습니다. [표준 사전 > 공통표준 가져오기] 로 기관 사전에 가져와 쓰세요.">참조 사전 — 읽기 전용</v-chip>
+              <v-checkbox v-if="dictMeta && dictMeta.parentDictId" id="inclParentWord" v-model="inclParentYn" true-value="Y" false-value="N"
+                label="상위 사전 포함" color="ndColor" dense hide-details class="mt-0 pt-0 mr-3" @change="getWordData" />
               <span :style="{ fontSize: '.875rem' }">단어명</span>
               <!-- 단어명 입력 필드 -->
               <v-text-field class="pr-4 pl-4" v-model="searchWord" v-on:keyup.enter="getWordData"
@@ -57,7 +62,7 @@
           <!-- 86번 #35 — DSDomain 패턴 따라 엑셀 관련은 드롭다운으로 묶음 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
             class="d-flex flex-nowrap align-center" style="gap: 6px;">
-            <v-btn class="gradient" id="addWordBtn" v-on:click="showModal('add')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="editable" class="gradient" id="addWordBtn" v-on:click="showModal('add')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
             <v-btn v-if="canManage" class="gradient" v-on:click="wordRemoveItem()" title="삭제">삭제</v-btn>
             <v-btn v-if="canManage" class="gradient" color="red lighten-4" v-on:click="wordBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
             <v-menu offset-y>
@@ -106,6 +111,7 @@
             <span class="ndColor--text" :style="{ cursor: 'pointer' }" @click="showDetail(item)">{{
               item.wordNm
             }}</span>
+            <v-chip v-if="item.dictId && item.dictId !== dictId" x-small outlined color="indigo" class="ml-1" title="상위 사전 항목">상위</v-chip>
           </template>
           <!-- 형식단어 여부 칩 -->
           <template v-slot:[`item.wordClsfYn`]="{ item }">
@@ -636,7 +642,10 @@ export default {
   props: ['isMobile'],
   computed: {
     // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE): 즉시 등록·수정·삭제·엑셀 업로드
-    canManage() { return this.$can('STD_MANAGE'); },
+    canManage() { return this.$can('STD_MANAGE') && this.editable; },
+    // 104번 WP5-14·11 — 참조 사전이거나 상위 사전 포함으로 보는 동안은 등록·수정·삭제하지 않는다
+    refDict() { return !!(this.dictMeta && this.dictMeta.dictTp === 'REF'); },
+    editable() { return !this.refDict && this.inclParentYn !== 'Y'; },
     // 104번 WP6-13 — 고른 사전의 표준 대문자 옵션 (끄면 영문약어를 바꾸지 않고 서버가 소문자를 거부한다)
     upperAuto() {
       const d = this.dictList.find(x => x.dictId === this.dictId);
@@ -644,6 +653,8 @@ export default {
     },
   },
   data: () => ({
+    dictMeta: null,        // 104번 WP5-14·11 — 고른 사전 속성 (DictSelector @meta)
+    inclParentYn: 'N',     // 104번 WP5-11 — 목록에 상위 사전 항목도
     // 단어 목록 리스트
     wordItems: [],
     // 도메인 분류명 리스트
@@ -1279,6 +1290,7 @@ export default {
               'schNm': schNm,
               'searchEngWord': searchEngWord,
               'schAprvYn': schAprvYn,
+              'inclParentYn': this.inclParentYn,   // 104번 WP5-11
               'wordClsfYn': this.searchWordClsfYn || null,
               'schCommStndYn': this.searchCommStndYn || null,
               'from': this.searchFromDt ? this.searchFromDt.replace(/-/g, '') + '000000' : null,
@@ -1311,7 +1323,8 @@ export default {
                   'updtDt': _data[i].updtDt,
                   'updtUserId': _data[i].updtUserId,
                   'reqSysCd':_data[i].reqSysCd,
-                  'reqSysNm':_data[i].reqSysNm
+                  'reqSysNm':_data[i].reqSysNm,
+                  'dictId': _data[i].dictId   // 104번 WP5-11 — 상위 사전 항목 표시
                 }
 
                 if (_data[i].allophSynmLst !== null && _data[i].allophSynmLst.length !== 0) {
@@ -1855,7 +1868,7 @@ export default {
         this.searchWord = '';
       }
     }
-    this.getWordData();
+    // 104번 WP5 — 첫 조회는 DictSelector 가 사전을 정한 뒤 change 로 건다. 여기서 먼저 부르면 기본 사전 목록이 늦게 도착해 고른 사전 목록을 덮어쓴다
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
   },

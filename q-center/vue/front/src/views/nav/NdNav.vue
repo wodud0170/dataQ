@@ -100,6 +100,16 @@
                         <v-list-item-title>미사용 표준</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 104번 WP5-14 공통표준 가져오기 -->
+                    <v-list-item link id="nav_stdImport" href="#tab_stdImport"
+                        active-class="ndColor--text" title="공통표준 가져오기"
+                        v-on:click.stop=" addTabItem('공통표준 가져오기', 'stdImport'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>공통표준 가져오기</v-list-item-title>
+                    </v-list-item>
+
                     <!-- <v-list-item link id="nav_datamodel" href="#tab_datamodel" active-class="ndColor--text" title="데이터 모델"
                         v-on:click.stop="addTabItem('데이터 모델', 'datamodel');">
                         <v-list-item-icon>
