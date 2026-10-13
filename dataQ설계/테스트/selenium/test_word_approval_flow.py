@@ -405,7 +405,8 @@ def main():
         # 단어명으로 검색 (DOM send_keys + Enter)
         search_inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='text']")
         for inp in search_inputs:
-            if inp.is_displayed() and inp.get_attribute("placeholder") != "통합 검색":
+            if (inp.is_displayed() and inp.get_attribute("placeholder") != "통합 검색"
+                    and not inp.get_attribute("readonly")):   # 98번: 사전 선택기(v-select)는 readonly input 이라 건너뛴다
                 inp.click()
                 inp.send_keys(Keys.CONTROL, "a")
                 inp.send_keys(TEST_WORD_NM)

@@ -586,7 +586,8 @@ def delete_word_by_search(driver, word_nm):
     search_inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='text']")
     for inp in search_inputs:
         try:
-            if inp.is_displayed() and inp.get_attribute("placeholder") != "통합 검색":
+            if (inp.is_displayed() and inp.get_attribute("placeholder") != "통합 검색"
+                    and not inp.get_attribute("readonly")):   # 98번: 사전 선택기(v-select)는 readonly input 이라 건너뛴다
                 inp.click()
                 inp.send_keys(Keys.CONTROL, "a")
                 inp.send_keys(word_nm)
@@ -633,7 +634,8 @@ def delete_domain_by_search(driver, domain_nm):
     search_inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='text']")
     for inp in search_inputs:
         try:
-            if inp.is_displayed() and inp.get_attribute("placeholder") != "통합 검색":
+            if (inp.is_displayed() and inp.get_attribute("placeholder") != "통합 검색"
+                    and not inp.get_attribute("readonly")):   # 98번: 사전 선택기(v-select)는 readonly input 이라 건너뛴다
                 inp.click()
                 inp.send_keys(Keys.CONTROL, "a")
                 inp.send_keys(domain_nm)
