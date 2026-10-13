@@ -30,7 +30,7 @@
             item-text="text" item-value="value"
             dense outlined hide-details single-line :style="{ width: '110px' }" />
 
-          <template v-if="isAdmin">
+          <template v-if="canViewAll">
             <span :style="{ fontSize: '.875rem' }">사용자</span>
             <v-text-field class="pr-4 pl-2" v-model="searchUser" v-on:keyup.enter="load"
               clearable clear-icon="mdi-close-circle" color="ndColor"
@@ -123,7 +123,6 @@ export default {
   props: ['isMobile'],
   data: () => ({
     items: [],
-    isAdmin: false,
     loading: false,
     page: 1,
     itemsPerPage: 20,
@@ -154,14 +153,13 @@ export default {
     ],
   }),
   computed: {
+    // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE)이면 모든 사용자의 이력을 보므로 사용자 조건을 보인다
+    canViewAll() { return this.$can('STD_MANAGE'); },
     changedCount() {
       return this.items.filter(i => this.isChanged(i)).length;
     },
   },
   mounted() {
-    axios.get(this.$APIURL.base + 'api/search/getUserInfo').then(r => {
-      this.isAdmin = !!(r.data && (r.data.admin || r.data.role === 'A'));
-    }).catch(() => {});
     this.load();
   },
   activated() { this.load(); },

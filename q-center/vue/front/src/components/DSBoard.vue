@@ -12,7 +12,7 @@
         </v-btn>
         <v-spacer></v-spacer>
         <v-btn class="gradient" @click="showWriteForm"
-          v-if="boardType === 'QNA' || isAdmin">
+          v-if="boardType === 'QNA' || canBoardAdmin">
           <v-icon small class="mr-1">mdi-pencil</v-icon> 글쓰기
         </v-btn>
       </v-row>
@@ -73,7 +73,7 @@
         </div>
 
         <!-- 수정/삭제 -->
-        <v-row v-if="currentPost.cretUserId === currentUserId || isAdmin" class="mt-3">
+        <v-row v-if="currentPost.cretUserId === currentUserId || canBoardAdmin" class="mt-3">
           <v-col cols="auto">
             <v-btn small outlined color="ndColor" @click="editPost">수정</v-btn>
           </v-col>
@@ -100,7 +100,7 @@
           </template>
           <template v-else>
             <div class="text-body-2 mt-1" style="white-space:pre-wrap;">{{ c.content }}</div>
-            <div v-if="c.cretUserId === currentUserId || isAdmin" class="mt-1">
+            <div v-if="c.cretUserId === currentUserId || canBoardAdmin" class="mt-1">
               <v-btn x-small text color="ndColor" @click="startCommentEdit(c)">수정</v-btn>
               <v-btn x-small text color="red" @click="deleteComment(c.commentId)">삭제</v-btn>
             </div>
@@ -135,7 +135,7 @@
         <v-textarea v-model="writeForm.content" label="내용" outlined rows="10" color="ndColor"></v-textarea>
 
         <!-- 우선노출 (관리자만) -->
-        <v-checkbox v-if="isAdmin" v-model="writeForm.pinYn" label="우선노출 (상단 고정)" color="ndColor"
+        <v-checkbox v-if="canBoardAdmin" v-model="writeForm.pinYn" label="우선노출 (상단 고정)" color="ndColor"
           true-value="Y" false-value="N" hide-details class="mt-0 mb-2"></v-checkbox>
 
         <!-- 파일 첨부 -->
@@ -179,6 +179,10 @@ export default {
     isMobile: Boolean,
     boardType: { type: String, default: 'NOTICE' }
   },
+  computed: {
+    // 104번 WP2 — 공지 관리 권한(관리자 또는 BOARD_ADMIN): 공지 작성, 남의 글·댓글 수정·삭제, 상단 고정
+    canBoardAdmin() { return this.$can('BOARD_ADMIN'); },
+  },
   data: () => ({
     viewMode: 'list',
     loading: false,
@@ -196,7 +200,6 @@ export default {
       { label: '내용', value: 'content' },
       { label: '작성자', value: 'user' },
     ],
-    isAdmin: false,
     currentUserId: '',
     currentPost: {},
     comments: [],
@@ -221,7 +224,6 @@ export default {
   },
   created() {
     this.currentUserId = this.$loginStatusData.id;
-    this.adminCheck();
     this.loadList();
   },
   methods: {
@@ -350,10 +352,6 @@ export default {
       if (bytes < 1024) return bytes + 'B';
       if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
       return (bytes / 1048576).toFixed(1) + 'MB';
-    },
-    adminCheck() {
-      axios.get(this.$APIURL.base + "api/login/isAdmin", { params: { user: this.currentUserId } })
-        .then(result => { this.isAdmin = result.data; });
     }
   },
   mounted() { this.$resizableGrid(); }

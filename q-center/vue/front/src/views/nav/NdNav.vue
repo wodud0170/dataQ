@@ -413,15 +413,15 @@
                         <v-list-item-title>표준 사전 변경 요청 현황</v-list-item-title>
                     </v-list-item>
 
-                    <!-- 88번 거버넌스 — 일반: 내 변경 신청 / 관리자: 데이터 모델 변경 승인 -->
-                    <v-list-item v-if="!isAdmin" link id="nav_mypage_dm_changes" href="#tab_my_dm_changes"
+                    <!-- 88번 거버넌스 — 변경이 승인 대기로 남는 사용자(DM_MANAGE 없음): 내 변경 신청 / 모델 승인 권한(DM_APPROVE): 데이터 모델 변경 승인 -->
+                    <v-list-item v-if="!$can('DM_MANAGE')" link id="nav_mypage_dm_changes" href="#tab_my_dm_changes"
                         active-class="ndColor--text" title="내 변경 신청"
                         v-on:click.stop="addTabItem('내 변경 신청', 'myDmChanges');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>내 변경 신청</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item v-if="isAdmin" link id="nav_mypage_dm_approval" href="#tab_dm_approval"
+                    <v-list-item v-if="$can('DM_APPROVE')" link id="nav_mypage_dm_approval" href="#tab_dm_approval"
                         active-class="ndColor--text" title="데이터 모델 변경 승인"
                         v-on:click.stop="addTabItem('데이터 모델 변경 승인', 'dmApproval');">
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
@@ -429,8 +429,8 @@
                     </v-list-item>
                 </v-list-group>
 
-                <!-- 관리 (관리자만) -->
-                <v-list-group v-if="isAdmin" link v-cloak :value=" navMmGroup " prepend-icon="app_registration"
+                <!-- 관리 — 104번 WP2: 항목마다 권한으로 보이고, 하나라도 보이면 그룹을 보인다 -->
+                <v-list-group v-if="showMmGroup" link v-cloak :value=" navMmGroup " prepend-icon="app_registration"
                     active-class="ndColor--text" id="mmGroup" title="관리" v-on:click.stop=" addNavGroupData('mmGroup'); ">
                     <template v-slot:activator>
                         <v-list-item-content>
@@ -438,7 +438,7 @@
                         </v-list-item-content>
                     </template>
 
-                    <v-list-item link id="nav_user" href="#tab_user" active-class="ndColor--text" title="사용자"
+                    <v-list-item v-if="$can('USER_ADMIN')" link id="nav_user" href="#tab_user" active-class="ndColor--text" title="사용자"
                         v-on:click.stop=" addTabItem('사용자', 'user'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
@@ -446,15 +446,15 @@
                         <v-list-item-title>사용자</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_roles" href="#tab_roles" active-class="ndColor--text" title="역할 및 권한"
-                        :style=" { 'display': 'none' } " v-on:click.stop=" addTabItem('역할 및 권한', 'roles'); ">
+                    <v-list-item v-if="$can('USER_ADMIN')" link id="nav_roles" href="#tab_roles" active-class="ndColor--text" title="역할 및 권한"
+                        v-on:click.stop=" addTabItem('역할 및 권한', 'roles'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
                         <v-list-item-title>역할 및 권한</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_approval" href="#tab_approval" active-class="ndColor--text" title="표준 사전 변경 승인"
+                    <v-list-item v-if="$can('STD_APPROVE')" link id="nav_approval" href="#tab_approval" active-class="ndColor--text" title="표준 사전 변경 승인"
                         v-on:click.stop=" sendApprovalStatus(); addTabItem('표준 사전 변경 승인', 'approval'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
@@ -462,8 +462,8 @@
                         <v-list-item-title>표준 사전 변경 승인</v-list-item-title>
                     </v-list-item>
 
-                    <!-- 88번 거버넌스 — 데이터 모델 변경 승인 (관리자 전용) -->
-                    <v-list-item link id="nav_dm_approval" href="#tab_dm_approval" active-class="ndColor--text" title="데이터 모델 변경 승인"
+                    <!-- 88번 거버넌스 — 데이터 모델 변경 승인 (모델 승인 권한) -->
+                    <v-list-item v-if="$can('DM_APPROVE')" link id="nav_dm_approval" href="#tab_dm_approval" active-class="ndColor--text" title="데이터 모델 변경 승인"
                         v-on:click.stop=" addTabItem('데이터 모델 변경 승인', 'dmApproval'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
@@ -471,8 +471,8 @@
                         <v-list-item-title>데이터 모델 변경 승인</v-list-item-title>
                     </v-list-item>
 
-                    <!-- 88번 §15 — 영역 관리 (관리자 전용) -->
-                    <v-list-item link id="nav_area_mgmt" href="#tab_area_mgmt" active-class="ndColor--text" title="영역 관리 (업무/주제)"
+                    <!-- 88번 §15 — 영역 관리 (영역 관리 권한) -->
+                    <v-list-item v-if="$can('AREA_ADMIN')" link id="nav_area_mgmt" href="#tab_area_mgmt" active-class="ndColor--text" title="영역 관리 (업무/주제)"
                         v-on:click.stop=" addTabItem('영역 관리', 'areaMgmt'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
@@ -480,8 +480,8 @@
                         <v-list-item-title>영역 관리 (업무/주제)</v-list-item-title>
                     </v-list-item>
 
-                    <!-- 98번 — 표준사전 관리 (관리자 전용) -->
-                    <v-list-item link id="nav_std_dict" href="#tab_std_dict" active-class="ndColor--text" title="표준사전 관리"
+                    <!-- 98번 — 표준사전 관리 (표준사전 관리 권한) -->
+                    <v-list-item v-if="$can('DICT_ADMIN')" link id="nav_std_dict" href="#tab_std_dict" active-class="ndColor--text" title="표준사전 관리"
                         v-on:click.stop=" addTabItem('표준사전 관리', 'stdDict'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
@@ -489,12 +489,21 @@
                         <v-list-item-title>표준사전 관리</v-list-item-title>
                     </v-list-item>
 
-                    <v-list-item link id="nav_datasource" href="#tab_datasource" active-class="ndColor--text" title="데이터 소스"
+                    <v-list-item v-if="$can('DS_ADMIN')" link id="nav_datasource" href="#tab_datasource" active-class="ndColor--text" title="데이터 소스"
                         v-on:click.stop=" addTabItem('데이터 소스', 'datasource'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
                         <v-list-item-title>데이터 소스</v-list-item-title>
+                    </v-list-item>
+
+                    <!-- 104번 WP2 — 시스템 계층 (시스템 관리 권한) -->
+                    <v-list-item v-if="$can('SYS_ADMIN')" link id="nav_system" href="#tab_system" active-class="ndColor--text" title="시스템"
+                        v-on:click.stop=" addTabItem('시스템', 'system'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>시스템</v-list-item-title>
                     </v-list-item>
 
                 </v-list-group>
@@ -539,8 +548,14 @@ export default {
     data: () => ({
         selectedList: null,
         wsLogShow: false,
-        isAdmin: false,
     }),
+    computed: {
+        // 104번 WP2 — 관리 그룹은 그 안의 항목이 하나라도 보이면 보인다
+        showMmGroup() {
+            return ['USER_ADMIN', 'STD_APPROVE', 'DM_APPROVE', 'AREA_ADMIN', 'DICT_ADMIN', 'DS_ADMIN', 'SYS_ADMIN']
+                .some(c => this.$can(c));
+        },
+    },
     watch: {
 
     },
@@ -589,9 +604,6 @@ export default {
         },
     },
     mounted() {
-        var self = this;
-        axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
-            .then(function(res) { self.isAdmin = res.data === true; });
         /**
          * DSDataDiag '결과 보기' 버튼 클릭 시 진단 결과 탭을 열기 위한 이벤트 수신
          * - eventBus 'openDiagResult' 이벤트를 받으면 진단 결과 탭을 추가/활성화

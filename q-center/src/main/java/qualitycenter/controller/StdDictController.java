@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ndata.common.message.Response;
+import com.ndata.quality.common.PermCode;
 import com.ndata.common.message.RestResult;
 import com.ndata.quality.service.StdDictService;
 
@@ -23,7 +24,7 @@ import reactor.core.publisher.Mono;
  * 98번 표준사전 세트 — 사전 CRUD.
  *
  * <p>사전 목록 조회는 모든 사용자가 쓴다 (화면마다 사전 선택기가 붙는다).
- * 생성·수정·중지는 관리자만.</p>
+ * 생성·수정·중지는 표준사전 관리 권한(관리자 또는 DICT_ADMIN)만.</p>
  */
 @Slf4j
 @RestController
@@ -57,7 +58,7 @@ public class StdDictController {
 	public Mono<Response> save(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.DICT_ADMIN)) throw new IllegalStateException("권한이 없습니다 (표준사전 관리 권한 필요)");
 			String id = (String) body.get("dictId");
 			Map<String, Object> p = new HashMap<>(body);
 			p.put("userId", sessionService.getUserId());
@@ -85,7 +86,7 @@ public class StdDictController {
 	public Mono<Response> disable(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.DICT_ADMIN)) throw new IllegalStateException("권한이 없습니다 (표준사전 관리 권한 필요)");
 			dictService.disable((String) body.get("dictId"), sessionService.getUserId());
 			res.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {

@@ -57,9 +57,9 @@
           <!-- 86번 #35 — DSDomain 패턴 따라 엑셀 관련은 드롭다운으로 묶음 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
             class="d-flex flex-nowrap align-center" style="gap: 6px;">
-            <v-btn class="gradient" id="addWordBtn" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
-            <v-btn v-if="isAdmin" class="gradient" v-on:click="wordRemoveItem()" title="삭제">삭제</v-btn>
-            <v-btn v-if="isAdmin" class="gradient" color="red lighten-4" v-on:click="wordBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
+            <v-btn class="gradient" id="addWordBtn" v-on:click="showModal('add')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="canManage" class="gradient" v-on:click="wordRemoveItem()" title="삭제">삭제</v-btn>
+            <v-btn v-if="canManage" class="gradient" color="red lighten-4" v-on:click="wordBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
             <v-menu offset-y>
               <template v-slot:activator="{ on, attrs }">
                 <v-btn class="gradient" v-bind="attrs" v-on="on">
@@ -68,7 +68,7 @@
                 </v-btn>
               </template>
               <v-list dense>
-                <v-list-item v-if="isAdmin" @click="excelFileUpload">
+                <v-list-item v-if="canManage" @click="excelFileUpload">
                   <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
                   <v-list-item-title>엑셀 업로드</v-list-item-title>
                 </v-list-item>
@@ -146,7 +146,7 @@
             </v-sheet>
             <!-- 수정 / 삭제 버튼 -->
             <v-sheet class="pr-4 pl-4">
-              <v-btn v-if="isAdmin" class="gradient" v-on:click="showModal('update')">수정</v-btn>
+              <v-btn v-if="canManage" class="gradient" v-on:click="showModal('update')">수정</v-btn>
               <v-btn class="gradient" v-on:click="openImpactDialog()">영향도 분석</v-btn>
               <!-- <v-btn class="gradient" v-on:click="wordRemoveItem()">삭제</v-btn> -->
             </v-sheet>
@@ -629,6 +629,10 @@ export default {
     }
   },
   props: ['isMobile'],
+  computed: {
+    // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE): 즉시 등록·수정·삭제·엑셀 업로드
+    canManage() { return this.$can('STD_MANAGE'); },
+  },
   data: () => ({
     // 단어 목록 리스트
     wordItems: [],
@@ -640,8 +644,6 @@ export default {
     searchWord: '',
     // 검색 단어영문약어명
     searchEngWord: '',
-    // 관리자 여부
-    isAdmin: false,
     // 검색 승인 여부
     searchApproval: true,
     // 형식단어 여부 필터
@@ -1814,8 +1816,6 @@ export default {
     this.getWordData();
     this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
-    axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
-      .then(res => { this.isAdmin = res.data === true; });
   },
   activated() {
     if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'word') {

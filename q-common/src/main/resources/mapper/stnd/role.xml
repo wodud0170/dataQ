@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="role">
+
+	<!-- 104번 WP2 — 역할·권한.
+	     TB_ROLE 역할, TB_ROLE_PERM 역할에 든 권한 코드(PermCode), TB_USER_ROLE 사용자에게 준 역할.
+	     TB_USER_ROLE.SYS_CD '*' 는 모든 시스템. 시스템 단위 권한(DDL_EXEC)만 시스템 코드를 의미 있게 쓴다. -->
+
+	<!-- 사용자가 역할로 받은 권한 (권한 코드, 시스템 범위) -->
+	<select id="selectUserPerms" parameterType="String" resultType="java.util.HashMap">
+		SELECT DISTINCT RP.PERM_CD as "permCd"
+		      ,UR.SYS_CD  as "sysCd"
+		  FROM TB_USER_ROLE UR
+		  JOIN TB_ROLE_PERM RP ON RP.ROLE_ID = UR.ROLE_ID
+		 WHERE UR.USER_ID = #{userId}
+	</select>
+
+	<!-- 시스템과 그 상위 시스템 코드 (자기 자신 포함). 상위 시스템에 준 권한은 하위 시스템에도 통한다 -->
+	<select id="selectSysWithAncestors" parameterType="String" resultType="String">
+		WITH RECURSIVE A (SYS_CD, P_SYS_CD, DEPTH) AS (
+			SELECT SYS_CD, P_SYS_CD, 0 FROM TB_SYS_INFO WHERE SYS_CD = #{sysCd}
+			UNION ALL
+			SELECT S.SYS_CD, S.P_SYS_CD, A.DEPTH + 1
+			  FROM TB_SYS_INFO S
+			  JOIN A ON S.SYS_CD = A.P_SYS_CD
+			 WHERE A.DEPTH &lt; 20
+		)
+		SELECT SYS_CD FROM A
+	</select>
+
+	<select id="selectRoleList" resultType="java.util.LinkedHashMap">
+		SELECT R.ROLE_ID      as "roleId"
+		      ,R.ROLE_NM      as "roleNm"
+		      ,R.ROLE_DESC    as "roleDesc"
+		      ,R.BUILTIN_YN   as "builtinYn"
+		      ,(SELECT COUNT(DISTINCT UR.USER_ID) FROM TB_USER_ROLE UR WHERE UR.ROLE_ID = R.ROLE_ID) as "userCnt"
+		      ,R.UPDT_DT      as "updtDt"
+		  FROM TB_ROLE R
+		 ORDER BY CASE WHEN R.BUILTIN_YN = 'Y' THEN 0 ELSE 1 END, R.ROLE_NM
+	</select>
+
+	<select id="selectRole" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT ROLE_ID as "roleId", ROLE_NM as "roleNm", ROLE_DESC as "roleDesc", BUILTIN_YN as "builtinYn"
+		  FROM TB_ROLE
+		 WHERE ROLE_ID = #{roleId}
+	</select>
+
+	<select id="selectRolePerms" parameterType="String" resultType="String">
+		SELECT PERM_CD FROM TB_ROLE_PERM WHERE ROLE_ID = #{roleId} ORDER BY PERM_CD
+	</select>
+
+	<select id="countRoleByNm" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_ROLE
+		 WHERE ROLE_NM = #{roleNm}
+		<if test="roleId != null">
+		   AND ROLE_ID &lt;&gt; #{roleId}
+		</if>
+	</select>
+
+	<insert id="insertRole" parameterType="java.util.Map">
+		INSERT INTO TB_ROLE (ROLE_ID, ROLE_NM, ROLE_DESC, BUILTIN_YN, CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{roleId}, #{roleNm}, #{roleDesc}, 'N', #{now}, #{userId}, #{now}, #{userId})
+	</insert>
+
+	<update id="updateRole" parameterType="java.util.Map">
+		UPDATE TB_ROLE
+		   SET ROLE_NM = #{roleNm}
+		      ,ROLE_DESC = #{roleDesc}
+		      ,UPDT_DT = #{now}
+		      ,UPDT_USER_ID = #{userId}
+		 WHERE ROLE_ID = #{roleId}
+	</update>
+
+	<!-- 내장 역할은 지우지 않는다 (서비스에서도 막는다) -->
+	<delete id="deleteRole" parameterType="String">
+		DELETE FROM TB_ROLE WHERE ROLE_ID = #{roleId} AND BUILTIN_YN = 'N'
+	</delete>
+
+	<delete id="deleteRolePerms" parameterType="String">
+		DELETE FROM TB_ROLE_PERM WHERE ROLE_ID = #{roleId}
+	</delete>
+
+	<insert id="insertRolePerm" parameterType="java.util.Map">
+		INSERT INTO TB_ROLE_PERM (ROLE_ID, PERM_CD) VALUES (#{roleId}, #{permCd})
+	</insert>
+
+	<!-- 역할을 받은 사용자. 삭제된 사용자는 빼고 보인다 -->
+	<select id="selectRoleUsers" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT UR.USER_ID  as "userId"
+		      ,U.NM        as "userNm"
+		      ,UR.SYS_CD   as "sysCd"
+		      ,CASE WHEN UR.SYS_CD = '*' THEN NULL ELSE S.SYS_NM END as "sysNm"
+		      ,UR.CRET_DT  as "cretDt"
+		  FROM TB_USER_ROLE UR
+		  JOIN TB_USER U ON U.USER_ID = UR.USER_ID AND (U.DEL_YN = false OR U.DEL_YN IS NULL)
+		  LEFT JOIN TB_SYS_INFO S ON S.SYS_CD = UR.SYS_CD
+		 WHERE UR.ROLE_ID = #{roleId}
+		 ORDER BY UR.USER_ID, UR.SYS_CD
+	</select>
+
+	<!-- 사용자가 받은 역할 (내 정보·사용자 화면 표시용) -->
+	<select id="selectUserRoles" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT R.ROLE_ID  as "roleId"
+		      ,R.ROLE_NM  as "roleNm"
+		      ,UR.SYS_CD  as "sysCd"
+		      ,CASE WHEN UR.SYS_CD = '*' THEN NULL ELSE S.SYS_NM END as "sysNm"
+		  FROM TB_USER_ROLE UR
+		  JOIN TB_ROLE R ON R.ROLE_ID = UR.ROLE_ID
+		  LEFT JOIN TB_SYS_INFO S ON S.SYS_CD = UR.SYS_CD
+		 WHERE UR.USER_ID = #{userId}
+		 ORDER BY R.ROLE_NM, UR.SYS_CD
+	</select>
+
+	<insert id="insertUserRole" parameterType="java.util.Map">
+		INSERT INTO TB_USER_ROLE (USER_ID, ROLE_ID, SYS_CD, CRET_DT, CRET_USER_ID)
+		VALUES (#{userId}, #{roleId}, #{sysCd}, #{now}, #{cretUserId})
+		ON CONFLICT (USER_ID, ROLE_ID, SYS_CD) DO NOTHING
+	</insert>
+
+	<delete id="deleteUserRole" parameterType="java.util.Map">
+		DELETE FROM TB_USER_ROLE
+		 WHERE USER_ID = #{userId} AND ROLE_ID = #{roleId} AND SYS_CD = #{sysCd}
+	</delete>
+
+	<!-- 변경 이력(TB_DATA_MODEL_CHANGE_HISTORY)의 모델이 속한 시스템. DDL_EXEC 판정용 -->
+	<select id="selectSysCdByChangeSeq" parameterType="Object" resultType="String">
+		SELECT M.DM_SYS_CD
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY H
+		  JOIN TB_DATA_MODEL M ON M.DM_ID = H.DM_ID
+		 WHERE H.CHANGE_SEQ = CAST(#{changeSeq} AS BIGINT)
+	</select>
+</mapper>

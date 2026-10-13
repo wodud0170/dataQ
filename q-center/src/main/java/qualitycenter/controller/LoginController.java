@@ -14,10 +14,13 @@ import org.springframework.web.server.ResponseStatusException;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 import com.ndata.module.StringUtils;
+import com.ndata.quality.common.PermCode;
+import com.ndata.quality.service.PermService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import qualitycenter.model.auth.AdminVo;
 import qualitycenter.model.auth.UserVo;
+import qualitycenter.service.auth.RoleService;
 import qualitycenter.service.auth.SessionService;
 import reactor.core.publisher.Mono;
 import lombok.extern.slf4j.Slf4j;
@@ -31,30 +34,50 @@ public class LoginController {
   @Autowired
   private SessionService sessionService;
 
+  @Autowired
+  private PermService permService;
+
+  @Autowired
+  private RoleService roleService;
+
   @RequestMapping(value = "/getUser", method = RequestMethod.GET)
   public UserVo getUser() {
     return sessionService.getUser();
   }
 
   /**
-   * 사용자 상세. 일반 사용자는 자기 정보만 본다.
+   * 사용자 상세. 사용자·권한 관리 권한(USER_ADMIN)이 없으면 자기 정보만 본다.
    * 비밀번호 해시는 응답에 싣지 않는다 (AdminVo.password 는 요청에서만 받는다).
    */
   @RequestMapping(value = "/getUserDetail", method = RequestMethod.GET)
   public AdminVo getUserDetail(@RequestParam String userId) {
-    if (!sessionService.isAdmin() && !userId.equals(sessionService.getUserId())) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 사용자의 정보는 관리자만 조회할 수 있습니다.");
+    if (!sessionService.hasPerm(PermCode.USER_ADMIN) && !userId.equals(sessionService.getUserId())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "다른 사용자의 정보를 볼 권한이 없습니다 (사용자·권한 관리 권한 필요).");
     }
     return sessionService.getUserDetail(userId);
   }
 
   /**
-   * 로그인한 사용자가 관리자인지. 화면은 예전처럼 ?user= 를 붙여 부르지만 그 값은 보지 않는다.
-   * 아무 ID 나 넣어 관리자 여부를 물어볼 수 있던 것을 막는다.
+   * 로그인한 사용자가 관리자인지 (사용자 속성 — 헤더·내 정보 표시용). 화면 기능 분기는 {@link #myPerms()} 로 한다.
+   * 화면은 예전처럼 ?user= 를 붙여 부르지만 그 값은 보지 않는다.
    */
   @RequestMapping(value = "/isAdmin", method = RequestMethod.GET)
   public boolean isAdmin() {
     return sessionService.isAdmin();
+  }
+
+  /**
+   * 104번 WP2 — 로그인 사용자의 권한. {admin, perms: {권한코드: [시스템코드|'*']}, roles: [{roleNm, sysCd, sysNm}]}.
+   * 관리자는 모든 권한 코드에 '*'.
+   */
+  @RequestMapping(value = "/myPerms", method = RequestMethod.GET)
+  public java.util.Map<String, Object> myPerms() {
+    java.util.Map<String, Object> m = new java.util.HashMap<>();
+    String userId = sessionService.getUserId();
+    m.put("admin", sessionService.isAdmin());
+    m.put("perms", permService.perms(userId));
+    m.put("roles", roleService.userRoles(userId));
+    return m;
   }
 
   /** 실제 로그인 세션이 있는지. stomp.broker.mode 와 무관하다 (dev 모드는 STOMP 연결에만 쓴다). */
@@ -98,8 +121,13 @@ public class LoginController {
     log.info(">> create user={}, name={}, admin={}", user.getId(), user.getName(), user.isAdmin());
     Response result = new Response();
 		try {
-      if (!sessionService.isAdmin()) {
-        result.setResultInfo(403, "사용자 추가는 관리자만 할 수 있습니다.");
+      if (!sessionService.hasPerm(PermCode.USER_ADMIN)) {
+        result.setResultInfo(403, "사용자를 추가할 권한이 없습니다 (사용자·권한 관리 권한 필요).");
+        return Mono.just(result);
+      }
+      // 관리자 지정은 관리자만 — 사용자·권한 관리 권한만으로 관리자를 만들면 그 권한이 모든 권한이 된다
+      if (user.isAdmin() && !sessionService.isAdmin()) {
+        result.setResultInfo(403, "관리자 계정은 관리자만 만들 수 있습니다.");
         return Mono.just(result);
       }
       if (sessionService.existUser(user.getId())) {
@@ -118,8 +146,12 @@ public class LoginController {
   @RequestMapping(value = "/removeUser", method = RequestMethod.POST)
   public boolean removeUser(AdminVo user) throws Exception {
     log.info(">> remove user={}", user);
-    if (!sessionService.isAdmin()) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사용자 삭제는 관리자만 할 수 있습니다.");
+    if (!sessionService.hasPerm(PermCode.USER_ADMIN)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사용자를 삭제할 권한이 없습니다 (사용자·권한 관리 권한 필요).");
+    }
+    AdminVo target = user.getId() == null ? null : sessionService.getUserDetail(user.getId());
+    if (target != null && target.isAdmin() && !sessionService.isAdmin()) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 계정은 관리자만 삭제할 수 있습니다.");
     }
     return sessionService.removeUser(user);
   }
@@ -128,7 +160,9 @@ public class LoginController {
    * 사용자 수정.
    * <ul>
    *   <li>관리자 — 모든 사용자의 이름·이메일·전화·관리자 여부·비밀번호(재설정)</li>
-   *   <li>일반 사용자 — 자기 이름·이메일·전화만. 관리자 여부는 지금 값 그대로여야 하고,
+   *   <li>사용자·권한 관리 권한(USER_ADMIN, 관리자 아님) — 관리자가 아닌 사용자의 이름·이메일·전화·비밀번호(재설정).
+   *       관리자 여부는 바꾸지 못하고 관리자 계정은 고치지 못한다</li>
+   *   <li>그 밖 — 자기 이름·이메일·전화만. 관리자 여부는 지금 값 그대로여야 하고,
    *       비밀번호는 현재 비밀번호를 확인하는 비밀번호 변경(changePassword)으로만 바꾼다.</li>
    * </ul>
    */
@@ -144,10 +178,14 @@ public class LoginController {
 			}
 			if (!sessionService.isAdmin()) {
 				String reason = null;
-				if (!user.getId().equals(sessionService.getUserId())) {
-					reason = "다른 사용자의 정보는 관리자만 변경할 수 있습니다.";
-				} else if (user.isAdmin() != current.isAdmin()) {
+				if (user.isAdmin() != current.isAdmin()) {
 					reason = "관리자 여부는 관리자만 변경할 수 있습니다.";
+				} else if (sessionService.hasPerm(PermCode.USER_ADMIN)) {
+					if (current.isAdmin() && !user.getId().equals(sessionService.getUserId())) {
+						reason = "관리자 계정은 관리자만 변경할 수 있습니다.";
+					}
+				} else if (!user.getId().equals(sessionService.getUserId())) {
+					reason = "다른 사용자의 정보를 변경할 권한이 없습니다 (사용자·권한 관리 권한 필요).";
 				} else if (StringUtils.isNotEmpty(user.getPassword())) {
 					reason = "비밀번호는 [비밀번호 변경]에서 현재 비밀번호를 확인한 뒤 바꿀 수 있습니다.";
 				}
@@ -167,11 +205,11 @@ public class LoginController {
 		return Mono.just(result);
   }
 
-  /** 사용자 목록 — 관리 > 사용자 화면(관리자 전용) 용. */
+  /** 사용자 목록 — 관리 > 사용자·역할 화면 용 (사용자·권한 관리 권한). */
   @RequestMapping(value = "/getUserList", method = RequestMethod.GET)
   public List<AdminVo> getUserList() throws Exception {
-    if (!sessionService.isAdmin()) {
-      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사용자 목록은 관리자만 조회할 수 있습니다.");
+    if (!sessionService.hasPerm(PermCode.USER_ADMIN)) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사용자 목록을 볼 권한이 없습니다 (사용자·권한 관리 권한 필요).");
     }
     return sessionService.getUserList();
   }

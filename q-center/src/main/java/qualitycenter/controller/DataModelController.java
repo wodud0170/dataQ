@@ -102,7 +102,7 @@ public class DataModelController {
 	public Mono<Response> swapAttrOrd(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(com.ndata.quality.common.PermCode.DM_MANAGE)) throw new IllegalStateException("권한이 없습니다 (모델 직접 반영 권한 필요)");
 			String dataModelId = (String) body.get("dataModelId");
 			String objOwner    = body.get("objOwner") == null ? "" : (String) body.get("objOwner");
 			String objNm       = (String) body.get("objNm");

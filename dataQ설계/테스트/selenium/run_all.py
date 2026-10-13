@@ -82,6 +82,7 @@ GROUPS = [
         "test_phase1_schedule_api.py",
         "test_date_range_filter.py",
         "test_perm_matrix.py",
+        "test_wp2_role_perm.py",     # 104 WP2 — 역할·권한
         "test_crud_std_dict.py",
     ]),
     ("표준 사전 (단어/용어/도메인)", [

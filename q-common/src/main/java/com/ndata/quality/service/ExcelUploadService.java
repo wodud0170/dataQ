@@ -26,6 +26,7 @@ import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
 import com.ndata.module.StringUtils;
+import com.ndata.quality.common.PermCode;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -57,6 +58,9 @@ public class ExcelUploadService {
 	@Autowired
 	private StdDictService dictService;
 
+	@Autowired
+	private PermService permService;
+
 	/**
 	 * 98번 — 이름으로 사전 항목을 찾을 때 쓰는 파라미터.
 	 *
@@ -83,11 +87,12 @@ public class ExcelUploadService {
 		return (dictId == null || dictId.trim().isEmpty()) ? dictService.defaultDictId() : dictId.trim();
 	}
 
-	/** userId로 관리자 여부 조회 (TB_USER.ADM_YN) */
-	private boolean isAdminUser(SqlSession session, String userId) {
-		if (userId == null) return false;
-		Boolean admYn = session.selectOne("sysinfo.selectIsAdmin", userId);
-		return Boolean.TRUE.equals(admYn);
+	/**
+	 * 104번 WP2 — 승인 없이 바로 등록(APRV_YN='Y')할 수 있는 사용자인지.
+	 * 관리자 또는 "표준 직접 관리"(STD_MANAGE) 권한. 화면 등록(createWord 등)과 같은 기준이다.
+	 */
+	private boolean canRegisterApproved(String userId) {
+		return permService.has(userId, PermCode.STD_MANAGE);
 	}
 	
 	/**
@@ -104,7 +109,7 @@ public class ExcelUploadService {
 		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
-		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
+		String aprvYn = canRegisterApproved(userId) ? "Y" : "N";
 
 		try {
 			ExcelSheetHandler sheetHandler = readExcel(multiPart);
@@ -194,7 +199,7 @@ public class ExcelUploadService {
 		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
-		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
+		String aprvYn = canRegisterApproved(userId) ? "Y" : "N";
 
 		try {
 			ExcelSheetHandler sheetHandler = readExcel(multiPart);
@@ -384,7 +389,7 @@ public class ExcelUploadService {
 		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
-		String aprvYn = isAdminUser(session, userId) ? "Y" : "N";
+		String aprvYn = canRegisterApproved(userId) ? "Y" : "N";
 
 		try {
 			ExcelSheetHandler sheetHandler = readExcel(multiPart);

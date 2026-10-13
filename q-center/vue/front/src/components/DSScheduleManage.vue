@@ -23,7 +23,7 @@
         :items-per-page="30" class="elevation-0" :loading="loading">
         <template v-slot:item.useYn="{ item }">
           <v-switch v-model="item._useYnBool" inset hide-details dense
-            color="green" class="mt-0 ml-2" :ripple="false" :disabled="!isAdmin"
+            color="green" class="mt-0 ml-2" :ripple="false" :disabled="!canManageSchedule"
             @change="toggleUseYn(item)"></v-switch>
         </template>
         <template v-slot:item.diagType="{ item }">
@@ -49,7 +49,7 @@
           <span v-else style="font-size:.75rem; color:#9E9E9E;">-</span>
         </template>
         <template v-slot:item.actions="{ item }">
-          <template v-if="isAdmin">
+          <template v-if="canManageSchedule">
             <v-btn icon x-small color="primary" @click="runNow(item)" :loading="item._running"
               title="즉시 실행">
               <v-icon small>mdi-play</v-icon>
@@ -157,7 +157,6 @@ export default {
       saving: false,
       items: [],
       dataModels: [],
-      isAdmin: false,
       filterUseYn: '',     // '', 'Y', 'N'
       headers: [
         { text: '스케줄명',    value: 'scheduleNm', sortable: false },
@@ -192,23 +191,18 @@ export default {
     };
   },
   computed: {
+    // 104번 WP2 — 스케줄 관리 권한(관리자 또는 SCHEDULE_ADMIN)이면 등록·수정·삭제·실행
+    canManageSchedule() { return this.$can('SCHEDULE_ADMIN'); },
     filteredItems() {
       if (!this.filterUseYn) return this.items;
       return this.items.filter(s => s.useYn === this.filterUseYn);
     },
   },
   mounted() {
-    this.checkAdmin();
     this.loadModels();
     this.loadList();
   },
   methods: {
-    checkAdmin() {
-      var self = this;
-      axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData && this.$loginStatusData.id } })
-        .then(function(res) { self.isAdmin = res.data === true; })
-        .catch(function() { self.isAdmin = false; });
-    },
     emptyForm() {
       return {
         scheduleId: null,
@@ -242,7 +236,7 @@ export default {
     },
     // 86번 #47 — 추가 버튼 클릭 시점에 관리자 체크 (등록 시점 체크는 제거)
     onAddScheduleClick() {
-      if (!this.isAdmin) {
+      if (!this.canManageSchedule) {
         this.$swal.fire({
           title: '관리자만 등록 가능',
           text: '스케줄 추가는 관리자 권한이 필요합니다.',

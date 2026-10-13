@@ -6,6 +6,7 @@ import Stomp from "webstomp-client"
 import router from "./router"
 import vuetify from "./plugins/vuetify"
 import common from "./../static/js/common"
+import perm, { loadPerms } from "./perm"
 import VueSplit from "vue-split-panel"
 import VueSweetalert2 from "vue-sweetalert2"
 import VueApexCharts from 'vue-apexcharts'
@@ -17,7 +18,13 @@ import "sweetalert2/dist/sweetalert2.min.css"
 Vue.config.productionTip = false;
 
 Vue.use(common);
+Vue.use(perm);
 Vue.use(VueSplit);
+
+// 104번 WP2 — 로그인한 화면이면 권한을 한 번 읽어 둔다 (로그인 화면은 제외)
+if ("/signin" !== window.location.pathname) {
+  loadPerms();
+}
 Vue.use(VueSweetalert2);
 Vue.use(VueApexCharts)
 

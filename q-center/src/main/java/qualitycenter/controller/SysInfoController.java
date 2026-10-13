@@ -20,6 +20,7 @@ import com.ndata.datasource.dbms.connection.DBConnection;
 import com.ndata.model.DataSourceVo;
 import com.ndata.model.DriverVo;
 import com.ndata.module.StringUtils;
+import com.ndata.quality.common.PermCode;
 import com.ndata.quality.model.mgmt.DataSourceExtVo;
 import com.ndata.quality.model.mgmt.SysInfoVo;
 
@@ -53,6 +54,8 @@ public class SysInfoController {
 	// 시스템정보
 	@RequestMapping(value = "/createSysInfo", method = RequestMethod.POST)
 	public Mono<Response> createSysInfo(@RequestBody SysInfoVo dataVo) {
+		Response denied = rejectWithout(PermCode.SYS_ADMIN);
+		if (denied != null) return Mono.just(denied);
 		dataVo.setSysCd(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
 		log.info(">> createSysInfo : {}", dataVo);
@@ -72,6 +75,8 @@ public class SysInfoController {
 
 	@RequestMapping(value = "/updateSysInfo", method = RequestMethod.POST)
 	public Mono<Response> updateSysInfo(@RequestBody SysInfoVo dataVo) {
+		Response denied = rejectWithout(PermCode.SYS_ADMIN);
+		if (denied != null) return Mono.just(denied);
 		dataVo.setUpdtUserId(sessionService.getUserId());
 		log.info(">> updateSysInfo : {}", dataVo);
 
@@ -89,6 +94,8 @@ public class SysInfoController {
 
 	@RequestMapping(value = "/deleteSysInfos", method = RequestMethod.POST)
 	public Mono<Response> deleteSysInfos(@RequestBody List<SysInfoVo> dataVos) {
+		Response denied = rejectWithout(PermCode.SYS_ADMIN);
+		if (denied != null) return Mono.just(denied);
 		Response result = new Response();
 
 		try {
@@ -111,22 +118,29 @@ public class SysInfoController {
 		return sqlSessionTemplate.selectOne("sysinfo.selectSysInfoBySysCd", sysCd);
 	}
 
+	/** 104번 WP2 — 시스템에 속한 데이터 모델 (TB_DATA_MODEL.DM_SYS_CD) */
+	@RequestMapping(value = "/getModelsBySysCd", method = RequestMethod.GET)
+	public List<java.util.Map<String, Object>> getModelsBySysCd(String sysCd) {
+		return sqlSessionTemplate.selectList("sysinfo.selectModelsBySysCd", sysCd);
+	}
+
 	/**
-	 * 데이터 소스 등록·수정·삭제·연결 테스트는 관리자만 (관리 > 데이터 소스 화면).
-	 * 수정·테스트는 화면이 모르는 저장 비밀번호를 서버에서 이어 쓰므로 서버에서 막는다.
-	 * 관리자면 null, 아니면 거부 응답.
+	 * 권한이 있으면 null, 없으면 거부 응답 (resultCode 403).
+	 * 데이터 소스 등록·수정·삭제·연결 테스트는 DS_ADMIN — 수정·테스트는 화면이 모르는 저장 비밀번호를
+	 * 서버에서 이어 쓰므로 서버에서 막는다. 시스템 트리 등록·수정·삭제는 SYS_ADMIN (104번 WP2).
+	 * 관리자는 모든 권한을 갖는다.
 	 */
-	private Response rejectIfNotAdmin() {
-		if (sessionService.isAdmin()) return null;
+	private Response rejectWithout(PermCode code) {
+		if (sessionService.hasPerm(code)) return null;
 		Response r = new Response();
-		r.setResultInfo(403, "데이터 소스 관리는 관리자만 할 수 있습니다.");
+		r.setResultInfo(403, "권한이 없습니다 (" + code.label + " 권한 필요)");
 		return r;
 	}
 
 	// 데이터소스
 	@RequestMapping(value = "/createDataSource", method = RequestMethod.POST)
 	public Mono<Response> createDataSource(@RequestBody DataSourceVo dataVo) {
-		Response denied = rejectIfNotAdmin();
+		Response denied = rejectWithout(PermCode.DS_ADMIN);
 		if (denied != null) return Mono.just(denied);
 		dataVo.setId(StringUtils.getUUID());
 		log.info(">> createDataSource : id={}, dsn={}, dbmsTp={}, svrAddr={}:{}, userId={}",
@@ -148,7 +162,7 @@ public class SysInfoController {
 
 	@RequestMapping(value = "/updateDataSource", method = RequestMethod.POST)
 	public Mono<Response> updateDataSource(@RequestBody DataSourceVo dataVo) {
-		Response denied = rejectIfNotAdmin();
+		Response denied = rejectWithout(PermCode.DS_ADMIN);
 		if (denied != null) return Mono.just(denied);
 		log.info(">> updateDataSource : id={}, dsn={}, dbmsTp={}, svrAddr={}:{}, userId={}",
 				dataVo.getId(), dataVo.getDsn(), dataVo.getDbmsTp(), dataVo.getSvrAddr(), dataVo.getPort(), dataVo.getUserId());
@@ -174,7 +188,7 @@ public class SysInfoController {
 
 	@RequestMapping(value = "/deleteDataSources", method = RequestMethod.POST)
 	public Mono<Response> deleteDataSources(@RequestBody List<DataSourceVo> dataVos) {
-		Response denied = rejectIfNotAdmin();
+		Response denied = rejectWithout(PermCode.DS_ADMIN);
 		if (denied != null) return Mono.just(denied);
 		Response result = new Response();
 
@@ -210,7 +224,7 @@ public class SysInfoController {
 
 	@RequestMapping(value = "/testDataSource", method = RequestMethod.POST)
 	public Mono<Response> testDataSource(@RequestBody DataSourceVo dataVo) {
-		Response denied = rejectIfNotAdmin();
+		Response denied = rejectWithout(PermCode.DS_ADMIN);
 		if (denied != null) return Mono.just(denied);
 		Response result = new Response();
 		DBConnection dbConn = null;

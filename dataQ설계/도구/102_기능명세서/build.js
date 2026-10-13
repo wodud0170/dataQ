@@ -37,7 +37,7 @@ for (const line of lines) {
     if (!/^\|/.test(line)) { inMenu = false; continue; }
     if (/^\|---/.test(line)) continue;
     const c = cells(line);
-    menuRows.push({ group: c[0].replace(/\s*\(`v-if.*$/, '').trim(), menu: c[1].replace(/ — 탭 제목은.*$/, ''), auth: c[4], state: c[5] });
+    menuRows.push({ group: c[0].replace(/\s+\(.*$/, '').trim(), menu: c[1].replace(/ — 탭 제목은.*$/, ''), auth: c[4], state: c[5] });
     continue;
   }
   if (/^\|\s*[A-Z]+-[A-Z]?\d+/.test(line)) {
@@ -50,16 +50,16 @@ const body = chapters.filter(c => c.no > 0);
 
 // ---- 장 요약 (사람이 쓴 한두 문장)
 const SUMMARY = {
-  1: '로그인과 계정 잠금, 세션과 관리자 판정, 탭으로 여는 화면 구조와 메뉴, 화면 사이 이동, 작업 진행을 알려 주는 실시간 알림(WebSocket), 서버 설정을 다룬다.',
+  1: '로그인과 계정 잠금, 세션, 역할로 나눠 주는 권한(관리자는 모든 권한), 탭으로 여는 화면 구조와 메뉴, 화면 사이 이동, 작업 진행을 알려 주는 실시간 알림(WebSocket), 서버 설정을 다룬다.',
   2: '로그인하면 처음 열리는 대시보드(표준 현황 건수, 표준 준수율·구조 일치율, 준수율 추이, 구조 변경 감지, 최근 변경 이력, 빠른 실행)와 단어·용어·도메인·컬럼을 한 번에 찾는 통합 검색.',
   3: '단어·용어·코드·도메인·도메인 그룹·도메인 분류의 등록·수정·삭제, 엑셀 일괄등록과 내려받기, 영향도 분석, 변경 이력, 그리고 기관별로 사전을 나누는 표준사전 관리.',
   4: '데이터 소스에 연결해 스키마 범위를 정하고 테이블·컬럼·인덱스·제약조건을 수집한다. 수집한 모델을 화면과 엑셀로 편집하고, 모델링 도구 파일(ERwin XML·XMI 2.1)을 들여오고 내보내며, ERD 로 그린다.',
-  5: '일반 사용자의 데이터 모델 변경은 저장(DRAFT) → 신청 → 관리자 승인·반려를 거친다. 변경 이력에 DDL 조각을 남기고 관리자가 대상 DB 에 반영한다. 진단 제외 대상과 업무영역도 여기서 관리한다.',
+  5: '모델 직접 반영 권한이 없는 사용자의 데이터 모델 변경은 저장(DRAFT) → 신청 → 모델 승인 권한자의 승인·반려를 거친다. 변경 이력에 DDL 조각을 남기고 그 시스템의 DB 반영 권한자가 대상 DB 에 반영한다. 진단 제외 대상과 업무영역도 여기서 관리한다.',
   6: '표준 진단은 컬럼마다 용어 존재·한글명·데이터 타입·길이를 판정해 준수율을 낸다. 구조 변경 진단은 수집본과 현재 DB 를 비교한다. 두 진단 모두 스케줄(간편 주기·Cron)로 돌릴 수 있다.',
   7: '한글 컬럼명 목록을 넣으면 형태소 분석으로 단어를 나누고, 영문약어를 조합하고, 도메인을 추천한다. 사람이 리뷰·수정한 뒤 용어로 일괄 등록하고 변환 이력을 남긴다.',
-  8: '일반 사용자가 등록한 단어·용어·도메인·코드를 관리자가 승인하거나 반려한다. 요청자는 자기 요청의 처리 상태를 본다. 용어는 구성 단어가 먼저 승인돼야 승인된다.',
+  8: '표준 직접 관리 권한이 없는 사용자가 등록한 단어·용어·도메인·코드를 표준 승인 권한자가 승인하거나 반려한다. 요청자는 자기 요청의 처리 상태를 본다. 용어는 구성 단어가 먼저 승인돼야 승인된다.',
   9: '공지사항과 Q&A 게시판. 글·첨부파일·상단 고정·댓글.',
-  10: '사용자 관리, 내 정보와 비밀번호 변경, 대상 DB 접속 정보(데이터 소스)와 연결 테스트, 시스템 정보. 역할 및 권한 화면은 메뉴에서 숨겨 두었다.',
+  10: '사용자 관리, 내 정보와 비밀번호 변경, 대상 DB 접속 정보(데이터 소스)와 연결 테스트, 시스템 정보(시스템별 기본 표준사전), 권한 묶음인 역할을 만들고 사용자에게 주는 역할 및 권한.',
 };
 const SHORT = { 1: '공통', 2: '대시보드·검색', 3: '표준 사전', 4: '데이터 모델', 5: '거버넌스', 6: '진단·스케줄', 7: '표준화 도구', 8: '표준 사전 승인', 9: '커뮤니티', 10: '관리' };
 
@@ -104,9 +104,18 @@ for (const r of menuRows.filter(x => !/주석/.test(x.state))) {
   if (!g) { g = { name: r.group, items: [] }; groups.push(g); }
   g.items.push(r);
 }
+// 권한 코드 이름은 1.10 절 표에서 읽는다
+const PERM_NM = {};
+for (const line of lines) {
+  const m = line.match(/^\| ([A-Z]+(?:_[A-Z]+)+) \| ([^|]+) \|/);
+  if (m) PERM_NM[m[1]] = m[2].trim();
+}
 const menuState = r => {
   if (/주석/.test(r.state)) return ['off', '메뉴 꺼 둠'];
   if (/숨김/.test(r.state)) return ['hide', '숨김'];
+  const p = (r.auth.match(/\b[A-Z]+(?:_[A-Z]+)+\b/) || [])[0];
+  if (p && /없는/.test(r.auth)) return ['usr', PERM_NM[p] + ' 없음'];
+  if (p) return ['adm', PERM_NM[p]];
   if (/관리자만/.test(r.auth)) return ['adm', '관리자'];
   if (/일반 사용자만/.test(r.auth)) return ['usr', '일반 사용자'];
   return ['on', ''];
@@ -120,7 +129,7 @@ const menuHtml = groups.map(g => {
     return `<li class="mi mi-${cls}"><span>${esc(r.menu)}</span>${label ? `<span class="mi-tag">${label}</span>` : ''}</li>`;
   }).join('');
   const allOff = g.items.every(r => /주석/.test(r.state));
-  return `<div class="mg${allOff ? ' mg-off' : ''}${/관리/.test(g.name) ? ' mg-adm' : ''}"><h4>${esc(groupName)}</h4><ul>${items}</ul></div>`;
+  return `<div class="mg${allOff ? ' mg-off' : ''}${g.name === '관리' ? ' mg-adm' : ''}"><h4>${esc(groupName)}</h4><ul>${items}</ul></div>`;
 }).join('\n');
 
 // ---- 기능 목록

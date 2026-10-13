@@ -7,11 +7,11 @@
         <v-spacer></v-spacer>
         <v-autocomplete v-model="filterDmId" :items="dataModels" item-text="dataModelNm" item-value="dataModelId"
           label="모델" dense hide-details style="max-width:280px" clearable @change="loadRules"></v-autocomplete>
-        <v-btn v-if="isAdmin" small class="gradient" @click="openAdd"
+        <v-btn v-if="canQualAdmin" small class="gradient" @click="openAdd"
           :disabled="!filterDmId" id="btn-rule-add">
           <v-icon small left>mdi-plus</v-icon>룰 추가
         </v-btn>
-        <v-btn v-if="isAdmin" small outlined @click="openCatalog"
+        <v-btn v-if="canQualAdmin" small outlined @click="openCatalog"
           :disabled="!filterDmId" class="ml-2" id="btn-rule-catalog">
           <v-icon small left>mdi-book-open-variant</v-icon>카탈로그
         </v-btn>
@@ -31,8 +31,8 @@
           </v-icon>
         </template>
         <template v-slot:item.actions="{ item }">
-          <v-btn v-if="isAdmin" icon small @click="openEdit(item)"><v-icon small>mdi-pencil</v-icon></v-btn>
-          <v-btn v-if="isAdmin" icon small @click="del(item)"><v-icon small>mdi-delete</v-icon></v-btn>
+          <v-btn v-if="canQualAdmin" icon small @click="openEdit(item)"><v-icon small>mdi-pencil</v-icon></v-btn>
+          <v-btn v-if="canQualAdmin" icon small @click="del(item)"><v-icon small>mdi-delete</v-icon></v-btn>
         </template>
       </v-data-table>
 
@@ -130,16 +130,14 @@ export default {
         { text: '유형', value: 'ruleType' },
         { text: '카테고리', value: 'category' },
         { text: '', value: 'actions', sortable: false }
-      ],
-      isAdmin: false
+      ]
     };
   },
+  computed: {
+    // 104번 WP2 — 품질 규칙 관리 권한(관리자 또는 QUAL_ADMIN)
+    canQualAdmin() { return this.$can('QUAL_ADMIN'); },
+  },
   mounted() {
-    var self = this;
-    axios.get(this.$APIURL.base + 'api/login/isAdmin',
-      { params: { user: this.$loginStatusData && this.$loginStatusData.id } })
-      .then(function(res) { self.isAdmin = res.data === true; })
-      .catch(function() { self.isAdmin = false; });
     this.loadModels();
   },
   methods: {

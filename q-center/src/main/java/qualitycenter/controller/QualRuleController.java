@@ -482,8 +482,8 @@ public class QualRuleController {
     // ==================== 유틸 ====================
 
     private void assertAdmin() throws IllegalAccessException {
-        if (!sessionService.isAdmin()) {
-            throw new IllegalAccessException("관리자 권한 필요");
+        if (!sessionService.hasPerm(com.ndata.quality.common.PermCode.QUAL_ADMIN)) {
+            throw new IllegalAccessException("권한이 없습니다 (품질 규칙 관리 권한 필요)");
         }
     }
 

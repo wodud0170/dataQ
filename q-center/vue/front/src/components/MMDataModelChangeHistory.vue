@@ -42,7 +42,7 @@
           <v-btn v-if="item.ddlSnippet" x-small text v-on:click="copyDdl(item)">
             <v-icon x-small>mdi-content-copy</v-icon>DDL
           </v-btn>
-          <v-btn v-if="isAdmin && item.aprvStatus==='APPROVED' && item.ddlSnippet && !item.ddlExecDt"
+          <v-btn v-if="canExecDdl && item.aprvStatus==='APPROVED' && item.ddlSnippet && !item.ddlExecDt"
             x-small text color="success" v-on:click="execDdl(item)">
             <v-icon x-small>mdi-database-arrow-up</v-icon>DB 반영
           </v-btn>
@@ -92,9 +92,12 @@ import { dmChangeTypeLabel } from './dmChangeType';
 export default {
   name: 'MMDataModelChangeHistory',
   props: ['isMobile'],
+  computed: {
+    // 104번 WP2 — DB 반영 권한(관리자 또는 DDL_EXEC, 시스템 단위). 건마다 시스템 범위는 서버가 다시 본다
+    canExecDdl() { return this.$can('DDL_EXEC'); },
+  },
   data: () => ({
     items: [],
-    isAdmin: false,
     dsId: '',
     filter: { dmId: '', changeUserId: '', changeTier: '', aprvStatus: '' },
     tierOptions: [
@@ -123,14 +126,9 @@ export default {
     detailDialog: false,
     detail: {},
   }),
-  mounted() { this.load(); this.loadIsAdmin(); },
-  activated() { this.load(); this.loadIsAdmin(); },
+  mounted() { this.load(); },
+  activated() { this.load(); },
   methods: {
-    loadIsAdmin() {
-      axios.get(this.$APIURL.base + 'api/search/getUserInfo').then(r => {
-        this.isAdmin = !!(r.data && (r.data.admin || r.data.role === 'A'));
-      }).catch(() => { this.isAdmin = false; });
-    },
     load() {
       axios.post(this.$APIURL.base + 'api/dmApproval/history', this.filter).then(res => {
         this.items = res.data || [];

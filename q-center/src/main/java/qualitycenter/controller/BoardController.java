@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ndata.common.message.Response;
+import com.ndata.quality.common.PermCode;
 import com.ndata.common.message.RestResult;
 import com.ndata.module.StringUtils;
 
@@ -73,8 +74,8 @@ public class BoardController {
 			@RequestParam(value = "files", required = false) List<MultipartFile> files) {
 		Response result = new Response();
 		try {
-			if ("NOTICE".equals(boardType) && !sessionService.isAdmin()) {
-				result.setResultInfo(RestResult.CODE_500.getCode(), "공지사항은 관리자만 작성할 수 있습니다.");
+			if ("NOTICE".equals(boardType) && !sessionService.hasPerm(PermCode.BOARD_ADMIN)) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "공지사항을 쓸 권한이 없습니다 (공지 관리 권한 필요).");
 				return result;
 			}
 			String boardId = StringUtils.getUUID();

@@ -272,10 +272,10 @@
             dense hide-details outlined flat solo single-line placeholder="자동"
             @paste.native="onCellPaste(item, 'attrOrder', $event)" />
           <!-- 88번 §7.3 — 컬럼 순서 ↑↓ (관리자만, saved 행) -->
-          <v-icon v-if="isAdmin && item._mode === 'saved' && item.attrNm" small
+          <v-icon v-if="canManageModel && item._mode === 'saved' && item.attrNm" small
             color="indigo lighten-2" title="위와 자리 바꾸기" style="cursor:pointer;"
             @click="swapAttrOrd(item, 'UP')">mdi-arrow-up-bold</v-icon>
-          <v-icon v-if="isAdmin && item._mode === 'saved' && item.attrNm" small
+          <v-icon v-if="canManageModel && item._mode === 'saved' && item.attrNm" small
             color="indigo lighten-2" title="아래와 자리 바꾸기" style="cursor:pointer;"
             @click="swapAttrOrd(item, 'DOWN')">mdi-arrow-down-bold</v-icon>
         </div>
@@ -580,8 +580,6 @@ export default {
     newRows: [],            // 미저장 ADD 행들
     pendingDeletes: [],     // 미저장 DELETE 행들
     selectedRows: [],       // show-select 체크된 행
-    // 88번 거버넌스 — 관리자 여부 (서버에서 lookup, mounted)
-    isAdmin: false,
     resolving: false,
     resolvingByEng: false,
     // 87-3 PK/FK
@@ -667,6 +665,8 @@ export default {
     ],
   }),
   computed: {
+    // 104번 WP2 — 모델 직접 반영 권한(관리자 또는 DM_MANAGE): 컬럼 순서 바꾸기
+    canManageModel() { return this.$can('DM_MANAGE'); },
     // 87-3 모달용 옵션
     pkColumnOptions() {
       return (this.dmColumnAllItems || [])
@@ -1365,9 +1365,9 @@ export default {
       row.attrOrder = insertAt;
       this.newRows.push(row);
     },
-    // 88번 §7.3 — 컬럼 순서 ↑↓ (관리자 only, 인접 행과 attr_ord 스왑)
+    // 88번 §7.3 — 컬럼 순서 ↑↓ (모델 직접 반영 권한만, 인접 행과 attr_ord 스왑)
     swapAttrOrd(item, direction) {
-      if (!this.isAdmin) return;
+      if (!this.canManageModel) return;
       axios.post(this.$APIURL.base + 'api/dm/swapAttrOrd', {
         dataModelId: this.selectedModelId,
         objOwner: item.objOwner || '',
@@ -2189,10 +2189,6 @@ export default {
   },
   created() {
     this.getModelList();
-    // 88번 거버넌스 — 관리자 여부 lookup
-    axios.get(this.$APIURL.base + 'api/search/getUserInfo').then(res => {
-      this.isAdmin = !!(res.data && (res.data.admin || res.data.isAdmin || res.data.role === 'A'));
-    }).catch(() => { this.isAdmin = false; });
   },
   mounted() {
     this.$resizableGrid && this.$resizableGrid();

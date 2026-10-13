@@ -55,7 +55,7 @@
           <v-btn icon small @click="openDetail(item)" title="상세" id="btn-row-detail">
             <v-icon small>mdi-information-outline</v-icon>
           </v-btn>
-          <v-btn icon small @click="rerun(item)" :disabled="!isAdmin" title="단위 재진단" id="btn-row-rerun">
+          <v-btn icon small @click="rerun(item)" :disabled="!canQualAdmin" title="단위 재진단" id="btn-row-rerun">
             <v-icon small>mdi-play-circle-outline</v-icon>
           </v-btn>
         </template>
@@ -130,8 +130,11 @@ import axios from 'axios';
 export default {
   name: 'DSQualColRule',
   props: ['isMobile'],
+  computed: {
+    // 104번 WP2 — 품질 규칙 관리 권한(관리자 또는 QUAL_ADMIN)
+    canQualAdmin() { return this.$can('QUAL_ADMIN'); },
+  },
   data: () => ({
-    isAdmin: false,
     dataModels: [],
     dmId: null,
     domainClsfList: [
@@ -180,10 +183,6 @@ export default {
   }),
   mounted() {
     var self = this;
-    axios.get(this.$APIURL.base + 'api/login/isAdmin',
-      { params: { user: this.$loginStatusData && this.$loginStatusData.id } })
-      .then(r => { self.isAdmin = r.data === true; })
-      .catch(() => { self.isAdmin = false; });
     // 86번 #46 — .catch
     axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { connectedOnly: 'Y' })
       .then(r => {

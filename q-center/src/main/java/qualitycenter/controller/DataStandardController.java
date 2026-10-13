@@ -34,6 +34,7 @@ import com.ndata.common.message.RestResult;
 import com.ndata.common.handler.WebClientHandler;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityApproveStat;
+import com.ndata.quality.common.PermCode;
 import com.ndata.quality.common.NDQualityConstant;
 import com.ndata.quality.common.NDQualityRetrieveCond;
 import com.ndata.quality.common.NDQualityStdObjectType;
@@ -201,7 +202,7 @@ public class DataStandardController {
 		// 98번 — 어느 사전에 등록하는지. 화면이 안 보내면 기본 사전.
 		dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
 		// 사용자가 어드민인 경우에 자동승인 처리
-		if (sessionService.isAdmin()) {
+		if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			dataVo.setAprvYn("Y");
 		}
 		log.info(">> createWord : {}", dataVo);
@@ -236,7 +237,7 @@ public class DataStandardController {
 
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
 			String msg = synonymMsg;
-			if (!sessionService.isAdmin()) {
+			if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 				String approvalMsg = "관리자 승인 후 조회 가능합니다.";
 				msg = msg != null ? msg + " " + approvalMsg : approvalMsg;
 			}
@@ -246,7 +247,7 @@ public class DataStandardController {
 				result.setResultInfo(RestResult.CODE_200);
 			}
 			// 이력 저장 (관리자 즉시 승인 시에만, 일반 사용자는 승인 시점에 저장)
-			if (sessionService.isAdmin()) {
+			if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
 				saveChangeHistory("INSERT", "WORD", dataVo.getId(), dataVo.getWordNm(),
 						null, dataVo.toString(), "단어 등록: " + dataVo.getWordNm());
 			}
@@ -272,9 +273,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateWord", method = RequestMethod.POST)
 	public Mono<Response> updateWord(@RequestBody StdWordVo dataVo) {
-		if (!sessionService.isAdmin()) {
+		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
-			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 수정할 수 있습니다.");
+			r.setResultInfo(RestResult.CODE_500.getCode(), "수정 권한이 없습니다 (표준 직접 관리 권한 필요).");
 			return Mono.just(r);
 		}
 		dataVo.setUpdtUserId(sessionService.getUserId());
@@ -316,9 +317,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteWords", method = RequestMethod.POST)
 	public Mono<Response> deleteWords(@RequestBody List<StdWordVo> dataVos) {
-		if (!sessionService.isAdmin()) {
+		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
-			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 삭제할 수 있습니다.");
+			r.setResultInfo(RestResult.CODE_500.getCode(), "삭제 권한이 없습니다 (표준 직접 관리 권한 필요).");
 			return Mono.just(r);
 		}
 		Response result = new Response();
@@ -530,7 +531,7 @@ public class DataStandardController {
 			dataVo.setDomainNm(null);
 		}
 		// 사용자가 어드민인 경우에 자동승인 처리
-		if (sessionService.isAdmin()) {
+		if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			dataVo.setAprvYn("Y");
 		}
 
@@ -568,13 +569,13 @@ public class DataStandardController {
 			wordList.stream().forEach(v -> v.setTermsId(dataVo.getId()));
 			session.insert("terms.insertTermsWords", wordList);
 			session.commit();
-			if (!sessionService.isAdmin()) {
+			if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 				result.setResultInfo(RestResult.CODE_200.getCode(), "관리자 승인 후 조회 가능합니다.");
 			} else {
 				result.setResultInfo(RestResult.CODE_200);
 			}
 			// 이력 저장 (관리자 즉시 승인 시에만)
-			if (sessionService.isAdmin()) {
+			if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
 				saveChangeHistory("INSERT", "TERM", dataVo.getId(), dataVo.getTermsNm(),
 						null, dataVo.toString(), "용어 등록: " + dataVo.getTermsNm());
 			}
@@ -722,9 +723,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateTerms", method = RequestMethod.POST)
 	public Mono<Response> updateTerms(@RequestBody StdTermsVo dataVo) {
-		if (!sessionService.isAdmin()) {
+		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
-			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 수정할 수 있습니다.");
+			r.setResultInfo(RestResult.CODE_500.getCode(), "수정 권한이 없습니다 (표준 직접 관리 권한 필요).");
 			return Mono.just(r);
 		}
 		dataVo.setUpdtUserId(sessionService.getUserId());
@@ -774,9 +775,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteTermsList", method = RequestMethod.POST)
 	public Mono<Response> deleteTermsList(@RequestBody List<StdTermsVo> dataVos) {
-		if (!sessionService.isAdmin()) {
+		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
-			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 삭제할 수 있습니다.");
+			r.setResultInfo(RestResult.CODE_500.getCode(), "삭제 권한이 없습니다 (표준 직접 관리 권한 필요).");
 			return Mono.just(r);
 		}
 		Response result = new Response();
@@ -917,7 +918,7 @@ public class DataStandardController {
 	public Mono<Response> createCode(@RequestBody StdTermsVo dataVo) {
 		Mono<Response> resp = createTerms(dataVo);
 		// 코드 이력을 별도로 저장 (관리자 즉시 승인 시에만)
-		if (sessionService.isAdmin()) {
+		if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			saveChangeHistory("INSERT", "CODE", dataVo.getId(), dataVo.getTermsNm(),
 					null, dataVo.toString(), "코드 등록: " + dataVo.getTermsNm());
 		}
@@ -1156,7 +1157,7 @@ public class DataStandardController {
 		// 98번 — 도메인 화면에서 고른 사전에 넣는다.
 		dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
 		// 사용자가 어드민인 경우에 자동승인 처리
-		if (sessionService.isAdmin()) {
+		if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			dataVo.setAprvYn("Y");
 		}
 		log.info(">> createDomain : {}", dataVo);
@@ -1174,13 +1175,13 @@ public class DataStandardController {
 				throw new Exception(dupMsg);
 			}
 			sqlSessionTemplate.insert("domain.insertDomain", dataVo);
-			if (!sessionService.isAdmin()) {
+			if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 				result.setResultInfo(RestResult.CODE_200.getCode(), "관리자 승인 후 조회 가능합니다.");
 			} else {
 				result.setResultInfo(RestResult.CODE_200);
 			}
 			// 이력 저장 (관리자 즉시 승인 시에만, 일반 사용자는 승인 시점에 저장)
-			if (sessionService.isAdmin()) {
+			if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
 				saveChangeHistory("INSERT", "DOMAIN", dataVo.getId(), dataVo.getDomainNm(),
 						null, dataVo.toString(), "도메인 등록: " + dataVo.getDomainNm());
 			}
@@ -1320,9 +1321,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateDomain", method = RequestMethod.POST)
 	public Mono<Response> updateDomain(@RequestBody StdDomainVo dataVo) {
-		if (!sessionService.isAdmin()) {
+		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
-			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 수정할 수 있습니다.");
+			r.setResultInfo(RestResult.CODE_500.getCode(), "수정 권한이 없습니다 (표준 직접 관리 권한 필요).");
 			return Mono.just(r);
 		}
 		dataVo.setUpdtUserId(sessionService.getUserId());
@@ -1360,9 +1361,9 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteDomains", method = RequestMethod.POST)
 	public Mono<Response> deleteDomains(@RequestBody List<StdDomainVo> dataVos) {
-		if (!sessionService.isAdmin()) {
+		if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 			Response r = new Response();
-			r.setResultInfo(RestResult.CODE_500.getCode(), "관리자만 삭제할 수 있습니다.");
+			r.setResultInfo(RestResult.CODE_500.getCode(), "삭제 권한이 없습니다 (표준 직접 관리 권한 필요).");
 			return Mono.just(r);
 		}
 		Response result = new Response();
@@ -1748,7 +1749,7 @@ public class DataStandardController {
 	public List<StdApproveStatVo> getStdAprvStatList(@RequestBody StdApproveStatVo.RetrieveCond retCond) {
 		log.info(">> getStdAprvStatList : {}", retCond);
 		String reqUserId = null;
-		if (!sessionService.isAdmin()) {// 관리자가 아닌 경우에는 자신 신청내역만 확인
+		if (!sessionService.hasPerm(PermCode.STD_APPROVE)) {// 승인 권한이 없으면 자신 신청내역만 확인
 			reqUserId = sessionService.getUserId();
 			retCond.setReqUserId(reqUserId);
 		}
@@ -1782,10 +1783,10 @@ public class DataStandardController {
 		Response result = new Response();
 		List<Map<String, Object>> warnings = new ArrayList<>();
 
-		// DEF-15 — 승인·반려는 관리자 전용. 화면에서는 메뉴가 안 보이지만 이 API 는 열려 있어
+		// DEF-15 — 승인·반려는 승인 권한(관리자 또는 STD_APPROVE)만. 화면에서는 메뉴가 안 보이지만 이 API 는 열려 있어
 		// 일반 사용자가 자기 신청을 스스로 승인할 수 있었다. 서버에서 다시 막는다.
-		if (!sessionService.isAdmin()) {
-			result.setResultInfo(403, "승인·반려는 관리자만 가능합니다.");
+		if (!sessionService.hasPerm(PermCode.STD_APPROVE)) {
+			result.setResultInfo(403, "승인·반려 권한이 없습니다 (표준 승인 권한 필요).");
 			return Mono.just(result);
 		}
 
@@ -2213,7 +2214,7 @@ public class DataStandardController {
 		String synonymMsg = checkSynonymWord(wordNm.trim(), dictId);
 
 		String userId = sessionService.getUserId();
-		boolean isAdmin = sessionService.isAdmin();
+		boolean directApprove = sessionService.hasPerm(PermCode.STD_MANAGE);
 
 		StdWordVo wordVo = new StdWordVo();
 		String wordId = StringUtils.getUUID();
@@ -2227,13 +2228,13 @@ public class DataStandardController {
 		wordVo.setWordClsfYn("N");
 		wordVo.setCommStndYn("N");
 		wordVo.setCretUserId(userId);
-		if (isAdmin) wordVo.setAprvYn("Y");
+		if (directApprove) wordVo.setAprvYn("Y");
 		else wordVo.setAprvYn("N");
 
 		sqlSessionTemplate.insert("word.insertWord", wordVo);
 
 		// 이력 저장 (관리자 즉시 승인 시에만)
-		if (isAdmin) {
+		if (directApprove) {
 			saveChangeHistory("INSERT", "WORD", wordId, wordVo.getWordNm(),
 					null, wordVo.toString(), "단어 등록(표준화 추천): " + wordVo.getWordNm(), "AUTO_RECOMMEND");
 		}
@@ -2279,7 +2280,7 @@ public class DataStandardController {
 		}
 
 		String userId = sessionService.getUserId();
-		boolean isAdmin = sessionService.isAdmin();
+		boolean directApprove = sessionService.hasPerm(PermCode.STD_MANAGE);
 		// 98번 — 이 일괄 등록이 들어갈 사전. 화면에서 고른 값이 온다.
 		String dictId = resolveDictOrDefault(body.get("dictId"));
 		int registeredTerms = 0;
@@ -2342,7 +2343,7 @@ public class DataStandardController {
 						wordVo.setWordClsfYn("N");
 						wordVo.setCommStndYn("N");
 						wordVo.setCretUserId(userId);
-						if (isAdmin) wordVo.setAprvYn("Y");
+						if (directApprove) wordVo.setAprvYn("Y");
 						else wordVo.setAprvYn("N");
 						session.insert("word.insertWord", wordVo);
 						newWordIdMap.put(i, wordId);
@@ -2393,7 +2394,7 @@ public class DataStandardController {
 				termsVo.setDomainNm(domainNm);
 				termsVo.setCommStndYn("N");
 				termsVo.setCretUserId(userId);
-				if (isAdmin) termsVo.setAprvYn("Y");
+				if (directApprove) termsVo.setAprvYn("Y");
 				else termsVo.setAprvYn("N");
 				session.insert("terms.insertTerms", termsVo);
 
@@ -2479,7 +2480,7 @@ public class DataStandardController {
 		}
 
 		// 일괄 등록 이력 저장 (관리자 즉시 승인 시에만, 일반 사용자는 승인 시점에 저장)
-		if (isAdmin) {
+		if (directApprove) {
 			try {
 				String changeId = StringUtils.getUUID();
 				Map<String, Object> history = new HashMap<>();
@@ -3271,10 +3272,10 @@ public class DataStandardController {
 	 */
 	private void saveChangeHistory(String changeType, String targetType, String targetId, String targetNm,
 			String prevValue, String currValue, String summary) {
-		boolean admin = false;
-		try { admin = sessionService.isAdmin(); } catch (Exception ignore) {}
+		boolean directApprove = false;
+		try { directApprove = sessionService.hasPerm(PermCode.STD_MANAGE); } catch (Exception ignore) {}
 		saveChangeHistory(changeType, targetType, targetId, targetNm, prevValue, currValue, summary,
-				admin ? "ADMIN_DIRECT" : "USER_REQUEST");
+				directApprove ? "ADMIN_DIRECT" : "USER_REQUEST");
 	}
 
 	private void saveChangeHistory(String changeType, String targetType, String targetId, String targetNm,

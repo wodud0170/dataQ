@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ndata.common.message.Response;
+import com.ndata.quality.common.PermCode;
 import com.ndata.common.message.RestResult;
 
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +23,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * 88번 §15 — 업무영역 (BIZ_AREA, 논리) / 주제영역 (SUBJ_AREA, 물리) CRUD.
- * 영역 자체 생성/수정/삭제는 관리자 only.
+ * 영역 자체 생성/수정/삭제는 영역 관리 권한(관리자 또는 AREA_ADMIN)만.
  */
 @Slf4j
 @RestController
@@ -47,7 +48,7 @@ public class BizSubjAreaController {
 	public Mono<Response> bizSave(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.AREA_ADMIN)) throw new IllegalStateException("권한이 없습니다 (영역 관리 권한 필요)");
 			Map<String, Object> p = new HashMap<>();
 			String id = (String) body.get("bizAreaId");
 			if (id == null || id.isEmpty()) id = UUID.randomUUID().toString();
@@ -71,7 +72,7 @@ public class BizSubjAreaController {
 	public Mono<Response> subjSave(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.AREA_ADMIN)) throw new IllegalStateException("권한이 없습니다 (영역 관리 권한 필요)");
 			Map<String, Object> p = new HashMap<>();
 			String id = (String) body.get("subjAreaId");
 			if (id == null || id.isEmpty()) id = UUID.randomUUID().toString();
@@ -95,7 +96,7 @@ public class BizSubjAreaController {
 	public Mono<Response> bizDelete(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.AREA_ADMIN)) throw new IllegalStateException("권한이 없습니다 (영역 관리 권한 필요)");
 			String id = (String) body.get("bizAreaId");
 			sqlSessionTemplate.update("area.deleteBizArea", id);
 			res.setResultInfo(RestResult.CODE_200);
@@ -109,7 +110,7 @@ public class BizSubjAreaController {
 	public Mono<Response> subjDelete(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.AREA_ADMIN)) throw new IllegalStateException("권한이 없습니다 (영역 관리 권한 필요)");
 			String id = (String) body.get("subjAreaId");
 			sqlSessionTemplate.update("area.deleteSubjArea", id);
 			res.setResultInfo(RestResult.CODE_200);

@@ -83,11 +83,11 @@
                 </v-icon>
               </template>
               <template v-slot:item.actions="{ item }">
-                <v-btn icon small @click="openEditDialog(item)" :disabled="!isAdmin"
+                <v-btn icon small @click="openEditDialog(item)" :disabled="!canQualAdmin"
                        title="수정" id="btn-rule-edit">
                   <v-icon small>mdi-pencil</v-icon>
                 </v-btn>
-                <v-btn icon small @click="deleteRule(item)" :disabled="!isAdmin"
+                <v-btn icon small @click="deleteRule(item)" :disabled="!canQualAdmin"
                        title="삭제" id="btn-rule-del">
                   <v-icon small>mdi-delete</v-icon>
                 </v-btn>
@@ -233,10 +233,10 @@
                 <v-icon x-small left>mdi-link-variant</v-icon>매핑
               </v-btn>
               <v-btn x-small outlined color="indigo" @click="forkCatalog(item)" class="ml-1"
-                     :disabled="!isAdmin" title="복사하여 사용자 정의로">
+                     :disabled="!canQualAdmin" title="복사하여 사용자 정의로">
                 <v-icon x-small left>mdi-content-copy</v-icon>복사
               </v-btn>
-              <v-btn v-if="item.isBuiltIn === 'N' && isAdmin" x-small icon @click="deleteUserCatalog(item)"
+              <v-btn v-if="item.isBuiltIn === 'N' && canQualAdmin" x-small icon @click="deleteUserCatalog(item)"
                      class="ml-1" title="삭제 (사용자 정의만)">
                 <v-icon x-small>mdi-delete</v-icon>
               </v-btn>
@@ -259,7 +259,6 @@ export default {
   name: 'DSQualDomainRule',
   props: ['isMobile'],
   data: () => ({
-    isAdmin: false,
     treeSearch: '',
     treeItems: [],
     treeOpen: [],
@@ -299,6 +298,8 @@ export default {
     ],
   }),
   computed: {
+    // 104번 WP2 — 품질 규칙 관리 권한(관리자 또는 QUAL_ADMIN)
+    canQualAdmin() { return this.$can('QUAL_ADMIN'); },
     catRowsFiltered() {
       const want = this.catTab === 0 ? 'Y' : 'N';
       return this.catRows.filter(r => r.isBuiltIn === want);
@@ -313,11 +314,6 @@ export default {
     }
   },
   mounted() {
-    var self = this;
-    axios.get(this.$APIURL.base + 'api/login/isAdmin',
-      { params: { user: this.$loginStatusData && this.$loginStatusData.id } })
-      .then(r => { self.isAdmin = r.data === true; })
-      .catch(() => { self.isAdmin = false; });
     this.loadTree();
   },
   methods: {

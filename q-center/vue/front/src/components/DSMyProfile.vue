@@ -24,6 +24,16 @@
         <v-col cols="4"><v-subheader class="font-weight-bold">전화번호</v-subheader></v-col>
         <v-col cols="8"><v-text-field v-model="userPhone" dense outlined hide-details color="ndColor" placeholder="010-0000-0000" autocomplete="off"></v-text-field></v-col>
       </v-row>
+      <!-- 104번 WP2 — 받은 역할 (관리자는 모든 권한이라 따로 보이지 않는다) -->
+      <v-row v-if="!isAdmin">
+        <v-col cols="4"><v-subheader class="font-weight-bold">역할</v-subheader></v-col>
+        <v-col cols="8" class="d-flex flex-wrap align-center" style="gap:6px;">
+          <span v-if="$perm.roles.length === 0" class="text-caption grey--text">받은 역할이 없습니다.</span>
+          <v-chip v-for="r in $perm.roles" :key="r.roleId + r.sysCd" small outlined color="indigo">
+            {{ r.roleNm }}<span v-if="r.sysNm" class="ml-1 grey--text">· {{ r.sysNm }}</span>
+          </v-chip>
+        </v-col>
+      </v-row>
 
       <v-row class="mt-2">
         <v-col class="text-right">

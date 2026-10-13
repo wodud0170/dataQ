@@ -1402,6 +1402,60 @@ COMMENT ON TABLE quality.tb_qual_violation_sample IS '위반 샘플 행 (PK + �
 
 
 --
+-- Name: tb_role; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_role (
+    role_id character varying(40) NOT NULL,
+    role_nm character varying(100) NOT NULL,
+    role_desc character varying(500),
+    builtin_yn character(1) DEFAULT 'N'::bpchar NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_role; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_role IS '역할 — 권한 코드(PermCode) 묶음 (104번 WP2)';
+
+
+--
+-- Name: COLUMN tb_role.builtin_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_role.builtin_yn IS '내장 역할 여부 (Y 는 삭제 불가)';
+
+
+--
+-- Name: tb_role_perm; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_role_perm (
+    role_id character varying(40) NOT NULL,
+    perm_cd character varying(50) NOT NULL
+);
+
+
+--
+-- Name: TABLE tb_role_perm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_role_perm IS '역할에 든 권한 코드 (104번 WP2)';
+
+
+--
+-- Name: COLUMN tb_role_perm.perm_cd; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_role_perm.perm_cd IS '권한 코드 — q-common PermCode 이름';
+
+
+--
 -- Name: tb_std_dict; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -1772,8 +1826,16 @@ CREATE TABLE quality.tb_sys_info (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     updt_dt character varying(14),
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    dict_id character varying(22)
 );
+
+
+--
+-- Name: COLUMN tb_sys_info.dict_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_sys_info.dict_id IS '시스템 기본 표준사전 (TB_STD_DICT.DICT_ID). 이 시스템의 모델 등록 때 기본값 (104번 WP2)';
 
 
 --
@@ -1874,6 +1936,33 @@ CREATE TABLE quality.tb_user (
     del_yn boolean,
     phone character varying(20)
 );
+
+
+--
+-- Name: tb_user_role; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_user_role (
+    user_id character varying(50) NOT NULL,
+    role_id character varying(40) NOT NULL,
+    sys_cd character varying(22) DEFAULT '*'::character varying NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_user_role; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_user_role IS '사용자에게 준 역할 (104번 WP2)';
+
+
+--
+-- Name: COLUMN tb_user_role.sys_cd; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_user_role.sys_cd IS '권한 범위 시스템 (TB_SYS_INFO.SYS_CD). ''*'' = 모든 시스템. 시스템 단위 권한(DDL_EXEC)만 의미가 있다';
 
 
 --
@@ -2298,6 +2387,30 @@ ALTER TABLE ONLY quality.tb_domain
 
 
 --
+-- Name: tb_role tb_role_nm_uk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_role
+    ADD CONSTRAINT tb_role_nm_uk UNIQUE (role_nm);
+
+
+--
+-- Name: tb_role_perm tb_role_perm_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_role_perm
+    ADD CONSTRAINT tb_role_perm_pk PRIMARY KEY (role_id, perm_cd);
+
+
+--
+-- Name: tb_role tb_role_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_role
+    ADD CONSTRAINT tb_role_pk PRIMARY KEY (role_id);
+
+
+--
 -- Name: tb_std_dict tb_std_dict_pk; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -2351,6 +2464,14 @@ ALTER TABLE ONLY quality.tb_terms_words
 
 ALTER TABLE ONLY quality.tb_user
     ADD CONSTRAINT tb_user_pk PRIMARY KEY (user_id);
+
+
+--
+-- Name: tb_user_role tb_user_role_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_user_role
+    ADD CONSTRAINT tb_user_role_pk PRIMARY KEY (user_id, role_id, sys_cd);
 
 
 --
@@ -2506,6 +2627,13 @@ CREATE INDEX ix_term_resolve_input ON quality.tb_term_resolve_history USING btre
 --
 
 CREATE INDEX ix_term_resolve_user ON quality.tb_term_resolve_history USING btree (change_user_id);
+
+
+--
+-- Name: ix_user_role_role; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_user_role_role ON quality.tb_user_role USING btree (role_id);
 
 
 --
@@ -2716,6 +2844,14 @@ ALTER TABLE ONLY quality.tb_domain
 
 
 --
+-- Name: tb_role_perm tb_role_perm_role_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_role_perm
+    ADD CONSTRAINT tb_role_perm_role_fk FOREIGN KEY (role_id) REFERENCES quality.tb_role(role_id) ON DELETE CASCADE;
+
+
+--
 -- Name: tb_terms tb_terms_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -2737,6 +2873,22 @@ ALTER TABLE ONLY quality.tb_terms_words
 
 ALTER TABLE ONLY quality.tb_terms_words
     ADD CONSTRAINT tb_terms_words_fk_2 FOREIGN KEY (word_id, word_nm) REFERENCES quality.tb_word(word_id, word_nm) ON UPDATE CASCADE;
+
+
+--
+-- Name: tb_user_role tb_user_role_role_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_user_role
+    ADD CONSTRAINT tb_user_role_role_fk FOREIGN KEY (role_id) REFERENCES quality.tb_role(role_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_user_role tb_user_role_user_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_user_role
+    ADD CONSTRAINT tb_user_role_user_fk FOREIGN KEY (user_id) REFERENCES quality.tb_user(user_id) ON DELETE CASCADE;
 
 
 --

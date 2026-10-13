@@ -38,8 +38,8 @@ public class DiagTargetController {
 
 	/** 관리자 검증 (운영 안전성) */
 	private void requireAdmin() {
-		if (!sessionService.isAdmin()) {
-			throw new RuntimeException("관리자만 진단 대상을 변경할 수 있습니다.");
+		if (!sessionService.hasPerm(com.ndata.quality.common.PermCode.DIAG_TARGET_ADMIN)) {
+			throw new RuntimeException("진단 대상을 변경할 권한이 없습니다 (진단 제외 관리 권한 필요).");
 		}
 	}
 

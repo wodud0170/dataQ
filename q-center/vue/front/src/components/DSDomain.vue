@@ -49,9 +49,9 @@
           <!-- 86번 #11 — 한 줄 유지, 엑셀 관련은 드롭다운으로 묶음 -->
           <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]"
             class="d-flex flex-nowrap align-center" style="gap: 6px;">
-            <v-btn class="gradient" v-on:click="showModal('add')" title="등록">{{ isAdmin ? '등록' : '등록 신청' }}</v-btn>
-            <v-btn v-if="isAdmin" class="gradient" v-on:click="domainRemoveItem()" title="삭제">삭제</v-btn>
-            <v-btn v-if="isAdmin" class="gradient" color="red lighten-4" v-on:click="domainBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
+            <v-btn class="gradient" v-on:click="showModal('add')" title="등록">{{ canManage ? '등록' : '등록 신청' }}</v-btn>
+            <v-btn v-if="canManage" class="gradient" v-on:click="domainRemoveItem()" title="삭제">삭제</v-btn>
+            <v-btn v-if="canManage" class="gradient" color="red lighten-4" v-on:click="domainBulkRemove()" title="일괄 삭제">일괄 삭제</v-btn>
             <!-- 엑셀 드롭다운 (업로드 / 양식 / 다운로드) -->
             <v-menu offset-y>
               <template v-slot:activator="{ on, attrs }">
@@ -61,11 +61,11 @@
                 </v-btn>
               </template>
               <v-list dense>
-                <v-list-item v-if="isAdmin" @click="domainExcelFileUpload()">
+                <v-list-item v-if="canManage" @click="domainExcelFileUpload()">
                   <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
                   <v-list-item-title>엑셀 업로드</v-list-item-title>
                 </v-list-item>
-                <v-list-item v-if="isAdmin" @click="domainTemplateDownload()">
+                <v-list-item v-if="canManage" @click="domainTemplateDownload()">
                   <v-list-item-icon><v-icon small>mdi-file-download-outline</v-icon></v-list-item-icon>
                   <v-list-item-title>양식 다운로드</v-list-item-title>
                 </v-list-item>
@@ -134,7 +134,7 @@
             </v-sheet>
             <!-- 수정 / 삭제 버튼 -->
             <v-sheet class="pr-4 pl-4">
-              <v-btn v-if="isAdmin" class="gradient" v-on:click="showModal('update')">수정</v-btn>
+              <v-btn v-if="canManage" class="gradient" v-on:click="showModal('update')">수정</v-btn>
               <v-btn class="gradient" v-on:click="openImpactDialog()">영향도 분석</v-btn>
               <!-- <v-btn class="gradient" v-on:click="domainRemoveItem()">삭제</v-btn> -->
             </v-sheet>
@@ -601,6 +601,10 @@ export default {
     }
   },
   props: ['isMobile'],
+  computed: {
+    // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE): 즉시 등록·수정·삭제·엑셀 업로드
+    canManage() { return this.$can('STD_MANAGE'); },
+  },
   data: () => ({
     // 98번 — 조회할 표준사전
     dictId: null,
@@ -618,8 +622,6 @@ export default {
       { text: 'Y', value: 'Y' },
       { text: 'N', value: 'N' }
     ],
-    // 관리자 여부
-    isAdmin: false,
     // 검색 승인 여부
     searchApproval: true,
     // 등록 모달 보이기
@@ -1790,8 +1792,6 @@ export default {
     }
     this.getDomainData();
     this.getSystemList();
-    axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
-      .then(res => { this.isAdmin = res.data === true; });
     eventBus.$on('NOTICE', this.onUploadNotice);
   },
   activated() {

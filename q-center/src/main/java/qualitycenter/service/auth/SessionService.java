@@ -27,6 +27,8 @@ import com.ndata.model.admin.RoleVo;
 import com.ndata.model.admin.UserAsgnRoleVo;
 import com.ndata.module.DateUtils;
 import com.ndata.module.StringUtils;
+import com.ndata.quality.common.PermCode;
+import com.ndata.quality.service.PermService;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -47,6 +49,9 @@ public class SessionService {
 
 	@Autowired
 	private SqlSessionTemplate sqlSessionTemplate;
+
+	@Autowired
+	private PermService permService;
 
 
 	/**
@@ -139,6 +144,19 @@ public class SessionService {
 		} else {
 			return false;
 		}
+    }
+
+    /**
+     * 104번 WP2 — 로그인 사용자가 그 권한을 갖는지. 관리자는 모든 권한을 갖는다.
+     * 시스템 단위 권한은 어느 시스템이든 하나라도 받았으면 true — 특정 시스템은 {@link #hasPerm(PermCode, String)}.
+     */
+    public boolean hasPerm(PermCode code) {
+		return permService.has(getUserId(), code);
+    }
+
+    /** 104번 WP2 — 그 시스템에 대한 권한. sysCd 가 비면 모든 시스템으로 받은 경우만 통한다. */
+    public boolean hasPerm(PermCode code, String sysCd) {
+		return permService.has(getUserId(), code, sysCd);
     }
 	
     /**

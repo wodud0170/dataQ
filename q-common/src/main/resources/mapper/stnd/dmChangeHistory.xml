@@ -50,14 +50,14 @@
 		)
 	</insert>
 
-	<!-- 모델 단위 이력 목록 (관리자: 전체, 사용자: 본인 + APPROVED) -->
+	<!-- 모델 단위 이력 목록 (viewAll — 관리자 또는 DM_APPROVE: 전체, 그 밖: 본인 + APPROVED) -->
 	<select id="selectByDmId" parameterType="java.util.Map" resultMap="map">
 		SELECT * FROM TB_DATA_MODEL_CHANGE_HISTORY
 		WHERE 1=1
 		<if test="dmId != null and dmId != ''">
 			AND DM_ID = #{dmId}
 		</if>
-		<if test="isAdmin == null or isAdmin == false">
+		<if test="viewAll == null or viewAll == false">
 			AND (APRV_STATUS = 'APPROVED' OR CHANGE_USER_ID = #{currentUserId})
 		</if>
 		<if test="changeUserId != null and changeUserId != ''">

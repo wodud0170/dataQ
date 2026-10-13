@@ -25,7 +25,7 @@
           :style="{ width: '40px', padding: '0 5px', minWidth: '45px' }"><v-icon>search</v-icon></v-btn>
       </v-sheet>
       <!-- 일괄 버튼 (화면 우측 padding 확보) -->
-      <v-sheet class="pl-4" v-if="isAdmin"
+      <v-sheet class="pl-4" v-if="canApprove"
         style="padding-right:32px !important; flex-shrink:0;"
         v-bind:style="[isMobile ? { width: '100%', display: 'flex', justifyContent: 'space-between' } : {}]">
         <v-btn class="gradient mr-2" @click="batchApprove" title="일괄 승인"
@@ -53,7 +53,7 @@
       </template>
       <!-- 행별 처리 — 그리드 가장 오른쪽 -->
       <template v-slot:[`item.rowActions`]="{ item }">
-        <template v-if="!isAdmin">
+        <template v-if="!canApprove">
           <span style="font-size:.75rem; color:#9E9E9E;">-</span>
         </template>
         <template v-else-if="rowRejectId === item.key">
@@ -158,8 +158,8 @@
       </template>
 
       <!-- 관리자 승인/반려 액션 -->
-      <v-divider class="my-3" v-if="isAdmin"></v-divider>
-      <v-row v-if="isAdmin" align="center">
+      <v-divider class="my-3" v-if="canApprove"></v-divider>
+      <v-row v-if="canApprove" align="center">
         <v-col cols="auto">
           <v-btn color="success" @click="approveItem(detailItem)" :disabled="detailItem.aprvStatRaw === 2">
             <v-icon small class="mr-1">mdi-check</v-icon> 승인
@@ -242,7 +242,6 @@ export default {
     typeFilter: '전체',
     typeItems: ['전체', '용어', '단어', '도메인'],
     datetimeitem: [null, null],
-    isAdmin: false,
     // 상세 패널
     detailItem: null,
     detailData: {},
@@ -269,6 +268,8 @@ export default {
     rowRejectReason: '',      // 인라인 반려 사유 텍스트
   }),
   computed: {
+    // 104번 WP2 — 표준 승인 권한(관리자 또는 STD_APPROVE)이면 승인·반려 처리 영역을 보인다
+    canApprove() { return this.$can('STD_APPROVE'); },
     statusCounts() {
       let items = this.approvalAllItems;
       return {
@@ -299,7 +300,6 @@ export default {
     }
   },
   created() {
-    this.adminCheck();
     this.getApprovalData();
   },
   activated() {
@@ -515,12 +515,6 @@ export default {
         .finally(() => {
           this.loadTable = false;
         });
-    },
-    adminCheck() {
-      const _userStatus = this.$loginStatusData.id;
-      axios.get(this.$APIURL.base + "api/login/isAdmin", { params: { user: _userStatus } })
-        .then(result => { this.isAdmin = result.data; })
-        .catch(err => { console.log(err); });
     }
   },
   mounted() {

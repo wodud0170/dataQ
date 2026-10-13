@@ -116,8 +116,8 @@
             <v-chip small color="orange" text-color="white" class="mr-1" v-if="countByStatus('PARTIAL') > 0">부분매칭 {{ countByStatus('PARTIAL') }}</v-chip>
             <v-chip small color="red" text-color="white" class="mr-1" v-if="countByStatus('FAILED') > 0">미매칭 {{ countByStatus('FAILED') }}</v-chip>
             <v-divider vertical class="mx-2" v-if="countPost('SUCCESS') + countPost('FAIL') > 0"></v-divider>
-            <v-chip small :color="isAdmin ? 'green' : 'blue'" text-color="white" class="mr-1" v-if="countPost('SUCCESS') > 0">
-              {{ isAdmin ? '등록완료' : '등록신청' }} {{ countPost('SUCCESS') }}
+            <v-chip small :color="canManage ? 'green' : 'blue'" text-color="white" class="mr-1" v-if="countPost('SUCCESS') > 0">
+              {{ canManage ? '등록완료' : '등록신청' }} {{ countPost('SUCCESS') }}
             </v-chip>
             <v-chip small color="red" text-color="white" class="mr-1" v-if="countPost('FAIL') > 0">실패 {{ countPost('FAIL') }}</v-chip>
           </v-card-title>
@@ -240,8 +240,8 @@
             <template v-slot:[`item.action`]="{ item }">
               <span v-if="item.status === 'REGISTERED'" class="grey--text text-caption">기등록</span>
               <template v-else-if="item._postStatus === 'SUCCESS'">
-                <v-chip small :color="isAdmin ? 'green' : 'blue'" text-color="white" class="chip-status">
-                  <v-icon small left>mdi-check-circle</v-icon>{{ isAdmin ? '등록완료' : '등록신청 완료' }}
+                <v-chip small :color="canManage ? 'green' : 'blue'" text-color="white" class="chip-status">
+                  <v-icon small left>mdi-check-circle</v-icon>{{ canManage ? '등록완료' : '등록신청 완료' }}
                 </v-chip>
               </template>
               <template v-else-if="item._postStatus === 'SKIPPED'">
@@ -468,8 +468,6 @@ export default {
       // 등록 결과 (요약용 — STEP 4 제거됨)
       registerResult: null,
 
-      // 권한 (등록완료/등록신청 라벨 분기)
-      isAdmin: false,
 
       // 표시 컬럼 토글
       visibleCols: ['words', 'recommendedEngAbrvNm', 'recommendedDomainNm', 'typeLen'],
@@ -494,6 +492,8 @@ export default {
     };
   },
   computed: {
+    // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE)이면 바로 등록, 아니면 등록 신청
+    canManage: function() { return this.$can('STD_MANAGE'); },
     // 98번 — 화면 안내용
     selectedDictNm: function() {
       var d = this.dictList.find(function(x) { return x.dictId === this.dictId; }, this);
@@ -1321,7 +1321,7 @@ export default {
             var rt = (res.data && res.data.registeredTerms) || 0;
             var sk = (res.data && res.data.skipped) || 0;
             var fl = (res.data && res.data.failed) || 0;
-            var lbl = self.isAdmin ? '등록' : '등록 신청';
+            var lbl = self.canManage ? '등록' : '등록 신청';
             self.$swal.fire({
               title: '처리 완료',
               html: lbl + ' ' + rt + '건 / 기등록 ' + sk + '건 / 실패 ' + fl + '건',
@@ -1352,7 +1352,7 @@ export default {
           var d = (res.data && res.data.details && res.data.details[0]) || {};
           if (d.status === 'SUCCESS') {
             self.$swal.fire({
-              title: self.isAdmin ? '등록 완료' : '등록 신청 완료',
+              title: self.canManage ? '등록 완료' : '등록 신청 완료',
               icon: 'success', confirmButtonText: '확인', timer: 1500
             });
           } else if (d.status === 'SKIPPED') {
@@ -1377,12 +1377,7 @@ export default {
     },
   },
   mounted: function() {
-    var self = this;
-    var uid = self.$loginStatusData && self.$loginStatusData.id;
-    axios.get(self.$APIURL.base + 'api/login/isAdmin', { params: { user: uid } })
-      .then(function(res) { self.isAdmin = res.data === true; })
-      .catch(function() { self.isAdmin = false; });
-    self.loadTargets();
+    this.loadTargets();
   },
 };
 </script>

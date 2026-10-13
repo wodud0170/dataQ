@@ -327,8 +327,11 @@ export default {
     Treeselect
   },
   watch: {
-    add_dataModelSysCd() {
+    add_dataModelSysCd(sysCd) {
       this.resetDataSourceItems();
+      // 104번 WP2 — 고른 시스템에 기본 표준사전이 있으면 그 사전을 미리 고른다
+      const sys = (this.dataModelSysDataList || []).find(s => s.sysCd === sysCd);
+      if (sys && sys.dictId) this.add_dictId = sys.dictId;
     },
     update_dataModelSysCd() {
       this.resetDataSourceItems();

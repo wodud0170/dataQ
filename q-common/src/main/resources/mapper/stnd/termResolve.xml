@@ -42,7 +42,8 @@
 		  LEFT JOIN TB_TERMS  t ON t.terms_id  = h.resolved_terms_id
 		  LEFT JOIN TB_DOMAIN d ON d.domain_nm = t.domain_nm AND d.dict_id = t.dict_id
 		 WHERE 1=1
-		<if test="isAdmin == null or isAdmin == false">
+		<!-- 104번 WP2 — viewAll: 관리자 또는 STD_MANAGE 면 전체, 아니면 본인 이력만 -->
+		<if test="viewAll == null or viewAll == false">
 		   AND h.change_user_id = #{currentUserId}
 		</if>
 		<if test="changeUserId != null and changeUserId != ''">

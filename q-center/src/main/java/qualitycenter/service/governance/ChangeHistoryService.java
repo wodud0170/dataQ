@@ -8,6 +8,7 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.ndata.quality.common.PermCode;
 import com.ndata.quality.model.std.StdDataModelChangeHistoryVo;
 
 import qualitycenter.service.auth.SessionService;
@@ -70,9 +71,9 @@ public class ChangeHistoryService {
 		else sqlSessionTemplate.insert("dmChangeHistory.insert", vo);
 	}
 
-	/** 사용자 변경 시 사용할 aprvStatus 결정 (관리자=APPROVED, 일반=DRAFT) */
+	/** 사용자 변경 시 사용할 aprvStatus 결정 (관리자·모델 직접 반영 권한 DM_MANAGE=APPROVED, 그 밖=DRAFT) */
 	public String resolveAprvStatusForUserChange() {
-		return sessionService.isAdmin() ? "APPROVED" : "DRAFT";
+		return sessionService.hasPerm(PermCode.DM_MANAGE) ? "APPROVED" : "DRAFT";
 	}
 
 	/** 현재 사용자 ID. 시스템 호출 시 'system' fallback */

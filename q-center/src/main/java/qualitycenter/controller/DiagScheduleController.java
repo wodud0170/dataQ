@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.google.gson.Gson;
 import com.ndata.common.handler.WebClientHandler;
 import com.ndata.common.message.Response;
+import com.ndata.quality.common.PermCode;
 import com.ndata.common.message.RestResult;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityConstant;
@@ -293,8 +294,8 @@ public class DiagScheduleController {
     // ==================== 유틸 ====================
 
     private void assertAdmin() throws IllegalAccessException {
-        if (!sessionService.isAdmin()) {
-            throw new IllegalAccessException("관리자 권한 필요");
+        if (!sessionService.hasPerm(PermCode.SCHEDULE_ADMIN)) {
+            throw new IllegalAccessException("권한이 없습니다 (스케줄 관리 권한 필요)");
         }
     }
 

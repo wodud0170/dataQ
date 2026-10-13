@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ndata.common.message.Response;
+import com.ndata.quality.common.PermCode;
 import com.ndata.common.message.RestResult;
 
 import lombok.extern.slf4j.Slf4j;
@@ -98,30 +99,30 @@ public class DataModelApprovalController {
 		return Mono.just(res);
 	}
 
-	/** 관리자 — SUBMITTED 묶음 목록 (승인 화면용) */
+	/** 모델 승인 권한(관리자 또는 DM_APPROVE) — SUBMITTED 묶음 목록 (승인 화면용) */
 	@PostMapping("/submissions")
 	public List<Map<String, Object>> submissions(@RequestBody Map<String, Object> body) {
-		if (!sessionService.isAdmin()) return new ArrayList<>();
+		if (!sessionService.hasPerm(PermCode.DM_APPROVE)) return new ArrayList<>();
 		Map<String, Object> p = new HashMap<>();
 		p.put("changeUserId", body.get("changeUserId"));
 		return sqlSessionTemplate.selectList("dmChangeHistory.selectSubmissions", p);
 	}
 
-	/** 관리자 — 특정 묶음의 항목들 */
+	/** 모델 승인 권한 — 특정 묶음의 항목들 */
 	@PostMapping("/submissionItems")
 	public List<com.ndata.quality.model.std.StdDataModelChangeHistoryVo> submissionItems(@RequestBody Map<String, Object> body) {
-		if (!sessionService.isAdmin()) return new ArrayList<>();
+		if (!sessionService.hasPerm(PermCode.DM_APPROVE)) return new ArrayList<>();
 		String submissionId = (String) body.get("submissionId");
 		return sqlSessionTemplate.selectList("dmChangeHistory.selectBySubmissionId", submissionId);
 	}
 
-	/** 관리자 — 선택 항목 승인 */
+	/** 모델 승인 권한 — 선택 항목 승인 */
 	@PostMapping("/approve")
 	@SuppressWarnings("unchecked")
 	public Mono<Response> approve(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.DM_APPROVE)) throw new IllegalStateException("권한이 없습니다 (모델 승인 권한 필요)");
 			List<Object> seqList = (List<Object>) body.get("changeSeqList");
 			if (seqList == null || seqList.isEmpty()) throw new IllegalArgumentException("changeSeqList 필수");
 			String now = LocalDateTime.now().format(DT_FMT);
@@ -139,13 +140,13 @@ public class DataModelApprovalController {
 		return Mono.just(res);
 	}
 
-	/** 관리자 — 선택 항목 반려 + 사유 */
+	/** 모델 승인 권한 — 선택 항목 반려 + 사유 */
 	@PostMapping("/reject")
 	@SuppressWarnings("unchecked")
 	public Mono<Response> reject(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.DM_APPROVE)) throw new IllegalStateException("권한이 없습니다 (모델 승인 권한 필요)");
 			List<Object> seqList = (List<Object>) body.get("changeSeqList");
 			if (seqList == null || seqList.isEmpty()) throw new IllegalArgumentException("changeSeqList 필수");
 			String now = LocalDateTime.now().format(DT_FMT);
@@ -475,13 +476,17 @@ public class DataModelApprovalController {
 		return sqlSessionTemplate.selectList("dmChangeHistory.selectRejectedAttrKeys", p);
 	}
 
-	/** 88번 §8 — 관리자: 변경 이력의 DDL_SNIPPET 을 실제 DB 에 실행 */
+	/**
+	 * 88번 §8 — 변경 이력의 DDL_SNIPPET 을 실제 DB 에 실행.
+	 * 104번 WP2 — DB 반영 권한(DDL_EXEC)은 시스템 단위다. 건마다 그 변경의 모델이 속한 시스템
+	 * (TB_DATA_MODEL.DM_SYS_CD)에 대한 권한을 본다. 시스템이 없는 모델은 모든 시스템으로 받은 권한만 통한다.
+	 */
 	@PostMapping("/execDdl")
 	@SuppressWarnings("unchecked")
 	public Mono<Response> execDdl(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			if (!sessionService.isAdmin()) throw new IllegalStateException("관리자 권한 필요");
+			if (!sessionService.hasPerm(PermCode.DDL_EXEC)) throw new IllegalStateException("권한이 없습니다 (DB 반영 권한 필요)");
 			List<Object> seqList = (List<Object>) body.get("changeSeqList");
 			String dsId = (String) body.get("dsId");
 			if (seqList == null || seqList.isEmpty()) throw new IllegalArgumentException("changeSeqList 필수");
@@ -497,6 +502,12 @@ public class DataModelApprovalController {
 			for (Object seq : seqList) {
 				Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
 				if (hist == null) { failed++; messages.add(seq + ": history 없음"); continue; }
+				String sysCd = sqlSessionTemplate.selectOne("role.selectSysCdByChangeSeq", seq);
+				if (!sessionService.hasPerm(PermCode.DDL_EXEC, sysCd)) {
+					failed++;
+					messages.add(seq + ": 이 모델의 시스템(" + (sysCd == null ? "지정 안 됨" : sysCd) + ")에 대한 DB 반영 권한이 없습니다");
+					continue;
+				}
 				String ddl = (String) hist.get("ddl_snippet");
 				if (ddl == null || ddl.trim().isEmpty() || ddl.startsWith("--") || ddl.contains("(...)")) {
 					failed++; messages.add(seq + ": 실행 가능한 DDL 없음 (snippet=" + ddl + ")");
@@ -539,12 +550,12 @@ public class DataModelApprovalController {
 		return Mono.just(res);
 	}
 
-	/** 변경 이력 조회 (관리자: 전체, 사용자: 본인 + APPROVED) */
+	/** 변경 이력 조회 (관리자·DM_APPROVE: 전체, 그 밖: 본인 + APPROVED) */
 	@PostMapping("/history")
 	public List<com.ndata.quality.model.std.StdDataModelChangeHistoryVo> history(@RequestBody Map<String, Object> body) {
 		Map<String, Object> p = new HashMap<>(body);
 		p.put("currentUserId", changeHistory.safeUserId());
-		p.put("isAdmin",       sessionService.isAdmin());
+		p.put("viewAll",       sessionService.hasPerm(PermCode.DM_APPROVE));
 		return sqlSessionTemplate.selectList("dmChangeHistory.selectByDmId", p);
 	}
 }

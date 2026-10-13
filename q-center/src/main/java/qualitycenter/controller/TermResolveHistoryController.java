@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ndata.quality.common.PermCode;
 import com.ndata.quality.service.ExcelDownloadService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,7 @@ import qualitycenter.service.auth.SessionService;
 /**
  * 88번 §16 — 한글 변환 이력 (매핑 정의서 작성용).
  * 표준화 액션 시점에 자동으로 input vs resolved 기록.
- * 관리자: 전체 / 사용자: 본인 변환 이력만 조회.
+ * 관리자·STD_MANAGE 권한: 전체 / 그 밖: 본인 변환 이력만 조회.
  */
 @Slf4j
 @RestController
@@ -38,7 +39,7 @@ public class TermResolveHistoryController {
 	@PostMapping("/list")
 	public List<Map<String, Object>> list(@RequestBody(required = false) Map<String, Object> body) {
 		Map<String, Object> p = new HashMap<>(body == null ? new HashMap<>() : body);
-		p.put("isAdmin",       sessionService.isAdmin());
+		p.put("viewAll",       sessionService.hasPerm(PermCode.STD_MANAGE));
 		p.put("currentUserId", sessionService.getUserId());
 		return sqlSessionTemplate.selectList("termResolve.selectList", p);
 	}
@@ -62,7 +63,7 @@ public class TermResolveHistoryController {
 		p.put("dmId",          dmId);
 		p.put("fromDt",        fromDt);
 		p.put("toDt",           toDt);
-		p.put("isAdmin",       sessionService.isAdmin());
+		p.put("viewAll",       sessionService.hasPerm(PermCode.STD_MANAGE));
 		p.put("currentUserId", sessionService.getUserId());
 		excelDownloadService.getTermResolveHistoryExcel(p, request, response);
 	}

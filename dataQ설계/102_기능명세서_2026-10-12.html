@@ -242,10 +242,10 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
   <h1>NavidM Meta 기능명세서</h1>
   <p class="lede">NavidM Meta 소스 코드를 전부 읽고, 지금 코드에 들어 있는 기능을 화면·서버 처리·백그라운드 작업 단위로 정리했다. 코드를 근거로 한 명세이고, 실데이터·실사용 검증은 따로 해야 한다.</p>
   <div class="figs">
-    <div class="fig"><b>544</b><span>기능 (화면 412 · 백그라운드·규칙 94 · 화면 없는 API 38)</span></div>
-    <div class="fig"><b>250</b><span>API (웹 서버 236 · 작업 서버 14)</span></div>
+    <div class="fig"><b>552</b><span>기능 (화면 420 · 백그라운드·규칙 94 · 화면 없는 API 38)</span></div>
+    <div class="fig"><b>259</b><span>API (웹 서버 245 · 작업 서버 14)</span></div>
     <div class="fig"><b>41</b><span>화면</span></div>
-    <div class="fig"><b>40</b><span>메뉴 항목 (관리자 전용 포함)</span></div>
+    <div class="fig"><b>42</b><span>메뉴 항목 (권한별 메뉴 포함)</span></div>
     <div class="fig"><b>10</b><span>기능 영역</span></div>
   </div>
   <p class="basis">기준: main 브랜치 소스 (q-common · q-center · q-executor, Vue 화면 포함). 기능별 API·검증 메시지·근거 파일 위치는 같은 이름의 md 원문에 있다.</p>
@@ -267,7 +267,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
       <!-- q-center -->
       <rect class="d-key" x="256" y="60" width="230" height="168" rx="8"/>
       <text class="d-t" x="272" y="90">q-center 웹 서버</text>
-      <text class="d-s" x="272" y="116">화면 제공 · API 236개</text>
+      <text class="d-s" x="272" y="116">화면 제공 · API 245개</text>
       <text class="d-s" x="272" y="137">로그인 · 권한 · 세션</text>
       <text class="d-s" x="272" y="158">실시간 알림 중계</text>
       <text class="d-m" x="272" y="208">포트 28091</text>
@@ -305,22 +305,22 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
     </svg>
   </div>
   <div class="mods">
-    <div class="mod"><h3>q-center <code>웹 서버</code></h3><p>Vue 화면을 내려주고 API 를 받는다. 로그인·세션·관리자 판정, 표준 사전과 데이터 모델 편집, 승인 처리, 작업 서버로 보내는 요청과 진행 알림 중계를 맡는다.</p></div>
+    <div class="mod"><h3>q-center <code>웹 서버</code></h3><p>Vue 화면을 내려주고 API 를 받는다. 로그인·세션·권한 판정, 표준 사전과 데이터 모델 편집, 승인 처리, 작업 서버로 보내는 요청과 진행 알림 중계를 맡는다.</p></div>
     <div class="mod"><h3>q-executor <code>작업 서버</code></h3><p>오래 걸리는 일을 별도 스레드로 돌린다. 데이터 모델 수집, 표준 진단, 구조 변경 진단, 엑셀 일괄등록, 정해진 시각에 진단을 띄우는 스케줄러.</p></div>
-    <div class="mod"><h3>q-common <code>공용 모듈</code></h3><p>두 서버가 함께 쓰는 데이터 객체, MyBatis 매퍼 XML 24개, 엑셀 처리 같은 공용 서비스.</p></div>
+    <div class="mod"><h3>q-common <code>공용 모듈</code></h3><p>두 서버가 함께 쓰는 데이터 객체, MyBatis 매퍼 XML 25개, 엑셀 처리 같은 공용 서비스.</p></div>
   </div>
 </section>
 
 <section class="blk" id="scale">
   <h2><span class="sn">2</span>영역별 기능 규모</h2>
-  <p class="sub">기능 544개를 10개 영역으로 나눴다. 막대 길이는 기능 수다. 영역 이름을 누르면 6장의 해당 기능 목록으로 간다.</p>
+  <p class="sub">기능 552개를 10개 영역으로 나눴다. 막대 길이는 기능 수다. 영역 이름을 누르면 6장의 해당 기능 목록으로 간다.</p>
   <ul class="bars">
 <li class="bar-row">
   <a class="bar-label" href="#ch1"><span class="bar-no">1</span>공통</a>
-  <span class="bar-track" role="img" aria-label="공통: 화면 기능 63, 백그라운드·규칙 0, 화면 없는 API 4">
-    <span class="seg seg-ui" style="width:55.75%"></span><span class="seg seg-bg" style="width:0.00%"></span><span class="seg seg-api" style="width:3.54%"></span>
+  <span class="bar-track" role="img" aria-label="공통: 화면 기능 66, 백그라운드·규칙 0, 화면 없는 API 4">
+    <span class="seg seg-ui" style="width:58.41%"></span><span class="seg seg-bg" style="width:0.00%"></span><span class="seg seg-api" style="width:3.54%"></span>
   </span>
-  <span class="bar-num">67</span>
+  <span class="bar-num">70</span>
 </li>
 <li class="bar-row">
   <a class="bar-label" href="#ch2"><span class="bar-no">2</span>대시보드·검색</a>
@@ -380,14 +380,14 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 </li>
 <li class="bar-row">
   <a class="bar-label" href="#ch10"><span class="bar-no">10</span>관리</a>
-  <span class="bar-track" role="img" aria-label="관리: 화면 기능 30, 백그라운드·규칙 0, 화면 없는 API 1">
-    <span class="seg seg-ui" style="width:26.55%"></span><span class="seg seg-bg" style="width:0.00%"></span><span class="seg seg-api" style="width:0.88%"></span>
+  <span class="bar-track" role="img" aria-label="관리: 화면 기능 35, 백그라운드·규칙 0, 화면 없는 API 1">
+    <span class="seg seg-ui" style="width:30.97%"></span><span class="seg seg-bg" style="width:0.00%"></span><span class="seg seg-api" style="width:0.88%"></span>
   </span>
-  <span class="bar-num">31</span>
+  <span class="bar-num">36</span>
 </li>
   </ul>
   <ul class="legend">
-    <li><span class="sw seg-ui"></span>화면 기능 412</li>
+    <li><span class="sw seg-ui"></span>화면 기능 420</li>
     <li><span class="sw seg-bg"></span>백그라운드 처리·업무 규칙 94</li>
     <li><span class="sw seg-api"></span>화면에서 부르지 않는 API 38</li>
   </ul>
@@ -395,7 +395,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 
 <section class="blk" id="menu">
   <h2><span class="sn">3</span>메뉴 구성</h2>
-  <p class="sub">왼쪽 메뉴에 나오는 그대로다. '관리' 그룹은 관리자에게만 보인다.</p>
+  <p class="sub">왼쪽 메뉴에 나오는 그대로다. 메뉴마다 권한(역할로 받는다, 관리자는 모두 가진다)으로 표시를 정하고, '관리' 그룹은 안의 메뉴가 하나라도 보이면 보인다.</p>
   <div class="menumap">
 <div class="mg"><h4>대시보드</h4><ul><li class="mi mi-on"><span>대시보드</span></li></ul></div>
 <div class="mg"><h4>데이터 표준 사전</h4><ul><li class="mi mi-on"><span>용어</span></li><li class="mi mi-on"><span>단어</span></li><li class="mi mi-on"><span>코드</span></li><li class="mi mi-on"><span>도메인</span></li><li class="mi mi-on"><span>도메인 그룹</span></li><li class="mi mi-on"><span>도메인 분류</span></li><li class="mi mi-on"><span>변경 이력</span></li></ul></div>
@@ -404,13 +404,13 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <div class="mg"><h4>구조 변경 진단</h4><ul><li class="mi mi-on"><span>진단 실행</span></li><li class="mi mi-on"><span>진단 결과</span></li></ul></div>
 <div class="mg"><h4>표준화 도구</h4><ul><li class="mi mi-on"><span>한글컬럼 일괄 표준화</span></li><li class="mi mi-on"><span>한글 변환 이력</span></li></ul></div>
 <div class="mg"><h4>커뮤니티</h4><ul><li class="mi mi-on"><span>공지사항</span></li><li class="mi mi-on"><span>Q&amp;A</span></li></ul></div>
-<div class="mg mg-adm"><h4>스케줄 관리</h4><ul><li class="mi mi-on"><span>스케줄 관리</span></li><li class="mi mi-on"><span>실행 이력</span></li></ul></div>
-<div class="mg"><h4>마이페이지</h4><ul><li class="mi mi-on"><span>내 정보</span></li><li class="mi mi-on"><span>표준 사전 변경 요청 현황</span></li><li class="mi mi-usr"><span>내 변경 신청</span><span class="mi-tag">일반 사용자</span></li><li class="mi mi-adm"><span>데이터 모델 변경 승인</span><span class="mi-tag">관리자</span></li></ul></div>
-<div class="mg mg-adm"><h4>관리</h4><ul><li class="mi mi-adm"><span>사용자</span><span class="mi-tag">관리자</span></li><li class="mi mi-hide"><span>역할 및 권한</span><span class="mi-tag">숨김</span></li><li class="mi mi-adm"><span>표준 사전 변경 승인</span><span class="mi-tag">관리자</span></li><li class="mi mi-adm"><span>데이터 모델 변경 승인</span><span class="mi-tag">관리자</span></li><li class="mi mi-adm"><span>영역 관리 (업무/주제)</span><span class="mi-tag">관리자</span></li><li class="mi mi-adm"><span>표준사전 관리</span><span class="mi-tag">관리자</span></li><li class="mi mi-adm"><span>데이터 소스</span><span class="mi-tag">관리자</span></li></ul></div>
+<div class="mg"><h4>스케줄 관리</h4><ul><li class="mi mi-on"><span>스케줄 관리</span></li><li class="mi mi-on"><span>실행 이력</span></li></ul></div>
+<div class="mg"><h4>마이페이지</h4><ul><li class="mi mi-on"><span>내 정보</span></li><li class="mi mi-on"><span>표준 사전 변경 요청 현황</span></li><li class="mi mi-usr"><span>내 변경 신청</span><span class="mi-tag">모델 직접 반영 없음</span></li><li class="mi mi-adm"><span>데이터 모델 변경 승인</span><span class="mi-tag">모델 승인</span></li></ul></div>
+<div class="mg mg-adm"><h4>관리</h4><ul><li class="mi mi-adm"><span>사용자</span><span class="mi-tag">사용자·권한 관리</span></li><li class="mi mi-adm"><span>역할 및 권한</span><span class="mi-tag">사용자·권한 관리</span></li><li class="mi mi-adm"><span>표준 사전 변경 승인</span><span class="mi-tag">표준 승인</span></li><li class="mi mi-adm"><span>데이터 모델 변경 승인</span><span class="mi-tag">모델 승인</span></li><li class="mi mi-adm"><span>영역 관리 (업무/주제)</span><span class="mi-tag">영역 관리</span></li><li class="mi mi-adm"><span>표준사전 관리</span><span class="mi-tag">표준사전 관리</span></li><li class="mi mi-adm"><span>데이터 소스</span><span class="mi-tag">데이터 소스 관리</span></li><li class="mi mi-adm"><span>시스템</span><span class="mi-tag">시스템 관리</span></li></ul></div>
   </div>
   <ul class="legend">
-    <li><span class="mi-tag" style="background:var(--adm-soft);color:var(--adm)">관리자</span>관리자에게만 보임</li>
-    <li><span class="mi-tag" style="background:var(--usr-soft);color:var(--usr)">일반 사용자</span>일반 사용자에게만 보임</li>
+    <li><span class="mi-tag" style="background:var(--adm-soft);color:var(--adm)">권한 이름</span>그 권한이 있는 사용자에게만 보임</li>
+    <li><span class="mi-tag" style="background:var(--usr-soft);color:var(--usr)">권한 이름 없음</span>그 권한이 없는 사용자에게만 보임</li>
     <li><span class="mi-tag" style="background:var(--hide-soft);color:var(--hide)">숨김</span>메뉴 항목을 화면에서 가림</li>
   </ul>
 </section>
@@ -423,8 +423,8 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
     <h3>표준 사전 등록과 승인 <small>3장 표준 사전 · 8장 승인</small></h3>
     <ol class="steps">
       <li><b>등록</b><span>단어·용어·코드·도메인을 화면에서 하나씩, 엑셀로 일괄, 한글컬럼 일괄 표준화로 한꺼번에 등록</span></li>
-      <li><b>승인 상태 결정</b><span>관리자가 등록하면 바로 승인. 일반 사용자가 등록하면 승인 대기</span></li>
-      <li><b>관리자 승인·반려</b><span>표준 사전 변경 승인 화면에서 건별·일괄 처리. 용어·코드는 구성 단어가 먼저 승인돼야 승인된다. 반려하면 사유를 남기고 항목을 지운다</span></li>
+      <li><b>승인 상태 결정</b><span>표준 직접 관리 권한(관리자는 모든 권한)이 있으면 바로 승인. 없으면 승인 대기</span></li>
+      <li><b>승인·반려</b><span>표준 승인 권한자가 표준 사전 변경 승인 화면에서 건별·일괄 처리. 용어·코드는 구성 단어가 먼저 승인돼야 승인된다. 반려하면 사유를 남기고 항목을 지운다</span></li>
       <li><b>결과 확인</b><span>승인 내역과 변경 이력이 쌓이고, 요청자는 표준 사전 변경 요청 현황에서 처리 결과와 사유를 본다</span></li>
     </ol>
     <p class="note">단어·용어·도메인·코드는 표준사전 단위로 나뉜다. 기관마다 표준화 관례가 다르면 사전을 따로 두고, 데이터 모델마다 쓸 사전을 지정한다.</p>
@@ -456,13 +456,13 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
     </div>
     <div class="diag-split">
       <div class="diag-card"><h4>어떤 변경이 승인을 거치나</h4><ul>
-        <li>스키마에 영향을 주는 변경 (TIER1): 테이블·컬럼 추가·삭제, 영문명·소유자·타입·길이 변경 — 일반 사용자는 승인 필요</li>
+        <li>스키마에 영향을 주는 변경 (TIER1): 테이블·컬럼 추가·삭제, 영문명·소유자·타입·길이 변경 — 모델 직접 반영 권한이 없으면 승인 필요</li>
         <li>그 밖의 수정 (TIER2): 한글명·설명·NULL 여부·디폴트 등 — 바로 반영, 이력만 남김</li>
-        <li>관리자가 한 변경은 바로 승인 상태</li>
+        <li>모델 직접 반영 권한자(관리자 포함)가 한 변경은 바로 승인 상태. 신청 묶음은 모델 승인 권한자가 처리</li>
       </ul></div>
       <div class="diag-card"><h4>승인 뒤</h4><ul>
         <li>변경마다 변경 전후 값과 DDL 조각을 이력에 남긴다</li>
-        <li>관리자가 [DB 반영] 으로 대상 DB 에 DDL 을 실행한다</li>
+        <li>그 모델 시스템의 DB 반영 권한자가 [DB 반영] 으로 대상 DB 에 DDL 을 실행한다</li>
         <li>실행 결과를 성공 · 권한 없음 · 실패 · 건너뜀 으로 나눠 기록한다</li>
       </ul></div>
     </div>
@@ -537,12 +537,12 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <section class="chap" id="ch1">
   <header class="chap-head">
     <span class="chap-no">1</span>
-    <div class="chap-title"><h3>공통 — 로그인·보안·화면 구조·실시간 통신</h3><p>로그인과 계정 잠금, 세션과 관리자 판정, 탭으로 여는 화면 구조와 메뉴, 화면 사이 이동, 작업 진행을 알려 주는 실시간 알림(WebSocket), 서버 설정을 다룬다.</p></div>
-    <dl class="chap-meta"><div><dt>기능</dt><dd>67</dd></div><div><dt>화면</dt><dd>1</dd></div></dl>
+    <div class="chap-title"><h3>공통 — 로그인·보안·화면 구조·실시간 통신</h3><p>로그인과 계정 잠금, 세션, 역할로 나눠 주는 권한(관리자는 모든 권한), 탭으로 여는 화면 구조와 메뉴, 화면 사이 이동, 작업 진행을 알려 주는 실시간 알림(WebSocket), 서버 설정을 다룬다.</p></div>
+    <dl class="chap-meta"><div><dt>기능</dt><dd>70</dd></div><div><dt>화면</dt><dd>1</dd></div></dl>
   </header>
   <ul class="screens"><li>로그인·최초 관리자</li></ul>
   <details class="flist" data-ch="1">
-    <summary>기능 목록 <b>67</b>건 펼쳐 보기</summary>
+    <summary>기능 목록 <b>70</b>건 펼쳐 보기</summary>
     <div class="tbl-wrap"><table class="ftable"><thead><tr><th scope="col">기능ID</th><th scope="col">기능명</th><th scope="col">동작</th></tr></thead><tbody>
 <tr class="sec"><th colspan="3" scope="colgroup">1.1 로그인·최초 관리자 — <code>NdLogin.vue</code></th></tr><tr data-q="com-001 입력 검증 아이디 또는 비밀번호가 비어 있으면 요청을 보내지 않고 오류창을 띄운다. 입력칸 규칙으로 칸별 안내도 표시한다."><td class="fid">COM-001</td><td class="fname">입력 검증</td><td class="fact">아이디 또는 비밀번호가 비어 있으면 요청을 보내지 않고 오류창을 띄운다. 입력칸 규칙으로 칸별 안내도 표시한다.</td></tr>
 <tr data-q="com-002 로그인 요청·인증 비밀번호를 btoa 로 base64 인코딩해 id·password 를 multipart 폼으로 전송한다. spring security 폼 로그인(파라미터 id/password)이 받아 customauthenticationprovider 가 base64 디코딩 후 sessionservice.login 을 호출한다: tb_user.block_time 확인 → tb_user 조회(del_yn 이 true 가 아닌 행) → 입력값의 sha-256 결과를 저장 해시(pwd)와 pbkdf2 로 대조 → 일치하면 이름·이메일·전화·관리자 여부를 세션 사용자(uservo)에 담고 tb_user.login_fail_count=0, block_time=null 로 초기화한다."><td class="fid">COM-002</td><td class="fname">로그인 요청·인증</td><td class="fact">비밀번호를 <code>btoa</code> 로 Base64 인코딩해 <code>id</code>·<code>password</code> 를 multipart 폼으로 전송한다. Spring Security 폼 로그인(파라미터 <code>id</code>/<code>password</code>)이 받아 <code>CustomAuthenticationProvider</code> 가 Base64 디코딩 후 <code>SessionService.login</code> 을 호출한다: TB_USER.BLOCK_TIME 확인 → TB_USER 조회(DEL_YN 이 true 가 아닌 행) → 입력값의 SHA-256 결과를 저장 해시(PWD)와 PBKDF2 로 대조 → 일치하면 이름·이메일·전화·관리자 여부를 세션 사용자(UserVo)에 담고 TB_USER.LOGIN_FAIL_COUNT=0, BLOCK_TIME=NULL 로 초기화한다.</td></tr>
@@ -570,7 +570,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <tr data-q="com-024 탭 목록 드롭다운 탭이 하나 이상이면 탭 바 오른쪽 ▼ 아이콘으로 열린 탭 목록을 보여주고 현재 탭에 체크 표시를 한다. 항목을 누르면 그 탭으로 이동한다."><td class="fid">COM-024</td><td class="fname">탭 목록 드롭다운</td><td class="fact">탭이 하나 이상이면 탭 바 오른쪽 ▼ 아이콘으로 열린 탭 목록을 보여주고 현재 탭에 체크 표시를 한다. 항목을 누르면 그 탭으로 이동한다.</td></tr>
 <tr data-q="com-025 탭 본문 표시 탭 키별로 v-if 로 감싼 영역 안에 keep-alive 로 컴포넌트를 그린다. 탭 키→컴포넌트 연결은 1.4 표와 같다."><td class="fid">COM-025</td><td class="fname">탭 본문 표시</td><td class="fact">탭 키별로 <code>v-if</code> 로 감싼 영역 안에 <code>keep-alive</code> 로 컴포넌트를 그린다. 탭 키→컴포넌트 연결은 1.4 표와 같다.</td></tr>
 <tr data-q="com-026 공통 모달 틀 제목·본문 슬롯·하단 왼쪽 슬롯과 하단 버튼(보조 버튼, 닫기, 확인)을 가진 카드(높이 80vh). 버튼 표시 여부와 문구는 호출 화면이 props(footersubbtn/footersubbtntitle, footerhidetitle, footersubmit/footersubmittitle)로 정하고, 누르면 subbtn·hide·submit 이벤트를 올린다. dsword·dsterm·dscode·dsdomain·dsdomaingroup·dsdomainclassification·dsdatamodelcollection·dsdatamodelstatus·dsdatamodelstatuscolumn·mmdatasource·mmsystem 이 사용한다."><td class="fid">COM-026</td><td class="fname">공통 모달 틀</td><td class="fact">제목·본문 슬롯·하단 왼쪽 슬롯과 하단 버튼(보조 버튼, 닫기, 확인)을 가진 카드(높이 80vh). 버튼 표시 여부와 문구는 호출 화면이 props(<code>footerSubbtn</code>/<code>footerSubbtnTitle</code>, <code>footerHideTitle</code>, <code>footerSubmit</code>/<code>footerSubmitTitle</code>)로 정하고, 누르면 <code>subbtn</code>·<code>hide</code>·<code>submit</code> 이벤트를 올린다. DSWord·DSTerm·DSCode·DSDomain·DSDomainGroup·DSDomainClassification·DSDatamodelCollection·DSDatamodelStatus·DSDatamodelStatusColumn·MMDatasource·MMSystem 이 사용한다.</td></tr>
-<tr class="sec"><th colspan="3" scope="colgroup">1.4 메뉴 트리 — <code>NdNav.vue</code></th></tr><tr data-q="com-027 관리자 메뉴 표시 메뉴가 마운트될 때 sessionstorage 의 로그인 id 로 관리자 여부를 조회해, true 면 '관리' 그룹과 마이페이지 '데이터 모델 변경 승인'을, false 면 마이페이지 '내 변경 신청'을 보여준다."><td class="fid">COM-027</td><td class="fname">관리자 메뉴 표시</td><td class="fact">메뉴가 마운트될 때 sessionStorage 의 로그인 ID 로 관리자 여부를 조회해, true 면 '관리' 그룹과 마이페이지 '데이터 모델 변경 승인'을, false 면 마이페이지 '내 변경 신청'을 보여준다.</td></tr>
+<tr class="sec"><th colspan="3" scope="colgroup">1.4 메뉴 트리 — <code>NdNav.vue</code></th></tr><tr data-q="com-027 권한별 메뉴 표시 메뉴 항목마다 로그인 사용자의 권한 코드(com-070)로 표시를 정한다. '관리' 그룹은 사용자·역할 및 권한(user_admin)·표준 사전 변경 승인(std_approve)·데이터 모델 변경 승인(dm_approve)·영역 관리(area_admin)·표준사전 관리(dict_admin)·데이터 소스(ds_admin)·시스템(sys_admin) 가운데 하나라도 보이면 보인다. 마이페이지 '데이터 모델 변경 승인'은 dm_approve, '내 변경 신청'은 dm_manage 가 없을 때 보인다."><td class="fid">COM-027</td><td class="fname">권한별 메뉴 표시</td><td class="fact">메뉴 항목마다 로그인 사용자의 권한 코드(COM-070)로 표시를 정한다. '관리' 그룹은 사용자·역할 및 권한(USER_ADMIN)·표준 사전 변경 승인(STD_APPROVE)·데이터 모델 변경 승인(DM_APPROVE)·영역 관리(AREA_ADMIN)·표준사전 관리(DICT_ADMIN)·데이터 소스(DS_ADMIN)·시스템(SYS_ADMIN) 가운데 하나라도 보이면 보인다. 마이페이지 '데이터 모델 변경 승인'은 DM_APPROVE, '내 변경 신청'은 DM_MANAGE 가 없을 때 보인다.</td></tr>
 <tr data-q="com-028 메뉴 그룹 펼치기·접기 그룹 제목을 누르면 해당 그룹의 펼침 상태를 바꾼다(mini 상태면 분할만 복원). 대시보드를 누르면 모든 그룹을 접는다."><td class="fid">COM-028</td><td class="fname">메뉴 그룹 펼치기·접기</td><td class="fact">그룹 제목을 누르면 해당 그룹의 펼침 상태를 바꾼다(mini 상태면 분할만 복원). 대시보드를 누르면 모든 그룹을 접는다.</td></tr>
 <tr data-q="com-029 알림 로그 패널 websocket 알림 문구를 쌓는 하단 패널(알림 로그, 펼침·접힘 아이콘)이 있으나 css display:none 으로 숨겨져 있다."><td class="fid">COM-029</td><td class="fname">알림 로그 패널</td><td class="fact">WebSocket 알림 문구를 쌓는 하단 패널(<code>알림 로그</code>, 펼침·접힘 아이콘)이 있으나 CSS <code>display:none</code> 으로 숨겨져 있다.</td></tr>
 <tr class="sec"><th colspan="3" scope="colgroup">1.5 화면 간 이동(eventBus) — <code>eventBus.js</code></th></tr><tr data-q="com-030 표준 진단 결과 열기 진단 실행 목록에서 완료(done) job 의 결과보기를 누르면 job id 를 pendingdiagjobid 에 넣고 opendiagresult 를 발행한다. 메뉴가 '진단 결과' 탭을 열거나 이동하고, 결과 화면이 job id 를 읽어 해당 job 을 선택한다."><td class="fid">COM-030</td><td class="fname">표준 진단 결과 열기</td><td class="fact">진단 실행 목록에서 완료(DONE) Job 의 <code>결과보기</code>를 누르면 Job ID 를 <code>pendingDiagJobId</code> 에 넣고 <code>openDiagResult</code> 를 발행한다. 메뉴가 '진단 결과' 탭을 열거나 이동하고, 결과 화면이 Job ID 를 읽어 해당 Job 을 선택한다.</td></tr>
@@ -611,6 +611,9 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <tr data-q="com-064 내장 관리자 존재 확인 내장 관리자 id 가 tb_user 에 미삭제 상태로 있는지 boolean 으로 돌려준다."><td class="fid">COM-064</td><td class="fname">내장 관리자 존재 확인</td><td class="fact">내장 관리자 ID 가 TB_USER 에 미삭제 상태로 있는지 boolean 으로 돌려준다.</td></tr>
 <tr data-q="com-065 내장 관리자 생성 내장 관리자가 아직 없을 때만 동작한다. 쿼리 password(base64)를 받아 tb_user 에 user_id·nm=내장 관리자 id, pwd=해시, adm_yn=true, cret_dt·updt_dt=현재, login_fail_count=0 을 insert 한다. 로그인 없이 부를 수 있다."><td class="fid">COM-065</td><td class="fname">내장 관리자 생성</td><td class="fact">내장 관리자가 아직 없을 때만 동작한다. 쿼리 <code>password</code>(Base64)를 받아 TB_USER 에 USER_ID·NM=내장 관리자 ID, PWD=해시, ADM_YN=true, CRET_DT·UPDT_DT=현재, LOGIN_FAIL_COUNT=0 을 INSERT 한다. 로그인 없이 부를 수 있다.</td></tr>
 <tr data-q="com-067 stomp 메시지 수신 /app/message 로 온 request 에서 사용자명(principal, dev 모드면 내장 관리자 id)과 servicename 이 없으면 끝내고, 있어도 아무 처리를 하지 않는다. 브라우저에서 send 하는 코드는 없다."><td class="fid">COM-067</td><td class="fname">STOMP 메시지 수신</td><td class="fact"><code>/app/message</code> 로 온 Request 에서 사용자명(Principal, dev 모드면 내장 관리자 ID)과 serviceName 이 없으면 끝내고, 있어도 아무 처리를 하지 않는다. 브라우저에서 SEND 하는 코드는 없다.</td></tr>
+<tr class="sec"><th colspan="3" scope="colgroup">1.10 권한 — 역할과 권한 코드 — <code>PermCode.java</code> · <code>PermService.java</code> · <code>perm.js</code></th></tr><tr data-q="com-068 권한 판정 (서버 공용) 사용자의 관리자 여부(tb_user.adm_yn)와 역할 권한(tb_user_role → tb_role_perm 의 권한 코드·범위)을 읽어 사용자별로 10초 캐시한다. 관리자면 모든 권한을 통과시킨다. 시스템 단위 권한은 범위가 ''(모든 시스템)이거나, 대상 시스템 또는 그 상위 시스템(tb_sys_info.p_sys_cd 를 따라 최대 20단계)에 받았을 때 통한다. 대상 시스템이 없으면 '' 범위만 통한다. 역할·사용자 지정을 바꾸면 q-center 캐시는 바로 비우고, q-executor(엑셀 일괄등록 승인값)는 10초 안에 따라온다. 서버 api 는 세션 사용자를 이 판정에 넣어 권한을 검사한다(sessionservice.hasperm)."><td class="fid">COM-068</td><td class="fname">권한 판정 (서버 공용)</td><td class="fact">사용자의 관리자 여부(TB_USER.ADM_YN)와 역할 권한(TB_USER_ROLE → TB_ROLE_PERM 의 권한 코드·범위)을 읽어 사용자별로 10초 캐시한다. 관리자면 모든 권한을 통과시킨다. 시스템 단위 권한은 범위가 '*'(모든 시스템)이거나, 대상 시스템 또는 그 상위 시스템(TB_SYS_INFO.P_SYS_CD 를 따라 최대 20단계)에 받았을 때 통한다. 대상 시스템이 없으면 '*' 범위만 통한다. 역할·사용자 지정을 바꾸면 q-center 캐시는 바로 비우고, q-executor(엑셀 일괄등록 승인값)는 10초 안에 따라온다. 서버 API 는 세션 사용자를 이 판정에 넣어 권한을 검사한다(<code>SessionService.hasPerm</code>).</td></tr>
+<tr data-q="com-069 로그인 사용자 권한 조회 {admin, perms: {권한 코드: [범위 …]}, roles: [{roleid, rolenm, syscd, sysnm}]} 를 돌려준다. 관리자는 14개 코드 모두 ['']."><td class="fid">COM-069</td><td class="fname">로그인 사용자 권한 조회</td><td class="fact"><code>{admin, perms: {권한 코드: [범위 …]}, roles: [{roleId, roleNm, sysCd, sysNm}]}</code> 를 돌려준다. 관리자는 14개 코드 모두 <code>['*']</code>.</td></tr>
+<tr data-q="com-070 화면 권한 표시 로그인 화면이 아닌 곳에서 앱이 시작될 때 com-069 를 한 번 읽어 공용 상태에 두고, 화면은 this.$can(권한 코드[, 시스템]) 으로 메뉴·버튼 표시를 정한다(반응형). 역할 화면에서 역할을 저장·삭제하면 다시 읽는다. 표시용이며 서버가 같은 기준으로 다시 검사한다."><td class="fid">COM-070</td><td class="fname">화면 권한 표시</td><td class="fact">로그인 화면이 아닌 곳에서 앱이 시작될 때 COM-069 를 한 번 읽어 공용 상태에 두고, 화면은 <code>this.$can(권한 코드[, 시스템])</code> 으로 메뉴·버튼 표시를 정한다(반응형). 역할 화면에서 역할을 저장·삭제하면 다시 읽는다. 표시용이며 서버가 같은 기준으로 다시 검사한다.</td></tr>
     </tbody></table></div>
   </details>
 </section>
@@ -783,7 +786,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
     <div class="tbl-wrap"><table class="ftable"><thead><tr><th scope="col">기능ID</th><th scope="col">기능명</th><th scope="col">동작</th></tr></thead><tbody>
 <tr class="sec"><th colspan="3" scope="colgroup">4.1 데이터 모델 관리 — <code>DSDatamodelCollection.vue</code></th></tr><tr data-q="dm-001 데이터 모델 목록 조회 진입 시와 [검색]·enter 때 모델명으로 조회한다. tb_data_model(use_yn='y')에 최신 수집 이력(tb_data_model_clct 중 clct_end_dt 최대) 1건을 붙이고 데이터소스명·시스템명·표준사전(id·사전명)을 함께 돌려준다. 모델명은 ilike 부분일치, 정렬은 생성일시 역순 → 수집 완료일시 역순. 조회 뒤 하단 상세를 닫는다. [초기화]는 검색어만 지우고 재조회하지 않는다."><td class="fid">DM-001</td><td class="fname">데이터 모델 목록 조회</td><td class="fact">진입 시와 [검색]·Enter 때 모델명으로 조회한다. TB_DATA_MODEL(USE_YN='Y')에 최신 수집 이력(TB_DATA_MODEL_CLCT 중 CLCT_END_DT 최대) 1건을 붙이고 데이터소스명·시스템명·표준사전(ID·사전명)을 함께 돌려준다. 모델명은 ILIKE 부분일치, 정렬은 생성일시 역순 → 수집 완료일시 역순. 조회 뒤 하단 상세를 닫는다. [초기화]는 검색어만 지우고 재조회하지 않는다.</td></tr>
 <tr data-q="dm-002 모델 상세 보기 모델명을 누르면 하단에 상세를 펼치고, 삭제 대상을 그 1건으로 바꾸고, 스키마 수집 범위를 불러온다(dm-006)."><td class="fid">DM-002</td><td class="fname">모델 상세 보기</td><td class="fact">모델명을 누르면 하단에 상세를 펼치고, 삭제 대상을 그 1건으로 바꾸고, 스키마 수집 범위를 불러온다(DM-006).</td></tr>
-<tr data-q="dm-003 데이터 모델 등록 [등록] → 모달 "데이터 모델 등록". 데이터 소스 목록(연결 테스트를 안 한 소스는 이름 뒤 "(연결 미확인)")과 사전 목록(기본 사전을 미리 선택)을 불러온다. [등록] 시 서버가 dm_id(uuid)·등록자를 채워 tb_data_model 에 insert 한다(model_type 미지정 시 'physical', cret_dt=현재). 버전을 비우면 '1.0'. 데이터 소스는 비워 둘 수 있다(논리 모델)."><td class="fid">DM-003</td><td class="fname">데이터 모델 등록</td><td class="fact">[등록] → 모달 "데이터 모델 등록". 데이터 소스 목록(연결 테스트를 안 한 소스는 이름 뒤 "(연결 미확인)")과 사전 목록(기본 사전을 미리 선택)을 불러온다. [등록] 시 서버가 DM_ID(UUID)·등록자를 채워 TB_DATA_MODEL 에 INSERT 한다(MODEL_TYPE 미지정 시 'PHYSICAL', CRET_DT=현재). 버전을 비우면 '1.0'. 데이터 소스는 비워 둘 수 있다(논리 모델).</td></tr>
+<tr data-q="dm-003 데이터 모델 등록 [등록] → 모달 "데이터 모델 등록". 데이터 소스 목록(연결 테스트를 안 한 소스는 이름 뒤 "(연결 미확인)")과 사전 목록(기본 사전을 미리 선택)을 불러온다. 시스템을 고르면 그 시스템에 기본 표준사전(tb_sys_info.dict_id, 10.5 절)이 있을 때 사전 선택을 그 사전으로 바꾼다. [등록] 시 서버가 dm_id(uuid)·등록자를 채워 tb_data_model 에 insert 한다(model_type 미지정 시 'physical', cret_dt=현재). 버전을 비우면 '1.0'. 데이터 소스는 비워 둘 수 있다(논리 모델)."><td class="fid">DM-003</td><td class="fname">데이터 모델 등록</td><td class="fact">[등록] → 모달 "데이터 모델 등록". 데이터 소스 목록(연결 테스트를 안 한 소스는 이름 뒤 "(연결 미확인)")과 사전 목록(기본 사전을 미리 선택)을 불러온다. 시스템을 고르면 그 시스템에 기본 표준사전(TB_SYS_INFO.DICT_ID, 10.5 절)이 있을 때 사전 선택을 그 사전으로 바꾼다. [등록] 시 서버가 DM_ID(UUID)·등록자를 채워 TB_DATA_MODEL 에 INSERT 한다(MODEL_TYPE 미지정 시 'PHYSICAL', CRET_DT=현재). 버전을 비우면 '1.0'. 데이터 소스는 비워 둘 수 있다(논리 모델).</td></tr>
 <tr data-q="dm-004 데이터 모델 수정 하단 [수정] → 모달 "데이터 모델 수정"(선택 모델 값을 채우고 시스템 코드 기준 데이터 소스 목록을 불러옴) → [수정] 시 tb_data_model 의 dm_nm·dm_sys_cd·dm_ds_id·ver·dict_id·수정일시·수정자를 update 한다."><td class="fid">DM-004</td><td class="fname">데이터 모델 수정</td><td class="fact">하단 [수정] → 모달 "데이터 모델 수정"(선택 모델 값을 채우고 시스템 코드 기준 데이터 소스 목록을 불러옴) → [수정] 시 TB_DATA_MODEL 의 DM_NM·DM_SYS_CD·DM_DS_ID·VER·DICT_ID·수정일시·수정자를 UPDATE 한다.</td></tr>
 <tr data-q="dm-005 데이터 모델 삭제 체크한 모델(모델명을 눌렀으면 그 1건) → 확인창 "정말로 데이터 모델을 삭제할까요?"(모델명, "⚠ 해당 모델로 등록된 진단 스케줄도 함께 비활성화됩니다.", [삭제]/[취소]) → tb_data_model.use_yn='n'(소프트 삭제) 후 같은 모델의 tb_diag_schedule.use_yn='n'. 스케줄 비활성화가 실패해도 모델 삭제는 유지하고, 비활성화 건수를 응답 contents 에 담는다. 하위 테이블·컬럼 행은 그대로 둔다."><td class="fid">DM-005</td><td class="fname">데이터 모델 삭제</td><td class="fact">체크한 모델(모델명을 눌렀으면 그 1건) → 확인창 "정말로 데이터 모델을 삭제할까요?"(모델명, "⚠ 해당 모델로 등록된 진단 스케줄도 함께 비활성화됩니다.", [삭제]/[취소]) → TB_DATA_MODEL.USE_YN='N'(소프트 삭제) 후 같은 모델의 TB_DIAG_SCHEDULE.USE_YN='N'. 스케줄 비활성화가 실패해도 모델 삭제는 유지하고, 비활성화 건수를 응답 contents 에 담는다. 하위 테이블·컬럼 행은 그대로 둔다.</td></tr>
 <tr data-q="dm-006 스키마 수집 범위 조회 상세를 열면 (1) 모델의 데이터소스에 직접 접속해 dbms 유형별 스키마 조회 sql 을 실행하고 시스템 스키마를 걸러 {스키마 목록, 접속 사용자}를 받고 (2) 저장된 수집 필터(tb_data_model_schema)를 받는다. 저장값이 있는 스키마는 그 값, 없는 스키마는 접속 사용자명과 같을 때만 체크한다. 스키마가 1개 이상이면 곧바로 현재 목록으로 다시 저장해(dm-007) 없어진 스키마 행을 정리한다. dbms별 sql·제외 목록은 4.10 표."><td class="fid">DM-006</td><td class="fname">스키마 수집 범위 조회</td><td class="fact">상세를 열면 (1) 모델의 데이터소스에 직접 접속해 DBMS 유형별 스키마 조회 SQL 을 실행하고 시스템 스키마를 걸러 {스키마 목록, 접속 사용자}를 받고 (2) 저장된 수집 필터(TB_DATA_MODEL_SCHEMA)를 받는다. 저장값이 있는 스키마는 그 값, 없는 스키마는 접속 사용자명과 같을 때만 체크한다. 스키마가 1개 이상이면 곧바로 현재 목록으로 다시 저장해(DM-007) 없어진 스키마 행을 정리한다. DBMS별 SQL·제외 목록은 4.10 표.</td></tr>
@@ -858,7 +861,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <section class="chap" id="ch5">
   <header class="chap-head">
     <span class="chap-no">5</span>
-    <div class="chap-title"><h3>데이터 모델 거버넌스·진단 제외·영역 관리</h3><p>일반 사용자의 데이터 모델 변경은 저장(DRAFT) → 신청 → 관리자 승인·반려를 거친다. 변경 이력에 DDL 조각을 남기고 관리자가 대상 DB 에 반영한다. 진단 제외 대상과 업무영역도 여기서 관리한다.</p></div>
+    <div class="chap-title"><h3>데이터 모델 거버넌스·진단 제외·영역 관리</h3><p>모델 직접 반영 권한이 없는 사용자의 데이터 모델 변경은 저장(DRAFT) → 신청 → 모델 승인 권한자의 승인·반려를 거친다. 변경 이력에 DDL 조각을 남기고 그 시스템의 DB 반영 권한자가 대상 DB 에 반영한다. 진단 제외 대상과 업무영역도 여기서 관리한다.</p></div>
     <dl class="chap-meta"><div><dt>기능</dt><dd>48</dd></div><div><dt>화면</dt><dd>5</dd></div></dl>
   </header>
   <ul class="screens"><li>내 변경 신청</li><li>데이터 모델 변경 승인</li><li>데이터 모델 변경 이력</li><li>진단 제외 관리</li><li>영역 관리</li></ul>
@@ -1095,7 +1098,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <section class="chap" id="ch8">
   <header class="chap-head">
     <span class="chap-no">8</span>
-    <div class="chap-title"><h3>표준 사전 승인·요청 현황</h3><p>일반 사용자가 등록한 단어·용어·도메인·코드를 관리자가 승인하거나 반려한다. 요청자는 자기 요청의 처리 상태를 본다. 용어는 구성 단어가 먼저 승인돼야 승인된다.</p></div>
+    <div class="chap-title"><h3>표준 사전 승인·요청 현황</h3><p>표준 직접 관리 권한이 없는 사용자가 등록한 단어·용어·도메인·코드를 표준 승인 권한자가 승인하거나 반려한다. 요청자는 자기 요청의 처리 상태를 본다. 용어는 구성 단어가 먼저 승인돼야 승인된다.</p></div>
     <dl class="chap-meta"><div><dt>기능</dt><dd>31</dd></div><div><dt>화면</dt><dd>2</dd></div></dl>
   </header>
   <ul class="screens"><li>표준 사전 변경 승인</li><li>표준 사전 변경 요청 현황</li></ul>
@@ -1169,12 +1172,12 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <section class="chap" id="ch10">
   <header class="chap-head">
     <span class="chap-no">10</span>
-    <div class="chap-title"><h3>관리 — 사용자·권한·데이터 소스·시스템·내 정보</h3><p>사용자 관리, 내 정보와 비밀번호 변경, 대상 DB 접속 정보(데이터 소스)와 연결 테스트, 시스템 정보. 역할 및 권한 화면은 메뉴에서 숨겨 두었다.</p></div>
-    <dl class="chap-meta"><div><dt>기능</dt><dd>31</dd></div><div><dt>화면</dt><dd>5</dd></div></dl>
+    <div class="chap-title"><h3>관리 — 사용자·권한·데이터 소스·시스템·내 정보</h3><p>사용자 관리, 내 정보와 비밀번호 변경, 대상 DB 접속 정보(데이터 소스)와 연결 테스트, 시스템 정보(시스템별 기본 표준사전), 권한 묶음인 역할을 만들고 사용자에게 주는 역할 및 권한.</p></div>
+    <dl class="chap-meta"><div><dt>기능</dt><dd>36</dd></div><div><dt>화면</dt><dd>5</dd></div></dl>
   </header>
   <ul class="screens"><li>사용자</li><li>역할 및 권한</li><li>내 정보</li><li>데이터 소스</li><li>시스템</li></ul>
   <details class="flist" data-ch="10">
-    <summary>기능 목록 <b>31</b>건 펼쳐 보기</summary>
+    <summary>기능 목록 <b>36</b>건 펼쳐 보기</summary>
     <div class="tbl-wrap"><table class="ftable"><thead><tr><th scope="col">기능ID</th><th scope="col">기능명</th><th scope="col">동작</th></tr></thead><tbody>
 <tr class="sec"><th colspan="3" scope="colgroup">10.1 사용자 — <code>MMUser.vue</code></th></tr><tr data-q="adm-001 사용자 목록 조회 화면 생성 때 tb_user 에서 user_id·nm·email·phone·adm_yn 을 user_id 순으로 조회한다(내장 관리자 id 와 del_yn=true 행 제외). 목록은 한 페이지 15건만 보이고 페이지 이동 컨트롤은 없다. 서버는 관리자가 아니면 http 403 으로 거부한다."><td class="fid">ADM-001</td><td class="fname">사용자 목록 조회</td><td class="fact">화면 생성 때 TB_USER 에서 USER_ID·NM·EMAIL·PHONE·ADM_YN 을 USER_ID 순으로 조회한다(내장 관리자 ID 와 DEL_YN=true 행 제외). 목록은 한 페이지 15건만 보이고 페이지 이동 컨트롤은 없다. 서버는 관리자가 아니면 HTTP 403 으로 거부한다.</td></tr>
 <tr data-q="adm-002 사용자 상세 표시 목록 행을 누르면 그 행 값을 복사해 우측 상세에 채운다(새 비밀번호 칸은 비움). 선택 전에는 안내 문구를 보여준다."><td class="fid">ADM-002</td><td class="fname">사용자 상세 표시</td><td class="fact">목록 행을 누르면 그 행 값을 복사해 우측 상세에 채운다(새 비밀번호 칸은 비움). 선택 전에는 안내 문구를 보여준다.</td></tr>
@@ -1182,8 +1185,13 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <tr data-q="adm-004 사용자 추가 창 열기 사용자 추가 를 누르면 빈 양식(관리자 스위치 꺼짐)으로 다이얼로그를 연다. 취소 는 닫기."><td class="fid">ADM-004</td><td class="fname">사용자 추가 창 열기</td><td class="fact"><code>사용자 추가</code> 를 누르면 빈 양식(관리자 스위치 꺼짐)으로 다이얼로그를 연다. <code>취소</code> 는 닫기.</td></tr>
 <tr data-q="adm-005 사용자 등록 필수값과 비밀번호 일치를 확인한 뒤 id·비밀번호(base64)·이름·이메일·관리자 여부를 보낸다. 서버는 관리자가 아니면 거부하고(resultcode 403 "사용자 추가는 관리자만 할 수 있습니다."), 같은 id 의 미삭제 사용자가 있으면 거부하고, 없으면 tb_user 에 user_id·pwd(해시)·nm·email·adm_yn·cret_dt·updt_dt·login_fail_count=0 을 insert 한다(phone·del_yn 은 넣지 않음). 성공하면 다이얼로그를 닫고 목록을 다시 조회한다."><td class="fid">ADM-005</td><td class="fname">사용자 등록</td><td class="fact">필수값과 비밀번호 일치를 확인한 뒤 id·비밀번호(Base64)·이름·이메일·관리자 여부를 보낸다. 서버는 관리자가 아니면 거부하고(resultCode 403 "사용자 추가는 관리자만 할 수 있습니다."), 같은 ID 의 미삭제 사용자가 있으면 거부하고, 없으면 TB_USER 에 USER_ID·PWD(해시)·NM·EMAIL·ADM_YN·CRET_DT·UPDT_DT·LOGIN_FAIL_COUNT=0 을 INSERT 한다(PHONE·DEL_YN 은 넣지 않음). 성공하면 다이얼로그를 닫고 목록을 다시 조회한다.</td></tr>
 <tr data-q="adm-006 사용자 삭제 선택한 사용자를 확인창 뒤 form 필드 id 로 보내 tb_user.del_yn=true 로 바꾼다(논리 삭제). 서버는 관리자가 아니면 http 403 으로 거부한다. 응답이 true 면 선택을 비우고 목록을 다시 조회한다."><td class="fid">ADM-006</td><td class="fname">사용자 삭제</td><td class="fact">선택한 사용자를 확인창 뒤 form 필드 <code>id</code> 로 보내 TB_USER.DEL_YN=true 로 바꾼다(논리 삭제). 서버는 관리자가 아니면 HTTP 403 으로 거부한다. 응답이 true 면 선택을 비우고 목록을 다시 조회한다.</td></tr>
-<tr class="sec"><th colspan="3" scope="colgroup">10.2 역할 및 권한 — <code>MMRoles.vue</code></th></tr><tr data-q="adm-007 역할 및 권한 화면 탭이 열리면 고정 문구만 표시한다. 조회·저장 기능이 없다."><td class="fid">ADM-007</td><td class="fname">역할 및 권한 화면</td><td class="fact">탭이 열리면 고정 문구만 표시한다. 조회·저장 기능이 없다.</td></tr>
-<tr data-q="adm-008 역할·권한 서비스 메서드 sessionservice 에 역할 목록·역할 생성·역할명 수정·역할 삭제·역할별 권한 재등록·사용자 역할 추가/삭제 메서드가 있으나, 이를 부르는 컨트롤러가 없다. 로그인 사용자의 권한은 관리자 여부(a/m) 하나만 쓰며, 세부 권한 목록(authorities)은 채우는 곳이 없다."><td class="fid">ADM-008</td><td class="fname">역할·권한 서비스 메서드</td><td class="fact">SessionService 에 역할 목록·역할 생성·역할명 수정·역할 삭제·역할별 권한 재등록·사용자 역할 추가/삭제 메서드가 있으나, 이를 부르는 컨트롤러가 없다. 로그인 사용자의 권한은 관리자 여부(A/M) 하나만 쓰며, 세부 권한 목록(authorities)은 채우는 곳이 없다.</td></tr>
+<tr class="sec"><th colspan="3" scope="colgroup">10.2 역할 및 권한 — <code>MMRoles.vue</code></th></tr><tr data-q="adm-007 역할 목록 조회 화면 생성 때 역할 목록을 읽는다. 서버는 tb_role 을 내장 역할 먼저·역할명 순으로 읽고, 역할마다 tb_role_perm 의 권한 코드 목록과 지정된 사용자 수(tb_user_role 의 서로 다른 user_id 수)를 붙인다. 저장·삭제·지정·해제 뒤에는 선택한 역할을 유지한 채 다시 읽는다."><td class="fid">ADM-007</td><td class="fname">역할 목록 조회</td><td class="fact">화면 생성 때 역할 목록을 읽는다. 서버는 TB_ROLE 을 내장 역할 먼저·역할명 순으로 읽고, 역할마다 TB_ROLE_PERM 의 권한 코드 목록과 지정된 사용자 수(TB_USER_ROLE 의 서로 다른 USER_ID 수)를 붙인다. 저장·삭제·지정·해제 뒤에는 선택한 역할을 유지한 채 다시 읽는다.</td></tr>
+<tr data-q="adm-032 권한 목록 조회 화면 생성 때 권한 코드 목록(코드·이름·설명·시스템 단위 여부, 1.10 절의 14개)을 읽어 상세의 권한 칩 이름과 편집 모달의 체크 목록에 쓴다. 목록은 서버 코드(permcode)가 기준이다."><td class="fid">ADM-032</td><td class="fname">권한 목록 조회</td><td class="fact">화면 생성 때 권한 코드 목록(코드·이름·설명·시스템 단위 여부, 1.10 절의 14개)을 읽어 상세의 권한 칩 이름과 편집 모달의 체크 목록에 쓴다. 목록은 서버 코드(PermCode)가 기준이다.</td></tr>
+<tr data-q="adm-033 역할 상세·사용자 목록 역할을 고르면 권한 칩을 보이고, 그 역할을 받은 사용자를 읽는다. 서버는 tb_user_role 을 tb_user(삭제되지 않은 사용자)와 잇고, 범위가 '' 면 범위 칸에 "모든 시스템", 아니면 시스템명을 보인다(user_id·sys_cd 순)."><td class="fid">ADM-033</td><td class="fname">역할 상세·사용자 목록</td><td class="fact">역할을 고르면 권한 칩을 보이고, 그 역할을 받은 사용자를 읽는다. 서버는 TB_USER_ROLE 을 TB_USER(삭제되지 않은 사용자)와 잇고, 범위가 '*' 면 범위 칸에 "모든 시스템", 아니면 시스템명을 보인다(USER_ID·SYS_CD 순).</td></tr>
+<tr data-q="adm-034 역할 추가·수정 [역할 추가] 또는 [수정] → 모달에서 이름·설명·권한을 정해 [저장]. 서버는 이름 필수(최대 100자), 권한 코드가 목록에 있는지, 같은 이름의 다른 역할이 없는지 확인한 뒤 새 역할이면 id(uuid)를 만들어 tb_role insert(builtin_yn='n'), 기존 역할이면 이름·설명·수정일시·수정자 update 하고, tb_role_perm 을 지운 뒤 고른 권한으로 다시 넣는다(한 트랜잭션). 내장 역할도 이름·권한을 고칠 수 있다. 저장 뒤 권한 판정 캐시를 비우고 로그인 사용자 권한도 다시 읽는다."><td class="fid">ADM-034</td><td class="fname">역할 추가·수정</td><td class="fact">[역할 추가] 또는 [수정] → 모달에서 이름·설명·권한을 정해 [저장]. 서버는 이름 필수(최대 100자), 권한 코드가 목록에 있는지, 같은 이름의 다른 역할이 없는지 확인한 뒤 새 역할이면 ID(UUID)를 만들어 TB_ROLE INSERT(BUILTIN_YN='N'), 기존 역할이면 이름·설명·수정일시·수정자 UPDATE 하고, TB_ROLE_PERM 을 지운 뒤 고른 권한으로 다시 넣는다(한 트랜잭션). 내장 역할도 이름·권한을 고칠 수 있다. 저장 뒤 권한 판정 캐시를 비우고 로그인 사용자 권한도 다시 읽는다.</td></tr>
+<tr data-q="adm-035 역할 삭제 내장 역할이 아니면 [삭제] → 확인창(지정된 사용자가 있으면 "'{역할}' 역할을 받은 사용자가 n명 있습니다. 삭제하면 그 사용자들에게서도 이 역할이 빠집니다. 계속할까요?", 없으면 "'{역할}' 역할을 삭제합니다. 계속할까요?") 뒤 삭제한다. 서버는 내장 역할을 거부하고 tb_role 을 지운다 — 권한·사용자 지정은 fk cascade 로 함께 지워진다."><td class="fid">ADM-035</td><td class="fname">역할 삭제</td><td class="fact">내장 역할이 아니면 [삭제] → 확인창(지정된 사용자가 있으면 "'{역할}' 역할을 받은 사용자가 N명 있습니다. 삭제하면 그 사용자들에게서도 이 역할이 빠집니다. 계속할까요?", 없으면 "'{역할}' 역할을 삭제합니다. 계속할까요?") 뒤 삭제한다. 서버는 내장 역할을 거부하고 TB_ROLE 을 지운다 — 권한·사용자 지정은 FK CASCADE 로 함께 지워진다.</td></tr>
+<tr data-q="adm-036 사용자 지정·해제 [사용자 지정] → 모달에서 사용자(사용자 목록 adm-001 을 계정 (이름) 으로)와 범위(기본 '모든 시스템')를 골라 [지정]. 서버는 역할·사용자가 있는지 확인하고 tb_user_role 에 (사용자, 역할, 범위 — 비면 '')를 넣는다(이미 있으면 그대로). 행의 [해제]는 그 (사용자, 역할, 범위) 행을 지운다. 둘 다 권한 판정 캐시를 비운다. 범위는 시스템 단위 권한(ddl_exec)에만 의미가 있다(1.10 절)."><td class="fid">ADM-036</td><td class="fname">사용자 지정·해제</td><td class="fact">[사용자 지정] → 모달에서 사용자(사용자 목록 ADM-001 을 <code>계정 (이름)</code> 으로)와 범위(기본 '모든 시스템')를 골라 [지정]. 서버는 역할·사용자가 있는지 확인하고 TB_USER_ROLE 에 (사용자, 역할, 범위 — 비면 '*')를 넣는다(이미 있으면 그대로). 행의 [해제]는 그 (사용자, 역할, 범위) 행을 지운다. 둘 다 권한 판정 캐시를 비운다. 범위는 시스템 단위 권한(DDL_EXEC)에만 의미가 있다(1.10 절).</td></tr>
+<tr data-q="adm-008 이전 플랫폼 역할 메서드 (사용 안 함) sessionservice 에 ndata 스키마 역할 테이블(tb_user_role·tb_user_asgn_role·tb_user_role_authority)을 쓰는 역할 목록·생성·이름 수정·삭제·권한 재등록·사용자 역할 추가/삭제 메서드가 있으나 부르는 곳이 없다. 역할·권한은 quality 스키마의 tb_role 계열(adm-007·032~036, 1.10 절)을 쓴다. 로그인 사용자의 spring security 권한(authorities)은 관리자 여부(a/m) 하나다."><td class="fid">ADM-008</td><td class="fname">이전 플랫폼 역할 메서드 (사용 안 함)</td><td class="fact">SessionService 에 ndata 스키마 역할 테이블(TB_USER_ROLE·TB_USER_ASGN_ROLE·TB_USER_ROLE_AUTHORITY)을 쓰는 역할 목록·생성·이름 수정·삭제·권한 재등록·사용자 역할 추가/삭제 메서드가 있으나 부르는 곳이 없다. 역할·권한은 quality 스키마의 TB_ROLE 계열(ADM-007·032~036, 1.10 절)을 쓴다. 로그인 사용자의 Spring Security 권한(authorities)은 관리자 여부(A/M) 하나다.</td></tr>
 <tr class="sec"><th colspan="3" scope="colgroup">10.3 내 정보 — <code>DSMyProfile.vue</code></th></tr><tr data-q="adm-009 내 정보 조회 화면 생성 때 sessionstorage 로그인 id 로 tb_user 한 건(미삭제)을 조회해 아이디·이메일·전화번호·관리자 칩을 채운다. 응답에 비밀번호 해시는 싣지 않는다. 서버는 관리자가 아니면 자기 id 만 조회하게 한다."><td class="fid">ADM-009</td><td class="fname">내 정보 조회</td><td class="fact">화면 생성 때 sessionStorage 로그인 ID 로 TB_USER 한 건(미삭제)을 조회해 아이디·이메일·전화번호·관리자 칩을 채운다. 응답에 비밀번호 해시는 싣지 않는다. 서버는 관리자가 아니면 자기 ID 만 조회하게 한다.</td></tr>
 <tr data-q="adm-010 내 정보 저장 저장 을 누르면 {id, name, admin, email, phone} 을 보낸다. 이름과 관리자 여부는 조회해 둔 값을 그대로 보내고, 화면에서 바꾸는 것은 이메일·전화번호다. 서버는 일반 사용자 요청이면 ① 자기 id 인지 ② 관리자 여부가 지금 값과 같은지 ③ 비밀번호가 비어 있는지 확인하고, 셋 다 맞을 때만 사용자 저장(adm-003)과 같은 갱신을 한다."><td class="fid">ADM-010</td><td class="fname">내 정보 저장</td><td class="fact"><code>저장</code> 을 누르면 <code>{id, name, admin, email, phone}</code> 을 보낸다. 이름과 관리자 여부는 조회해 둔 값을 그대로 보내고, 화면에서 바꾸는 것은 이메일·전화번호다. 서버는 일반 사용자 요청이면 ① 자기 ID 인지 ② 관리자 여부가 지금 값과 같은지 ③ 비밀번호가 비어 있는지 확인하고, 셋 다 맞을 때만 사용자 저장(ADM-003)과 같은 갱신을 한다.</td></tr>
 <tr data-q="adm-011 비밀번호 변경 세 칸이 모두 채워지고 새 비밀번호와 확인이 같을 때만 버튼이 켜진다. 사용자 id·현재 비밀번호·새 비밀번호(각각 base64)를 쿼리 문자열로 보낸다. 서버는 쿼리의 사용자 id 를 쓰지 않고 로그인 세션 사용자의 비밀번호를 바꾼다. tb_user 저장 해시로 ① 새 비밀번호가 현재 비밀번호와 같으면 거부 ② 현재 비밀번호가 틀리면 거부 ③ 맞으면 새 비밀번호를 해시해 pwd 를 갱신한다(updt_dt 는 갱신 안 함). 성공하면 세 칸을 비운다."><td class="fid">ADM-011</td><td class="fname">비밀번호 변경</td><td class="fact">세 칸이 모두 채워지고 새 비밀번호와 확인이 같을 때만 버튼이 켜진다. 사용자 ID·현재 비밀번호·새 비밀번호(각각 Base64)를 쿼리 문자열로 보낸다. 서버는 쿼리의 사용자 ID 를 쓰지 않고 로그인 세션 사용자의 비밀번호를 바꾼다. TB_USER 저장 해시로 ① 새 비밀번호가 현재 비밀번호와 같으면 거부 ② 현재 비밀번호가 틀리면 거부 ③ 맞으면 새 비밀번호를 해시해 PWD 를 갱신한다(UPDT_DT 는 갱신 안 함). 성공하면 세 칸을 비운다.</td></tr>
@@ -1200,11 +1208,11 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
 <tr data-q="adm-022 데이터 소스 삭제 체크한 행의 이름을 보여주는 확인창 뒤 [{id}] 목록을 보내 ndata.tb_data_source 에서 ds_id in (…) 을 delete 한다. 서버는 관리자가 아니면 거부한다."><td class="fid">ADM-022</td><td class="fname">데이터 소스 삭제</td><td class="fact">체크한 행의 이름을 보여주는 확인창 뒤 <code>[{id}]</code> 목록을 보내 ndata.TB_DATA_SOURCE 에서 DS_ID IN (…) 을 DELETE 한다. 서버는 관리자가 아니면 거부한다.</td></tr>
 <tr data-q="adm-023 행 연결 테스트 목록 행의 테스트 를 누르면 그 행의 저장값으로 연결 시험을 요청한다. 비밀번호는 보내지 않고, 서버가 저장된 비밀번호를 복호화해 쓴다(adm-018). 성공하면 서버가 conn_test_yn='y'·conn_test_dt 를 기록하고 화면의 연결 상태 칩을 성공 으로 바꾼다. 한 행을 시험하는 동안 다른 행 버튼은 막는다."><td class="fid">ADM-023</td><td class="fname">행 연결 테스트</td><td class="fact">목록 행의 <code>테스트</code> 를 누르면 그 행의 저장값으로 연결 시험을 요청한다. 비밀번호는 보내지 않고, 서버가 저장된 비밀번호를 복호화해 쓴다(ADM-018). 성공하면 서버가 CONN_TEST_YN='Y'·CONN_TEST_DT 를 기록하고 화면의 <code>연결 상태</code> 칩을 <code>성공</code> 으로 바꾼다. 한 행을 시험하는 동안 다른 행 버튼은 막는다.</td></tr>
 <tr data-q="adm-024 접속 핸들러 생성 (서버 공용) 수집·진단 기능이 데이터 소스에 접속할 때 pwd 를 복호화하고, 접속 방식이 service name 이고 oracle·tibero 면 드라이버명을 "{dbms}(service name)" 으로 잠시 바꿔 dbhandler 를 만든 뒤 드라이버명을 되돌린다. 호출처: q-center datamodelcontroller·datamodelapprovalcontroller, q-executor datamodelservice·structdiagservice·valueprofileservice·businessruleservice."><td class="fid">ADM-024</td><td class="fname">접속 핸들러 생성 (서버 공용)</td><td class="fact">수집·진단 기능이 데이터 소스에 접속할 때 PWD 를 복호화하고, 접속 방식이 Service Name 이고 Oracle·Tibero 면 드라이버명을 "{DBMS}(Service Name)" 으로 잠시 바꿔 DBHandler 를 만든 뒤 드라이버명을 되돌린다. 호출처: q-center DataModelController·DataModelApprovalController, q-executor DataModelService·StructDiagService·ValueProfileService·BusinessRuleService.</td></tr>
-<tr class="sec"><th colspan="3" scope="colgroup">10.5 시스템 — <code>MMSystem.vue</code></th></tr><tr data-q="adm-025 시스템 트리 조회 화면 생성 때 데이터 소스 목록과 시스템 목록을 조회한다. 서버는 tb_sys_info 를 최상위(p_sys_cd 없음)부터 재귀로 펼쳐 깊이(depth)와 경로(path, 시스템명 배열)를 붙이고 경로 순으로 돌려준다(일시는 'yyyy-mm-dd hh24:mi:ss'). 화면은 상위 시스템명·타입명('시스템 그룹'/'시스템')·경로 문자열('/' 연결)을 만들고, 타입 0 만 모아 시스템 그룹 선택 목록을 만든 뒤 트리를 그린다."><td class="fid">ADM-025</td><td class="fname">시스템 트리 조회</td><td class="fact">화면 생성 때 데이터 소스 목록과 시스템 목록을 조회한다. 서버는 TB_SYS_INFO 를 최상위(P_SYS_CD 없음)부터 재귀로 펼쳐 깊이(DEPTH)와 경로(PATH, 시스템명 배열)를 붙이고 경로 순으로 돌려준다(일시는 'YYYY-MM-DD HH24:MI:SS'). 화면은 상위 시스템명·타입명('시스템 그룹'/'시스템')·경로 문자열('/' 연결)을 만들고, 타입 0 만 모아 <code>시스템 그룹</code> 선택 목록을 만든 뒤 트리를 그린다.</td></tr>
-<tr data-q="adm-026 시스템 선택·상세 트리 항목을 누르면 그 시스템의 데이터 소스 id 마다 단건 조회를 해 데이터소스명을 모으고 우측 상세표에 표시한다."><td class="fid">ADM-026</td><td class="fname">시스템 선택·상세</td><td class="fact">트리 항목을 누르면 그 시스템의 데이터 소스 ID 마다 단건 조회를 해 데이터소스명을 모으고 우측 상세표에 표시한다.</td></tr>
-<tr data-q="adm-027 시스템 등록 등록 → 창에서 타입·그룹·이름·설명·데이터 소스를 입력 → 검사 후 서버가 sys_cd 를 uuid 로 만들어 tb_sys_info 에 p_sys_cd·sys_tp·sys_nm·sys_ds_lst(데이터 소스 id 배열)·sys_desc·cret_dt(현재)·cret_user_id(세션 사용자)를 insert 한다(sys_cd 충돌 시 update). 상위 시스템은 타입과 관계없이 선택값을 보낸다. 성공하면 창을 닫고 트리를 다시 조회하며 선택을 비운다."><td class="fid">ADM-027</td><td class="fname">시스템 등록</td><td class="fact"><code>등록</code> → 창에서 타입·그룹·이름·설명·데이터 소스를 입력 → 검사 후 서버가 SYS_CD 를 UUID 로 만들어 TB_SYS_INFO 에 P_SYS_CD·SYS_TP·SYS_NM·SYS_DS_LST(데이터 소스 ID 배열)·SYS_DESC·CRET_DT(현재)·CRET_USER_ID(세션 사용자)를 INSERT 한다(SYS_CD 충돌 시 UPDATE). 상위 시스템은 타입과 관계없이 선택값을 보낸다. 성공하면 창을 닫고 트리를 다시 조회하며 선택을 비운다.</td></tr>
-<tr data-q="adm-028 시스템 수정 수정 → 선택 항목 값으로 창을 채우고(데이터 소스는 id 로 목록에서 찾아 선택) 이름만 필수 검사 → sys_cd 기준으로 p_sys_cd·sys_tp·sys_nm·sys_ds_lst·sys_desc·updt_dt·updt_user_id 를 갱신한다."><td class="fid">ADM-028</td><td class="fname">시스템 수정</td><td class="fact"><code>수정</code> → 선택 항목 값으로 창을 채우고(데이터 소스는 ID 로 목록에서 찾아 선택) 이름만 필수 검사 → SYS_CD 기준으로 P_SYS_CD·SYS_TP·SYS_NM·SYS_DS_LST·SYS_DESC·UPDT_DT·UPDT_USER_ID 를 갱신한다.</td></tr>
-<tr data-q="adm-029 시스템 삭제 삭제 → 확인 후 선택 시스템과 그 아래 시스템 전체를 재귀로 찾아 tb_sys_info 에서 delete 한다. tb_data_model.dm_sys_cd 가 참조하는 시스템은 fk 로 삭제되지 않는다."><td class="fid">ADM-029</td><td class="fname">시스템 삭제</td><td class="fact"><code>삭제</code> → 확인 후 선택 시스템과 그 아래 시스템 전체를 재귀로 찾아 TB_SYS_INFO 에서 DELETE 한다. TB_DATA_MODEL.DM_SYS_CD 가 참조하는 시스템은 FK 로 삭제되지 않는다.</td></tr>
+<tr class="sec"><th colspan="3" scope="colgroup">10.5 시스템 — <code>MMSystem.vue</code></th></tr><tr data-q="adm-025 시스템 트리 조회 화면 생성 때 데이터 소스 목록, 시스템 목록, 표준사전 목록(기본 표준사전 선택용)을 조회한다. 서버는 tb_sys_info 를 최상위(p_sys_cd 없음)부터 재귀로 펼쳐 깊이(depth)와 경로(path, 시스템명 배열)를 붙이고, 시스템마다 기본 표준사전 id·이름(tb_sys_info.dict_id → tb_std_dict)을 붙여 경로 순으로 돌려준다(일시는 'yyyy-mm-dd hh24:mi:ss'). 화면은 상위 시스템명·타입명('시스템 그룹'/'시스템')·경로 문자열('/' 연결)을 만들고, 타입 0 만 모아 시스템 그룹 선택 목록을 만든 뒤 트리를 그린다."><td class="fid">ADM-025</td><td class="fname">시스템 트리 조회</td><td class="fact">화면 생성 때 데이터 소스 목록, 시스템 목록, 표준사전 목록(기본 표준사전 선택용)을 조회한다. 서버는 TB_SYS_INFO 를 최상위(P_SYS_CD 없음)부터 재귀로 펼쳐 깊이(DEPTH)와 경로(PATH, 시스템명 배열)를 붙이고, 시스템마다 기본 표준사전 ID·이름(TB_SYS_INFO.DICT_ID → TB_STD_DICT)을 붙여 경로 순으로 돌려준다(일시는 'YYYY-MM-DD HH24:MI:SS'). 화면은 상위 시스템명·타입명('시스템 그룹'/'시스템')·경로 문자열('/' 연결)을 만들고, 타입 0 만 모아 <code>시스템 그룹</code> 선택 목록을 만든 뒤 트리를 그린다.</td></tr>
+<tr data-q="adm-026 시스템 선택·상세 트리 항목을 누르면 그 시스템의 데이터 소스 id 마다 단건 조회를 해 데이터소스명을 모으고, 그 시스템에 속한 데이터 모델(tb_data_model.dm_sys_cd, 사용 중, 모델명 순)을 모델명 [사전명] 으로 모아 우측 상세표에 표시한다(모델이 없으면 "없음")."><td class="fid">ADM-026</td><td class="fname">시스템 선택·상세</td><td class="fact">트리 항목을 누르면 그 시스템의 데이터 소스 ID 마다 단건 조회를 해 데이터소스명을 모으고, 그 시스템에 속한 데이터 모델(TB_DATA_MODEL.DM_SYS_CD, 사용 중, 모델명 순)을 <code>모델명 [사전명]</code> 으로 모아 우측 상세표에 표시한다(모델이 없으면 "없음").</td></tr>
+<tr data-q="adm-027 시스템 등록 등록 → 창에서 타입·그룹·이름·설명·기본 표준사전·데이터 소스를 입력 → 검사 후 서버가 시스템 관리 권한을 확인하고(아니면 resultcode 403 "권한이 없습니다 (시스템 관리 권한 필요)") sys_cd 를 uuid 로 만들어 tb_sys_info 에 p_sys_cd·sys_tp·sys_nm·sys_ds_lst(데이터 소스 id 배열)·sys_desc·dict_id·cret_dt(현재)·cret_user_id(세션 사용자)를 insert 한다(sys_cd 충돌 시 update). 상위 시스템은 타입과 관계없이 선택값을 보낸다. 성공하면 창을 닫고 트리를 다시 조회하며 선택을 비운다."><td class="fid">ADM-027</td><td class="fname">시스템 등록</td><td class="fact"><code>등록</code> → 창에서 타입·그룹·이름·설명·기본 표준사전·데이터 소스를 입력 → 검사 후 서버가 시스템 관리 권한을 확인하고(아니면 resultCode 403 "권한이 없습니다 (시스템 관리 권한 필요)") SYS_CD 를 UUID 로 만들어 TB_SYS_INFO 에 P_SYS_CD·SYS_TP·SYS_NM·SYS_DS_LST(데이터 소스 ID 배열)·SYS_DESC·DICT_ID·CRET_DT(현재)·CRET_USER_ID(세션 사용자)를 INSERT 한다(SYS_CD 충돌 시 UPDATE). 상위 시스템은 타입과 관계없이 선택값을 보낸다. 성공하면 창을 닫고 트리를 다시 조회하며 선택을 비운다.</td></tr>
+<tr data-q="adm-028 시스템 수정 수정 → 선택 항목 값으로 창을 채우고(데이터 소스는 id 로 목록에서 찾아 선택) 이름만 필수 검사 → 서버가 시스템 관리 권한을 확인하고 sys_cd 기준으로 p_sys_cd·sys_tp·sys_nm·sys_ds_lst·sys_desc·dict_id·updt_dt·updt_user_id 를 갱신한다."><td class="fid">ADM-028</td><td class="fname">시스템 수정</td><td class="fact"><code>수정</code> → 선택 항목 값으로 창을 채우고(데이터 소스는 ID 로 목록에서 찾아 선택) 이름만 필수 검사 → 서버가 시스템 관리 권한을 확인하고 SYS_CD 기준으로 P_SYS_CD·SYS_TP·SYS_NM·SYS_DS_LST·SYS_DESC·DICT_ID·UPDT_DT·UPDT_USER_ID 를 갱신한다.</td></tr>
+<tr data-q="adm-029 시스템 삭제 삭제 → 확인 후 서버가 시스템 관리 권한을 확인하고 선택 시스템과 그 아래 시스템 전체를 재귀로 찾아 tb_sys_info 에서 delete 한다. tb_data_model.dm_sys_cd 가 참조하는 시스템은 fk 로 삭제되지 않는다."><td class="fid">ADM-029</td><td class="fname">시스템 삭제</td><td class="fact"><code>삭제</code> → 확인 후 서버가 시스템 관리 권한을 확인하고 선택 시스템과 그 아래 시스템 전체를 재귀로 찾아 TB_SYS_INFO 에서 DELETE 한다. TB_DATA_MODEL.DM_SYS_CD 가 참조하는 시스템은 FK 로 삭제되지 않는다.</td></tr>
 <tr data-q="adm-030 다른 화면이 쓰는 시스템 api 시스템 목록은 dsword·dsterm·dscode·dsdomain·dsdatamodelcollection 에서도 호출한다. 시스템별 데이터 소스 목록은 데이터 모델 관리 화면(dsdatamodelcollection)이 호출하며, 서버는 선택 시스템과 그 아래 시스템들의 sys_ds_lst 를 펼쳐 ndata.tb_data_source 의 ds_id·dsn·ds_tp·dbms_tp 를 중복 없이 돌려준다(비밀번호 미포함)."><td class="fid">ADM-030</td><td class="fname">다른 화면이 쓰는 시스템 API</td><td class="fact">시스템 목록은 DSWord·DSTerm·DSCode·DSDomain·DSDatamodelCollection 에서도 호출한다. 시스템별 데이터 소스 목록은 데이터 모델 관리 화면(DSDatamodelCollection)이 호출하며, 서버는 선택 시스템과 그 아래 시스템들의 SYS_DS_LST 를 펼쳐 ndata.TB_DATA_SOURCE 의 DS_ID·DSN·DS_TP·DBMS_TP 를 중복 없이 돌려준다(비밀번호 미포함).</td></tr>
 <tr class="sec"><th colspan="3" scope="colgroup">10.6 화면 없는 API</th></tr><tr data-q="adm-031 시스템 단건 조회 syscd 로 재귀 목록 쿼리를 실행해 해당 시스템 한 건(깊이·경로 포함)을 돌려준다. 호출하는 화면이 없다."><td class="fid">ADM-031</td><td class="fname">시스템 단건 조회</td><td class="fact">sysCd 로 재귀 목록 쿼리를 실행해 해당 시스템 한 건(깊이·경로 포함)을 돌려준다. 호출하는 화면이 없다.</td></tr>
     </tbody></table></div>
@@ -1218,19 +1226,20 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
     <li>근거: main 브랜치 소스 전체 — 화면(Vue), 웹 서버·작업 서버 컨트롤러, 서비스, MyBatis 매퍼, 수집 쿼리, DDL.</li>
     <li>기능 수는 기능ID 가 붙은 행 수다. 백그라운드 처리(<code>-B</code>)와 승인 규칙(<code>-R</code>)도 한 행으로 센다.</li>
     <li>"화면 없는 API" 는 서버에 있지만 어느 화면도 부르지 않거나, 진입 경로 없는 화면만 부르는 API 다.</li>
-    <li>API 250개는 컨트롤러의 매핑 어노테이션에서 뽑은 메서드·경로 조합이고, 모두 기능 목록의 어느 행엔가 연결된다.</li>
+    <li>API 259개는 컨트롤러의 매핑 어노테이션에서 뽑은 메서드·경로 조합이고, 모두 기능 목록의 어느 행엔가 연결된다.</li>
   </ul>
   <h3 style="margin:18px 0 8px">컨트롤러별 API 수</h3>
   <ul class="ctl">
     <li><span>표준 사전 (DataStandard)</span><span>85</span></li>
     <li><span>데이터 모델 (DataModel)</span><span>56</span></li>
-    <li><span>시스템·데이터 소스 (SysInfo)</span><span>13</span></li>
+    <li><span>시스템·데이터 소스 (SysInfo)</span><span>14</span></li>
     <li><span>게시판 (Board)</span><span>12</span></li>
-    <li><span>로그인 (Login)</span><span>11</span></li>
+    <li><span>로그인 (Login)</span><span>12</span></li>
     <li><span>구조 변경 진단 (StructDiag)</span><span>10</span></li>
     <li><span>진단 스케줄 (DiagSchedule)</span><span>10</span></li>
     <li><span>데이터 모델 승인 (DataModelApproval)</span><span>9</span></li>
     <li><span>표준 진단 (Diag)</span><span>7</span></li>
+    <li><span>역할·권한 (Role)</span><span>7</span></li>
     <li><span>진단 제외 (DiagTarget)</span><span>6</span></li>
     <li><span>영역 (BizSubjArea)</span><span>6</span></li>
     <li><span>표준사전 관리 (StdDict)</span><span>5</span></li>

@@ -16,6 +16,9 @@
     <result property="cretUserId" column="CRET_USER_ID"/>
     <result property="updtDt" column="UPDT_DT"/>
     <result property="updtUserId" column="UPDT_USER_ID"/>
+    <!-- 104번 WP2 — 시스템 기본 표준사전 -->
+    <result property="dictId" column="DICT_ID"/>
+    <result property="dictNm" column="DICT_NM"/>
   </resultMap>
 
   <select id="selectSysInfoList" resultMap="sysInfoMap">
@@ -59,8 +62,10 @@
 			   PATH,
 			   to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT, 
 			   CRET_USER_ID, 
-			   to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT, 
-			   UPDT_USER_ID
+			   to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT,
+			   UPDT_USER_ID,
+			   (select S.DICT_ID from TB_SYS_INFO S where S.SYS_CD = CODE_LIST.SYS_CD) as DICT_ID,
+			   (select D.DICT_NM from TB_SYS_INFO S join TB_STD_DICT D on D.DICT_ID = S.DICT_ID where S.SYS_CD = CODE_LIST.SYS_CD) as DICT_NM
 			from CODE_LIST
 			order by PATH
   </select>
@@ -106,8 +111,10 @@
 			   PATH,
 			   to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT, 
 			   CRET_USER_ID, 
-			   to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT, 
-			   UPDT_USER_ID
+			   to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT,
+			   UPDT_USER_ID,
+			   (select S.DICT_ID from TB_SYS_INFO S where S.SYS_CD = CODE_LIST.SYS_CD) as DICT_ID,
+			   (select D.DICT_NM from TB_SYS_INFO S join TB_STD_DICT D on D.DICT_ID = S.DICT_ID where S.SYS_CD = CODE_LIST.SYS_CD) as DICT_NM
 			from CODE_LIST
       where SYS_CD = #{sysCd}
 			order by PATH
@@ -135,9 +142,10 @@
             ,SYS_TP
             ,SYS_NM		
             ,SYS_DS_LST		
-            ,SYS_DESC	
-            ,CRET_DT			
-            ,CRET_USER_ID	
+            ,SYS_DESC
+            ,DICT_ID
+            ,CRET_DT
+            ,CRET_USER_ID
            )
            VALUES
            (
@@ -147,6 +155,7 @@
             ,#{sysNm}
 			      ,#{sysDsLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
             ,#{sysDesc, jdbcType=VARCHAR}
+            ,#{dictId, jdbcType=VARCHAR}
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{cretUserId, jdbcType=VARCHAR}
            )
@@ -157,6 +166,7 @@
               ,SYS_NM = #{sysNm}
               ,SYS_DS_LST = #{sysDsLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
               ,SYS_DESC = #{sysDesc, jdbcType=VARCHAR}
+              ,DICT_ID = #{dictId, jdbcType=VARCHAR}
               ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
               ,UPDT_USER_ID = #{updtUserId}
   </insert>
@@ -170,11 +180,25 @@
               ,SYS_NM = #{sysNm}
               ,SYS_DS_LST = #{sysDsLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
               ,SYS_DESC = #{sysDesc, jdbcType=VARCHAR}
+              ,DICT_ID = #{dictId, jdbcType=VARCHAR}
               ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
               ,UPDT_USER_ID = #{updtUserId}
             WHERE
               SYS_CD = #{sysCd}
   </update>
+
+  <!-- 104번 WP2 — 시스템에 속한 데이터 모델 (시스템 화면 상세) -->
+  <select id="selectModelsBySysCd" parameterType="String" resultType="java.util.LinkedHashMap">
+            SELECT M.DM_ID       as "dataModelId"
+                  ,M.DM_NM       as "dataModelNm"
+                  ,M.MODEL_TYPE  as "modelType"
+                  ,M.DICT_ID     as "dictId"
+                  ,(SELECT D.DICT_NM FROM TB_STD_DICT D WHERE D.DICT_ID = M.DICT_ID) as "dictNm"
+              FROM TB_DATA_MODEL M
+             WHERE M.DM_SYS_CD = #{sysCd}
+               AND (M.USE_YN = 'Y' OR M.USE_YN IS NULL)
+             ORDER BY M.DM_NM
+  </select>
 
   <delete id="deleteSysInfoList" parameterType="java.util.List">
             DELETE FROM TB_SYS_INFO

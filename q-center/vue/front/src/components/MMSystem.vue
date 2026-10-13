@@ -110,6 +110,18 @@
               </v-col>
             </v-row>
 
+            <!-- 104번 WP2 — 이 시스템의 데이터 모델을 등록할 때 기본으로 고를 표준사전 -->
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>기본 표준사전</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-select dense clearable color="ndColor" v-model="addSystem_dictId" :items="dictItems"
+                  item-value="dictId" item-text="dictNm" placeholder="선택 안 함" hide-details
+                  :menu-props="{ top: false, offsetY: true }"></v-select>
+              </v-col>
+            </v-row>
+
             <v-row>
               <v-col cols="12">
                 <v-subheader>데이터 소스</v-subheader>
@@ -226,6 +238,18 @@
               </v-col>
             </v-row>
 
+            <!-- 104번 WP2 — 이 시스템의 데이터 모델을 등록할 때 기본으로 고를 표준사전 -->
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>기본 표준사전</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-select dense clearable color="ndColor" v-model="updateSystem_dictId" :items="dictItems"
+                  item-value="dictId" item-text="dictNm" placeholder="선택 안 함" hide-details
+                  :menu-props="{ top: false, offsetY: true }"></v-select>
+              </v-col>
+            </v-row>
+
             <v-row>
               <v-col cols="12">
                 <v-subheader>데이터 소스</v-subheader>
@@ -308,6 +332,8 @@ export default {
     addSystem_sysDesc: null,
     addSystem_sysDsLst: [],
     addSystem_sysDsLstNm: [],
+    addSystem_dictId: null,
+    dictItems: [], // 104번 WP2 — 표준사전 목록
     // 수정 관련
     updateSystem_sysCd: null,
     updateSystem_parentSysCd: null,
@@ -316,6 +342,7 @@ export default {
     updataSystem_sysTp_value: null,
     updateSystem_sysDesc: null,
     updateSystem_sysDsLst: [],
+    updateSystem_dictId: null,
     // 시스템 타입
     sysTpItems: [
       '시스템 그룹', '시스템'
@@ -341,6 +368,8 @@ export default {
       { text: '시스템 타입', value: 'sysTpNm', sortable: false, },
       { text: '데이터 소스', value: 'sysDsLstNm', sortable: false, },
       // { text: '데이터 소스', value: 'sysDsLst', sortable: false, },
+      { text: '기본 표준사전', value: 'dictNm', sortable: false, },
+      { text: '데이터 모델', value: 'modelNms', sortable: false, },
       { text: '시스템 경로', value: 'pathNm', sortable: false, },
       { text: '생성일시', value: 'cretDt', sortable: false, },
       { text: '생성사용자ID', value: 'cretUserId', sortable: false, },
@@ -360,6 +389,9 @@ export default {
   created() {
     this.getDatasourceData();
     this.getSysInfoList();
+    axios.post(this.$APIURL.base + 'api/dict/list', {}).then(res => {
+      this.dictItems = res.data || [];
+    }).catch(() => { this.dictItems = []; });
   },
   mounted() {
   },
@@ -410,10 +442,20 @@ export default {
       }
       // console.log(_dsNm);
 
+      // 104번 WP2 — 이 시스템에 속한 데이터 모델 (모델명 [사전명])
+      let _models = [];
+      try {
+        const res = await axios.get(this.$APIURL.base + 'api/sysinfo/getModelsBySysCd', { params: { sysCd: data.model.sysCd } });
+        _models = (res.data || []).map(m => m.dataModelNm + (m.dictNm ? ' [' + m.dictNm + ']' : ''));
+      } catch (error) {
+        console.error(error);
+      }
+
       this.selectedItem = [data.model];
 
       // this.selectedItem에 데이터 소스명 추가
       this.selectedItem[0].sysDsLstNm = _dsNm;
+      this.$set(this.selectedItem[0], 'modelNms', _models.length ? _models : ['없음']);
     },
     showModal(value) {
       // 모달 보여주기
@@ -469,6 +511,7 @@ export default {
       this.addSystem_sysNm = null;
       this.addSystem_sysDesc = null;
       this.addSystem_sysDsLst = [];
+      this.addSystem_dictId = null;
     },
     resetUpdateModal() {
       this.updateSystem_sysTp = null;
@@ -477,6 +520,7 @@ export default {
       this.updateSystem_sysNm = null;
       this.updateSystem_sysDesc = null;
       this.updateSystem_sysDsLst = [];
+      this.updateSystem_dictId = null;
     },
     // 시스템 정보 수정 버튼 클릭 시 데이터 불러오기
     updateModalInit() {
@@ -485,6 +529,7 @@ export default {
       this.updateSystem_parentSysCd = this.selectedItem[0].parentSysCd;
       this.updateSystem_sysNm = this.selectedItem[0].sysNm;
       this.updateSystem_sysDesc = this.selectedItem[0].sysDesc;
+      this.updateSystem_dictId = this.selectedItem[0].dictId || null;
 
       if (this.selectedItem[0].sysTp === 0) {
         this.updateSystem_sysTp = '시스템 그룹';
@@ -746,6 +791,7 @@ export default {
         'sysTp': this.addSystem_sysTp_value,
         'sysDsLst': _sysDsLst,
         'sysDesc': this.addSystem_sysDesc,
+        'dictId': this.addSystem_dictId,
       }
 
       axios.post(this.$APIURL.base + 'api/sysinfo/createSysInfo', _systemData).then(res => {
@@ -802,6 +848,7 @@ export default {
         'sysTp': this.updataSystem_sysTp_value,
         'sysDsLst': _sysDsLst,
         'sysDesc': this.updateSystem_sysDesc,
+        'dictId': this.updateSystem_dictId,
       }
 
       console.log(_systemData);

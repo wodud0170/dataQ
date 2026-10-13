@@ -236,8 +236,6 @@ export default {
     domainCnt: 0,
     termsCnt: 0,
     wordCnt: 0,
-    // 관리자 여부
-    isAdmin: false,
     // 데이터 모델 현황
     dataModelCnt: 0,
     objCnt: 0,
@@ -453,8 +451,6 @@ export default {
     this.getDashboardInfo();
     this.loadModelList();
     this.getRecentChangeHistory();
-    axios.get(this.$APIURL.base + 'api/login/isAdmin', { params: { user: this.$loginStatusData.id } })
-      .then(res => { this.isAdmin = res.data === true; });
   },
   mounted() {
   },
