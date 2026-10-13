@@ -27,6 +27,7 @@
 		<result property="aprvUserId"      column="APRV_USER_ID"/>
 		<result property="aprvDt"          column="APRV_DT"/>
 		<result property="aprvComment"     column="APRV_COMMENT"/>
+		<result property="stndExceptReason" column="STND_EXCEPT_REASON"/>
 		<result property="ddlExecDt"       column="DDL_EXEC_DT"/>
 		<result property="ddlExecUserId"   column="DDL_EXEC_USER_ID"/>
 		<result property="ddlExecResult"   column="DDL_EXEC_RESULT"/>
@@ -39,7 +40,7 @@
 		  OBJ_OWNER, OBJ_NM, ATTR_NM, CONSTRAINT_NM, INDEX_NM,
 		  BEFORE_JSON, AFTER_JSON, DDL_SNIPPET, DDL_DBMS_TP,
 		  APRV_STATUS, APRV_USER_ID, APRV_DT, APRV_COMMENT,
-		  DDL_EXEC_DT, DDL_EXEC_USER_ID, DDL_EXEC_RESULT, DDL_EXEC_MESSAGE )
+		  DDL_EXEC_DT, DDL_EXEC_USER_ID, DDL_EXEC_RESULT, DDL_EXEC_MESSAGE, STND_EXCEPT_REASON )
 		VALUES
 		( #{dmId}, #{changeDt}, #{changeUserId}, #{changeType}, #{changeTier},
 		  #{submissionId, jdbcType=VARCHAR},
@@ -49,7 +50,7 @@
 		  COALESCE(#{aprvStatus, jdbcType=VARCHAR}, 'APPROVED'),
 		  #{aprvUserId, jdbcType=VARCHAR}, #{aprvDt, jdbcType=VARCHAR}, #{aprvComment, jdbcType=VARCHAR},
 		  #{ddlExecDt, jdbcType=VARCHAR}, #{ddlExecUserId, jdbcType=VARCHAR},
-		  #{ddlExecResult, jdbcType=VARCHAR}, #{ddlExecMessage, jdbcType=VARCHAR}
+		  #{ddlExecResult, jdbcType=VARCHAR}, #{ddlExecMessage, jdbcType=VARCHAR}, #{stndExceptReason, jdbcType=VARCHAR}
 		)
 	</insert>
 

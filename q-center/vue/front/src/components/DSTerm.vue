@@ -185,6 +185,8 @@
               <!-- 수정 / 삭제 버튼 -->
               <v-sheet class="pr-4 pl-4">
                 <v-btn v-if="canManage" class="gradient" v-on:click="showModal('update')">수정</v-btn>
+                <!-- 104번 WP7-26 -->
+                <v-btn id="termImpactBtn" class="gradient" v-on:click="impactShow = true">영향도 분석</v-btn>
                 <!-- <v-btn class="gradient" v-on:click="wordRemoveItem()">삭제</v-btn> -->
               </v-sheet>
             </v-sheet>
@@ -321,6 +323,9 @@
                     <div class="d-flex align-center" :style="{ margin: '6px 0' }">
                       <h4 class="flex-grow-1">{{ item.wordNm }}
                         <v-chip x-small color="green" text-color="white" class="ml-2">등록됨</v-chip>
+                        <!-- 104번 WP7-8 — 입력이 표준 단어의 유사어면 권장 단어로 바꿨다고 알린다 -->
+                        <v-chip v-if="item.wordNm && item.wordNm !== item.wordLst[0].wordNm" x-small color="orange" text-color="white"
+                          class="ml-1 term-synonym-chip">유사어 → 권장 '{{ item.wordLst[0].wordNm }}'</v-chip>
                       </h4>
                       <v-btn icon x-small color="red" @click="removeWordAt(index)" title="단어 삭제">
                         <v-icon x-small>mdi-close</v-icon>
@@ -786,6 +791,8 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <StdImpactDialog v-model="impactShow" kind="term" :title="selectedItem.length ? selectedItem[0].termsNm : ''"
+      :termsId="selectedItem.length ? selectedItem[0].id : null" />
   </v-main>
 </template>
 
@@ -796,6 +803,7 @@ import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { eventBus } from './../eventBus.js'
 import DictSelector from './DictSelector.vue'
+import StdImpactDialog from './StdImpactDialog.vue'
 
 export default {
   name: 'DSTerm',
@@ -803,7 +811,8 @@ export default {
   components: {
     NdModal,
     Treeselect,
-    DictSelector
+    DictSelector,
+    StdImpactDialog
   },
   watch: {
     termItems() {
@@ -898,6 +907,7 @@ export default {
     }
   },
   data: () => ({
+    impactShow: false,   // 104번 WP7-26
     // 98번 — 조회할 표준사전
     dictId: null,
     // 용어 목록
@@ -2308,8 +2318,9 @@ export default {
                   wordEngAbrvNm: data.wordEngAbrvNm, wordEngNm: data.wordEngNm,
                   domainClsfNm: data.domainClsfNm || '', partOfSpeech: 'NN', index: idx
                 };
+                // 104번 WP7-8 — 유사어로 찾았으면 입력 이름을 남겨 "유사어 → 권장" 칩이 보이게 한다
                 self.$set(self.addTerm_wordListArr, idx, {
-                  wordNm: data.wordNm, wordLst: [matched],
+                  wordNm: data.synonymOf ? wordNm : data.wordNm, wordLst: [matched],
                   inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
                   inlineSaving: false
                 });
@@ -2356,7 +2367,7 @@ export default {
                   domainClsfNm: data.domainClsfNm || '', partOfSpeech: 'NN', index: index
                 };
                 self.$set(self.addTerm_wordListArr, index, {
-                  wordNm: data.wordNm, wordLst: [matched],
+                  wordNm: data.synonymOf ? nm : data.wordNm, wordLst: [matched],
                   inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
                   inlineSaving: false
                 });

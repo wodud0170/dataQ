@@ -8,6 +8,8 @@ public class StdDataModelVo {
 	private String dictId;
 	/** 98번 — 화면 표시용 사전명. */
 	private String dictNm;
+	/** 104번 WP7-25 — 표준 준수 필수 (Y 면 비표준 컬럼 저장 거부). */
+	private String stndReqYn;
 	private String dataModelId;
 	private String dataModelNm;
 	private String dataModelSysCd;

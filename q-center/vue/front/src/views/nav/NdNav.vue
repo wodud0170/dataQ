@@ -90,6 +90,16 @@
                         <v-list-item-title>표준 매핑</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 104번 WP7-27 쓰이지 않는 표준 -->
+                    <v-list-item link id="nav_unusedStd" href="#tab_unusedStd"
+                        active-class="ndColor--text" title="미사용 표준"
+                        v-on:click.stop=" addTabItem('미사용 표준', 'unusedStd'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>미사용 표준</v-list-item-title>
+                    </v-list-item>
+
                     <!-- <v-list-item link id="nav_datamodel" href="#tab_datamodel" active-class="ndColor--text" title="데이터 모델"
                         v-on:click.stop="addTabItem('데이터 모델', 'datamodel');">
                         <v-list-item-icon>
@@ -718,6 +728,10 @@ export default {
         });
         eventBus.$on('openColumnView', () => {
             this.addTabItem('컬럼', 'datamodelStatusColumn');
+        });
+        // 104번 WP7-27 — 미사용 표준의 이름 → 단어·용어·도메인 화면 검색 (검색어는 eventBus.pendingSearch)
+        eventBus.$on('openStdSearch', (title, tab) => {
+            this.addTabItem(title, tab);
         });
     },
     beforeDestroy() {

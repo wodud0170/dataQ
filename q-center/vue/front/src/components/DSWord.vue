@@ -193,9 +193,14 @@
                   <v-subheader class="reqText">단어명</v-subheader>
                 </v-col>
                 <v-col cols="8">
-                  <v-text-field v-model="addWord_wordNm" ref="addWord_wordNm"
+                  <v-text-field id="addWordNm" v-model="addWord_wordNm" ref="addWord_wordNm"
                     :rules="[() => !!addWord_wordNm || '단어명은 필수 입력값입니다.']" clearable required dense placeholder="가능"
-                    color="ndColor"></v-text-field>
+                    color="ndColor" @blur="checkWordNm"></v-text-field>
+                  <!-- 104번 WP7-8 — 유사어·금칙어면 권장(표준) 단어 안내 -->
+                  <div v-if="addWord_nmCheck" id="addWordNmCheck" :style="{ color: '#d32f2f', fontSize: '0.75rem', marginTop: '-8px' }">
+                    {{ addWord_nmCheck.msg }}
+                    <a v-if="addWord_nmCheck.stdNm" href="javascript:void(0)" class="ml-1" @click="showStdWord(addWord_nmCheck.stdNm)">권장 단어 보기</a>
+                  </div>
                 </v-col>
               </v-row>
 
@@ -698,6 +703,7 @@ export default {
     detailWord: null,
     // 등록 관련
     addWord_engAbrvDuplicate: '',
+    addWord_nmCheck: null,
     addWord_wordNm: null,
     addWord_wordEngAbrvNm: null,
     addWord_wordEngNm: null,
@@ -782,6 +788,35 @@ export default {
       this.searchCommStndYn = '';
       this.searchFromDt = '';
       this.searchToDt = '';
+    },
+    // 104번 WP7-8 — 단어명이 이미 있는 단어·다른 단어의 유사어·금칙어인지 보고 권장 단어를 안내한다
+    checkWordNm() {
+      const nm = (this.addWord_wordNm || '').trim();
+      if (!nm) {
+        this.addWord_nmCheck = null;
+        return;
+      }
+      axios.get(this.$APIURL.base + 'api/std/checkWordNm', { params: { wordNm: nm, dictId: this.dictId } }).then(res => {
+        const r = res.data || {};
+        const std = r.wordNm + (r.wordEngAbrvNm ? '(' + r.wordEngAbrvNm + ')' : '');
+        if (r.status === 'SYNONYM') {
+          this.addWord_nmCheck = { msg: `'${nm}' 은(는) 표준 단어 ${std} 의 유사어입니다. '${r.wordNm}' 를 쓰세요.`, stdNm: r.wordNm };
+        } else if (r.status === 'FORBIDDEN') {
+          this.addWord_nmCheck = { msg: `'${nm}' 은(는) 표준 단어 ${std} 의 금칙어입니다. '${r.wordNm}' 를 쓰세요.`, stdNm: r.wordNm };
+        } else if (r.status === 'EXACT') {
+          this.addWord_nmCheck = { msg: `이미 ${r.aprvYn === 'Y' ? '승인된' : '승인 대기 중인'} 단어입니다.`, stdNm: r.wordNm };
+        } else {
+          this.addWord_nmCheck = null;
+        }
+      }).catch(() => {
+        this.addWord_nmCheck = null;
+      });
+    },
+    // 권장 단어 보기 — 등록 창을 닫고 그 단어로 목록을 검색한다
+    showStdWord(nm) {
+      this.hideModal('add');
+      this.searchWord = nm;
+      this.getWordData();
     },
     checkEngAbrvDuplicate() {
       var vm = this;
@@ -983,6 +1018,7 @@ export default {
       this.addWord_forbdnWordLst_count = 0;
       this.addWord_reqSysCd = null;
       this.addWord_engAbrvDuplicate = '';
+      this.addWord_nmCheck = null;
     },
     addForbdnWordLst() {
       if (this.addWordModalShow) {

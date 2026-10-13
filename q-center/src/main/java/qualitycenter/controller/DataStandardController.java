@@ -233,7 +233,10 @@ public class DataStandardController {
 			// 중복 체크: 동일 단어명이 이미 존재하면 승인 상태에 따라 메시지 분기
 			StdWordVo existingWord = sqlSessionTemplate.selectOne("word.selectWordInfoByNm", dictService.nameParam(dataVo.getDictId(), "wordNm", dataVo.getWordNm()));
 			if (existingWord != null) {
-				String dupMsg = "Y".equals(existingWord.getAprvYn())
+				// 104번 WP7-8 — 다른 단어의 이음동의어(유사어)와 같으면 표준 단어를 안내한다
+				String dupMsg = !existingWord.getWordNm().equals(dataVo.getWordNm())
+						? "'" + dataVo.getWordNm() + "'은(는) '" + existingWord.getWordNm() + "'의 유사어입니다. 표준 단어 '" + existingWord.getWordNm() + "'를 사용해주세요."
+						: "Y".equals(existingWord.getAprvYn())
 						? "이미 승인된 단어명입니다."
 						: "승인 대기 중인 단어명입니다.";
 				result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg);
@@ -413,6 +416,39 @@ public class DataStandardController {
 	}
 
 	/**
+	 * 104번 WP7-8 — 등록하려는 단어명이 사전에서 어떤 단어와 겹치는지 본다.
+	 * EXACT(같은 단어), SYNONYM(다른 단어의 유사어 — 이음동의어), FORBIDDEN(승인 단어의 금칙어), NONE.
+	 * SYNONYM·FORBIDDEN 이면 권장(표준) 단어를 함께 준다.
+	 */
+	@RequestMapping(value = "/checkWordNm", method = RequestMethod.GET)
+	public Map<String, Object> checkWordNm(@RequestParam("wordNm") String wordNm,
+			@RequestParam(value = "dictId", required = false) String dictId) {
+		Map<String, Object> result = new HashMap<>();
+		String nm = wordNm == null ? "" : wordNm.trim();
+		result.put("status", "NONE");
+		if (nm.isEmpty()) return result;
+		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(dictId, "wordNm", nm));
+		if (words != null && !words.isEmpty()) {
+			StdWordVo w = words.stream().filter(x -> nm.equals(x.getWordNm())).findFirst().orElse(words.get(0));
+			result.put("status", nm.equals(w.getWordNm()) ? "EXACT" : "SYNONYM");
+			result.put("wordId", w.getId());
+			result.put("wordNm", w.getWordNm());
+			result.put("wordEngAbrvNm", w.getWordEngAbrvNm());
+			result.put("wordEngNm", w.getWordEngNm());
+			result.put("aprvYn", w.getAprvYn());
+			return result;
+		}
+		Map<String, Object> forbidden = sqlSessionTemplate.selectOne("word.selectWordByForbiddenNm", dictService.nameParam(dictId, "wordNm", nm));
+		if (forbidden != null) {
+			result.put("status", "FORBIDDEN");
+			result.put("wordNm", forbidden.get("wordNm"));
+			result.put("wordEngAbrvNm", forbidden.get("wordEngAbrvNm"));
+			result.put("aprvYn", "Y");
+		}
+		return result;
+	}
+
+	/**
 	 * 단어명으로 TB_WORD + TB_WORD_DICT 동시 조회 (실시간 입력 조회용, 경량)
 	 */
 	@RequestMapping(value = "/lookupWord", method = RequestMethod.GET)
@@ -429,6 +465,8 @@ public class DataStandardController {
 			StdWordVo w = words.get(0);
 			result.put("found", true);
 			result.put("source", "WORD");
+			// 104번 WP7-8 — 입력이 이 단어의 유사어(이음동의어)면 표시
+			if (!w.getWordNm().equals(wordNm.trim())) result.put("synonymOf", w.getWordNm());
 			result.put("wordId", w.getId());
 			result.put("wordNm", w.getWordNm());
 			result.put("wordEngAbrvNm", w.getWordEngAbrvNm());
@@ -2422,6 +2460,11 @@ public class DataStandardController {
 			StdWordVo existWord = existing.get(0);
 			res.put("success", true);
 			res.put("alreadyExists", true);
+			// 104번 WP7-8 — 유사어로 맞춘 경우 표준 단어로 바꿨다고 알린다
+			if (!existWord.getWordNm().equals(wordNm.trim())) {
+				res.put("synonymOf", existWord.getWordNm());
+				res.put("message", "'" + wordNm.trim() + "'은(는) '" + existWord.getWordNm() + "'의 유사어입니다. 표준 단어 '" + existWord.getWordNm() + "'를 씁니다.");
+			}
 			res.put("wordId", existWord.getId());
 			res.put("wordNm", existWord.getWordNm());
 			res.put("wordEngAbrvNm", existWord.getWordEngAbrvNm());
@@ -3499,16 +3542,68 @@ public class DataStandardController {
 	}
 
 	/**
-	 * 도메인 영향도 분석 - 해당 도메인을 사용하는 용어 목록 반환
+	 * 도메인 영향도 분석 - 해당 도메인을 사용하는 용어 목록과, 그 용어를 쓰는 컬럼 (104번 WP7-26)
 	 *
 	 * @param domainNm 도메인명
-	 * @return { terms: 참조 용어 목록 }
+	 * @param dictId   사전 (없으면 기본 사전)
+	 * @return { terms: 참조 용어 목록, columns: 그 용어들의 컬럼 }
 	 */
 	@GetMapping("/impact/domain")
-	public Map<String, Object> getDomainImpact(@RequestParam String domainNm) {
+	public Map<String, Object> getDomainImpact(@RequestParam String domainNm,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 		Map<String, Object> result = new HashMap<>();
-		result.put("terms", sqlSessionTemplate.selectList("impact.selectImpactTermsByDomainNm", domainNm));
+		List<Map<String, Object>> terms = sqlSessionTemplate.selectList("impact.selectImpactTermsByDomainNm", dictService.nameParam(dictId, "domainNm", domainNm));
+		result.put("terms", terms);
+		result.put("columns", impactColumns(terms));
 		return result;
+	}
+
+	/**
+	 * 104번 WP7-26 — 용어 영향도: 이 용어를 쓰는 컬럼 (모델 사전 = 용어 사전, 영문명 일치 ENG / 한글명만 일치 KR)
+	 */
+	@GetMapping("/impact/term")
+	public Map<String, Object> getTermImpact(@RequestParam String termsId) {
+		Map<String, Object> result = new HashMap<>();
+		Map<String, Object> one = new HashMap<>();
+		one.put("termsId", termsId);
+		result.put("columns", impactColumns(java.util.Collections.singletonList(one)));
+		return result;
+	}
+
+	/**
+	 * 104번 WP7-26 — 코드 영향도: 이 코드 그룹을 쓰는 용어(코드 자신 포함)와 그 컬럼(코드값이 들어가는 컬럼),
+	 * 이 코드를 상위로 쓰는 계층·파생 코드, 하위로 묶는 통합 코드, 코드값 수
+	 */
+	@GetMapping("/impact/code")
+	public Map<String, Object> getCodeImpact(@RequestParam String termsId) {
+		Map<String, Object> result = new HashMap<>();
+		try (SqlSession session = sqlSessionFactory.openSession()) {
+			Map<String, Object> code = session.selectOne("codeType.selectCodeById", termsId);
+			if (code == null || code.get("codeGrp") == null) {
+				result.put("terms", new ArrayList<>());
+				result.put("columns", new ArrayList<>());
+				result.put("relatedCodes", new ArrayList<>());
+				result.put("valueCnt", 0);
+				return result;
+			}
+			Map<String, Object> p = dictService.nameParam((String) code.get("dictId"), "codeGrp", (String) code.get("codeGrp"));
+			List<Map<String, Object>> terms = session.selectList("impact.selectTermsByCodeGrp", p);
+			result.put("terms", terms);
+			result.put("columns", impactColumns(terms));
+			result.put("relatedCodes", session.selectList("impact.selectRelatedCodes", p));
+			result.put("valueCnt", session.selectOne("codeType.countValuesByGrp", p));
+		}
+		return result;
+	}
+
+	/** 용어 목록의 연관 컬럼 (용어가 없으면 빈 목록) */
+	private List<Map<String, Object>> impactColumns(List<Map<String, Object>> terms) {
+		List<String> ids = new ArrayList<>();
+		for (Map<String, Object> t : terms) if (t.get("termsId") != null) ids.add((String) t.get("termsId"));
+		if (ids.isEmpty()) return new ArrayList<>();
+		Map<String, Object> p = new HashMap<>();
+		p.put("termsIds", ids);
+		return sqlSessionTemplate.selectList("impact.selectImpactColumnsByTermIds", p);
 	}
 
 	/**

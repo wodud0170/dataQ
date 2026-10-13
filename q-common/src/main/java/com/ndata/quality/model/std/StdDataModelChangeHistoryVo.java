@@ -32,6 +32,8 @@ public class StdDataModelChangeHistoryVo {
 	private String aprvUserId;
 	private String aprvDt;
 	private String aprvComment;
+	/** 104번 WP7-25 — 표준 준수 필수 모델에 비표준 컬럼을 넣을 때의 예외 신청 사유 */
+	private String stndExceptReason;
 	private String ddlExecDt;
 	private String ddlExecUserId;
 	private String ddlExecResult; // SUCCESS / FAILED / SKIPPED / NO_PRIVILEGE

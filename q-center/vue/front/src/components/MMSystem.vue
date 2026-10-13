@@ -17,6 +17,17 @@
           <v-btn class="gradient" v-on:click="showModal('update')" title="수정"
             :style="{ marginRight: '20px' }">수정</v-btn>
           <v-btn class="gradient" v-on:click="removeSystemData()" title="삭제">삭제</v-btn>
+          <!-- 104번 WP7-25 — 이 시스템(하위 포함) 모델의 표준 준수 필수 일괄 설정 -->
+          <v-menu v-if="$can('DM_MANAGE')" offset-y>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn id="sysStndReqMenu" class="ml-5" outlined color="indigo" v-bind="attrs" v-on="on">표준 준수 필수
+                <v-icon small right>mdi-menu-down</v-icon></v-btn>
+            </template>
+            <v-list dense>
+              <v-list-item id="sysStndReqOn" @click="setStndReqBySys('Y')"><v-list-item-title>하위 모델 모두 켜기</v-list-item-title></v-list-item>
+              <v-list-item id="sysStndReqOff" @click="setStndReqBySys('N')"><v-list-item-title>하위 모델 모두 끄기</v-list-item-title></v-list-item>
+            </v-list>
+          </v-menu>
         </v-sheet>
 
         <!-- 테이블 -->
@@ -886,6 +897,24 @@ export default {
           icon: 'error',
         });
       })
+    },
+    // 104번 WP7-25 — 이 시스템과 하위 시스템의 사용 중 모델을 모두 표준 준수 필수로 켜거나 끈다
+    setStndReqBySys(yn) {
+      const sys = this.selectedItem[0];
+      this.$swal.fire({
+        title: `'${sys.sysNm}' 과 하위 시스템의 모델을 모두 표준 준수 필수로 ${yn === 'Y' ? '켤까요' : '끌까요'}?`,
+        text: yn === 'Y' ? '켜면 그 모델들에 비표준 컬럼을 추가·수정할 수 없고, 예외는 결재로 신청합니다.' : '',
+        showCancelButton: true, confirmButtonText: yn === 'Y' ? '켜기' : '끄기', cancelButtonText: '취소',
+      }).then(r => {
+        if (!r.isConfirmed) return;
+        axios.post(this.$APIURL.base + 'api/dm/setStndReqBySys', { sysCd: sys.sysCd, stndReqYn: yn }).then(res => {
+          if (res.data.resultCode === 200) {
+            this.$swal.fire({ title: `모델 ${res.data.contents}개를 바꿨습니다.`, icon: 'success', timer: 1500, showConfirmButton: false });
+          } else {
+            this.$swal.fire({ title: res.data.resultMessage || '설정 실패', icon: 'error' });
+          }
+        });
+      });
     },
     removeSystemData() {
       // 삭제할 시스템 확인. 없으면 경고

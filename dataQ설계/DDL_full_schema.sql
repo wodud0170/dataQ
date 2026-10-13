@@ -470,7 +470,8 @@ CREATE TABLE quality.tb_data_model (
     aprv_dt character varying(14),
     aprv_comment character varying(500),
     submission_id character varying(40),
-    dict_id character varying(22)
+    dict_id character varying(22),
+    stnd_req_yn character(1) DEFAULT 'N'::bpchar
 );
 
 
@@ -500,6 +501,13 @@ COMMENT ON COLUMN quality.tb_data_model.model_type IS 'PHYSICAL(물리만), LOGI
 --
 
 COMMENT ON COLUMN quality.tb_data_model.dict_id IS '이 모델에 적용할 표준사전. NULL 이면 스케줄 진단 불가';
+
+
+--
+-- Name: COLUMN tb_data_model.stnd_req_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model.stnd_req_yn IS '표준 준수 필수 — Y 면 비표준 컬럼 추가·수정 저장을 거부하고, 예외는 결재(변경 승인)로 (104번 WP7-25)';
 
 
 --
@@ -722,7 +730,8 @@ CREATE TABLE quality.tb_data_model_change_history (
     ddl_exec_user_id character varying(50),
     ddl_exec_result character varying(20),
     ddl_exec_message character varying(2000),
-    ddl_dbms_tp character varying(20)
+    ddl_dbms_tp character varying(20),
+    stnd_except_reason character varying(500)
 );
 
 
@@ -731,6 +740,13 @@ CREATE TABLE quality.tb_data_model_change_history (
 --
 
 COMMENT ON COLUMN quality.tb_data_model_change_history.ddl_dbms_tp IS 'DDL_SNIPPET 을 만든 DBMS (모델 데이터소스 DBMS_TP). 데이터소스 없는 모델은 NULL (104번 WP3)';
+
+
+--
+-- Name: COLUMN tb_data_model_change_history.stnd_except_reason; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_change_history.stnd_except_reason IS '표준 예외 신청 사유 — 표준 준수 필수 모델에 비표준 컬럼을 넣을 때 (104번 WP7-25)';
 
 
 --

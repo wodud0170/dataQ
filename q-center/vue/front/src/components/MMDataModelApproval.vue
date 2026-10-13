@@ -65,6 +65,9 @@
                 <span style="font-family:monospace;">
                   {{ (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '') + (item.constraintNm ? ' [' + item.constraintNm + ']' : '') }}
                 </span>
+                <!-- 104번 WP7-25 — 표준 준수 필수 모델의 비표준 컬럼 예외 신청 -->
+                <v-chip v-if="item.stndExceptReason" x-small color="deep-orange" text-color="white" class="ml-1 stnd-except-chip"
+                  :title="'표준 예외 사유: ' + item.stndExceptReason">표준 예외 — {{ item.stndExceptReason }}</v-chip>
               </template>
               <template #item.aprvStatus="{ item }">
                 <v-chip x-small :color="statusColor(item.aprvStatus)" dark>{{ item.aprvStatus }}</v-chip>

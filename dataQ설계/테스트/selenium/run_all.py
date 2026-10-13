@@ -87,6 +87,7 @@ GROUPS = [
         "test_wp1_aprv.py",          # 104 WP1 — 결재선·알림·결재함
         "test_wp5_gov_meta.py",      # 104 WP5 — 개인정보 컬럼·범정부 메타
         "test_wp6_std_struct.py",    # 104 WP6 — 사전 운영 옵션·도메인 그룹 다단계·코드 유형·표준 매핑
+        "test_wp7_std_control.py",   # 104 WP7 — 유사어·자동완성·표준 후보·표준 준수 강제·영향도·미사용 표준
         "test_crud_std_dict.py",
     ]),
     ("표준 사전 (단어/용어/도메인)", [

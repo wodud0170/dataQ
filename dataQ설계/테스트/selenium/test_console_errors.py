@@ -44,6 +44,7 @@ MENUS = [
     "nav_org", "nav_aprvLine", "nav_aprvBox",   # 104 WP1
     "nav_privColumn", "nav_govMetaConf", "nav_govMetaSys", "nav_govMetaItems", "nav_govMetaSend",   # 104 WP5
     "nav_stdMap", "nav_std_dict",   # 104 WP6
+    "nav_unusedStd",   # 104 WP7
 ]
 
 results = []

@@ -68,7 +68,19 @@ public class ChangeHistoryService {
 	                   String constraintNm, String indexNm,
 	                   String beforeJson, String afterJson, String ddlSnippet,
 	                   String aprvStatus) {
+		record(session, dmId, changeType, tier, objOwner, objNm, attrNm, constraintNm, indexNm,
+				beforeJson, afterJson, ddlSnippet, aprvStatus, null);
+	}
+
+	/** 104번 WP7-25 — 표준 예외 신청 사유를 함께 남긴다 (표준 준수 필수 모델의 비표준 컬럼) */
+	public void record(SqlSession session,
+	                   String dmId, String changeType, String tier,
+	                   String objOwner, String objNm, String attrNm,
+	                   String constraintNm, String indexNm,
+	                   String beforeJson, String afterJson, String ddlSnippet,
+	                   String aprvStatus, String stndExceptReason) {
 		StdDataModelChangeHistoryVo vo = new StdDataModelChangeHistoryVo();
+		vo.setStndExceptReason(stndExceptReason);
 		vo.setDmId(dmId);
 		vo.setChangeDt(LocalDateTime.now().format(DT_FMT));
 		vo.setChangeUserId(safeUserId());

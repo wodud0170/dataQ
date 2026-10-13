@@ -115,6 +115,8 @@
               <!-- 수정 / 삭제 버튼 -->
               <v-sheet class="pr-4 pl-4">
                 <v-btn v-if="canManage" class="gradient" v-on:click="showModal('codeUpdate')">수정</v-btn>
+                <!-- 104번 WP7-26 -->
+                <v-btn id="codeImpactBtn" class="gradient" v-on:click="impactShow = true">영향도 분석</v-btn>
               </v-sheet>
             </v-sheet>
             <!-- 테이블 -->
@@ -905,6 +907,8 @@
       </v-card>
     </v-dialog>
 
+    <StdImpactDialog v-model="impactShow" kind="code" :title="selectedItem.length ? selectedItem[0].codeNm : ''"
+      :termsId="selectedItem.length ? selectedItem[0].id : null" />
   </v-main>
 </template>
 
@@ -915,6 +919,7 @@ import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { eventBus } from './../eventBus.js'
 import DictSelector from './DictSelector.vue'
+import StdImpactDialog from './StdImpactDialog.vue'
 
 export default {
   name: 'DSCode',
@@ -922,7 +927,8 @@ export default {
   components: {
     NdModal,
     Treeselect,
-    DictSelector
+    DictSelector,
+    StdImpactDialog
   },
   watch: {
     codeItems() {
@@ -1008,6 +1014,7 @@ export default {
     canManage() { return this.$can('STD_MANAGE'); },
   },
   data: () => ({
+    impactShow: false,   // 104번 WP7-26
     // 98번 — 조회할 표준사전
     dictId: null,
     // 코드 목록

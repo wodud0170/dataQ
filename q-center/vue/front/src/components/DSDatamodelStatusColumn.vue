@@ -9,6 +9,9 @@
           item-text="dataModelNm" item-value="dataModelId"
           @change="onModelChange" clearable dense outlined hide-details
           class="filterInput" :style="{ width: '220px' }" color="ndColor" placeholder="모델 선택" />
+        <!-- 104번 WP7-25 -->
+        <v-chip v-if="stndReq" id="colStndReqChip" small color="indigo" text-color="white"
+          title="비표준 컬럼은 추가·수정 저장이 거부되고, 예외는 결재로 신청합니다">표준 준수 필수</v-chip>
         <v-checkbox class="checkboxStyle ma-0 pa-0" hide-details v-model="showNonStandardOnly"
           label="비표준만 보기" color="error" dense />
         <v-spacer />
@@ -161,6 +164,13 @@
           style="min-width:220px !important; width:220px !important; padding:0 24px !important; flex-shrink:0; white-space:nowrap;">
           <span style="white-space:nowrap; display:inline-block;">영문명 기준 표준화</span>
         </v-btn>
+
+        <!-- 104번 WP7-23 — 컬럼마다 표준 용어 후보를 찾아 골라 채운다 (선택 없으면 비표준 컬럼 전체) -->
+        <v-btn id="btn-term-cand" class="tb-btn" color="indigo" outlined depressed
+          :disabled="!selectedModelId" v-on:click="openCandDialog" :loading="candLoading"
+          style="min-width:160px !important; flex-shrink:0; white-space:nowrap;">
+          <v-icon small left>mdi-format-list-checks</v-icon>표준 후보 찾기
+        </v-btn>
       </v-row>
 
       <!-- 87-3 제약조건 액션 줄 — PK/FK 생성 (왼쪽 체크박스로 컬럼 선택 후 클릭) -->
@@ -228,12 +238,30 @@
         <div style="display:flex; align-items:center;">
           <v-icon v-if="item.termsStndYn === 'N' && item._mode !== 'add'" small color="error" class="mr-1"
             title="비표준 용어">mdi-alert-circle</v-icon>
-          <v-text-field v-model="item.attrNmKr"
-            :class="'inline-edit ' + (item._error ? 'inline-error ' : '') + (isRowDirty(item) ? 'inline-dirty' : '')"
-            dense hide-details outlined flat solo single-line
-            :placeholder="item._mode === 'add' ? '컬럼 한글명 (논리)' : ''"
-            :autofocus="item._mode === 'add'"
-            @paste.native="onCellPaste(item, 'attrNmKr', $event)" />
+          <!-- 104번 WP7-24 — 한글명 입력 중 승인 용어 자동완성. 고르면 영문명·타입·길이를 채운다 -->
+          <v-menu :value="suggestKey === item._rowKey && suggestItems.length > 0" offset-y max-height="320" min-width="380"
+            @input="v => { if (!v) closeSuggest() }">
+            <template #activator="{ attrs }">
+              <v-text-field v-model="item.attrNmKr" v-bind="attrs"
+                :class="'inline-edit ' + (item._error ? 'inline-error ' : '') + (isRowDirty(item) ? 'inline-dirty' : '')"
+                dense hide-details outlined flat solo single-line
+                :placeholder="item._mode === 'add' ? '컬럼 한글명 (논리)' : ''"
+                :autofocus="item._mode === 'add'"
+                @input="onKrInput(item)" @keydown.esc="closeSuggest"
+                @paste.native="onCellPaste(item, 'attrNmKr', $event)" />
+            </template>
+            <v-list dense class="term-suggest-list">
+              <v-list-item v-for="t in suggestItems" :key="t.termsId" @click="applySuggest(item, t)">
+                <v-list-item-content>
+                  <v-list-item-title>{{ t.termsNm }} <span class="grey--text ml-1">{{ t.termsEngAbrvNm }}</span></v-list-item-title>
+                  <v-list-item-subtitle>
+                    {{ t.domainNm || '도메인 없음' }}<span v-if="t.dataType"> · {{ t.dataType }}<span v-if="t.dataLen">({{ t.dataLen }}{{ t.dataDecimalLen ? ',' + t.dataDecimalLen : '' }})</span></span>
+                    <span v-if="t.synonym" class="orange--text"> · 유사어 {{ t.synonym }}</span>
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </div>
       </template>
 
@@ -319,7 +347,11 @@
 
       <template #item.actions="{ item }">
         <v-icon v-if="item._mode === 'add'" small color="error" @click="removeNewRow(item)">mdi-close</v-icon>
-        <v-icon v-else small :disabled="!selectedModelId" @click="deleteOne(item)">mdi-delete</v-icon>
+        <template v-else>
+          <!-- 104번 WP7-26 — 이 컬럼이 기대는 표준 (용어·단어·도메인) -->
+          <v-icon small class="col-impact-icon mr-1" title="영향도 — 용어·단어·도메인" @click="openColImpact(item)">mdi-sitemap</v-icon>
+          <v-icon small :disabled="!selectedModelId" @click="deleteOne(item)">mdi-delete</v-icon>
+        </template>
       </template>
 
       <template #top>
@@ -330,6 +362,40 @@
         <span v-show="loadTable">잠시만 기다려주세요.</span>
       </template>
     </v-data-table>
+
+    <!-- ===== 104번 WP7-23 표준 용어 후보 ===== -->
+    <v-dialog v-model="candDialog" max-width="1100" scrollable>
+      <v-card>
+        <v-card-title class="indigo white--text">표준 용어 후보 — 컬럼 {{ candRows.length }}개</v-card-title>
+        <v-card-text class="pt-3" style="max-height:65vh;">
+          <div class="mb-2" style="font-size:.82rem; color:#546E7A;">
+            컬럼마다 쓸 용어를 고르세요 (가장 잘 맞는 후보를 미리 골라 두었습니다). [적용] 하면 한글명·영문명·타입·길이를 화면에 채우고, [저장] 해야 모델에 반영됩니다.
+          </div>
+          <v-simple-table id="candTable" dense>
+            <thead>
+              <tr><th>테이블</th><th>컬럼</th><th>한글명</th><th style="width:48%">용어 후보</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(c, i) in candRows" :key="'cand-' + i">
+                <td>{{ c.objNm }}</td>
+                <td>{{ c.attrNm }}</td>
+                <td>{{ c.attrNmKr }}</td>
+                <td>
+                  <span v-if="!c.candidates.length" style="color:#9E9E9E;">후보 없음</span>
+                  <v-select v-else v-model="c.pick" :items="candOptions(c)" item-text="text" item-value="value"
+                    dense hide-details outlined class="my-1" />
+                </td>
+              </tr>
+            </tbody>
+          </v-simple-table>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text v-on:click="candDialog = false">닫기</v-btn>
+          <v-btn id="btn-cand-apply" color="primary" depressed v-on:click="applyCands">적용</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- ===== 87-3 PK 생성 모달 ===== -->
     <v-dialog v-model="pkDialog" max-width="640" persistent>
@@ -493,6 +559,9 @@
 
     <!-- 88번 거버넌스 — 내 변경 신청 모달 (DRAFT 일괄 → SUBMITTED) -->
     <DMSubmitModal v-model="submitModalShow" @submitted="load" />
+    <!-- 104번 WP7-26 -->
+    <StdImpactDialog v-model="colImpactShow" kind="column" :title="colImpact.title" :dmId="selectedModelId"
+      :attrNm="colImpact.attrNm" :attrNmKr="colImpact.attrNmKr" />
   </v-main>
 </template>
 
@@ -501,11 +570,12 @@ import axios from 'axios';
 import { eventBus } from '../eventBus';
 import NdModal from "./../views/modal/NdModal.vue"
 import DMSubmitModal from './DMSubmitModal.vue';
+import StdImpactDialog from './StdImpactDialog.vue';
 
 export default {
   name: 'DSDatamodelStatusColumn',
   props: ['isMobile'],
-  components: { NdModal, DMSubmitModal },
+  components: { NdModal, DMSubmitModal, StdImpactDialog },
   watch: {
     mergedItems() {
       this.pageCount = Math.ceil(this.mergedItems.length / this.itemsPerPage);
@@ -582,6 +652,17 @@ export default {
     selectedRows: [],       // show-select 체크된 행
     resolving: false,
     resolvingByEng: false,
+    // 104번 WP7-24 용어 자동완성
+    suggestKey: null,
+    suggestItems: [],
+    suggestTimer: null,
+    // 104번 WP7-23 표준 후보
+    candDialog: false,
+    candLoading: false,
+    candRows: [],
+    // 104번 WP7-26 컬럼 영향도
+    colImpactShow: false,
+    colImpact: { title: '', attrNm: null, attrNmKr: null },
     // 87-3 PK/FK
     // key = ownerObjNm (예: USER1TB_MEMBER), value = { byCol: { ATTR_NM: { pk:{name,columns}, fk:{name,refTable,refCol} } }, pk: {...}, fkList: [...] }
     constraintsByKey: {},
@@ -666,6 +747,11 @@ export default {
     ],
   }),
   computed: {
+    // 104번 WP7-25 — 고른 모델이 표준 준수 필수인가
+    stndReq() {
+      const m = this.modelList.find(x => x.dataModelId === this.selectedModelId);
+      return !!(m && m.stndReqYn === 'Y');
+    },
     // 104번 WP2 — 모델 직접 반영 권한(관리자 또는 DM_MANAGE): 컬럼 순서 바꾸기
     canManageModel() { return this.$can('DM_MANAGE'); },
     // 87-3 모달용 옵션
@@ -773,6 +859,7 @@ export default {
         this.modelList = res.data.map(item => ({
           dataModelId: item.dataModelId,
           dataModelNm: item.dataModelNm,
+          stndReqYn: item.stndReqYn,
         }));
       }).catch(() => {
         this.$swal.fire({ title: '데이터 모델 목록 로드 실패', confirmButtonText: '확인', icon: 'error' });
@@ -1810,7 +1897,8 @@ export default {
       }
       this._doSaveAll();
     },
-    _doSaveAll() {
+    // exceptReason·onlyKeys — 104번 WP7-25 표준 예외 신청으로 다시 보낼 때 (거부된 테이블만, 행마다 사유)
+    _doSaveAll(exceptReason, onlyKeys) {
       if (!this._validateNewRows()) {
         const dups = this._dupErrorList || [];
         if (dups.length > 0) {
@@ -1833,7 +1921,10 @@ export default {
       if (allKeys.size === 0) return;
 
       const requests = [];
+      const reqKeys = [];
       allKeys.forEach(k => {
+        if (onlyKeys && !onlyKeys.has(k)) return;
+        reqKeys.push(k);
         const meta = (addGroups[k] || delGroups[k] || updGroups[k]);
         const objNm = meta.objNm;
         const objOwner = meta.objOwner;
@@ -1844,6 +1935,7 @@ export default {
           attrOrder: r.attrOrder,
           pkYn: r.pkYn, fkYn: r.fkYn,
           nullableYn: r.nullableYn, defaultVal: r.defaultVal,
+          stndExceptReason: exceptReason || null,
         }));
         ((updGroups[k] && updGroups[k].rows) || []).forEach(r => attrs.push({
           mode: 'UPDATE',
@@ -1854,6 +1946,7 @@ export default {
           attrOrder: r.attrOrder,
           pkYn: r.pkYn, fkYn: r.fkYn,
           nullableYn: r.nullableYn, defaultVal: r.defaultVal,
+          stndExceptReason: exceptReason || null,
         }));
         ((delGroups[k] && delGroups[k].rows) || []).forEach(r => attrs.push({
           mode: 'DELETE', attrNm: r.attrNm,
@@ -1865,6 +1958,22 @@ export default {
 
       Promise.all(requests).then(responses => {
         const fail = responses.find(res => !(res.data && res.data.resultCode === 200));
+        // 104번 WP7-25 — 표준 준수 필수 모델이 비표준 컬럼을 거부하면 사유를 받아 그 테이블만 결재 대상으로 다시 보낸다
+        const stndFailKeys = new Set(reqKeys.filter((k, i) => {
+          const d = responses[i].data;
+          return d && d.resultCode !== 200 && (d.resultMessage || '').indexOf('표준 준수 필수 모델입니다') === 0;
+        }));
+        if (fail && !exceptReason && stndFailKeys.size > 0 && stndFailKeys.size === responses.filter(res => !(res.data && res.data.resultCode === 200)).length) {
+          this.$swal.fire({
+            title: '표준 준수 필수 모델 — 비표준 컬럼',
+            html: '<div style="text-align:left; font-size:.86rem; line-height:1.55;">' + this._esc(fail.data.resultMessage)
+                + '<br><br>표준에 맞게 고치거나, 사유를 넣어 <b>표준 예외</b>로 신청하세요. 예외 컬럼은 결재(데이터 모델 변경 승인)를 거쳐 반영됩니다.</div>',
+            input: 'textarea', inputPlaceholder: '표준 예외 사유',
+            inputValidator: v => (!v || !v.trim()) && '사유를 넣어 주세요.',
+            showCancelButton: true, confirmButtonText: '표준 예외로 신청', cancelButtonText: '고치기',
+          }).then(r => { if (r.isConfirmed) this._doSaveAll(r.value.trim(), stndFailKeys); });
+          return;
+        }
         if (fail) {
           this.$swal.fire({
             title: '일부 저장 실패',
@@ -1880,9 +1989,13 @@ export default {
             return sum + (parsed.saved || 0);
           } catch (e) { return sum; }
         }, 0);
-        this.$swal.fire({
-          title: `${totalSaved}건 저장 완료`, icon: 'success', timer: 1500, showConfirmButton: false,
-        });
+        if (exceptReason) {
+          this.$swal.fire({ title: '표준 예외로 저장했습니다', text: '예외 컬럼은 결재 대상입니다. [내 변경 신청]으로 신청하세요.', icon: 'info' });
+        } else {
+          this.$swal.fire({
+            title: `${totalSaved}건 저장 완료`, icon: 'success', timer: 1500, showConfirmButton: false,
+          });
+        }
         this.newRows = [];
         this.pendingDeletes = [];
         this.load();
@@ -1892,6 +2005,84 @@ export default {
       });
     },
     // 한글명 기준 표준화 — 사전 confirm
+    // 104번 WP7-26 — 컬럼 영향도 (저장된 값 기준)
+    openColImpact(item) {
+      const o = item._orig || item;
+      this.colImpact = { title: (item.objNm || '') + '.' + (o.attrNm || ''), attrNm: o.attrNm, attrNmKr: o.attrNmKr };
+      this.colImpactShow = true;
+    },
+    _esc(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+    // ===== 104번 WP7-24 용어 자동완성 =====
+    onKrInput(item) {
+      clearTimeout(this.suggestTimer);
+      const q = (item.attrNmKr || '').trim();
+      if (!q || !this.selectedModelId) {
+        this.closeSuggest();
+        return;
+      }
+      this.suggestTimer = setTimeout(() => {
+        axios.get(this.$APIURL.base + 'api/dm/termSuggest', { params: { dmId: this.selectedModelId, q } }).then(res => {
+          if ((item.attrNmKr || '').trim() !== q) return;   // 그새 더 입력했으면 버린다
+          this.suggestKey = item._rowKey;
+          this.suggestItems = res.data || [];
+        });
+      }, 300);
+    },
+    closeSuggest() {
+      this.suggestKey = null;
+      this.suggestItems = [];
+    },
+    applySuggest(item, t) {
+      this.applyTermToRow(item, t);
+      this.closeSuggest();
+    },
+    // 용어 값으로 행 채우기 — 한글명 = 용어명, 영문명 = 용어 영문약어명, 타입·길이·소수 = 도메인
+    applyTermToRow(row, t) {
+      this.$set(row, 'attrNmKr', t.termsNm);
+      this.$set(row, 'attrNm', t.termsEngAbrvNm);
+      if (t.dataType) {
+        this.$set(row, 'dataType', t.dataType);
+        this.$set(row, 'dataLen', t.dataLen == null ? null : t.dataLen);
+        this.$set(row, 'dataDecimalLen', t.dataDecimalLen == null ? null : t.dataDecimalLen);
+      }
+    },
+    // ===== 104번 WP7-23 표준 후보 =====
+    openCandDialog() {
+      const base = this.selectedRows.length ? this.selectedRows : this.mergedItems.filter(r => r.termsStndYn !== 'Y');
+      const rows = base.filter(r => (r.attrNmKr || '').trim());
+      if (rows.length === 0) {
+        this.$swal.fire({ title: '후보를 찾을 컬럼이 없습니다.', text: '한글명이 있는 컬럼을 고르세요 (고르지 않으면 비표준 컬럼 전체).', icon: 'info' });
+        return;
+      }
+      this.candLoading = true;
+      axios.post(this.$APIURL.base + 'api/dm/suggestTerms', {
+        dmId: this.selectedModelId,
+        attrs: rows.map(r => ({ objOwner: r.objOwner, objNm: r.objNm, attrNm: r.attrNm, attrNmKr: r.attrNmKr })),
+      }).then(res => {
+        const items = (res.data && res.data.items) || [];
+        this.candRows = items.map((it, i) => Object.assign({}, it, { row: rows[i], pick: it.candidates.length ? 0 : null }));
+        this.candDialog = true;
+      }).catch(() => {
+        this.$swal.fire({ title: '후보 찾기 실패', icon: 'error' });
+      }).finally(() => { this.candLoading = false; });
+    },
+    candOptions(c) {
+      return [{ text: '(적용 안 함)', value: null }].concat(c.candidates.map((t, i) => ({
+        text: t.termsNm + ' (' + t.termsEngAbrvNm + ') — ' + t.reason, value: i,
+      })));
+    },
+    applyCands() {
+      let n = 0;
+      this.candRows.forEach(c => {
+        if (c.pick == null) return;
+        this.applyTermToRow(c.row, c.candidates[c.pick]);
+        n++;
+      });
+      this.candDialog = false;
+      this.$swal.fire({ title: n + '개 컬럼에 채웠습니다.', text: '[저장] 하면 모델에 반영됩니다.', icon: 'success', timer: 1800, showConfirmButton: false });
+    },
     resolveSelectedConfirm() {
       const saved = this.selectedRows.filter(r => r._mode === 'saved');
       if (saved.length === 0) {
@@ -2186,6 +2377,7 @@ export default {
           this.modelList = res.data.map(item => ({
             dataModelId: item.dataModelId,
             dataModelNm: item.dataModelNm,
+            stndReqYn: item.stndReqYn,
           }));
           apply();
         });

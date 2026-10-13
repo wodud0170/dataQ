@@ -89,6 +89,39 @@ public class ExcelDownloadService {
         IOUtils.copy(stream, response.getOutputStream());
     }
 
+    /** 104번 WP7-27 — 미사용 표준 목록 (단어·용어·도메인 중 하나, 화면과 같은 필터) */
+    public void getUnusedStdExcel(String kind, Map<String, Object> filter, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        String sqlId = "WORD".equals(kind) ? "unusedStd.selectUnusedWords" : "DOMAIN".equals(kind) ? "unusedStd.selectUnusedDomains" : "unusedStd.selectUnusedTerms";
+        String kindNm = "WORD".equals(kind) ? "단어" : "DOMAIN".equals(kind) ? "도메인" : "용어";
+        List<Map<String, Object>> rows = sqlSessionTemplate.selectList(sqlId, filter);
+        List<String[]> headers = Arrays.asList(
+            new String[]{"No","6","RIGHT"},
+            new String[]{"유형","8","CENTER"},
+            new String[]{kindNm + "명","25","LEFT"},
+            new String[]{"영문약어명","25","LEFT"},
+            new String[]{"WORD".equals(kind) ? "구분" : "DOMAIN".equals(kind) ? "데이터타입" : "도메인","25","LEFT"},
+            new String[]{"승인여부","10","CENTER"},
+            new String[]{"등록일","12","CENTER"}
+        );
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            Map<String, Object> r = rows.get(i);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("HEADER1", i + 1);
+            m.put("HEADER2", kindNm);
+            m.put("HEADER3", r.get("nm"));
+            m.put("HEADER4", r.get("engAbrvNm"));
+            m.put("HEADER5", r.get("extra"));
+            m.put("HEADER6", r.get("aprvYn"));
+            m.put("HEADER7", r.get("cretDt"));
+            list.add(m);
+        }
+        String fileName = "미사용표준_" + kindNm + "_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
     private static String privSrcNm(String src) {
         if ("COLUMN".equals(src)) return "컬럼";
         if ("TERMS".equals(src)) return "용어";

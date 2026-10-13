@@ -200,8 +200,9 @@
               <span v-if="item.status === 'REGISTERED'">-</span>
               <span v-else>
                 <v-chip v-for="(w, wi) in item.words" :key="wi" x-small
-                  :color="w.status === 'MATCHED' ? 'green' : w.status === 'NEW' ? 'orange' : 'red'" text-color="white" class="mr-1">
-                  {{ w.wordNm }}
+                  :color="w.status === 'MATCHED' ? 'green' : w.status === 'NEW' ? 'orange' : 'red'" text-color="white" class="mr-1"
+                  :title="w.status === 'MATCHED' && w.selected && w.selected.wordNm !== w.wordNm ? '\'' + w.wordNm + '\' 은(는) \'' + w.selected.wordNm + '\' 의 유사어 — 권장 단어로 등록' : ''">
+                  {{ w.wordNm }}<span v-if="w.status === 'MATCHED' && w.selected && w.selected.wordNm !== w.wordNm"> → {{ w.selected.wordNm }}</span>
                 </v-chip>
               </span>
             </template>
@@ -338,6 +339,9 @@
                 <td>
                   <v-chip v-if="(w.status === 'UNRECOGNIZED' || w.status === 'NEW') && !w._registered" x-small color="orange" text-color="white">신규</v-chip>
                   <v-chip v-else x-small color="green" text-color="white">등록됨</v-chip>
+                  <!-- 104번 WP7-8 — 유사어로 맞춘 단어 -->
+                  <v-chip v-if="w.status === 'MATCHED' && w.selected && w.selected.wordNm !== w.wordNm" x-small color="orange"
+                    text-color="white" class="ml-1">유사어 → 권장 '{{ w.selected.wordNm }}'</v-chip>
                 </td>
                 <td>
                   <v-btn v-if="(w.status === 'NEW' || w.status === 'UNRECOGNIZED') && !w._registered" small color="primary"

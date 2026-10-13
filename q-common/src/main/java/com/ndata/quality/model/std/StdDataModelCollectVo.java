@@ -14,6 +14,8 @@ public class StdDataModelCollectVo {
 	private String dataModelVer;
 	private String dictId;
 	private String dictNm;
+	/** 104번 WP7-25 — 표준 준수 필수. */
+	private String stndReqYn;
 	private String clctType;
     private String clctStartDt;
 	private String clctEndDt;

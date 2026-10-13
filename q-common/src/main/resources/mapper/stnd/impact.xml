@@ -14,33 +14,98 @@
 		ORDER BY t.TERMS_NM
 	</select>
 
-	<!-- 단어 → 연관 컬럼 (최신 수집건 기준) -->
-	<select id="selectImpactColumnsByWordId" parameterType="String" resultType="java.util.HashMap">
-		SELECT a.OBJ_NM AS "objNm",
-			   a.ATTR_NM AS "attrNm",
-			   a.ATTR_NM_KR AS "attrNmKr",
-			   m.DM_NM AS "dataModelNm"
-		FROM TB_DATA_MODEL_ATTR a
-		JOIN TB_DATA_MODEL m ON a.DM_ID = m.DM_ID
-		<!-- 2026-08-23: 기존엔 a.DM_CLCT_ID 로 "최신 수집 회차" 를 골랐는데,
-		     CLCT 폐기(44/48번) 때 TB_DATA_MODEL_ATTR 에서 DM_CLCT_ID 컬럼이 제거되면서
-		     `column a.dm_clct_id does not exist` 로 단어 영향도 분석이 항상 500 이었다.
-		     현재 규약대로 DM_ID + USE_YN='Y' (soft-delete 로 stale 행 배제) 로 대체. -->
-		WHERE a.USE_YN = 'Y'
-		AND m.USE_YN = 'Y'
-		AND a.ATTR_NM ILIKE '%' || (
-			SELECT w.WORD_ENG_ABRV_NM FROM TB_WORD w WHERE w.WORD_ID = #{wordId}
-		) || '%'
-		ORDER BY m.DM_NM, a.OBJ_NM, a.ATTR_NM
+	<!-- 모델의 사전 — 모델에 사전이 없으면 기본 사전 (104번 WP7-26) -->
+	<sql id="modelDict">COALESCE(M.DICT_ID, (SELECT SD.DICT_ID FROM TB_STD_DICT SD WHERE SD.DEFAULT_YN = 'Y' ORDER BY SD.DICT_ID LIMIT 1))</sql>
+
+	<!-- 사용 중·승인 모델의 사용 중·승인 컬럼 열 (104번 WP7-26) -->
+	<sql id="colCols">
+		       M.DM_NM        AS "dataModelNm"
+		      ,A.DM_ID        AS "dmId"
+		      ,A.OBJ_OWNER    AS "objOwner"
+		      ,A.OBJ_NM       AS "objNm"
+		      ,A.ATTR_NM      AS "attrNm"
+		      ,A.ATTR_NM_KR   AS "attrNmKr"
+		      ,A.DATA_TYPE    AS "dataType"
+		      ,A.DATA_LEN     AS "dataLen"
+		      ,COALESCE(A.TERMS_STND_YN, 'N') AS "termsStndYn"
+	</sql>
+	<sql id="colJoin">
+		  JOIN TB_DATA_MODEL M
+		    ON M.USE_YN = 'Y' AND COALESCE(M.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		  JOIN TB_DATA_MODEL_ATTR A
+		    ON A.DM_ID = M.DM_ID AND A.USE_YN = 'Y' AND COALESCE(A.APRV_STATUS, 'APPROVED') = 'APPROVED'
+	</sql>
+
+	<!-- 단어 → 연관 컬럼. 104번 WP7-26 — 컬럼명을 '_' 로 나눈 토큰 중 하나가 단어 영문약어와 같은 컬럼, 모델 사전 = 단어 사전
+	     (예전: 컬럼명에 약어가 들어 있기만 하면 — NO 가 NOTE 에도 걸렸다) -->
+	<select id="selectImpactColumnsByWordId" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="colCols"/>
+		  FROM TB_WORD W
+		<include refid="colJoin"/>
+		   AND W.WORD_ENG_ABRV_NM = ANY(string_to_array(UPPER(TRIM(A.ATTR_NM)), '_'))
+		 WHERE W.WORD_ID = #{wordId}
+		   AND <include refid="modelDict"/> = W.DICT_ID
+		 ORDER BY M.DM_NM, A.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD
+		 LIMIT 2000
 	</select>
 
-	<!-- 도메인 → 연관 용어 -->
-	<select id="selectImpactTermsByDomainNm" parameterType="String" resultType="java.util.HashMap">
-		SELECT t.TERMS_NM AS "termsNm",
+	<!-- 도메인 → 연관 용어 (사전 안) -->
+	<select id="selectImpactTermsByDomainNm" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT t.TERMS_ID AS "termsId",
+			   t.TERMS_NM AS "termsNm",
 			   t.TERMS_ENG_ABRV_NM AS "termsEngAbrvNm"
 		FROM TB_TERMS t
 		WHERE t.DOMAIN_NM = #{domainNm}
+		  AND t.DICT_ID = #{dictId}
 		ORDER BY t.TERMS_NM
+	</select>
+
+	<!-- 104번 WP7-26 — 용어(들) → 연관 컬럼. 모델 사전 = 용어 사전이고 컬럼 영문명 = 용어 영문약어명(ENG),
+	     또는 영문명은 다르고 한글명만 용어명과 같은 컬럼(KR — 비표준 후보) -->
+	<select id="selectImpactColumnsByTermIds" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT T.TERMS_NM AS "termsNm"
+		      ,T.TERMS_ENG_ABRV_NM AS "termsEngAbrvNm"
+		      ,CASE WHEN TRIM(A.ATTR_NM) = T.TERMS_ENG_ABRV_NM THEN 'ENG' ELSE 'KR' END AS "matchType"
+		      ,<include refid="colCols"/>
+		  FROM TB_TERMS T
+		<include refid="colJoin"/>
+		   AND (TRIM(A.ATTR_NM) = T.TERMS_ENG_ABRV_NM OR TRIM(A.ATTR_NM_KR) = T.TERMS_NM)
+		 WHERE T.TERMS_ID IN <foreach collection="termsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+		   AND <include refid="modelDict"/> = T.DICT_ID
+		 ORDER BY 3, M.DM_NM, A.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD
+		 LIMIT 2000
+	</select>
+
+	<!-- 104번 WP7-26 — 코드를 쓰는 용어 (같은 사전, 같은 코드 그룹 — 코드 자신 포함) -->
+	<select id="selectTermsByCodeGrp" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT TERMS_ID AS "termsId", TERMS_NM AS "termsNm", TERMS_ENG_ABRV_NM AS "termsEngAbrvNm",
+		       DOMAIN_NM AS "domainNm", APRV_YN AS "aprvYn"
+		  FROM TB_TERMS
+		 WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+		 ORDER BY TERMS_NM
+	</select>
+
+	<!-- 104번 WP7-26 — 이 코드를 상위로 쓰는 계층·파생 코드와, 하위로 묶는 통합 코드 -->
+	<select id="selectRelatedCodes" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT T.TERMS_NM AS "termsNm", T.CODE_GRP AS "codeGrp", COALESCE(T.CODE_TP, 'SINGLE') AS "codeTp", 'CHILD' AS "rel"
+		  FROM TB_TERMS T
+		 WHERE T.DICT_ID = #{dictId} AND T.PARENT_CODE_GRP = #{codeGrp}
+		UNION ALL
+		SELECT T.TERMS_NM, T.CODE_GRP, COALESCE(T.CODE_TP, 'SINGLE'), 'INTEG'
+		  FROM TB_CODE_INTEG I
+		  JOIN TB_TERMS T ON T.DICT_ID = I.DICT_ID AND T.CODE_GRP = I.CODE_GRP
+		 WHERE I.DICT_ID = #{dictId} AND I.SUB_CODE_GRP = #{codeGrp}
+		 ORDER BY 4, 1
+	</select>
+
+	<!-- 104번 WP7-26 — 컬럼 → 용어 구성 단어 (순서대로) -->
+	<select id="selectTermWords" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT W.WORD_ID AS "wordId", W.WORD_NM AS "wordNm", W.WORD_ENG_ABRV_NM AS "wordEngAbrvNm",
+		       W.WORD_CLSF_YN AS "wordClsfYn"
+		  FROM TB_TERMS_WORDS TW
+		  JOIN TB_WORD W ON W.WORD_ID = TW.WORD_ID
+		 WHERE TW.TERMS_ID = #{termsId}
+		 ORDER BY TW.WORD_ORD
 	</select>
 
 </mapper>

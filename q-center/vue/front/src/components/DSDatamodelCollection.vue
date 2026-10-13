@@ -49,6 +49,11 @@
         <v-data-table id="dataModel_table" :headers="dataModelHeaders" :items="dataModelItems" :page.sync="page"
           :items-per-page="itemsPerPage" hide-default-footer item-key="dataModelId" show-select class="px-4 pb-3"
           v-model="removeItems" :loading="loadTable" loading-text="잠시만 기다려주세요.">
+          <!-- 104번 WP7-25 -->
+          <template v-slot:[`item.stndReqYn`]="{ item }">
+            <v-chip v-if="item.stndReqYn === 'Y'" x-small color="indigo" text-color="white">필수</v-chip>
+            <span v-else>-</span>
+          </template>
           <!-- 클릭 가능한 아이템 설정 : 데이터모델명  -->
           <template v-slot:[`item.dataModelNm`]="{ item }">
             <span class="ndColor--text" :style="{ cursor: 'pointer' }" @click="showDetail(item)">{{
@@ -241,6 +246,16 @@
                   :menu-props="{ top: false, offsetY: true }"></v-select>
               </v-col>
             </v-row>
+            <!-- 104번 WP7-25 — 표준 준수 필수 -->
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>표준 준수 필수</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-switch id="addStndReqYn" v-model="add_stndReqYn" true-value="Y" false-value="N" dense hide-details class="mt-2"
+                  label="비표준 컬럼 추가·수정 저장을 막음 (예외는 결재)"></v-switch>
+              </v-col>
+            </v-row>
             <!-- 버전 (선택, 미입력 시 '1.0') -->
             <v-row>
               <v-col cols="4">
@@ -294,6 +309,16 @@
                   item-text="dictNm" item-value="dictId" no-data-text="사전이 없습니다."
                   placeholder="미지정 시 예약 진단을 쓸 수 없습니다"
                   :menu-props="{ top: false, offsetY: true }"></v-select>
+              </v-col>
+            </v-row>
+            <!-- 104번 WP7-25 — 표준 준수 필수 -->
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>표준 준수 필수</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-switch id="updateStndReqYn" v-model="update_stndReqYn" true-value="Y" false-value="N" dense hide-details class="mt-2"
+                  label="비표준 컬럼 추가·수정 저장을 막음 (예외는 결재)"></v-switch>
               </v-col>
             </v-row>
             <!-- 버전 (선택, 미입력 시 '1.0') -->
@@ -396,7 +421,9 @@ export default {
     add_dataModelSysCd: null,
     // 98번 — 이 모델이 쓸 표준사전
     add_dictId: null,
+    add_stndReqYn: 'N',
     update_dictId: null,
+    update_stndReqYn: 'N',
     dictList: [],
     add_dataSource: null,
     // 수정 관련
@@ -410,6 +437,7 @@ export default {
       { text: '데이터 모델명', align: 'center', sortable: false, value: 'dataModelNm' },
       { text: '데이터소스', sortable: false, align: 'center', value: 'dataModelDsNm' },
       { text: '표준사전', sortable: false, align: 'center', value: 'dictNm' },
+      { text: '표준 준수 필수', sortable: false, align: 'center', value: 'stndReqYn' },
       { text: '버전', sortable: false, align: 'center', value: 'dataModelVer' },
       { text: '수집 시작일시', align: 'center', sortable: false, value: 'clctStartDt' },
       { text: '수집 완료일시', align: 'center', sortable: false, value: 'clctEndDt' },
@@ -946,6 +974,7 @@ export default {
           'dataModelSysCd': this.add_dataModelSysCd,
           'dataModelDsId': this.add_dataSource,
           'dictId': this.add_dictId,
+          'stndReqYn': this.add_stndReqYn,
           'ver': _ver,
         };
 
@@ -1014,6 +1043,7 @@ export default {
       this.update_ver = this.selectedItem[0].dataModelVer;
       this.update_dataSource = this.selectedItem[0].dataModelDsId;
       this.update_dictId = this.selectedItem[0].dictId;
+      this.update_stndReqYn = this.selectedItem[0].stndReqYn || 'N';
     },
     updateDataModel() {
       try {
@@ -1022,6 +1052,7 @@ export default {
           'dataModelId': this.update_dataModelId,
           'dataModelNm': this.update_dataModelNm,
           'dictId': this.update_dictId,
+          'stndReqYn': this.update_stndReqYn,
           'dataModelSysCd': this.update_dataModelSysCd,
           'dataModelDsId': this.update_dataSource,
           'ver': _ver,
@@ -1124,6 +1155,7 @@ export default {
     addModalReset() {
       this.add_dataModelNm = null;
       this.add_ver = null;
+      this.add_stndReqYn = 'N';
       this.add_dataModelSysCd = null;
       this.add_dataSource = null;
     },

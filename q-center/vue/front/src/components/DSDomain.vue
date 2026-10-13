@@ -622,6 +622,34 @@
               </template>
             </v-simple-table>
             <v-alert v-else type="info" dense text class="mt-1">연관 용어가 없습니다.</v-alert>
+
+            <!-- 104번 WP7-26 — 그 용어들을 쓰는 컬럼 -->
+            <div class="font-weight-bold mb-2 mt-4">연관 컬럼 ({{ impactColumns.length }}건)</div>
+            <v-simple-table dense v-if="impactColumns.length > 0" id="domainImpactColumns">
+              <template v-slot:default>
+                <thead>
+                  <tr>
+                    <th>용어</th>
+                    <th>데이터 모델</th>
+                    <th>테이블</th>
+                    <th>컬럼</th>
+                    <th>컬럼 한글명</th>
+                    <th>일치</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(c, i) in impactColumns" :key="'col_'+i">
+                    <td>{{ c.termsNm }}</td>
+                    <td>{{ c.dataModelNm }}</td>
+                    <td>{{ (c.objOwner ? c.objOwner + '.' : '') + c.objNm }}</td>
+                    <td>{{ c.attrNm }}</td>
+                    <td>{{ c.attrNmKr }}</td>
+                    <td>{{ c.matchType === 'ENG' ? '영문명' : '한글명만' }}</td>
+                  </tr>
+                </tbody>
+              </template>
+            </v-simple-table>
+            <v-alert v-else type="info" dense text class="mt-1">연관 컬럼이 없습니다.</v-alert>
           </template>
         </v-card-text>
         <v-card-actions>
@@ -778,6 +806,7 @@ export default {
     impactDialogShow: false,
     impactLoading: false,
     impactTerms: [],
+    impactColumns: [],   // 104번 WP7-26
     // 삭제 관련
     removeItems: [],
     // 상단 테이블 헤더
@@ -895,9 +924,11 @@ export default {
       this.impactDialogShow = true;
       this.impactLoading = true;
       this.impactTerms = [];
-      axios.get(this.$APIURL.base + 'api/std/impact/domain', { params: { domainNm: domainNm } })
+      this.impactColumns = [];
+      axios.get(this.$APIURL.base + 'api/std/impact/domain', { params: { domainNm: domainNm, dictId: this.dictId } })
         .then(res => {
           this.impactTerms = res.data.terms || [];
+          this.impactColumns = res.data.columns || [];
         })
         .catch(err => {
           console.error('영향도 분석 조회 실패', err);

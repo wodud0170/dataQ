@@ -243,7 +243,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
   <p class="lede">NavidM Meta 소스 코드를 전부 읽고, 지금 코드에 들어 있는 기능을 화면·서버 처리·백그라운드 작업 단위로 정리했다. 코드를 근거로 한 명세이고, 실데이터·실사용 검증은 따로 해야 한다.</p>
   <div class="figs">
     <div class="fig"><b>{{TOTAL}}</b><span>기능 (화면 {{SUM_UI}} · 백그라운드·규칙 {{SUM_BG}} · 화면 없는 API {{SUM_API}})</span></div>
-    <div class="fig"><b>313</b><span>API (웹 서버 299 · 작업 서버 14)</span></div>
+    <div class="fig"><b>322</b><span>API (웹 서버 308 · 작업 서버 14)</span></div>
     <div class="fig"><b>{{SCREENS}}</b><span>화면</span></div>
     <div class="fig"><b>{{MENUS}}</b><span>메뉴 항목 (권한별 메뉴 포함)</span></div>
     <div class="fig"><b>11</b><span>기능 영역</span></div>
@@ -267,7 +267,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
       <!-- q-center -->
       <rect class="d-key" x="256" y="60" width="230" height="168" rx="8"/>
       <text class="d-t" x="272" y="90">q-center 웹 서버</text>
-      <text class="d-s" x="272" y="116">화면 제공 · API 299개</text>
+      <text class="d-s" x="272" y="116">화면 제공 · API 308개</text>
       <text class="d-s" x="272" y="137">로그인 · 권한 · 세션</text>
       <text class="d-s" x="272" y="158">실시간 알림 중계</text>
       <text class="d-m" x="272" y="208">포트 28091</text>
@@ -465,12 +465,12 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
     <li>근거: main 브랜치 소스 전체 — 화면(Vue), 웹 서버·작업 서버 컨트롤러, 서비스, MyBatis 매퍼, 수집 쿼리, DDL.</li>
     <li>기능 수는 기능ID 가 붙은 행 수다. 백그라운드 처리(<code>-B</code>)와 승인 규칙(<code>-R</code>)도 한 행으로 센다.</li>
     <li>"화면 없는 API" 는 서버에 있지만 어느 화면도 부르지 않거나, 진입 경로 없는 화면만 부르는 API 다.</li>
-    <li>API 313개는 컨트롤러의 매핑 어노테이션에서 뽑은 메서드·경로 조합이고, 모두 기능 목록의 어느 행엔가 연결된다.</li>
+    <li>API 322개는 컨트롤러의 매핑 어노테이션에서 뽑은 메서드·경로 조합이고, 모두 기능 목록의 어느 행엔가 연결된다.</li>
   </ul>
   <h3 style="margin:18px 0 8px">컨트롤러별 API 수</h3>
   <ul class="ctl">
-    <li><span>표준 사전 (DataStandard)</span><span>86</span></li>
-    <li><span>데이터 모델 (DataModel)</span><span>56</span></li>
+    <li><span>표준 사전 (DataStandard)</span><span>89</span></li>
+    <li><span>데이터 모델 (DataModel)</span><span>60</span></li>
     <li><span>범정부 메타 (GovMeta)</span><span>24</span></li>
     <li><span>시스템·데이터 소스 (SysInfo)</span><span>14</span></li>
     <li><span>게시판 (Board)</span><span>12</span></li>
@@ -489,6 +489,7 @@ footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
     <li><span>표준사전 관리 (StdDict)</span><span>5</span></li>
     <li><span>검색·대시보드 (Search)</span><span>4</span></li>
     <li><span>표준 매핑 (StdMap)</span><span>3</span></li>
+    <li><span>미사용 표준 (UnusedStd)</span><span>2</span></li>
     <li><span>알림 (Noti)</span><span>3</span></li>
     <li><span>한글 변환 이력 (TermResolveHistory)</span><span>2</span></li>
     <li><span>작업 서버 q-executor (5개 컨트롤러)</span><span>14</span></li>

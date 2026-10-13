@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -177,6 +178,10 @@ public class DataModelController {
 	@Autowired
 	private DdlDialects ddlDialects;
 
+	/** 104번 WP7-23 — 용어 등록 자동 분석 엔진(analyzeTermsBatch)을 표준 후보 찾기에 쓴다 */
+	@Autowired
+	private DataStandardController stdController;
+
 	/**
 	 * 데이터모델 등록 API
 	 *
@@ -222,6 +227,36 @@ public class DataModelController {
 			log.error(">> updateDataModel failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
+		return Mono.just(result);
+	}
+
+	/**
+	 * 104번 WP7-25 — 시스템(하위 시스템 포함)에 속한 사용 중 모델을 모두 표준 준수 필수로 켜거나 끈다.
+	 * 모델 직접 반영 권한(DM_MANAGE).
+	 *
+	 * @param body {sysCd, stndReqYn: Y|N}
+	 * @return contents = 바뀐 모델 수
+	 */
+	@RequestMapping(value = "/setStndReqBySys", method = RequestMethod.POST)
+	public Mono<Response> setStndReqBySys(@RequestBody Map<String, Object> body) {
+		Response result = new Response();
+		if (!sessionService.hasPerm(com.ndata.quality.common.PermCode.DM_MANAGE)) {
+			result.setResultInfo(403, "권한이 없습니다 (모델 직접 반영 권한 필요)");
+			return Mono.just(result);
+		}
+		String sysCd = str(body.get("sysCd"));
+		String yn = str(body.get("stndReqYn"));
+		if (sysCd == null || sysCd.trim().isEmpty() || !("Y".equals(yn) || "N".equals(yn))) {
+			result.setResultInfo(RestResult.CODE_500.getCode(), "시스템과 표준 준수 필수 여부(Y/N)를 보내 주세요.");
+			return Mono.just(result);
+		}
+		Map<String, Object> p = new HashMap<>();
+		p.put("sysCd", sysCd.trim());
+		p.put("stndReqYn", yn);
+		p.put("userId", sessionService.getUserId());
+		int n = sqlSessionTemplate.update("datamodel.updateStndReqYnBySys", p);
+		result.setResultInfo(RestResult.CODE_200);
+		result.setContents(String.valueOf(n));
 		return Mono.just(result);
 	}
 
@@ -1862,6 +1897,190 @@ public class DataModelController {
 	 * 한글명으로 표준 용어 조회 → 영문약어명 + 도메인(타입/길이) 반환
 	 * 컬럼 추가 시 [표준 적용] 버튼에서 호출
 	 */
+	// ===== 104번 WP7-26 — 컬럼 → 용어·단어·도메인·코드 (역방향 영향도) =====
+
+	/**
+	 * 컬럼이 기대는 표준. 모델 사전에서 영문명 = 용어 영문약어명인 승인 용어(없으면 한글명 = 용어명·이음동의어),
+	 * 그 용어의 구성 단어(용어가 없으면 영문명 토큰과 같은 영문약어 단어), 도메인, 코드(용어에 코드 그룹이 있으면).
+	 */
+	@RequestMapping(value = "/impact/column", method = RequestMethod.GET)
+	public Map<String, Object> columnImpact(@RequestParam String dmId, @RequestParam String attrNm,
+			@RequestParam(required = false) String attrNmKr) {
+		String dictId = dictService.resolve(null, dmId);
+		Map<String, Object> out = new HashMap<>();
+		com.ndata.quality.model.std.StdTermsVo term = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
+				dictService.nameParam(dictId, "termsEngAbrvNm", attrNm.trim()));
+		String matchType = "ENG";
+		if (term == null && attrNmKr != null && !attrNmKr.trim().isEmpty()) {
+			term = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm", dictService.nameParam(dictId, "termsNm", attrNmKr.trim()));
+			matchType = "KR";
+		}
+		out.put("dictId", dictId);
+		if (term != null) {
+			Map<String, Object> t = new LinkedHashMap<>();
+			t.put("termsId", term.getId());
+			t.put("termsNm", term.getTermsNm());
+			t.put("termsEngAbrvNm", term.getTermsEngAbrvNm());
+			t.put("matchType", matchType);
+			t.put("codeGrp", term.getCodeGrp());
+			out.put("term", t);
+			out.put("words", sqlSessionTemplate.selectList("impact.selectTermWords", term.getId()));
+			if (term.getDomainNm() != null) {
+				com.ndata.quality.model.std.StdDomainVo d = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm",
+						dictService.nameParam(dictId, "domainNm", term.getDomainNm()));
+				if (d != null) {
+					Map<String, Object> dm = new LinkedHashMap<>();
+					dm.put("domainNm", d.getDomainNm());
+					dm.put("dataType", d.getDataType());
+					dm.put("dataLen", d.getDataLen());
+					dm.put("dataDecimalLen", d.getDataDecimalLen());
+					out.put("domain", dm);
+				}
+			}
+		} else {
+			List<String> tokens = splitTokens(attrNm);
+			Map<String, Object> wp = dictService.dictParam(dictId);
+			wp.put("engAbrvNms", tokens);
+			List<StdWordVo> words = tokens.isEmpty() ? new ArrayList<>() : sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", wp);
+			words.sort((x, y) -> tokens.indexOf(x.getWordEngAbrvNm()) - tokens.indexOf(y.getWordEngAbrvNm()));   // 컬럼명 토큰 순서
+			out.put("words", words);
+		}
+		return out;
+	}
+
+	// ===== 104번 WP7-24 — 컬럼 한글명 용어 자동완성 =====
+
+	/** 모델 사전의 승인 용어를 용어명·이음동의어로 찾아 20건 (도메인 타입·길이 포함) */
+	@RequestMapping(value = "/termSuggest", method = RequestMethod.GET)
+	public List<Map<String, Object>> termSuggest(@RequestParam String dmId, @RequestParam String q) {
+		String kw = q == null ? "" : q.trim();
+		if (kw.isEmpty()) return new ArrayList<>();
+		Map<String, Object> p = dictService.dictParam(dictService.resolve(null, dmId));
+		p.put("q", kw);
+		List<Map<String, Object>> list = sqlSessionTemplate.selectList("terms.selectTermSuggest", p);
+		for (Map<String, Object> t : list) {
+			String nm = (String) t.get("termsNm");
+			if (nm != null && !nm.toLowerCase().contains(kw.toLowerCase())) {
+				Map<String, Object> sp = new HashMap<>();
+				sp.put("termsId", t.get("termsId"));
+				sp.put("q", kw);
+				t.put("synonym", sqlSessionTemplate.selectOne("terms.selectTermSynonymHit", sp));
+			}
+		}
+		return list;
+	}
+
+	// ===== 104번 WP7-23 — 컬럼별 표준 용어 후보 =====
+
+	/**
+	 * 컬럼 한글명으로 모델 사전의 승인 용어 후보를 찾는다 (컬럼마다 5건, 점수 순).
+	 * ① 한글명 = 용어명(100)·이음동의어(95) ② 한글명을 단어 분석(용어 등록 자동 분석과 같은 엔진)해 만든 영문약어 = 용어 영문약어(90)
+	 * ③ 나눈 단어를 모두 쓰는 용어(70) ④ 이름 일부 일치(50).
+	 *
+	 * @param body {dmId, attrs:[{objOwner, objNm, attrNm, attrNmKr}]}
+	 * @return {items:[{objOwner, objNm, attrNm, attrNmKr, candidates:[{termsId, termsNm, termsEngAbrvNm, domainNm, dataType, dataLen, dataDecimalLen, reason, score}]}]}
+	 */
+	@RequestMapping(value = "/suggestTerms", method = RequestMethod.POST)
+	public Map<String, Object> suggestTerms(@RequestBody Map<String, Object> body) {
+		String dmId = (String) body.get("dmId");
+		String dictId = dictService.resolve(null, dmId);
+		@SuppressWarnings("unchecked")
+		List<Map<String, Object>> attrs = (List<Map<String, Object>>) body.get("attrs");
+		if (attrs == null) attrs = new ArrayList<>();
+		if (attrs.size() > 2000) throw new IllegalArgumentException("한 번에 2,000개 컬럼까지 찾을 수 있습니다.");
+
+		// 한글명마다 단어 분석 한 번 (같은 한글명은 묶는다)
+		java.util.LinkedHashSet<String> names = new java.util.LinkedHashSet<>();
+		for (Map<String, Object> a : attrs) {
+			String kr = a.get("attrNmKr") == null ? "" : a.get("attrNmKr").toString().replaceAll("\\s", "");
+			if (!kr.isEmpty()) names.add(kr);
+		}
+		Map<String, com.ndata.quality.model.std.TermAnalysisResult> analysis = new HashMap<>();
+		if (!names.isEmpty()) {
+			Map<String, Object> req = new HashMap<>();
+			req.put("termNames", new ArrayList<>(names));
+			req.put("dictId", dictId);
+			for (com.ndata.quality.model.std.TermAnalysisResult r : stdController.analyzeTermsBatch(req)) {
+				analysis.put(r.getInputNm(), r);
+			}
+		}
+
+		Map<String, List<Map<String, Object>>> byName = new HashMap<>();
+		List<Map<String, Object>> items = new ArrayList<>();
+		for (Map<String, Object> a : attrs) {
+			String kr = a.get("attrNmKr") == null ? "" : a.get("attrNmKr").toString().replaceAll("\\s", "");
+			Map<String, Object> it = new LinkedHashMap<>();
+			it.put("objOwner", a.get("objOwner"));
+			it.put("objNm", a.get("objNm"));
+			it.put("attrNm", a.get("attrNm"));
+			it.put("attrNmKr", a.get("attrNmKr"));
+			it.put("candidates", kr.isEmpty() ? new ArrayList<>() : byName.computeIfAbsent(kr, k -> termCandidates(dictId, k, analysis.get(k))));
+			items.add(it);
+		}
+		Map<String, Object> out = new HashMap<>();
+		out.put("items", items);
+		return out;
+	}
+
+	private List<Map<String, Object>> termCandidates(String dictId, String kr, com.ndata.quality.model.std.TermAnalysisResult r) {
+		Map<String, Map<String, Object>> found = new LinkedHashMap<>();
+		// ① 용어명·이음동의어
+		com.ndata.quality.model.std.StdTermsVo t = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByNm", dictService.nameParam(dictId, "termsNm", kr));
+		if (t != null) {
+			Map<String, Object> p = dictService.nameParam(dictId, "termsEngAbrvNm", t.getTermsEngAbrvNm());
+			for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByEng", p)) {
+				if (!t.getId().equals(c.get("termsId"))) continue;
+				boolean exact = kr.equals(t.getTermsNm());
+				addCand(found, c, exact ? "한글명 일치" : "유사어 일치 ('" + kr + "')", exact ? 100 : 95);
+			}
+		}
+		if (r != null && r.getWords() != null && !r.getWords().isEmpty()) {
+			boolean allMatched = r.getWords().stream().allMatch(w -> "MATCHED".equals(w.getStatus()) && w.getSelected() != null);
+			// ② 단어 분석 영문약어
+			if (allMatched && r.getRecommendedEngAbrvNm() != null && !r.getRecommendedEngAbrvNm().isEmpty()) {
+				for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByEng",
+						dictService.nameParam(dictId, "termsEngAbrvNm", r.getRecommendedEngAbrvNm()))) {
+					addCand(found, c, "단어 분석 영문약어 일치 (" + r.getRecommendedEngAbrvNm() + ")", 90);
+				}
+			}
+			// ③ 나눈 단어를 모두 쓰는 용어
+			List<String> wordIds = new ArrayList<>();
+			List<String> wordNms = new ArrayList<>();
+			for (com.ndata.quality.model.std.TermAnalysisResult.WordAnalysis w : r.getWords()) {
+				if ("MATCHED".equals(w.getStatus()) && w.getSelected() != null && w.getSelected().getWordId() != null) {
+					if (!wordIds.contains(w.getSelected().getWordId())) wordIds.add(w.getSelected().getWordId());
+					wordNms.add(w.getSelected().getWordNm());
+				}
+			}
+			if (!wordIds.isEmpty()) {
+				Map<String, Object> p = dictService.dictParam(dictId);
+				p.put("wordIds", wordIds);
+				p.put("wordCnt", wordIds.size());
+				for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByWords", p)) {
+					addCand(found, c, "단어 포함 (" + String.join("+", wordNms) + ")", 70);
+				}
+			}
+		}
+		// ④ 이름 일부 일치
+		Map<String, Object> p = dictService.dictParam(dictId);
+		p.put("kr", kr);
+		for (Map<String, Object> c : sqlSessionTemplate.<Map<String, Object>>selectList("terms.selectTermCandByContains", p)) {
+			addCand(found, c, "이름 일부 일치", 50);
+		}
+		List<Map<String, Object>> list = new ArrayList<>(found.values());
+		list.sort((x, y) -> ((Integer) y.get("score")) - ((Integer) x.get("score")));
+		return list.size() > 5 ? new ArrayList<>(list.subList(0, 5)) : list;
+	}
+
+	private static void addCand(Map<String, Map<String, Object>> found, Map<String, Object> c, String reason, int score) {
+		String id = (String) c.get("termsId");
+		if (found.containsKey(id)) return;   // 먼저 찾은(점수가 높은) 이유를 남긴다
+		Map<String, Object> m = new LinkedHashMap<>(c);
+		m.put("reason", reason);
+		m.put("score", score);
+		found.put(id, m);
+	}
+
 	@RequestMapping(value = "/resolveStandard", method = RequestMethod.GET)
 	public Map<String, Object> resolveStandard(@RequestParam String termsNm,
 			@RequestParam(required = false) String dmId,
@@ -2058,7 +2277,10 @@ public class DataModelController {
 		item.put("objNm", attr.getObjNm());
 		item.put("attrNm", attr.getAttrNm());                        // 기존 (식별용)
 		item.put("newAttrNm", newAttrNm);                            // 새 영문명
-		item.put("newAttrNmKr", attrNmKr);                           // 한글명 그대로 (입력값)
+		// 104번 WP7-8 — 한글명이 용어 이음동의어(유사어)로 맞았으면 표준 용어명으로 바꾼다 (표준 검사는 한글명 = 용어명)
+		String stdKr = (String) resolved.get("termsNm");
+		item.put("newAttrNmKr", stdKr != null ? stdKr : attrNmKr);
+		if (stdKr != null && !stdKr.equals(attrNmKr.trim())) item.put("synonymOf", stdKr);
 		item.put("newDataType", resolved.get("dataType"));
 		item.put("newDataLen", dataLen);
 		item.put("newDataDecimalLen", dataDecimalLen);
@@ -2343,6 +2565,8 @@ public class DataModelController {
 				throw new IllegalArgumentException("objNm 누락");
 			if (!(rawAttrs instanceof List))
 				throw new IllegalArgumentException("attrs 배열이 아닙니다.");
+			// 104번 WP7-25 — 표준 준수 필수 모델은 비표준 컬럼 추가·수정을 거부한다 (행에 예외 사유가 있으면 결재로)
+			boolean stndReq = "Y".equals(sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", dataModelId));
 
 			@SuppressWarnings("unchecked")
 			List<Map<String, Object>> rawList = (List<Map<String, Object>>) rawAttrs;
@@ -2458,15 +2682,17 @@ public class DataModelController {
 								: (nullableYn == null || nullableYn.isEmpty() ? "Y" : nullableYn));
 						vo.setDefaultVal(str(row.get("defaultVal")));
 						// ADD 시 표준 재평가 — 영문명이 표준 용어와 매칭되고 도메인이 일치하면 Y/Y, 아니면 N/N
+						String addExcept = null;
 						try {
 							validateAttrStandards(vo);
 							applyStandardFlags(vo);
 						} catch (Exception stdErr) {
 							vo.setTermsStndYn("N");
 							vo.setDomainStndYn("N");
+							addExcept = stndReqCheck(stndReq, row, objNm, addAttrNm, stdErr);
 						}
-						// 88번 거버넌스 — 관리자=APPROVED 즉시, 사용자=DRAFT
-						String addAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+						// 88번 거버넌스 — 관리자=APPROVED 즉시, 사용자=DRAFT. 표준 예외 신청은 관리자도 결재(DRAFT)
+						String addAprvStatus = addExcept != null ? "DRAFT" : changeHistory.resolveAprvStatusForUserChange();
 						vo.setAprvStatus(addAprvStatus);
 						vo.setRequesterUserId(changeHistory.safeUserId());
 						vo.setReqDt(changeHistory.currentDt());
@@ -2480,7 +2706,7 @@ public class DataModelController {
 								objOwner, objNm, addAttrNm, null, null,
 								null, toJsonSafe(vo),
 								changeHistory.generateDdlSnippet(dataModelId, "ADD_ATTR", objOwner, objNm, addAttrNm, vo, null),
-								addAprvStatus);
+								addAprvStatus, addExcept);
 					} else if ("UPDATE".equalsIgnoreCase(mode)) {
 						// origAttrNm = DB 의 PK 매칭용 — DB 에 저장된 case 그대로 유지 (UPPER 처리 X)
 						String origAttrNm = str(row.get("origAttrNm"));
@@ -2595,6 +2821,7 @@ public class DataModelController {
 						vo.setDataLen(newLen);
 						vo.setDataDecimalLen(newDec);
 						// 변경된 값이 표준에 맞는지 다시 평가 (영문명 토큰 + 도메인 매칭)
+						String updExcept = null;   // 104번 WP7-25 — 표준 예외 신청 사유
 						boolean krChanged   = !Objects.equals(existing.getAttrNmKr(), newKr);
 						boolean typeChanged = !Objects.equals(existing.getDataType(), newType)
 						                   || existing.getDataLen() != newLen
@@ -2627,20 +2854,23 @@ public class DataModelController {
 								vo.setWordStndLst(existing.getWordStndLst());
 								vo.setTermsStndYn("N");
 								vo.setDomainStndYn("N");
+								updExcept = stndReqCheck(stndReq, row, objNm, newAttrNm, stdErr);
 							}
 						}
 						session.update("datamodel.updateDataModelAttr", vo);
 						updated++;
 						// 88번 거버넌스 — UPDATE 이력 (Tier 1: 영문명/타입/길이 변경 / Tier 2: 한글명만 변경)
-						String updTier = (nmChanged || typeChanged) ? "TIER1" : "TIER2";
-						String updAprvStatus = "TIER1".equals(updTier)
+						// 104번 WP7-25 — 표준 예외 신청은 1단계·결재(DRAFT)
+						String updTier = (nmChanged || typeChanged || updExcept != null) ? "TIER1" : "TIER2";
+						String updAprvStatus = updExcept != null ? "DRAFT"
+								: "TIER1".equals(updTier)
 								? changeHistory.resolveAprvStatusForUserChange()
 								: "APPROVED";
 						changeHistory.record(session, dataModelId, "MODIFY_ATTR", updTier,
 								objOwner, objNm, newAttrNm, null, null,
 								toJsonSafe(existing), toJsonSafe(vo),
 								"TIER1".equals(updTier) ? changeHistory.generateModifyAttrSnippet(dataModelId, objOwner, objNm, existing, vo) : null,
-								updAprvStatus);
+								updAprvStatus, updExcept);
 					} else if ("DELETE".equalsIgnoreCase(mode)) {
 						String attrNm = str(row.get("attrNm"));
 						if (attrNm == null || attrNm.trim().isEmpty())
@@ -2706,6 +2936,20 @@ public class DataModelController {
 		}
 		return Mono.just(result);
 	}
+
+	/**
+	 * 104번 WP7-25 — 표준 준수 필수 모델에서 표준 검사가 실패한 컬럼. 행에 예외 사유(stndExceptReason)가 있으면 그 사유를 돌려주고
+	 * (호출자가 결재 대상으로 저장), 없으면 거부한다. 필수 모델이 아니면 null (지금처럼 표준 여부만 N).
+	 */
+	private static String stndReqCheck(boolean stndReq, Map<String, Object> row, String objNm, String attrNm, Exception stdErr) {
+		if (!stndReq) return null;
+		String reason = str(row.get("stndExceptReason"));
+		if (reason != null && !reason.trim().isEmpty()) return reason.trim();
+		throw new IllegalStateException(STND_REQ_MSG + objNm + "." + attrNm + " — " + stdErr.getMessage());
+	}
+
+	/** 화면이 이 문구로 시작하는 오류를 받으면 표준 예외 신청을 띄운다 */
+	private static final String STND_REQ_MSG = "표준 준수 필수 모델입니다. 비표준 컬럼: ";
 
 	private static String str(Object o) {
 		return o == null ? null : o.toString();
@@ -2844,7 +3088,8 @@ public class DataModelController {
 		updateMap.put("objNm", attr.getObjNm());
 		updateMap.put("origAttrNm", attr.getAttrNm());
 		updateMap.put("attrNm", newAttrNm);
-		updateMap.put("attrNmKr", attrNmKr);
+		// 104번 WP7-8 — 유사어(이음동의어)로 맞았으면 한글명도 표준 용어명으로
+		updateMap.put("attrNmKr", resolved.get("termsNm") != null ? resolved.get("termsNm") : attrNmKr);
 		updateMap.put("dataType", resolved.get("dataType"));
 		updateMap.put("dataLen", dataLen);
 		updateMap.put("dataDecimalLen", dataDecimalLen);
@@ -2886,7 +3131,7 @@ public class DataModelController {
 		}
 		// 88번 §16 — 변환 이력 기록 (사용자가 입력했던 한글 → 표준 매핑)
 		recordResolveHistory(attr.getDataModelId(), attr.getObjOwner(), attr.getObjNm(),
-				newAttrNm, attrNmKr, attrNmKr, newAttrNm,
+				newAttrNm, attrNmKr, (String) updateMap.get("attrNmKr"), newAttrNm,
 				(String) resolved.get("termsId"), (String) resolved.get("dataType"), dataLen,
 				"한글명 기준 표준화 성공");
 	}
@@ -3213,6 +3458,19 @@ public class DataModelController {
 					if ("Y".equals(r.get("fkYn"))) toInsertFks++;
 				}
 			}
+			// 104번 WP7-25 — 표준 준수 필수 모델은 비표준 행을 오류로 (오류가 있으면 등록하지 않는다)
+			if ("Y".equals(sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", dataModelId))) {
+				for (Map<String, Object> r : rows) {
+					if (!"INSERT".equals(r.get("_action"))) continue;
+					try {
+						validateAttrStandards(uploadAttrVo(dataModelId, r, (short) 0));
+					} catch (Exception stdErr) {
+						Object rowNo = r.get("row");
+						errors.add(errRow(rowNo instanceof Number ? ((Number) rowNo).intValue() : 0,
+								STND_REQ_MSG + str(r.get("objNm")) + "." + str(r.get("attrNm")) + " — " + stdErr.getMessage()));
+					}
+				}
+			}
 
 			if ("commit".equalsIgnoreCase(mode) && errors.isEmpty()) {
 				SqlSession session = sqlSessionFactory.openSession();
@@ -3234,31 +3492,15 @@ public class DataModelController {
 						cur = (short) (cur + 1);
 						ordMap.put(objNm, cur);
 
-						StdDataModelAttrVo vo = new StdDataModelAttrVo();
-						vo.setDataModelId(dataModelId);
-						vo.setObjOwner(str(r.get("objOwner")));
-						vo.setObjNm(objNm);
-						String enIn = str(r.get("attrNm"));
-						vo.setAttrNm((enIn != null && !enIn.trim().isEmpty()) ? enIn.trim() : ("TMP_COL_" + cur));
-						vo.setAttrNmKr(str(r.get("attrNmKr")));
-						vo.setAttrOrder(cur);
-						String typeIn = str(r.get("dataType"));
-						vo.setDataType((typeIn != null && !typeIn.trim().isEmpty()) ? typeIn.trim() : "VARCHAR");
-						Integer lenIn = parseIntSafe(r.get("dataLen"));
-						vo.setDataLen(lenIn != null ? lenIn.longValue() : 255L);
-						Integer decIn = parseIntSafe(r.get("dataDecimalLen"));
-						if (decIn != null) vo.setDataDecimalLen(decIn.shortValue());
-						String pk = str(r.get("pkYn"));
-						String fk = str(r.get("fkYn"));
-						vo.setPkYn("Y".equals(pk) ? "Y" : "N");
-						vo.setFkYn("Y".equals(fk) ? "Y" : "N");
-						// 86번 #11 — NULL여부/디폴트값을 업로드 row 에서 그대로 보존 (PK 면 N 강제)
-						String nullableIn = str(r.get("nullableYn"));
-						vo.setNullableYn("Y".equals(vo.getPkYn()) ? "N"
-								: (nullableIn == null || nullableIn.isEmpty() ? "Y" : nullableIn));
-						vo.setDefaultVal(str(r.get("defaultVal")));
-						vo.setTermsStndYn("N");
-						vo.setDomainStndYn("N");
+						StdDataModelAttrVo vo = uploadAttrVo(dataModelId, r, cur);
+						// 104번 WP7-25 — 화면 저장처럼 표준 여부를 평가해 둔다
+						try {
+							validateAttrStandards(vo);
+							applyStandardFlags(vo);
+						} catch (Exception stdErr) {
+							vo.setTermsStndYn("N");
+							vo.setDomainStndYn("N");
+						}
 						session.insert("datamodel.insertDataModelAttr", vo);
 						r.put("attrNm", vo.getAttrNm());
 					}
@@ -3684,6 +3926,36 @@ public class DataModelController {
 		if ("CASCADE".equals(up) || "SET NULL".equals(up) || "NO ACTION".equals(up)) return up;
 		warnings.add(warnRow(row, "삭제 규칙 '" + v + "' 허용 외 — NO ACTION 으로 대체"));
 		return "NO ACTION";
+	}
+
+	/** 컬럼 엑셀 업로드 한 행 → 컬럼 VO (영문명이 없으면 TMP_COL_{순서}) */
+	private static StdDataModelAttrVo uploadAttrVo(String dataModelId, Map<String, Object> r, short cur) {
+		StdDataModelAttrVo vo = new StdDataModelAttrVo();
+		vo.setDataModelId(dataModelId);
+		vo.setObjOwner(str(r.get("objOwner")));
+		vo.setObjNm(str(r.get("objNm")));
+		String enIn = str(r.get("attrNm"));
+		vo.setAttrNm((enIn != null && !enIn.trim().isEmpty()) ? enIn.trim() : ("TMP_COL_" + cur));
+		vo.setAttrNmKr(str(r.get("attrNmKr")));
+		vo.setAttrOrder(cur);
+		String typeIn = str(r.get("dataType"));
+		vo.setDataType((typeIn != null && !typeIn.trim().isEmpty()) ? typeIn.trim() : "VARCHAR");
+		Integer lenIn = parseIntSafe(r.get("dataLen"));
+		vo.setDataLen(lenIn != null ? lenIn.longValue() : 255L);
+		Integer decIn = parseIntSafe(r.get("dataDecimalLen"));
+		if (decIn != null) vo.setDataDecimalLen(decIn.shortValue());
+		String pk = str(r.get("pkYn"));
+		String fk = str(r.get("fkYn"));
+		vo.setPkYn("Y".equals(pk) ? "Y" : "N");
+		vo.setFkYn("Y".equals(fk) ? "Y" : "N");
+		// 86번 #11 — NULL여부/디폴트값을 업로드 row 에서 그대로 보존 (PK 면 N 강제)
+		String nullableIn = str(r.get("nullableYn"));
+		vo.setNullableYn("Y".equals(vo.getPkYn()) ? "N"
+				: (nullableIn == null || nullableIn.isEmpty() ? "Y" : nullableIn));
+		vo.setDefaultVal(str(r.get("defaultVal")));
+		vo.setTermsStndYn("N");
+		vo.setDomainStndYn("N");
+		return vo;
 	}
 
 	private Map<String, Object> errRow(int row, String msg) {

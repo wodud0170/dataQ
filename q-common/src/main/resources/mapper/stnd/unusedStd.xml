@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 104번 WP7-27 — 쓰이지 않는 표준 (사전 안). 컬럼은 사용 중·승인 모델 중 모델 사전(없으면 기본 사전)이 같은 것만 본다 -->
+<mapper namespace="unusedStd">
+
+	<sql id="modelDict">COALESCE(M.DICT_ID, (SELECT SD.DICT_ID FROM TB_STD_DICT SD WHERE SD.DEFAULT_YN = 'Y' ORDER BY SD.DICT_ID LIMIT 1))</sql>
+	<sql id="colJoin">
+		  FROM TB_DATA_MODEL M
+		  JOIN TB_DATA_MODEL_ATTR A
+		    ON A.DM_ID = M.DM_ID AND A.USE_YN = 'Y' AND COALESCE(A.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		 WHERE M.USE_YN = 'Y' AND COALESCE(M.APRV_STATUS, 'APPROVED') = 'APPROVED'
+	</sql>
+
+	<!-- 단어 — 어떤 용어의 구성 단어도 아니고, 어떤 컬럼명 토큰('_' 로 나눈 것)에도 없는 단어 -->
+	<select id="selectUnusedWords" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT W.WORD_ID AS "id", W.WORD_NM AS "nm", W.WORD_ENG_ABRV_NM AS "engAbrvNm",
+		       CASE WHEN W.WORD_CLSF_YN = 'Y' THEN '형식단어' ELSE '' END AS "extra",
+		       W.APRV_YN AS "aprvYn",
+		       to_char(to_timestamp(W.CRET_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS "cretDt"
+		  FROM TB_WORD W
+		 WHERE W.DICT_ID = #{dictId}
+		<if test='aprvOnly == "Y"'> AND W.APRV_YN = 'Y' </if>
+		<if test="keyword != null and keyword != ''"> AND (W.WORD_NM ILIKE '%' || #{keyword} || '%' OR W.WORD_ENG_ABRV_NM ILIKE '%' || #{keyword} || '%') </if>
+		   AND NOT EXISTS (SELECT 1 FROM TB_TERMS_WORDS TW WHERE TW.WORD_ID = W.WORD_ID)
+		   AND NOT EXISTS (SELECT 1 <include refid="colJoin"/>
+		                      AND <include refid="modelDict"/> = W.DICT_ID
+		                      AND W.WORD_ENG_ABRV_NM = ANY(string_to_array(UPPER(TRIM(A.ATTR_NM)), '_')))
+		 ORDER BY W.WORD_NM
+		 LIMIT 5000
+	</select>
+
+	<!-- 용어(코드 포함) — 어떤 컬럼에도 쓰이지 않는 용어 (컬럼명 = 용어 영문약어명인 컬럼이 없음) -->
+	<select id="selectUnusedTerms" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT T.TERMS_ID AS "id", T.TERMS_NM AS "nm", T.TERMS_ENG_ABRV_NM AS "engAbrvNm",
+		       COALESCE(T.DOMAIN_NM, '') || CASE WHEN T.CODE_GRP IS NOT NULL THEN ' (코드 ' || T.CODE_GRP || ')' ELSE '' END AS "extra",
+		       T.APRV_YN AS "aprvYn",
+		       to_char(to_timestamp(T.CRET_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS "cretDt"
+		  FROM TB_TERMS T
+		 WHERE T.DICT_ID = #{dictId}
+		<if test='aprvOnly == "Y"'> AND T.APRV_YN = 'Y' </if>
+		<if test="keyword != null and keyword != ''"> AND (T.TERMS_NM ILIKE '%' || #{keyword} || '%' OR T.TERMS_ENG_ABRV_NM ILIKE '%' || #{keyword} || '%') </if>
+		   AND NOT EXISTS (SELECT 1 <include refid="colJoin"/>
+		                      AND <include refid="modelDict"/> = T.DICT_ID
+		                      AND TRIM(A.ATTR_NM) = T.TERMS_ENG_ABRV_NM)
+		 ORDER BY T.TERMS_NM
+		 LIMIT 5000
+	</select>
+
+	<!-- 도메인 — 어떤 용어도 쓰지 않는 도메인 -->
+	<select id="selectUnusedDomains" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT D.DOMAIN_ID AS "id", D.DOMAIN_NM AS "nm", '' AS "engAbrvNm",
+		       D.DATA_TYPE || CASE WHEN D.DATA_LEN IS NOT NULL THEN '(' || D.DATA_LEN || CASE WHEN COALESCE(D.DATA_DECIMAL_LEN, 0) > 0 THEN ',' || D.DATA_DECIMAL_LEN ELSE '' END || ')' ELSE '' END AS "extra",
+		       D.APRV_YN AS "aprvYn",
+		       to_char(to_timestamp(D.CRET_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD') AS "cretDt"
+		  FROM TB_DOMAIN D
+		 WHERE D.DICT_ID = #{dictId}
+		<if test='aprvOnly == "Y"'> AND D.APRV_YN = 'Y' </if>
+		<if test="keyword != null and keyword != ''"> AND D.DOMAIN_NM ILIKE '%' || #{keyword} || '%' </if>
+		   AND NOT EXISTS (SELECT 1 FROM TB_TERMS T WHERE T.DICT_ID = D.DICT_ID AND T.DOMAIN_NM = D.DOMAIN_NM)
+		 ORDER BY D.DOMAIN_NM
+		 LIMIT 5000
+	</select>
+
+</mapper>

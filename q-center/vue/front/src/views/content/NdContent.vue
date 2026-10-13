@@ -146,6 +146,12 @@
                     <stdMap :key="stdMapKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'unusedStd'" id="tab_unusedStd" class="tab_contents"
+                :class="{ active: this.activeContent === 'unusedStd' }">
+                <keep-alive>
+                    <unusedStd :key="unusedStdKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'privColumn'" id="tab_privColumn" class="tab_contents"
                 :class="{ active: this.activeContent === 'privColumn' }">
                 <keep-alive>
@@ -517,6 +523,7 @@ import MMDdlRule from "./../../components/MMDdlRule.vue"
 import DSAprvBox from "./../../components/DSAprvBox.vue"
 import DSPrivColumn from "./../../components/DSPrivColumn.vue"
 import DSStdMap from "./../../components/DSStdMap.vue"
+import DSUnusedStd from "./../../components/DSUnusedStd.vue"
 import MMGovMetaConf from "./../../components/MMGovMetaConf.vue"
 import DSGovMetaSys from "./../../components/DSGovMetaSys.vue"
 import DSGovMetaItems from "./../../components/DSGovMetaItems.vue"
@@ -578,6 +585,7 @@ export default {
             datamodelVisualizationKey: this.createUUID(),
             privColumnKey: this.createUUID(),
             stdMapKey: this.createUUID(),
+            unusedStdKey: this.createUUID(),
             govMetaConfKey: this.createUUID(),
             govMetaSysKey: this.createUUID(),
             govMetaItemsKey: this.createUUID(),
@@ -653,6 +661,7 @@ export default {
         "datamodelVisualization": DSDatamodelVisualization,
         "privColumn": DSPrivColumn,
         "stdMap": DSStdMap,
+        "unusedStd": DSUnusedStd,
         "govMetaConf": MMGovMetaConf,
         "govMetaSys": DSGovMetaSys,
         "govMetaItems": DSGovMetaItems,
@@ -755,6 +764,9 @@ export default {
                     break;
                 case "stdMap":
                     this.stdMapKey = this.createUUID();
+                    break;
+                case "unusedStd":
+                    this.unusedStdKey = this.createUUID();
                     break;
                 case "privColumn":
                     this.privColumnKey = this.createUUID();

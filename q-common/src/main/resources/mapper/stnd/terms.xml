@@ -590,4 +590,64 @@
 			     on A.DOMAIN_NM = B.DOMAIN_NM AND A.DICT_ID = B.DICT_ID
 			where A.CODE_GRP is not null AND (A.TERMS_NM = #{codeNm} OR #{codeNm} = any(A.ALLOPH_SYNM_LST))
 	</select>
+
+	<!-- ===== 104번 WP7-23·24 — 컬럼에 쓸 승인 용어 찾기 (도메인 타입·길이 포함) ===== -->
+	<sql id="termWithDomainCols">
+		SELECT T.TERMS_ID          as "termsId"
+		      ,T.TERMS_NM          as "termsNm"
+		      ,T.TERMS_ENG_ABRV_NM as "termsEngAbrvNm"
+		      ,T.DOMAIN_NM         as "domainNm"
+		      ,D.DATA_TYPE         as "dataType"
+		      ,D.DATA_LEN          as "dataLen"
+		      ,D.DATA_DECIMAL_LEN  as "dataDecimalLen"
+		  FROM TB_TERMS T
+		  LEFT JOIN TB_DOMAIN D ON D.DICT_ID = T.DICT_ID AND D.DOMAIN_NM = T.DOMAIN_NM
+		 WHERE T.DICT_ID = #{dictId}
+		   AND T.APRV_YN = 'Y'
+	</sql>
+
+	<!-- 자동완성 — 용어명·이음동의어에 입력이 들어 있는 용어. 같은 이름 → 앞이 같은 이름 → 짧은 이름 순 20건 -->
+	<select id="selectTermSuggest" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT X.*
+		  FROM (
+		<include refid="termWithDomainCols"/>
+		   AND (T.TERMS_NM ILIKE '%' || #{q} || '%'
+		        OR EXISTS (SELECT 1 FROM unnest(T.ALLOPH_SYNM_LST) S WHERE S ILIKE '%' || #{q} || '%'))
+		       ) X
+		 ORDER BY CASE WHEN X."termsNm" = #{q} THEN 0 WHEN X."termsNm" ILIKE #{q} || '%' THEN 1 ELSE 2 END,
+		          length(X."termsNm"), X."termsNm"
+		 LIMIT 20
+	</select>
+
+	<!-- 이음동의어 중 입력이 들어 있는 것 (자동완성 표시용) -->
+	<select id="selectTermSynonymHit" parameterType="java.util.Map" resultType="String">
+		SELECT S FROM TB_TERMS T, unnest(T.ALLOPH_SYNM_LST) S
+		 WHERE T.TERMS_ID = #{termsId} AND S ILIKE '%' || #{q} || '%'
+		 LIMIT 1
+	</select>
+
+	<!-- 후보 — 단어 분석 영문약어와 같은 용어 -->
+	<select id="selectTermCandByEng" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<include refid="termWithDomainCols"/>
+		   AND T.TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
+	</select>
+
+	<!-- 후보 — 한글명을 나눈 단어를 모두 쓰는 용어 (구성 단어가 적은 순 5건) -->
+	<select id="selectTermCandByWords" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<include refid="termWithDomainCols"/>
+		   AND (SELECT COUNT(DISTINCT TW.WORD_ID) FROM TB_TERMS_WORDS TW
+		         WHERE TW.TERMS_ID = T.TERMS_ID
+		           AND TW.WORD_ID IN <foreach collection="wordIds" item="w" open="(" separator="," close=")">#{w}</foreach>) = #{wordCnt}
+		 ORDER BY (SELECT COUNT(*) FROM TB_TERMS_WORDS TW WHERE TW.TERMS_ID = T.TERMS_ID), T.TERMS_NM
+		 LIMIT 5
+	</select>
+
+	<!-- 후보 — 용어명이 한글명을 포함하거나 한글명이 용어명을 포함 (길이 차이가 작은 순 5건) -->
+	<select id="selectTermCandByContains" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<include refid="termWithDomainCols"/>
+		   AND (T.TERMS_NM ILIKE '%' || #{kr} || '%'
+		        OR (length(T.TERMS_NM) >= 2 AND #{kr} ILIKE '%' || T.TERMS_NM || '%'))
+		 ORDER BY abs(length(T.TERMS_NM) - length(#{kr})), T.TERMS_NM
+		 LIMIT 5
+	</select>
 </mapper>
