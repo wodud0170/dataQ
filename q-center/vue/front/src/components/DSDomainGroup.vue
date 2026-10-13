@@ -79,11 +79,12 @@
     <v-divider></v-divider>
     <!-- 도메인 그룹 목록 -->
     <v-data-table id="domainGroup_table" :headers="domainGroupHeaders" :items="domainGroupItems" :page.sync="page"
-      :items-per-page="itemsPerPage" hide-default-footer item-key="domainGrpNm" show-select class="px-4 pb-3"
+      :items-per-page="itemsPerPage" hide-default-footer item-key="id" show-select class="px-4 pb-3"
       v-model="selectedItem">
       <!-- 클릭 가능한 아이템 설정 : 도메인그룹명  -->
       <template v-slot:[`item.domainGrpNm`]="{ item }">
-        <span class="ndColor--text" :style="{ cursor: 'pointer' }" @click="bindDetail(item)">{{
+        <span class="ndColor--text" :style="{ cursor: 'pointer', paddingLeft: ((item.level || 1) - 1) * 18 + 'px' }" @click="bindDetail(item)">
+          <v-icon v-if="(item.level || 1) > 1" x-small>mdi-subdirectory-arrow-right</v-icon>{{
           item.domainGrpNm
         }}</span>
       </template>
@@ -106,7 +107,7 @@
     <!-- add domainGroup Modal -->
     <v-dialog max-width="600" v-model="addDomainGroupModalShow">
       <NdModal @hide="hideModal('add')" @submit="submitDialog('add')" :footer-submit="true" header-title="도메인 그룹 등록"
-        footer-hide-title="취소" footer-submit-title="등록" :style="{ height: '40vh' }">
+        footer-hide-title="취소" footer-submit-title="등록" :style="{ height: '70vh' }">
         <template v-slot:body>
           <v-container fluid>
             <v-form ref="form">
@@ -132,6 +133,42 @@
                   </v-radio-group>
                 </v-col>
               </v-row>
+
+              <!-- 104번 WP6-4 다단계 -->
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>상위 그룹</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-select id="addGrpParent" v-model="addDomainGroup_parentGrpId" :items="parentOptions(null)" item-text="text" item-value="value"
+                    dense clearable color="ndColor" placeholder="(최상위)" hint="3단계까지" persistent-hint></v-select>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>기본 데이터 타입</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-autocomplete v-model="addDomainGroup_dfltDataType" :items="dataTypeItems" dense clearable color="ndColor"
+                    hint="도메인 등록 때 이 그룹을 고르면 채웁니다" persistent-hint></v-autocomplete>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>분류어</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-text-field v-model="addDomainGroup_clsfWordNm" dense color="ndColor" placeholder="금액"></v-text-field>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>순서</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-text-field v-model="addDomainGroup_sortOrder" type="number" dense color="ndColor" placeholder="0"></v-text-field>
+                </v-col>
+              </v-row>
             </v-form>
           </v-container>
         </template>
@@ -141,7 +178,7 @@
     <!-- update domainGroup Modal -->
     <v-dialog max-width="600" v-model="updateDomainGroupModalShow">
       <NdModal @hide="hideModal('update')" @submit="submitDialog('update')" :footer-submit="true" header-title="도메인 그룹 수정"
-        footer-hide-title="취소" footer-submit-title="수정" :style="{ height: '40vh' }">
+        footer-hide-title="취소" footer-submit-title="수정" :style="{ height: '70vh' }">
         <template v-slot:body>
           <v-container fluid>
             <v-row>
@@ -166,6 +203,42 @@
                 </v-radio-group>
               </v-col>
             </v-row>
+
+              <!-- 104번 WP6-4 다단계 -->
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>상위 그룹</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-select id="updateGrpParent" v-model="updateDomainGroup_parentGrpId" :items="parentOptions(updateDomainGroup_id)" item-text="text" item-value="value"
+                    dense clearable color="ndColor" placeholder="(최상위)" hint="3단계까지" persistent-hint></v-select>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>기본 데이터 타입</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-autocomplete v-model="updateDomainGroup_dfltDataType" :items="dataTypeItems" dense clearable color="ndColor"
+                    hint="도메인 등록 때 이 그룹을 고르면 채웁니다" persistent-hint></v-autocomplete>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>분류어</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-text-field v-model="updateDomainGroup_clsfWordNm" dense color="ndColor" placeholder="금액"></v-text-field>
+                </v-col>
+              </v-row>
+              <v-row>
+                <v-col cols="4">
+                  <v-subheader>순서</v-subheader>
+                </v-col>
+                <v-col cols="8">
+                  <v-text-field v-model="updateDomainGroup_sortOrder" type="number" dense color="ndColor" placeholder="0"></v-text-field>
+                </v-col>
+              </v-row>
           </v-container>
         </template>
       </NdModal>
@@ -209,13 +282,26 @@ export default {
     // 등록 관련
     addDomainGroup_domainGrpNm: null,
     addDomainGroup_commStndYn: "N",
+    addDomainGroup_parentGrpId: null,
+    addDomainGroup_dfltDataType: null,
+    addDomainGroup_clsfWordNm: null,
+    addDomainGroup_sortOrder: null,
     // 수정 관련
     updateDomainGroup_id: null,
     updateDomainGroup_domainGrpNm: null,
     updateDomainGroup_commStndYn: "N",
+    updateDomainGroup_parentGrpId: null,
+    updateDomainGroup_dfltDataType: null,
+    updateDomainGroup_clsfWordNm: null,
+    updateDomainGroup_sortOrder: null,
+    dataTypeItems: ['VARCHAR', 'VARCHAR2', 'CHAR', 'NUMBER', 'NUMERIC', 'DECIMAL', 'DATE', 'DATETIME', 'TIMESTAMP', 'CLOB', 'BLOB', 'TEXT', 'INTEGER', 'BIGINT', 'FLOAT', 'DOUBLE', 'TIME', 'BOOLEAN'],
     // 상단 테이블 헤더
     domainGroupHeaders: [
-      { text: '도메인 그룹명', align: 'center', sortable: false, value: 'domainGrpNm' },
+      { text: '도메인 그룹명', align: 'start', sortable: false, value: 'domainGrpNm' },
+      { text: '상위 그룹', sortable: false, align: 'center', value: 'parentGrpNm' },
+      { text: '기본 데이터 타입', sortable: false, align: 'center', value: 'dfltDataType' },
+      { text: '분류어', sortable: false, align: 'center', value: 'clsfWordNm' },
+      { text: '순서', sortable: false, align: 'center', value: 'sortOrder' },
       { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn' },
       { text: '생성일시', sortable: false, align: 'center', value: 'cretDt' },
       { text: '생성사용자ID', sortable: false, align: 'center', value: 'cretUserId' },
@@ -265,6 +351,20 @@ export default {
     eventBus.$off('NOTICE', this.onUploadNotice);
   },
   methods: {
+    // 104번 WP6-4 — 상위 그룹 선택지: 2단계까지의 그룹(그 아래에 하나 더 둘 수 있음). 수정 때는 자기 자신과 하위 그룹을 뺀다
+    parentOptions(selfId) {
+      const byId = {};
+      this.domainGroupAllItems.forEach(g => { byId[g.id] = g; });
+      const underSelf = g => {
+        for (let p = g; p; p = p.parentGrpId ? byId[p.parentGrpId] : null) {
+          if (p.id === selfId) return true;
+        }
+        return false;
+      };
+      return this.domainGroupAllItems
+        .filter(g => (g.level || 1) <= 2 && !(selfId && underSelf(g)))
+        .map(g => ({ text: g.path || g.domainGrpNm, value: g.id }));
+    },
     setListPage() {
       // 페이지네이션 버튼 개수
       this.pageCount = Math.ceil(this.domainGroupItems.length / this.itemsPerPage);
@@ -334,6 +434,10 @@ export default {
       this.updateDomainGroup_id = this.selectedItem[0].id;
       this.updateDomainGroup_domainGrpNm = this.selectedItem[0].domainGrpNm;
       this.updateDomainGroup_commStndYn = this.selectedItem[0].commStndYn;
+      this.updateDomainGroup_parentGrpId = this.selectedItem[0].parentGrpId || null;
+      this.updateDomainGroup_dfltDataType = this.selectedItem[0].dfltDataType || null;
+      this.updateDomainGroup_clsfWordNm = this.selectedItem[0].clsfWordNm || null;
+      this.updateDomainGroup_sortOrder = this.selectedItem[0].sortOrder;
     },
     getDomainGroupData() {
       try {
@@ -381,6 +485,10 @@ export default {
         let domainGroupData = {
           'domainGrpNm': this.addDomainGroup_domainGrpNm,
           'commStndYn': this.addDomainGroup_commStndYn,
+          'parentGrpId': this.addDomainGroup_parentGrpId || null,
+          'dfltDataType': this.addDomainGroup_dfltDataType || null,
+          'clsfWordNm': this.addDomainGroup_clsfWordNm || null,
+          'sortOrder': this.addDomainGroup_sortOrder === null || this.addDomainGroup_sortOrder === '' ? null : Number(this.addDomainGroup_sortOrder),
           'dictId': this.dictId,
         };
 
@@ -400,6 +508,10 @@ export default {
             // 초기화
             this.addDomainGroup_domainGrpNm = null;
             this.addDomainGroup_commStndYn = 'N';
+            this.addDomainGroup_parentGrpId = null;
+            this.addDomainGroup_dfltDataType = null;
+            this.addDomainGroup_clsfWordNm = null;
+            this.addDomainGroup_sortOrder = null;
 
           } else {
             this.$swal.fire({
@@ -432,6 +544,11 @@ export default {
           'id': this.updateDomainGroup_id,
           'domainGrpNm': this.updateDomainGroup_domainGrpNm,
           'commStndYn': this.updateDomainGroup_commStndYn,
+          // 104번 WP6-4 — 빈 문자열은 지움(상위 그룹이면 최상위로 이동)
+          'parentGrpId': this.updateDomainGroup_parentGrpId || '',
+          'dfltDataType': this.updateDomainGroup_dfltDataType || '',
+          'clsfWordNm': this.updateDomainGroup_clsfWordNm || '',
+          'sortOrder': this.updateDomainGroup_sortOrder === null || this.updateDomainGroup_sortOrder === '' ? 0 : Number(this.updateDomainGroup_sortOrder),
         };
 
         axios.post(this.$APIURL.base + "api/std/updateDomainGroup", domainGroupData).then(result => {

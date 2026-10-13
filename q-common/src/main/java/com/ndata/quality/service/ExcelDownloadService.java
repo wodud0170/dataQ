@@ -357,7 +357,8 @@ public class ExcelDownloadService {
         	new String[]{"코드명","30","CENTER"},
         	new String[]{"코드영문명","20","LEFT"},
         	new String[]{"코드값","15","CENTER"}, 
-        	new String[]{"코드값설명","70","LEFT"}
+        	new String[]{"코드값설명","70","LEFT"},
+        	new String[]{"상위코드값","15","CENTER"}
         );
         
         // 데이터 리스트
@@ -373,6 +374,7 @@ public class ExcelDownloadService {
             tempMap.put("HEADER4", dataVo.getCodeEngNm());
             tempMap.put("HEADER5", dataVo.getCodeVal());
             tempMap.put("HEADER6", dataVo.getCodeValDesc());
+            tempMap.put("HEADER7", dataVo.getParentCodeVal());   // 104번 WP6-3 — 계층 코드의 상위 코드값
             list.add(tempMap);
         }
         log.info(">> excel export size={}", list.size());

@@ -208,7 +208,7 @@
                 <v-col cols="8">
                   <v-select dense required color="ndColor" v-model="addDomain_domainGrpNm" :items="domainGroupNameItems"
                     :placeholder="'선택'" :rules="[v => !!v || '도메인 그룹명은 필수 입력값입니다.']"
-                    :menu-props="{ top: false, offsetY: true }" v-on:change="resetDomainClassificationItems()"></v-select>
+                    :menu-props="{ top: false, offsetY: true }" v-on:change="resetDomainClassificationItems(); fillGroupDataType()"></v-select>
                 </v-col>
               </v-row>
 
@@ -1047,7 +1047,8 @@ export default {
           let _new_arr = [];
 
           for (let i = 0; i < _data.length; i++) {
-            _new_arr.push(_data[i].domainGrpNm)
+            // 104번 WP6-4 — 다단계 그룹은 경로("상위 > 하위")로 보이고 값은 그룹명
+            _new_arr.push({ text: _data[i].path || _data[i].domainGrpNm, value: _data[i].domainGrpNm, dfltDataType: _data[i].dfltDataType })
           }
 
           this.domainGroupNameItems = _new_arr;
@@ -1065,6 +1066,11 @@ export default {
     },
     resetDomainClassificationItems() {
       this.domainClassificationNameItems = [];
+    },
+    // 104번 WP6-4 — 등록 때 그룹을 고르면 그룹 기본 데이터 타입을 채운다 (이미 고른 타입은 두고)
+    fillGroupDataType() {
+      const g = this.domainGroupNameItems.find(x => x.value === this.addDomain_domainGrpNm);
+      if (g && g.dfltDataType && !this.addDomain_dataType) this.addDomain_dataType = g.dfltDataType;
     },
     getDomainClassification() {
       // 도메인 분류명을 도메인 등록, 도메인 수정에 바인드

@@ -206,6 +206,20 @@
 			where (WORD_NM = #{wordNm} OR #{wordNm} = any(ALLOPH_SYNM_LST)) AND DICT_ID = #{dictId}
 	</select>
 
+	<!-- 104번 WP6-13 — 수정할 단어의 사전 (화면이 사전을 보내지 않아도 그 사전의 운영 옵션으로 검사) -->
+	<select id="selectWordDictIdById" parameterType="String" resultType="String">
+		SELECT DICT_ID FROM TB_WORD WHERE WORD_ID = #{wordId}
+	</select>
+
+	<!-- 104번 WP6-13 — 단어 영문명 중복을 허용하지 않는 사전의 검사 (대소문자 무시, 자기 자신 제외) -->
+	<select id="countWordEngNmDup" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*)
+		  FROM TB_WORD
+		 WHERE DICT_ID = #{dictId}
+		   AND UPPER(WORD_ENG_NM) = UPPER(#{wordEngNm})
+		   AND WORD_ID &lt;&gt; COALESCE(#{wordId, jdbcType=VARCHAR}, '')
+	</select>
+
 	<select id="selectWordByEngAbrvNm" parameterType="java.util.Map" resultMap="stdWordMap">
 			select 
 				WORD_ID

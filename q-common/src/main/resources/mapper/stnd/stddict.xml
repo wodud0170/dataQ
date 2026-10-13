@@ -12,6 +12,10 @@
 		       default_yn             as "defaultYn",
 		       use_yn                 as "useYn",
 		       term_last_word_clsf_yn as "termLastWordClsfYn",
+		       upper_yn               as "upperYn",
+		       word_eng_nm_dup_yn     as "wordEngNmDupYn",
+		       term_eng_max_len       as "termEngMaxLen",
+		       old_std_yn             as "oldStdYn",
 		       cret_dt                as "cretDt",
 		       cret_user_id           as "cretUserId",
 		       updt_dt                as "updtDt",
@@ -58,11 +62,14 @@
 	<insert id="insertDict" parameterType="java.util.Map">
 		INSERT INTO tb_std_dict
 		  (dict_id, dict_nm, dict_desc, default_yn, use_yn,
-		   term_last_word_clsf_yn, cret_dt, cret_user_id, updt_dt, updt_user_id)
+		   term_last_word_clsf_yn, upper_yn, word_eng_nm_dup_yn, term_eng_max_len, old_std_yn,
+		   cret_dt, cret_user_id, updt_dt, updt_user_id)
 		VALUES
 		  (#{dictId}, #{dictNm}, #{dictDesc, jdbcType=VARCHAR},
 		   COALESCE(#{defaultYn, jdbcType=VARCHAR}, 'N'), 'Y',
 		   COALESCE(#{termLastWordClsfYn, jdbcType=VARCHAR}, 'N'),
+		   COALESCE(#{upperYn, jdbcType=VARCHAR}, 'Y'), COALESCE(#{wordEngNmDupYn, jdbcType=VARCHAR}, 'Y'),
+		   #{termEngMaxLen, jdbcType=INTEGER}, COALESCE(#{oldStdYn, jdbcType=VARCHAR}, 'N'),
 		   to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR},
 		   to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR})
 	</insert>
@@ -72,6 +79,11 @@
 		   SET dict_nm                = #{dictNm},
 		       dict_desc              = #{dictDesc, jdbcType=VARCHAR},
 		       term_last_word_clsf_yn = COALESCE(#{termLastWordClsfYn, jdbcType=VARCHAR}, term_last_word_clsf_yn),
+		       upper_yn               = COALESCE(#{upperYn, jdbcType=VARCHAR}, upper_yn),
+		       word_eng_nm_dup_yn     = COALESCE(#{wordEngNmDupYn, jdbcType=VARCHAR}, word_eng_nm_dup_yn),
+		       <!-- 104번 WP6-13 — 최대 길이는 비우면 제한 없음(NULL) 이라 보낸 값 그대로 -->
+		       term_eng_max_len       = #{termEngMaxLen, jdbcType=INTEGER},
+		       old_std_yn             = COALESCE(#{oldStdYn, jdbcType=VARCHAR}, old_std_yn),
 		       updt_dt                = to_char(now(), 'YYYYMMDDHH24MISS'),
 		       updt_user_id           = #{userId, jdbcType=VARCHAR}
 		 WHERE dict_id = #{dictId}

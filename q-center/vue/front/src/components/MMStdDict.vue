@@ -31,6 +31,14 @@
       <template v-slot:item.termLastWordClsfYn="{ item }">
         <span>{{ item.termLastWordClsfYn === 'Y' ? '필수' : '미적용' }}</span>
       </template>
+      <template v-slot:item.opts="{ item }">
+        <span class="dict-opt-desc">
+          대문자 {{ item.upperYn === 'N' ? '거부' : '자동' }}
+          · 단어 영문명 중복 {{ item.wordEngNmDupYn === 'N' ? '불가' : '허용' }}
+          · 용어 영문약어 {{ item.termEngMaxLen ? item.termEngMaxLen + ' Byte 이하' : '길이 제한 없음' }}
+          · 구표준 {{ item.oldStdYn === 'Y' ? '사용' : '안 씀' }}
+        </span>
+      </template>
       <template v-slot:item.counts="{ item }">
         <span v-if="stats[item.dictId]">
           단어 {{ stats[item.dictId].wordCnt }} / 용어 {{ stats[item.dictId].termsCnt }}
@@ -54,6 +62,19 @@
             켜면 '고객명' 처럼 형식단어(명·코드·번호·일자 등)로 끝나야 용어를 등록할 수 있습니다.
             행안부 공통표준의 관례이며, 기관 자체 표준에서는 대개 끕니다.
           </div>
+          <!-- 104번 WP6-13 표준 운영 옵션 -->
+          <div class="dict-opt-title">표준 운영 옵션</div>
+          <v-switch id="dictUpperYn" v-model="form.upperYn" true-value="Y" false-value="N" dense hide-details
+            label="표준 대문자 — 영문약어 소문자 입력을 대문자로 바꿔 받음" />
+          <div class="ml-8 mb-2 dict-opt-desc">끄면 단어·용어 영문약어에 소문자가 있을 때 등록하지 않습니다.</div>
+          <v-switch id="dictWordEngNmDupYn" v-model="form.wordEngNmDupYn" true-value="Y" false-value="N" dense hide-details
+            label="단어 영문명 중복 허용" />
+          <div class="ml-8 mb-2 dict-opt-desc">끄면 같은 영문명(대소문자 무시)을 쓰는 단어가 이 사전에 있을 때 등록·수정하지 않습니다.</div>
+          <v-text-field id="dictTermEngMaxLen" v-model="form.termEngMaxLen" label="용어 영문약어명 최대 길이 (Byte, 비우면 제한 없음)"
+            dense type="number" min="1" class="mt-2" />
+          <v-switch id="dictOldStdYn" v-model="form.oldStdYn" true-value="Y" false-value="N" dense hide-details
+            label="구표준 사용 — 옛 표준 → 새 표준 매핑" />
+          <div class="ml-8 mb-2 dict-opt-desc">켜면 표준 사전 > 표준 매핑에 옛 표준을 등록하고, 표준 진단 결과가 옛 표준을 쓰는 컬럼에 새 표준을 안내합니다.</div>
           <v-switch v-model="form.defaultYn" true-value="Y" false-value="N" dense
             label="기본 사전으로 지정 (신규 모델에 미리 선택됨)" />
         </v-card-text>
@@ -82,13 +103,14 @@ export default {
       selectedRows: [],
       modal: false,
       editing: false,
-      form: { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', defaultYn: 'N' },
+      form: { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', defaultYn: 'N' },
       snackbar: false, snackbarMsg: '', snackbarColor: 'info',
       headers: [
         { text: '사전명', value: 'dictNm', width: '180px' },
         { text: '설명', value: 'dictDesc' },
         { text: '기본', value: 'defaultYn', width: '70px', align: 'center' },
         { text: '형식단어 강제', value: 'termLastWordClsfYn', width: '110px', align: 'center' },
+        { text: '운영 옵션', value: 'opts', sortable: false },
         { text: '보유 건수', value: 'counts', width: '320px', sortable: false },
       ],
     };
@@ -112,7 +134,7 @@ export default {
     onSelect() { /* v-model 로 처리 */ },
     openAdd() {
       this.editing = false;
-      this.form = { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', defaultYn: 'N' };
+      this.form = { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', defaultYn: 'N' };
       this.modal = true;
     },
     openEdit() {
@@ -162,3 +184,7 @@ export default {
   },
 };
 </script>
+<style scoped>
+.dict-opt-title { font-size: .85rem; font-weight: 600; color: #37474F; margin: 12px 0 2px; }
+.dict-opt-desc { font-size: .75rem; color: #78909C; }
+</style>

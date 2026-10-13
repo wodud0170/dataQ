@@ -11,6 +11,7 @@
             ,CODE_ENG_NM        as codeEngNm
             ,CODE_VAL           as codeVal
             ,CODE_VAL_DESC      as codeValDesc
+            ,PARENT_CODE_VAL    as parentCodeVal
             ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
             ,CRET_USER_ID       as cretUserId
             ,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
@@ -30,6 +31,7 @@
             ,CODE_ENG_NM        as codeEngNm
             ,CODE_VAL           as codeVal
             ,CODE_VAL_DESC      as codeValDesc
+            ,PARENT_CODE_VAL    as parentCodeVal
             ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
             ,CRET_USER_ID       as cretUserId
             ,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
@@ -50,6 +52,7 @@
             ,CODE_ENG_NM        as codeEngNm
             ,CODE_VAL           as codeVal
             ,CODE_VAL_DESC      as codeValDesc
+            ,PARENT_CODE_VAL    as parentCodeVal
             ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
             ,CRET_USER_ID       as cretUserId
             ,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
@@ -70,6 +73,7 @@
             ,CODE_ENG_NM        as codeEngNm
             ,CODE_VAL           as codeVal
             ,CODE_VAL_DESC      as codeValDesc
+            ,PARENT_CODE_VAL    as parentCodeVal
             ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
             ,CRET_USER_ID       as cretUserId
             ,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
@@ -94,6 +98,7 @@
             ,CRET_DT
             ,CRET_USER_ID
             ,DICT_ID
+            ,PARENT_CODE_VAL
            )
            VALUES
            (
@@ -106,6 +111,7 @@
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{cretUserId, jdbcType=VARCHAR}
             ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
+            ,NULLIF(#{parentCodeVal, jdbcType=VARCHAR}, '')
            )
   </insert>
 
@@ -118,6 +124,7 @@
                ,CODE_ENG_NM = #{codeEngNm}
                ,CODE_VAL = #{codeVal}
                ,CODE_VAL_DESC = #{codeValDesc, jdbcType=VARCHAR}
+               ,PARENT_CODE_VAL = NULLIF(#{parentCodeVal, jdbcType=VARCHAR}, '')
                ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
                ,UPDT_USER_ID  = #{updtUserId, jdbcType=VARCHAR}
             WHERE

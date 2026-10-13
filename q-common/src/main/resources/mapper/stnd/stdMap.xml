@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="stdMap">
+
+	<!-- 104번 WP6-15 — 옛 표준 → 새 표준 매핑 (AS-IS / TO-BE). 새 표준은 같은 사전의 단어(WORD) 또는 용어(TERM). -->
+	<sql id="cols">
+		SELECT M.MAP_ID as "mapId", M.DICT_ID as "dictId", M.MAP_TP as "mapTp", M.OLD_NM as "oldNm",
+		       M.OLD_ENG_ABRV_NM as "oldEngAbrvNm", M.NEW_ID as "newId",
+		       CASE WHEN M.MAP_TP = 'WORD' THEN W.WORD_NM ELSE T.TERMS_NM END as "newNm",
+		       CASE WHEN M.MAP_TP = 'WORD' THEN W.WORD_ENG_ABRV_NM ELSE T.TERMS_ENG_ABRV_NM END as "newEngAbrvNm",
+		       CASE WHEN M.MAP_TP = 'WORD' THEN W.APRV_YN ELSE T.APRV_YN END as "newAprvYn",
+		       M.MAP_REASON as "mapReason", M.USE_YN as "useYn",
+		       M.CRET_DT as "cretDt", M.CRET_USER_ID as "cretUserId", M.UPDT_DT as "updtDt", M.UPDT_USER_ID as "updtUserId"
+		  FROM TB_STD_MAP M
+		  LEFT JOIN TB_WORD W ON M.MAP_TP = 'WORD' AND W.WORD_ID = M.NEW_ID
+		  LEFT JOIN TB_TERMS T ON M.MAP_TP = 'TERM' AND T.TERMS_ID = M.NEW_ID
+	</sql>
+
+	<select id="selectList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<include refid="cols"/>
+		 WHERE M.DICT_ID = #{dictId}
+		<if test="mapTp != null and mapTp != ''"> AND M.MAP_TP = #{mapTp} </if>
+		<if test="keyword != null and keyword != ''">
+		   AND (M.OLD_NM ILIKE '%' || #{keyword} || '%' OR M.OLD_ENG_ABRV_NM ILIKE '%' || #{keyword} || '%'
+		        OR W.WORD_NM ILIKE '%' || #{keyword} || '%' OR T.TERMS_NM ILIKE '%' || #{keyword} || '%')
+		</if>
+		 ORDER BY M.MAP_TP, M.OLD_NM
+	</select>
+
+	<select id="selectById" parameterType="String" resultType="java.util.LinkedHashMap">
+		<include refid="cols"/>
+		 WHERE M.MAP_ID = #{mapId}
+	</select>
+
+	<!-- 같은 사전·유형에 같은 옛 이름이 이미 있는지 (자기 자신 제외) -->
+	<select id="countDup" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_STD_MAP
+		 WHERE DICT_ID = #{dictId} AND MAP_TP = #{mapTp} AND OLD_NM = #{oldNm}
+		   AND MAP_ID &lt;&gt; COALESCE(#{mapId, jdbcType=VARCHAR}, '')
+	</select>
+
+	<select id="countNewTarget" parameterType="java.util.Map" resultType="int">
+		<choose>
+			<when test="mapTp == 'WORD'">SELECT COUNT(*) FROM TB_WORD WHERE WORD_ID = #{newId} AND DICT_ID = #{dictId}</when>
+			<otherwise>SELECT COUNT(*) FROM TB_TERMS WHERE TERMS_ID = #{newId} AND DICT_ID = #{dictId}</otherwise>
+		</choose>
+	</select>
+
+	<insert id="insert" parameterType="java.util.Map">
+		INSERT INTO TB_STD_MAP (MAP_ID, DICT_ID, MAP_TP, OLD_NM, OLD_ENG_ABRV_NM, NEW_ID, MAP_REASON, USE_YN, CRET_DT, CRET_USER_ID)
+		VALUES (#{mapId}, #{dictId}, #{mapTp}, #{oldNm}, NULLIF(#{oldEngAbrvNm, jdbcType=VARCHAR}, ''), #{newId},
+		        NULLIF(#{mapReason, jdbcType=VARCHAR}, ''), 'Y', to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+	</insert>
+
+	<update id="update" parameterType="java.util.Map">
+		UPDATE TB_STD_MAP
+		   SET MAP_TP = #{mapTp}, OLD_NM = #{oldNm}, OLD_ENG_ABRV_NM = NULLIF(#{oldEngAbrvNm, jdbcType=VARCHAR}, ''),
+		       NEW_ID = #{newId}, MAP_REASON = NULLIF(#{mapReason, jdbcType=VARCHAR}, ''),
+		       UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS'), UPDT_USER_ID = #{userId}
+		 WHERE MAP_ID = #{mapId}
+	</update>
+
+	<delete id="delete" parameterType="java.util.List">
+		DELETE FROM TB_STD_MAP WHERE MAP_ID IN
+		<foreach item="id" collection="list" open="(" separator="," close=")">#{id}</foreach>
+	</delete>
+
+	<!-- 표준 진단 결과 안내 — 컬럼 영문명이 옛 용어 영문약어명과 같으면 새 용어 -->
+	<select id="selectTermMapByEng" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT M.OLD_ENG_ABRV_NM as "oldEngAbrvNm", M.OLD_NM as "oldNm", T.TERMS_NM as "newNm", T.TERMS_ENG_ABRV_NM as "newEngAbrvNm"
+		  FROM TB_STD_MAP M
+		  JOIN TB_TERMS T ON T.TERMS_ID = M.NEW_ID
+		 WHERE M.DICT_ID = #{dictId} AND M.MAP_TP = 'TERM' AND M.USE_YN = 'Y' AND M.OLD_ENG_ABRV_NM IS NOT NULL
+		<if test="engList != null and engList.size() > 0">
+		   AND M.OLD_ENG_ABRV_NM IN <foreach item="e" collection="engList" open="(" separator="," close=")">#{e}</foreach>
+		</if>
+	</select>
+</mapper>

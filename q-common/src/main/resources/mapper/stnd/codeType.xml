@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="codeType">
+
+	<!-- 104번 WP6-3 — 코드 유형(단일·계층·파생·통합·개별).
+	     코드 = CODE_GRP 가 있는 용어(TB_TERMS), 코드값 = TB_CODE_DATA (같은 사전·같은 CODE_GRP),
+	     통합 코드 구성 = TB_CODE_INTEG. CODE_TP 가 비어 있는 코드는 단일 코드로 본다. -->
+
+	<!-- 코드 그룹으로 코드 한 건 (승인된 것을 먼저) -->
+	<select id="selectCodeByGrp" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT TERMS_ID as "termsId", TERMS_NM as "termsNm", CODE_GRP as "codeGrp",
+		       COALESCE(CODE_TP, 'SINGLE') as "codeTp", PARENT_CODE_GRP as "parentCodeGrp"
+		  FROM TB_TERMS
+		 WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+		 ORDER BY CASE WHEN APRV_YN = 'Y' THEN 0 ELSE 1 END, TERMS_NM
+		 LIMIT 1
+	</select>
+
+	<select id="countValuesByGrp" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_CODE_DATA WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+	</select>
+
+	<select id="countValue" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_CODE_DATA WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp} AND CODE_VAL = #{codeVal}
+	</select>
+
+	<!-- 계층 코드 값이 상위로 쓰이는 수 (상위 값을 지우거나 바꿀 때) -->
+	<select id="countChildValues" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*)
+		  FROM TB_CODE_DATA D
+		  JOIN TB_TERMS T ON T.DICT_ID = D.DICT_ID AND T.CODE_GRP = D.CODE_GRP AND T.CODE_TP = 'HIER' AND T.PARENT_CODE_GRP = #{codeGrp}
+		 WHERE D.DICT_ID = #{dictId} AND D.PARENT_CODE_VAL = #{codeVal}
+	</select>
+
+	<select id="selectChildValues" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+		SELECT D.CODE_ID as id, D.CODE_GRP as codeGrp, D.CODE_VAL as codeVal
+		  FROM TB_CODE_DATA D
+		  JOIN TB_TERMS T ON T.DICT_ID = D.DICT_ID AND T.CODE_GRP = D.CODE_GRP AND T.CODE_TP = 'HIER' AND T.PARENT_CODE_GRP = #{codeGrp}
+		 WHERE D.DICT_ID = #{dictId} AND D.PARENT_CODE_VAL = #{codeVal}
+	</select>
+
+	<select id="selectValuesByGrp" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+		SELECT CODE_ID as id, CODE_GRP as codeGrp, CODE_NM as codeNm, CODE_ENG_NM as codeEngNm, CODE_VAL as codeVal,
+		       CODE_VAL_DESC as codeValDesc, PARENT_CODE_VAL as parentCodeVal, DICT_ID as dictId,
+		       to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt, CRET_USER_ID as cretUserId,
+		       to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt, UPDT_USER_ID as updtUserId
+		  FROM TB_CODE_DATA
+		 WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+		 ORDER BY CODE_VAL
+	</select>
+
+	<select id="selectIntegSubs" parameterType="java.util.Map" resultType="String">
+		SELECT SUB_CODE_GRP FROM TB_CODE_INTEG
+		 WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+		 ORDER BY SORT_ORDER, SUB_CODE_GRP
+	</select>
+
+	<select id="selectCodeById" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT TERMS_ID as "termsId", TERMS_NM as "termsNm", CODE_GRP as "codeGrp", DICT_ID as "dictId"
+		  FROM TB_TERMS WHERE TERMS_ID = #{termsId}
+	</select>
+
+	<!-- 이 코드 그룹을 상위로 쓰는 계층·파생 코드 수 -->
+	<select id="countChildCodes" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_TERMS WHERE DICT_ID = #{dictId} AND PARENT_CODE_GRP = #{codeGrp} AND CODE_TP IN ('HIER', 'DERIV')
+	</select>
+
+	<!-- 이 코드 그룹을 하위로 쓰는 통합 코드 수 -->
+	<select id="countIntegParents" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_CODE_INTEG WHERE DICT_ID = #{dictId} AND SUB_CODE_GRP = #{codeGrp}
+	</select>
+
+	<delete id="deleteInteg" parameterType="java.util.Map">
+		DELETE FROM TB_CODE_INTEG WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+	</delete>
+
+	<insert id="insertInteg" parameterType="java.util.Map">
+		INSERT INTO TB_CODE_INTEG (DICT_ID, CODE_GRP, SUB_CODE_GRP, SORT_ORDER, CRET_DT, CRET_USER_ID)
+		VALUES
+		<foreach item="s" index="i" collection="subs" separator=",">
+		(#{dictId}, #{codeGrp}, #{s}, #{i}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR})
+		</foreach>
+	</insert>
+
+	<select id="selectCodeDataById" parameterType="String" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+		SELECT CODE_ID as id, CODE_GRP as codeGrp, CODE_VAL as codeVal, DICT_ID as dictId, PARENT_CODE_VAL as parentCodeVal
+		  FROM TB_CODE_DATA WHERE CODE_ID = #{id}
+	</select>
+</mapper>

@@ -62,6 +62,21 @@ public class StdDictController {
 			String id = (String) body.get("dictId");
 			Map<String, Object> p = new HashMap<>(body);
 			p.put("userId", sessionService.getUserId());
+			// 104번 WP6-13 — 용어 영문약어명 최대 길이: 비우면 제한 없음, 넣으면 1 이상 정수
+			Object maxLen = body.get("termEngMaxLen");
+			String ml = maxLen == null ? "" : String.valueOf(maxLen).trim();
+			if (ml.isEmpty()) {
+				p.put("termEngMaxLen", null);
+			} else {
+				int v;
+				try {
+					v = Integer.parseInt(ml);
+				} catch (NumberFormatException e) {
+					throw new IllegalArgumentException("용어 영문약어명 최대 길이는 숫자여야 합니다.");
+				}
+				if (v < 1) throw new IllegalArgumentException("용어 영문약어명 최대 길이는 1 이상이어야 합니다.");
+				p.put("termEngMaxLen", v);
+			}
 			if (id == null || id.trim().isEmpty()) {
 				p.put("dictId", UUID.randomUUID().toString().replace("-", "").substring(0, 22));
 				dictService.create(p);

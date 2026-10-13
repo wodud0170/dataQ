@@ -140,6 +140,12 @@
                     <datamodelVisualization :key="datamodelVisualizationKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <div v-if="this.activeContent === 'stdMap'" id="tab_stdMap" class="tab_contents"
+                :class="{ active: this.activeContent === 'stdMap' }">
+                <keep-alive>
+                    <stdMap :key="stdMapKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'privColumn'" id="tab_privColumn" class="tab_contents"
                 :class="{ active: this.activeContent === 'privColumn' }">
                 <keep-alive>
@@ -510,6 +516,7 @@ import MMSystem from "./../../components/MMSystem.vue"
 import MMDdlRule from "./../../components/MMDdlRule.vue"
 import DSAprvBox from "./../../components/DSAprvBox.vue"
 import DSPrivColumn from "./../../components/DSPrivColumn.vue"
+import DSStdMap from "./../../components/DSStdMap.vue"
 import MMGovMetaConf from "./../../components/MMGovMetaConf.vue"
 import DSGovMetaSys from "./../../components/DSGovMetaSys.vue"
 import DSGovMetaItems from "./../../components/DSGovMetaItems.vue"
@@ -570,6 +577,7 @@ export default {
             erwinImportKey: this.createUUID(),
             datamodelVisualizationKey: this.createUUID(),
             privColumnKey: this.createUUID(),
+            stdMapKey: this.createUUID(),
             govMetaConfKey: this.createUUID(),
             govMetaSysKey: this.createUUID(),
             govMetaItemsKey: this.createUUID(),
@@ -644,6 +652,7 @@ export default {
         "erwinImport": DSErwinImport,
         "datamodelVisualization": DSDatamodelVisualization,
         "privColumn": DSPrivColumn,
+        "stdMap": DSStdMap,
         "govMetaConf": MMGovMetaConf,
         "govMetaSys": DSGovMetaSys,
         "govMetaItems": DSGovMetaItems,
@@ -743,6 +752,9 @@ export default {
                     break;
                 case "erwinImport":
                     this.erwinImportKey = this.createUUID();
+                    break;
+                case "stdMap":
+                    this.stdMapKey = this.createUUID();
                     break;
                 case "privColumn":
                     this.privColumnKey = this.createUUID();

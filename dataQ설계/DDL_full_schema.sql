@@ -412,8 +412,37 @@ CREATE TABLE quality.tb_code_data (
     cret_user_id character varying(50),
     updt_dt character varying(14),
     updt_user_id character varying(50),
-    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL,
+    parent_code_val character varying(50)
 );
+
+
+--
+-- Name: COLUMN tb_code_data.parent_code_val; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_code_data.parent_code_val IS '상위 코드값 — 계층 코드 값 (상위 코드 그룹의 코드값, 104번 WP6-3)';
+
+
+--
+-- Name: tb_code_integ; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_code_integ (
+    dict_id character varying(22) NOT NULL,
+    code_grp character varying(50) NOT NULL,
+    sub_code_grp character varying(50) NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_code_integ; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_code_integ IS '통합 코드 구성 — 통합 코드 그룹 → 하위 코드 그룹 (104번 WP6-3)';
 
 
 --
@@ -1391,8 +1420,40 @@ CREATE TABLE quality.tb_domain_grp (
     cret_user_id character varying(50),
     updt_dt character varying(14),
     updt_user_id character varying(50),
-    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL,
+    parent_grp_id character varying(22),
+    dflt_data_type character varying(50),
+    clsf_word_nm character varying(100),
+    sort_order integer DEFAULT 0
 );
+
+
+--
+-- Name: COLUMN tb_domain_grp.parent_grp_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_domain_grp.parent_grp_id IS '상위 도메인 그룹 (같은 사전, NULL 이면 최상위, 3단계까지 — 104번 WP6-4)';
+
+
+--
+-- Name: COLUMN tb_domain_grp.dflt_data_type; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_domain_grp.dflt_data_type IS '그룹 기본 데이터 타입 — 도메인 등록 때 채움 (104번 WP6-4)';
+
+
+--
+-- Name: COLUMN tb_domain_grp.clsf_word_nm; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_domain_grp.clsf_word_nm IS '분류어 (형식단어명, 104번 WP6-4)';
+
+
+--
+-- Name: COLUMN tb_domain_grp.sort_order; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_domain_grp.sort_order IS '같은 상위 안 순서 (104번 WP6-4)';
 
 
 --
@@ -2203,7 +2264,11 @@ CREATE TABLE quality.tb_std_dict (
     cret_dt character varying(14),
     cret_user_id character varying(50),
     updt_dt character varying(14),
-    updt_user_id character varying(50)
+    updt_user_id character varying(50),
+    upper_yn character(1) DEFAULT 'Y'::bpchar,
+    word_eng_nm_dup_yn character(1) DEFAULT 'Y'::bpchar,
+    term_eng_max_len integer,
+    old_std_yn character(1) DEFAULT 'N'::bpchar
 );
 
 
@@ -2226,6 +2291,75 @@ COMMENT ON COLUMN quality.tb_std_dict.default_yn IS '신규 모델 등록 시 �
 --
 
 COMMENT ON COLUMN quality.tb_std_dict.term_last_word_clsf_yn IS '용어의 마지막 단어가 형식단어여야 하는지. Y=필수, N=미적용';
+
+
+--
+-- Name: COLUMN tb_std_dict.upper_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.upper_yn IS '표준 대문자 — 단어·용어 영문약어 소문자 입력을 대문자로 바꿔 받음 (N 이면 소문자 거부, 104번 WP6-13)';
+
+
+--
+-- Name: COLUMN tb_std_dict.word_eng_nm_dup_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.word_eng_nm_dup_yn IS '단어 영문명 중복 허용 (104번 WP6-13)';
+
+
+--
+-- Name: COLUMN tb_std_dict.term_eng_max_len; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.term_eng_max_len IS '용어 영문약어명 최대 길이(Byte), NULL 이면 제한 없음 (104번 WP6-13)';
+
+
+--
+-- Name: COLUMN tb_std_dict.old_std_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.old_std_yn IS '구표준 사용 — 옛 표준 → 새 표준 매핑 (104번 WP6-13·15)';
+
+
+--
+-- Name: tb_std_map; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_std_map (
+    map_id character varying(40) NOT NULL,
+    dict_id character varying(22) NOT NULL,
+    map_tp character varying(10) NOT NULL,
+    old_nm character varying(200) NOT NULL,
+    old_eng_abrv_nm character varying(200),
+    new_id character varying(22) NOT NULL,
+    map_reason character varying(500),
+    use_yn character(1) DEFAULT 'Y'::bpchar NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_std_map; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_std_map IS '옛 표준 → 새 표준 매핑 (AS-IS / TO-BE, 104번 WP6-15)';
+
+
+--
+-- Name: COLUMN tb_std_map.map_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_map.map_tp IS 'WORD(단어), TERM(용어)';
+
+
+--
+-- Name: COLUMN tb_std_map.new_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_map.new_id IS '새 표준 ID — TB_WORD.WORD_ID 또는 TB_TERMS.TERMS_ID';
 
 
 --
@@ -2659,7 +2793,9 @@ CREATE TABLE quality.tb_terms (
     use_yn character(1) DEFAULT 'Y'::bpchar,
     dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL,
     priv_yn character(1),
-    encr_yn character(1)
+    encr_yn character(1),
+    code_tp character varying(10),
+    parent_code_grp character varying(50)
 );
 
 
@@ -2675,6 +2811,20 @@ COMMENT ON COLUMN quality.tb_terms.priv_yn IS '개인정보여부 — NULL 이�
 --
 
 COMMENT ON COLUMN quality.tb_terms.encr_yn IS '암호화여부 — NULL 이면 도메인 값 (104번 WP5-16)';
+
+
+--
+-- Name: COLUMN tb_terms.code_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_terms.code_tp IS '코드 유형 — SINGLE 단일·HIER 계층·DERIV 파생·INTEG 통합·INDIV 개별 (코드인데 NULL 이면 단일, 104번 WP6-3)';
+
+
+--
+-- Name: COLUMN tb_terms.parent_code_grp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_terms.parent_code_grp IS '상위 코드 그룹 — 계층·파생 코드 (104번 WP6-3)';
 
 
 --
@@ -3124,6 +3274,14 @@ ALTER TABLE ONLY quality.tb_code_data
 
 
 --
+-- Name: tb_code_integ tb_code_integ_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_code_integ
+    ADD CONSTRAINT tb_code_integ_pk PRIMARY KEY (dict_id, code_grp, sub_code_grp);
+
+
+--
 -- Name: tb_data_model_attr tb_data_model_attr_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -3316,6 +3474,14 @@ ALTER TABLE ONLY quality.tb_std_dict
 
 
 --
+-- Name: tb_std_map tb_std_map_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_std_map
+    ADD CONSTRAINT tb_std_map_pk PRIMARY KEY (map_id);
+
+
+--
 -- Name: tb_subj_area tb_subj_area_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -3465,6 +3631,13 @@ CREATE INDEX ix_diag_schedule_log_schedule ON quality.tb_diag_schedule_log USING
 
 
 --
+-- Name: ix_domain_grp_parent; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_domain_grp_parent ON quality.tb_domain_grp USING btree (parent_grp_id);
+
+
+--
 -- Name: ix_domain_rule_dom; Type: INDEX; Schema: quality; Owner: -
 --
 
@@ -3511,6 +3684,13 @@ CREATE INDEX ix_qual_profile_hist_timeline ON quality.tb_qual_profile_history US
 --
 
 CREATE INDEX ix_qual_rule_dm ON quality.tb_qual_rule USING btree (dm_id, use_yn);
+
+
+--
+-- Name: ix_std_map_old_eng; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_std_map_old_eng ON quality.tb_std_map USING btree (dict_id, map_tp, old_eng_abrv_nm);
 
 
 --
@@ -3804,6 +3984,14 @@ ALTER TABLE ONLY quality.tb_domain
 
 ALTER TABLE ONLY quality.tb_domain
     ADD CONSTRAINT tb_domain_fk_2 FOREIGN KEY (dict_id, domain_clsf_nm) REFERENCES quality.tb_domain_clsf(dict_id, domain_clsf_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: tb_domain_grp tb_domain_grp_fk_parent; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_domain_grp
+    ADD CONSTRAINT tb_domain_grp_fk_parent FOREIGN KEY (parent_grp_id) REFERENCES quality.tb_domain_grp(domain_grp_id);
 
 
 --

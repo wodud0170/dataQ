@@ -396,6 +396,15 @@
               </v-tooltip>
             </template>
             <span v-else class="text-caption green--text">OK</span>
+            <!-- 104번 WP6-15 — 컬럼 영문명이 옛 표준 용어이면 새 표준 안내 (구표준 사용 사전) -->
+            <v-tooltip v-if="item.oldStdNewNm" bottom>
+              <template v-slot:activator="{ on }">
+                <v-chip v-on="on" x-small outlined color="deep-orange" class="ml-1 old-std-chip">
+                  옛 표준 → {{ item.oldStdNewNm }}({{ item.oldStdNewEng }})
+                </v-chip>
+              </template>
+              <span>옛 표준 '{{ item.oldStdNm }}' 을 쓰는 컬럼입니다. 새 표준 '{{ item.oldStdNewNm }}' 으로 바꾸세요 (표준 사전 > 표준 매핑).</span>
+            </v-tooltip>
           </template>
           <!-- 액션: 이슈 유형별 버튼 -->
           <template v-slot:item.actions="{ item }">

@@ -340,6 +340,35 @@
                   </v-col>
                 </v-row>
 
+                <!-- 104번 WP6-3 코드 유형 -->
+                <v-row>
+                  <v-col cols="4">
+                    <v-subheader>코드 유형</v-subheader>
+                  </v-col>
+                  <v-col cols="8">
+                    <v-select id="addCodeTp" v-model="addTerm_codeTp" :items="codeTpOptions" item-text="text" item-value="value"
+                      dense color="ndColor" :hint="codeTpDesc(addTerm_codeTp)" persistent-hint></v-select>
+                  </v-col>
+                </v-row>
+                <v-row v-if="addTerm_codeTp === 'HIER' || addTerm_codeTp === 'DERIV'">
+                  <v-col cols="4">
+                    <v-subheader class="reqText">상위 코드</v-subheader>
+                  </v-col>
+                  <v-col cols="8">
+                    <v-autocomplete id="addParentCodeGrp" v-model="addTerm_parentCodeGrp" :items="parentCodeOptions(addTerm_codeTp, addTerm_codeGrp)"
+                      item-text="text" item-value="value" dense color="ndColor"></v-autocomplete>
+                  </v-col>
+                </v-row>
+                <v-row v-if="addTerm_codeTp === 'INTEG'">
+                  <v-col cols="4">
+                    <v-subheader class="reqText">하위 코드 (2개 이상)</v-subheader>
+                  </v-col>
+                  <v-col cols="8">
+                    <v-autocomplete id="addIntegSubGrps" v-model="addTerm_integSubGrps" :items="integSubOptions(addTerm_codeGrp)"
+                      item-text="text" item-value="value" multiple small-chips dense color="ndColor"></v-autocomplete>
+                  </v-col>
+                </v-row>
+
                 <v-row>
                   <v-col cols="4">
                     <v-subheader>이음동의어 목록</v-subheader>
@@ -550,6 +579,35 @@
                     </v-col>
                   </v-row>
 
+                  <!-- 104번 WP6-3 코드 유형 -->
+                  <v-row>
+                    <v-col cols="4">
+                      <v-subheader>코드 유형</v-subheader>
+                    </v-col>
+                    <v-col cols="8">
+                      <v-select id="updateCodeTp" v-model="updateTerm_codeTp" :items="codeTpOptions" item-text="text" item-value="value"
+                        dense color="ndColor" :hint="codeTpDesc(updateTerm_codeTp)" persistent-hint></v-select>
+                    </v-col>
+                  </v-row>
+                  <v-row v-if="updateTerm_codeTp === 'HIER' || updateTerm_codeTp === 'DERIV'">
+                    <v-col cols="4">
+                      <v-subheader class="reqText">상위 코드</v-subheader>
+                    </v-col>
+                    <v-col cols="8">
+                      <v-autocomplete id="updateParentCodeGrp" v-model="updateTerm_parentCodeGrp" :items="parentCodeOptions(updateTerm_codeTp, updateTerm_codeGrp)"
+                        item-text="text" item-value="value" dense color="ndColor"></v-autocomplete>
+                    </v-col>
+                  </v-row>
+                  <v-row v-if="updateTerm_codeTp === 'INTEG'">
+                    <v-col cols="4">
+                      <v-subheader class="reqText">하위 코드 (2개 이상)</v-subheader>
+                    </v-col>
+                    <v-col cols="8">
+                      <v-autocomplete id="updateIntegSubGrps" v-model="updateTerm_integSubGrps" :items="integSubOptions(updateTerm_codeGrp)"
+                        item-text="text" item-value="value" multiple small-chips dense color="ndColor"></v-autocomplete>
+                    </v-col>
+                  </v-row>
+
                   <v-row>
                     <v-col cols="4">
                       <v-subheader>이음동의어 목록</v-subheader>
@@ -671,6 +729,17 @@
               </v-col>
             </v-row>
 
+            <!-- 104번 WP6-3 계층 코드의 상위 코드값 -->
+            <v-row v-if="valParentGrp">
+              <v-col cols="4">
+                <v-subheader class="reqText">상위 코드값</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-autocomplete id="addCodeValParent" v-model="addCodeValParentCodeVal" :items="valParentOptions" item-text="text" item-value="value"
+                  dense clearable color="ndColor" :hint="'상위 코드 그룹 ' + valParentGrp + ' 의 값'" persistent-hint></v-autocomplete>
+              </v-col>
+            </v-row>
+
           </v-container>
         </template>
       </NdModal>
@@ -730,6 +799,17 @@
               <v-col cols="8">
                 <v-text-field v-model="updateCodeValCodeValDesc" clearable required dense placeholder=""
                   color="ndColor"></v-text-field>
+              </v-col>
+            </v-row>
+
+            <!-- 104번 WP6-3 계층 코드의 상위 코드값 -->
+            <v-row v-if="valParentGrp">
+              <v-col cols="4">
+                <v-subheader class="reqText">상위 코드값</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-autocomplete id="updateCodeValParent" v-model="updateCodeValParentCodeVal" :items="valParentOptions" item-text="text" item-value="value"
+                  dense clearable color="ndColor" :hint="'상위 코드 그룹 ' + valParentGrp + ' 의 값'" persistent-hint></v-autocomplete>
               </v-col>
             </v-row>
           </v-container>
@@ -970,6 +1050,9 @@ export default {
     addTerm_wordListArr: [],
     addTerm_selected_word_list: [],
     addTerm_codeGrp: null,
+    addTerm_codeTp: 'SINGLE',
+    addTerm_parentCodeGrp: null,
+    addTerm_integSubGrps: [],
     addTerm_chrgOrg: null,
     addTerm_commStndYn: 'Y',
     addTerm_magntdOrd: null,
@@ -990,6 +1073,22 @@ export default {
     updateTerm_wordListArr: [],
     updateTerm_selected_word_list: [],
     updateTerm_codeGrp: null,
+    updateTerm_codeTp: 'SINGLE',
+    updateTerm_parentCodeGrp: null,
+    updateTerm_integSubGrps: [],
+    // 104번 WP6-3 — 코드 유형 선택지·전체 코드(상위·하위 후보)·값 창의 상위 코드값
+    codeTpOptions: [
+      { text: '단일', value: 'SINGLE' },
+      { text: '계층', value: 'HIER' },
+      { text: '파생', value: 'DERIV' },
+      { text: '통합', value: 'INTEG' },
+      { text: '개별', value: 'INDIV' },
+    ],
+    allCodes: [],
+    valParentGrp: null,
+    valParentOptions: [],
+    addCodeValParentCodeVal: null,
+    updateCodeValParentCodeVal: null,
     updateTerm_chrgOrg: null,
     updateTerm_commStndYn: null,
     updateTerm_magntdOrd: null,
@@ -1069,6 +1168,7 @@ export default {
       { text: '코드설명', align: 'center', sortable: false, value: 'codeDesc' },
       { text: '도메인명', align: 'center', sortable: false, value: 'domainNm', width: '12%' },
       { text: '코드 그룹', align: 'center', sortable: false, value: 'codeGrp', width: '12%' },
+      { text: '코드 유형', align: 'center', sortable: false, value: 'codeTpNm', width: '8%' },
     ],
     // 하단 테이블 헤더
     detaileHeaders: [
@@ -1081,6 +1181,9 @@ export default {
       { text: '저장형식', sortable: false, align: 'center', value: 'storFmt', width: '15%' },
       { text: '표현형식', sortable: false, align: 'center', value: 'exprFmtLst', width: '15%' },
       { text: '코드 그룹', align: 'center', sortable: false, value: 'codeGrp', width: '15%' },
+      { text: '코드 유형', align: 'center', sortable: false, value: 'codeTpNm', width: '15%' },
+      { text: '상위 코드 그룹', align: 'center', sortable: false, value: 'parentCodeGrp', width: '15%' },
+      { text: '하위 코드 그룹', align: 'center', sortable: false, value: 'integSubGrps', width: '15%' },
       { text: '담당기관명', sortable: false, align: 'center', value: 'chrgOrg', width: '15%' },
       { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn', width: '15%' },
       { text: '제정차수', sortable: false, align: 'center', value: 'magntdOrd', width: '15%' },
@@ -1098,6 +1201,8 @@ export default {
       { text: '코드영문약어명', align: 'center', sortable: false, value: 'codeEngNm' },
       { text: '코드값', align: 'center', sortable: false, value: 'codeVal' },
       { text: '코드값설명', align: 'center', sortable: false, value: 'codeValDesc' },
+      { text: '상위 코드값', align: 'center', sortable: false, value: 'parentCodeVal' },
+      { text: '하위 코드 그룹 (통합)', align: 'center', sortable: false, value: 'srcCodeGrp' },
       { text: '생성일시', sortable: false, align: 'center', value: 'cretDt' },
       { text: '생성사용자ID', sortable: false, align: 'center', value: 'cretUserId' },
       { text: '수정일시', sortable: false, align: 'center', value: 'updtDt' },
@@ -1190,7 +1295,51 @@ export default {
         console.log(err);
       }
     },
+    // ===== 104번 WP6-3 코드 유형 =====
+    codeTpNm(tp) {
+      const o = this.codeTpOptions.find(x => x.value === (tp || 'SINGLE'));
+      return o ? o.text : tp;
+    },
+    codeTpDesc(tp) {
+      return {
+        SINGLE: '코드값을 직접 관리합니다.',
+        HIER: '상위 코드를 정하고, 값마다 상위 코드값을 둡니다. 계층을 이어 3단계 이상도 됩니다.',
+        DERIV: '상위 코드의 값 중 일부(또는 전부)만 씁니다.',
+        INTEG: '하위 코드 2개 이상을 묶습니다. 값은 하위 코드의 값을 모아 보여 주고 직접 넣지 않습니다.',
+        INDIV: '코드 테이블이 따로 있어 값을 관리하지 않습니다.',
+      }[tp || 'SINGLE'];
+    },
+    // 상위 코드 후보 — 계층: 단일·계층, 파생: 단일·계층·파생. 자기 자신은 뺀다
+    parentCodeOptions(tp, selfGrp) {
+      const ok = tp === 'HIER' ? ['SINGLE', 'HIER'] : ['SINGLE', 'HIER', 'DERIV'];
+      return this.allCodes
+        .filter(c => c.codeGrp && c.codeGrp !== selfGrp && ok.includes(c.codeTp || 'SINGLE'))
+        .map(c => ({ text: `${c.codeNm} (${c.codeGrp}) — ${this.codeTpNm(c.codeTp)}`, value: c.codeGrp }));
+    },
+    // 통합 코드의 하위 후보 — 값을 가진 코드(단일·계층·파생)
+    integSubOptions(selfGrp) {
+      return this.allCodes
+        .filter(c => c.codeGrp && c.codeGrp !== selfGrp && ['SINGLE', 'HIER', 'DERIV'].includes(c.codeTp || 'SINGLE'))
+        .map(c => ({ text: `${c.codeNm} (${c.codeGrp}) — ${this.codeTpNm(c.codeTp)}`, value: c.codeGrp }));
+    },
+    loadAllCodes() {
+      axios.post(this.$APIURL.base + "api/std/getCodeInfoList", { 'dictId': this.dictId }).then(result => {
+        this.allCodes = result.data || [];
+      });
+    },
+    // 값 등록·수정 창 — 값의 코드 그룹이 계층 코드면 상위 코드 그룹 값을 후보로 읽는다
+    loadValParent(codeGrp) {
+      const code = this.allCodes.find(c => c.codeGrp === codeGrp);
+      this.valParentGrp = code && code.codeTp === 'HIER' ? code.parentCodeGrp : null;
+      this.valParentOptions = [];
+      if (!this.valParentGrp) return;
+      axios.get(this.$APIURL.base + "api/std/getCodeValues", { params: { codeGrp: this.valParentGrp, dictId: this.dictId } }).then(res => {
+        this.valParentOptions = ((res.data && res.data.values) || [])
+          .map(v => ({ text: `${v.codeVal} ${v.codeValDesc ? '— ' + v.codeValDesc : ''}${v.parentCodeVal ? ' (상위 ' + v.parentCodeVal + ')' : ''}`, value: v.codeVal }));
+      });
+    },
     getCodeData() {
+      this.loadAllCodes();
       this.loadTable = true;
       try {
 
@@ -1215,7 +1364,8 @@ export default {
           'to': this.searchToDt ? this.searchToDt.replace(/-/g, '') + '235959' : null,
           'dictId': this.dictId
         }).then(result => {
-          this.codeItems = result.data;
+          // 104번 WP6-3 — 코드 유형 이름 (CODE_TP 가 비면 서버가 SINGLE 로 준다)
+          this.codeItems = (result.data || []).map(c => Object.assign(c, { codeTpNm: this.codeTpNm(c.codeTp) }));
 
           // console 표시
           console.log("📃 CODE LIST ↓↓↓")
@@ -1239,16 +1389,19 @@ export default {
         this.loadTable = false;
       }
     },
-    getCodeValList(codeNm) {
+    // 104번 WP6-3 — 선택한 코드의 코드 그룹 값 (코드 유형에 맞게: 통합은 하위 코드 값을 모아서, 개별은 없음)
+    getCodeValList() {
+      const code = this.selectedItem[0];
+      if (!code) return;
       try {
-        axios.get(this.$APIURL.base + "api/std/getCodeDataListByNm", {
+        axios.get(this.$APIURL.base + "api/std/getCodeValues", {
           params: {
-            codeNm: codeNm,
+            codeGrp: code.codeGrp,
             dictId: this.dictId
           }
         }).then(result => {
           // console.log(result)
-          this.codeValItems = result.data;
+          this.codeValItems = result.data.values || [];
 
           // console 표시
           console.log("📃 CODE VAL LIST ↓↓↓")
@@ -1910,6 +2063,10 @@ export default {
           'termsDesc': this.addTerm_termDesc,
           'domainNm': this.addTerm_domainNm,
           'codeGrp': this.addTerm_codeGrp,
+          // 104번 WP6-3 — 코드 유형
+          'codeTp': this.addTerm_codeTp || 'SINGLE',
+          'parentCodeGrp': this.addTerm_parentCodeGrp,
+          'integSubGrps': this.addTerm_integSubGrps,
           'chrgOrg': this.addTerm_chrgOrg,
           'commStndYn': this.addTerm_commStndYn,
           'magntdOrd': this.addTerm_magntdOrd,
@@ -1967,6 +2124,9 @@ export default {
           'termsDesc': this.updateTerm_termDesc,
           'domainNm': this.updateTerm_domainNm,
           'codeGrp': this.updateTerm_codeGrp,
+          'codeTp': this.updateTerm_codeTp || 'SINGLE',
+          'parentCodeGrp': this.updateTerm_parentCodeGrp,
+          'integSubGrps': this.updateTerm_integSubGrps,
           'chrgOrg': this.updateTerm_chrgOrg,
           'commStndYn': this.updateTerm_commStndYn,
           'magntdOrd': this.updateTerm_magntdOrd,
@@ -2020,6 +2180,7 @@ export default {
         let codeValData = {
           'id': null,
           'codeGrp': this.addCodeValCodeGrp,
+          'parentCodeVal': this.addCodeValParentCodeVal,
           'codeNm': this.addCodeValCodeNm,
           'codeEngNm': this.addCodeValCodeEngNm,
           'codeVal': this.addCodeValCodeVal,
@@ -2074,6 +2235,7 @@ export default {
         let codeValData = {
           'id': this.updateCodeValId,
           'codeGrp': this.updateCodeValCodeGrp,
+          'parentCodeVal': this.updateCodeValParentCodeVal,
           'codeNm': this.updateCodeValCodeNm,
           'codeEngNm': this.updateCodeValCodeEngNm,
           'codeVal': this.updateCodeValCodeVal,
@@ -2153,6 +2315,9 @@ export default {
       this.updateTerm_termDesc = this.selectedItem[0].codeDesc;
       this.updateTerm_domainNm = this.selectedItem[0].domainNm;
       this.updateTerm_codeGrp = this.selectedItem[0].codeGrp;
+      this.updateTerm_codeTp = this.selectedItem[0].codeTp || 'SINGLE';
+      this.updateTerm_parentCodeGrp = this.selectedItem[0].parentCodeGrp || null;
+      this.updateTerm_integSubGrps = this.selectedItem[0].integSubGrps ? this.selectedItem[0].integSubGrps.split(',') : [];
       this.updateTerm_chrgOrg = this.selectedItem[0].chrgOrg;
       this.updateTerm_commStndYn = this.selectedItem[0].commStndYn;
       this.updateTerm_magntdOrd = this.selectedItem[0].magntdOrd;
@@ -2165,6 +2330,8 @@ export default {
     updateCodeValModalInit() {
       this.updateCodeValId = this.selectedCodeValItem[0].id;
       this.updateCodeValCodeGrp = this.selectedCodeValItem[0].codeGrp;
+      this.updateCodeValParentCodeVal = this.selectedCodeValItem[0].parentCodeVal || null;
+      this.loadValParent(this.updateCodeValCodeGrp);
       this.updateCodeValCodeNm = this.selectedCodeValItem[0].codeNm;
       this.updateCodeValCodeEngNm = this.selectedCodeValItem[0].codeEngNm;
       this.updateCodeValCodeVal = this.selectedCodeValItem[0].codeVal;
@@ -2173,6 +2340,8 @@ export default {
     updateCodeDataModalInit() {
       this.updateCodeValId = this.selectedCodeDataItem[0].id;
       this.updateCodeValCodeGrp = this.selectedCodeDataItem[0].codeGrp;
+      this.updateCodeValParentCodeVal = this.selectedCodeDataItem[0].parentCodeVal || null;
+      this.loadValParent(this.updateCodeValCodeGrp);
       this.updateCodeValCodeNm = this.selectedCodeDataItem[0].codeNm;
       this.updateCodeValCodeEngNm = this.selectedCodeDataItem[0].codeEngNm;
       this.updateCodeValCodeVal = this.selectedCodeDataItem[0].codeVal;
@@ -2180,6 +2349,8 @@ export default {
     },
     addCodeValModalInit() {
       this.addCodeValCodeGrp = this.selectedItem[0].codeGrp;
+      this.addCodeValParentCodeVal = null;
+      this.loadValParent(this.addCodeValCodeGrp);
       this.addCodeValCodeNm = this.selectedItem[0].codeNm;
       this.addCodeValCodeEngNm = this.selectedItem[0].codeEngAbrvNm;
     },
@@ -2318,6 +2489,9 @@ export default {
       this.addTerm_domainNm = null;
       this.addTerm_domainNmItems = [];
       this.addTerm_codeGrp = null;
+      this.addTerm_codeTp = 'SINGLE';
+      this.addTerm_parentCodeGrp = null;
+      this.addTerm_integSubGrps = [];
       this.addTerm_chrgOrg = null;
       this.addTerm_commStndYn = 'Y';
       this.addTerm_magntdOrd = null;

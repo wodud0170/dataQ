@@ -61,6 +61,9 @@ public class ExcelUploadService {
 	@Autowired
 	private PermService permService;
 
+	@Autowired
+	private CodeTypeService codeTypeService;
+
 	/** 104번 WP1 — 승인 대기로 들어간 행에 결재선이 있으면 결재 문서. 알림은 저장만 하고(화면은 헤더가 주기적으로 읽는다) 여기서 실시간 전송은 하지 않는다 */
 	@Autowired
 	private AprvService aprvService;
@@ -122,16 +125,20 @@ public class ExcelUploadService {
 			for (List<String> dataRow : excelDatas) {
 				StdWordVo stdWordVo = new StdWordVo();
 				try {
+					// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자(켜면 대문자로 바꿔 받고, 끄면 소문자인 행은 실패)
+					String engAbrv = dictService.checkWordEngAbrv(dictId, dataRow.get(3));
 					// 단어가 이미 존재하는 경우에는 Skip 한다.
-					if (session.selectOne("word.selectWordByEngAbrvNm", byName(dictId, "wordEngAbrvNm", dataRow.get(3))) != null) {
+					if (session.selectOne("word.selectWordByEngAbrvNm", byName(dictId, "wordEngAbrvNm", engAbrv)) != null) {
 						result.addSkip();
 						continue;
 					}
 					stdWordVo.setId(StringUtils.getUUID());
 					stdWordVo.setWordNm(dataRow.get(2));
 
+					// 104번 WP6-13 — 사전 운영 옵션: 단어 영문명 중복
+					dictService.checkWordEngNmDup(dictId, dataRow.get(4), stdWordVo.getId());
 					// 영문약어 규격 체크: 대문자 영문(A-Z) + 숫자(0-9)만 허용
-					if (dataRow.get(3) != null && !dataRow.get(3).matches("^[A-Z0-9]+$")) {
+					if (engAbrv != null && !engAbrv.matches("^[A-Z0-9]+$")) {
 						throw new Exception("단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다. (입력값: " + dataRow.get(3) + ")");
 					}
 					// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
@@ -141,7 +148,7 @@ public class ExcelUploadService {
 						throw new Exception("'" + dataRow.get(2) + "'은(는) '" + stdWordNm + "'의 금칙어입니다. '" + stdWordNm + "'를 사용해주세요.");
 					}
 
-					stdWordVo.setWordEngAbrvNm(dataRow.get(3));
+					stdWordVo.setWordEngAbrvNm(engAbrv);
 					stdWordVo.setWordEngNm(dataRow.get(4));
 					stdWordVo.setWordDesc(dataRow.get(5));
 					stdWordVo.setWordClsfYn(dataRow.get(6));
@@ -216,15 +223,17 @@ public class ExcelUploadService {
 			for (List<String> dataRow : excelDatas) {
 				StdTermsVo stdTermsVo = new StdTermsVo();
 				try {
+					// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자, 용어 영문약어명 최대 길이 (어긋나면 그 행 실패)
+					String termsEngAbrv = dictService.checkTermEngAbrv(dictId, dataRow.get(4));
 					// 용어가 이미 존재하는 경우에는 Skip 한다.
-					if (session.selectOne("terms.selectTermsByEngNm", byName(dictId, "termsEngAbrvNm", dataRow.get(4))) != null) {
+					if (session.selectOne("terms.selectTermsByEngNm", byName(dictId, "termsEngAbrvNm", termsEngAbrv)) != null) {
 						result.addSkip();
 						continue;
 					}
 					stdTermsVo.setId(StringUtils.getUUID());
 					stdTermsVo.setTermsNm(dataRow.get(2));
 					stdTermsVo.setTermsDesc(dataRow.get(3));
-					stdTermsVo.setTermsEngAbrvNm(dataRow.get(4));
+					stdTermsVo.setTermsEngAbrvNm(termsEngAbrv);
 					stdTermsVo.setDomainNm(checkInvalidVal(dataRow.get(5)));
 					stdTermsVo.setCodeGrp(checkInvalidVal(dataRow.get(9)));
 					stdTermsVo.setChrgOrg(checkInvalidVal(dataRow.get(10)));
@@ -368,6 +377,9 @@ public class ExcelUploadService {
 						continue;
 					}
 					stdCodeDataVo.setCodeValDesc(dataRow.get(5));
+					// 104번 WP6-3 — 양식 끝의 상위코드값(계층 코드). 열이 없는 예전 양식도 받는다. 코드 유형별 값 검사
+					if (dataRow.size() > 6) stdCodeDataVo.setParentCodeVal(checkInvalidVal(dataRow.get(6)));
+					codeTypeService.checkValue(session, stdCodeDataVo);
 					session.insert("codedata.insertCodeData", stdCodeDataVo);
 					session.commit();
 					result.addSuccess();

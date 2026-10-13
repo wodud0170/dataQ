@@ -80,6 +80,16 @@
                         <v-list-item-title>변경 이력</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 104번 WP6-15 옛 표준 → 새 표준 매핑 -->
+                    <v-list-item link id="nav_stdMap" href="#tab_stdMap"
+                        active-class="ndColor--text" title="표준 매핑"
+                        v-on:click.stop=" addTabItem('표준 매핑', 'stdMap'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>표준 매핑</v-list-item-title>
+                    </v-list-item>
+
                     <!-- <v-list-item link id="nav_datamodel" href="#tab_datamodel" active-class="ndColor--text" title="데이터 모델"
                         v-on:click.stop="addTabItem('데이터 모델', 'datamodel');">
                         <v-list-item-icon>

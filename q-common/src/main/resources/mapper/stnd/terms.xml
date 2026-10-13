@@ -23,6 +23,8 @@
 		<result property="encrYn" column="ENCR_YN"/>
 		<result property="domainPrivYn" column="DOMAIN_PRIV_YN"/>
 		<result property="domainEncrYn" column="DOMAIN_ENCR_YN"/>
+		<result property="codeTp" column="CODE_TP"/>
+		<result property="parentCodeGrp" column="PARENT_CODE_GRP"/>
 		<result property="magntdOrd" column="MAGNTD_ORD"/>
 		<result property="aprvYn" column="APRV_YN"/>
 		<result property="aprvUserId" column="APRV_USER_ID"/>
@@ -62,6 +64,8 @@
 					,A.ENCR_YN
 					,A.DOMAIN_PRIV_YN
 					,A.DOMAIN_ENCR_YN
+					,A.CODE_TP
+					,A.PARENT_CODE_GRP
 					,A.MAGNTD_ORD		
 					,A.APRV_YN			
 					,A.APRV_USER_ID	
@@ -163,6 +167,8 @@
 					,A.ENCR_YN
 					,B.PRIV_YN as DOMAIN_PRIV_YN
 					,B.ENCR_YN as DOMAIN_ENCR_YN
+					,A.CODE_TP
+					,A.PARENT_CODE_GRP
 					,A.MAGNTD_ORD		
 					,A.APRV_YN			
 					,A.APRV_USER_ID	
@@ -220,6 +226,8 @@
 				,A.ENCR_YN
 				,B.PRIV_YN as DOMAIN_PRIV_YN
 				,B.ENCR_YN as DOMAIN_ENCR_YN
+					,A.CODE_TP
+					,A.PARENT_CODE_GRP
 				,A.MAGNTD_ORD		
 				,A.APRV_YN			
 				,A.APRV_USER_ID	
@@ -320,6 +328,8 @@
             ,COMM_STND_YN	
             ,PRIV_YN
             ,ENCR_YN
+            ,CODE_TP
+            ,PARENT_CODE_GRP
             ,MAGNTD_ORD		
             ,APRV_YN			
             ,APRV_USER_ID	
@@ -342,6 +352,8 @@
             ,#{commStndYn, jdbcType=VARCHAR}
             ,NULLIF(#{privYn, jdbcType=VARCHAR}, '')
             ,NULLIF(#{encrYn, jdbcType=VARCHAR}, '')
+            ,#{codeTp, jdbcType=VARCHAR}
+            ,#{parentCodeGrp, jdbcType=VARCHAR}
             ,#{magntdOrd, jdbcType=VARCHAR}
             ,#{aprvYn, jdbcType=VARCHAR}
             ,#{aprvUserId, jdbcType=VARCHAR}
@@ -392,6 +404,8 @@
               ,COMM_STND_YN = #{commStndYn, jdbcType=VARCHAR}
               <if test="privYn != null">,PRIV_YN = NULLIF(#{privYn}, '')</if>
               <if test="encrYn != null">,ENCR_YN = NULLIF(#{encrYn}, '')</if>
+              <!-- 104번 WP6-3 — 코드 유형을 보낸 수정만 바꾼다 (용어 화면 수정은 코드 유형을 보내지 않음) -->
+              <if test="codeTp != null">,CODE_TP = NULLIF(#{codeTp}, ''), PARENT_CODE_GRP = NULLIF(#{parentCodeGrp, jdbcType=VARCHAR}, '')</if>
               ,MAGNTD_ORD = #{magntdOrd, jdbcType=VARCHAR}
               ,UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
               ,UPDT_USER_ID = #{updtUserId, jdbcType=VARCHAR}
@@ -435,6 +449,9 @@
 		<result property="aprvStatUpdtDt" column="APRV_STAT_UPDT_DT"/>
 		<result property="reqSysCd" column="REQ_SYS_CD"/>
 		<result property="reqSysNm" column="REQ_SYS_NM"/>
+		<result property="codeTp" column="CODE_TP"/>
+		<result property="parentCodeGrp" column="PARENT_CODE_GRP"/>
+		<result property="integSubGrps" column="INTEG_SUB_GRPS"/>
 	</resultMap>
 
 	<select id="selectCodeInfoList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdCodeMap">
@@ -456,6 +473,9 @@
 					END as STOR_FMT
 					,A.EXPR_FMT_LST	
 					,A.CODE_GRP	
+					,COALESCE(A.CODE_TP, 'SINGLE') as CODE_TP
+					,A.PARENT_CODE_GRP
+					,(SELECT string_agg(I.SUB_CODE_GRP, ',' ORDER BY I.SORT_ORDER, I.SUB_CODE_GRP) FROM TB_CODE_INTEG I WHERE I.DICT_ID = A.DICT_ID AND I.CODE_GRP = A.CODE_GRP) as INTEG_SUB_GRPS
 					,A.CHRG_ORG	
 					,A.ALLOPH_SYNM_LST	
 					,A.COMM_STND_YN	
@@ -508,6 +528,9 @@
 					END as STOR_FMT
 					,B.EXPR_FMT_LST	
 					,A.CODE_GRP	
+					,COALESCE(A.CODE_TP, 'SINGLE') as CODE_TP
+					,A.PARENT_CODE_GRP
+					,(SELECT string_agg(I.SUB_CODE_GRP, ',' ORDER BY I.SORT_ORDER, I.SUB_CODE_GRP) FROM TB_CODE_INTEG I WHERE I.DICT_ID = A.DICT_ID AND I.CODE_GRP = A.CODE_GRP) as INTEG_SUB_GRPS
 					,A.CHRG_ORG	
 					,A.ALLOPH_SYNM_LST	
 					,A.COMM_STND_YN	
@@ -547,6 +570,9 @@
 		         END as STOR_FMT
 				,B.EXPR_FMT_LST	
 				,A.CODE_GRP	
+					,COALESCE(A.CODE_TP, 'SINGLE') as CODE_TP
+					,A.PARENT_CODE_GRP
+					,(SELECT string_agg(I.SUB_CODE_GRP, ',' ORDER BY I.SORT_ORDER, I.SUB_CODE_GRP) FROM TB_CODE_INTEG I WHERE I.DICT_ID = A.DICT_ID AND I.CODE_GRP = A.CODE_GRP) as INTEG_SUB_GRPS
 				,A.CHRG_ORG	
 				,A.ALLOPH_SYNM_LST	
 				,A.COMM_STND_YN	

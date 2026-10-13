@@ -95,6 +95,84 @@ public class StdDictService {
 		return d != null && "Y".equalsIgnoreCase(String.valueOf(d.get("termLastWordClsfYn")));
 	}
 
+	/** 104번 WP6-13 — 표준 대문자: 영문약어 소문자를 대문자로 바꿔 받는가 (아니면 소문자를 거부). 기본 Y */
+	public boolean isUpperAuto(String dictId) {
+		Map<String, Object> d = snapshot().get(dictId == null ? DEFAULT_DICT_ID : dictId);
+		return d == null || !"N".equalsIgnoreCase(String.valueOf(d.get("upperYn")));
+	}
+
+	/** 104번 WP6-13 — 단어 영문명 중복을 허용하는가. 기본 Y */
+	public boolean isWordEngNmDupAllowed(String dictId) {
+		Map<String, Object> d = snapshot().get(dictId == null ? DEFAULT_DICT_ID : dictId);
+		return d == null || !"N".equalsIgnoreCase(String.valueOf(d.get("wordEngNmDupYn")));
+	}
+
+	/** 104번 WP6-13 — 용어 영문약어명 최대 길이(Byte). 제한이 없으면 null */
+	public Integer termEngMaxLen(String dictId) {
+		Map<String, Object> d = snapshot().get(dictId == null ? DEFAULT_DICT_ID : dictId);
+		Object v = d == null ? null : d.get("termEngMaxLen");
+		return v == null ? null : ((Number) v).intValue();
+	}
+
+	/** 104번 WP6-13·15 — 구표준(옛 표준 → 새 표준 매핑)을 쓰는가. 기본 N */
+	public boolean isOldStdUsed(String dictId) {
+		Map<String, Object> d = snapshot().get(dictId == null ? DEFAULT_DICT_ID : dictId);
+		return d != null && "Y".equalsIgnoreCase(String.valueOf(d.get("oldStdYn")));
+	}
+
+	/**
+	 * 104번 WP6-13 — 단어 영문약어를 사전 옵션대로 다듬는다. 표준 대문자가 켜져 있으면 대문자로 바꾸고,
+	 * 꺼져 있으면 소문자가 있을 때 거부한다.
+	 */
+	public String checkWordEngAbrv(String dictId, String engAbrv) {
+		if (engAbrv == null || engAbrv.equals(engAbrv.toUpperCase())) return engAbrv;
+		if (!isUpperAuto(dictId)) {
+			throw new IllegalArgumentException("단어 영문약어에 소문자를 쓸 수 없습니다 (표준 대문자 옵션이 꺼진 사전). (입력값: " + engAbrv + ")");
+		}
+		return engAbrv.toUpperCase();
+	}
+
+	/**
+	 * 104번 WP6-13 — 단어 영문명 중복을 허용하지 않는 사전이면 같은 영문명(대소문자 무시)의 다른 단어가 있을 때 거부한다.
+	 *
+	 * @param wordId 수정할 때 자기 자신 (등록이면 새 ID)
+	 */
+	public void checkWordEngNmDup(String dictId, String wordEngNm, String wordId) {
+		if (wordEngNm == null || isWordEngNmDupAllowed(dictId)) return;
+		Map<String, Object> p = nameParam(dictId, "wordEngNm", wordEngNm.trim());
+		p.put("wordId", wordId);
+		try (SqlSession session = sqlSessionFactory.openSession()) {
+			Integer n = session.selectOne("word.countWordEngNmDup", p);
+			if (n != null && n > 0) {
+				throw new IllegalArgumentException("이 사전은 단어 영문명 중복을 허용하지 않습니다. 이미 쓰는 영문명입니다: " + wordEngNm.trim());
+			}
+		}
+	}
+
+	/**
+	 * 104번 WP6-13 — 용어 영문약어명을 사전 옵션대로 다듬고 검사한다.
+	 * 표준 대문자가 켜져 있으면 대문자로 바꾸고, 꺼져 있으면 소문자가 있을 때 거부한다. 최대 길이(Byte)를 넘으면 거부한다.
+	 *
+	 * @return 다듬은 영문약어명
+	 * @throws IllegalArgumentException 옵션에 어긋날 때 (메시지는 화면에 그대로 보인다)
+	 */
+	public String checkTermEngAbrv(String dictId, String engAbrv) {
+		if (engAbrv == null) return null;
+		String v = engAbrv;
+		if (!v.equals(v.toUpperCase())) {
+			if (!isUpperAuto(dictId)) {
+				throw new IllegalArgumentException("용어 영문약어명에 소문자를 쓸 수 없습니다 (표준 대문자 옵션이 꺼진 사전). (입력값: " + engAbrv + ")");
+			}
+			v = v.toUpperCase();
+		}
+		Integer max = termEngMaxLen(dictId);
+		int len = v.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+		if (max != null && len > max) {
+			throw new IllegalArgumentException("용어 영문약어명이 이 사전의 최대 길이 " + max + " Byte 를 넘습니다 (" + len + " Byte: " + v + ")");
+		}
+		return v;
+	}
+
 	/**
 	 * 사전 하나만 넘기는 쿼리 파라미터.
 	 *

@@ -258,6 +258,10 @@
                 WHEN MT.TERMS_NM = A.ATTR_NM_KR THEN 'EXACT'
                 ELSE 'SYNONYM'
              END                                            as "matchType"
+            <!-- 104번 WP6-15 — 컬럼 영문명이 옛 표준(용어) 영문약어명이면 새 표준 안내 (구표준 사용 사전만) -->
+            ,SM.OLD_NM                                      as "oldStdNm"
+            ,SMT.TERMS_NM                                   as "oldStdNewNm"
+            ,SMT.TERMS_ENG_ABRV_NM                          as "oldStdNewEng"
         FROM TB_DATA_MODEL_ATTR A
         LEFT JOIN TB_DIAG_RESULT R
             ON R.DIAG_JOB_ID = #{diagJobId}
@@ -278,6 +282,12 @@
             ORDER BY CASE WHEN TT.TERMS_NM = A.ATTR_NM_KR THEN 0 ELSE 1 END
             LIMIT 1
         ) MT ON TRUE
+        LEFT JOIN TB_STD_MAP SM
+            ON SM.MAP_TP = 'TERM' AND SM.USE_YN = 'Y' AND SM.OLD_ENG_ABRV_NM = A.ATTR_NM
+            AND SM.DICT_ID = (SELECT COALESCE(J.DICT_ID, M.DICT_ID) FROM TB_DIAG_JOB J JOIN TB_DATA_MODEL M ON M.DM_ID = J.DM_ID WHERE J.DIAG_JOB_ID = #{diagJobId})
+            AND EXISTS (SELECT 1 FROM TB_STD_DICT SD WHERE SD.DICT_ID = SM.DICT_ID AND SD.OLD_STD_YN = 'Y')
+        LEFT JOIN TB_TERMS SMT
+            ON SMT.TERMS_ID = SM.NEW_ID
         LEFT JOIN TB_DOMAIN MD
             ON MD.DOMAIN_NM = MT.DOMAIN_NM
         WHERE A.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
@@ -286,7 +296,8 @@
                  A.DATA_TYPE, A.DATA_LEN, A.DATA_DECIMAL_LEN,
                  T.TERMS_NM, D.DATA_TYPE, D.DATA_LEN, D.DATA_DECIMAL_LEN,
                  MT.TERMS_NM, MT.TERMS_ENG_ABRV_NM, MT.DOMAIN_NM,
-                 MD.DATA_TYPE, MD.DATA_LEN, MD.DATA_DECIMAL_LEN
+                 MD.DATA_TYPE, MD.DATA_LEN, MD.DATA_DECIMAL_LEN,
+                 SM.OLD_NM, SMT.TERMS_NM, SMT.TERMS_ENG_ABRV_NM
         ORDER BY A.OBJ_OWNER, A.OBJ_NM, A.ATTR_NM
     </select>
 

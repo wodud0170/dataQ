@@ -48,6 +48,7 @@ import com.ndata.quality.model.std.TermAnalysisResult;
 import com.ndata.quality.model.std.StdTermsVo;
 import com.ndata.quality.model.std.StdWordVo;
 import com.ndata.quality.service.AprvService;
+import com.ndata.quality.service.CodeTypeService;
 import com.ndata.quality.service.ExcelDownloadService;
 import com.ndata.quality.service.ExcelUploadService;
 import com.ndata.quality.tool.StringWordAnalyzer;
@@ -170,6 +171,14 @@ public class DataStandardController {
 
 	@Autowired
 	private AprvService aprvService;
+
+	@Autowired
+	private CodeTypeService codeTypeService;
+
+	/** 104번 WP6-3 — 코드(용어) 등록·수정의 코드 유형 검사와 통합 코드 구성 저장 (같은 트랜잭션) */
+	private void checkCodeType(SqlSession session, StdTermsVo vo, boolean isNew) {
+		codeTypeService.checkAndSave(session, vo, isNew, sessionService.getUserId());
+	}
 
 	/**
 	 * 통합 검색 API - 단어/용어/도메인/컬럼을 키워드로 일괄 검색
@@ -304,6 +313,8 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
+			// 104번 WP6-13 — 수정 화면은 사전을 보내지 않는다. 그 단어의 사전 옵션으로 검사하려고 사전을 읽는다
+			dataVo.setDictId(sqlSessionTemplate.selectOne("word.selectWordDictIdById", dataVo.getId()));
 			// 86번 #29 — updateWord 도 createWord 와 동일 검증
 			validateWordInput(dataVo);
 			// 변경 전 값 조회
@@ -584,6 +595,10 @@ public class DataStandardController {
 			if (dictService.isTermLastWordClsfRequired(dataVo.getDictId()) && lastWord.getWordId() != null) {
 				checkLastWordClsf(session, lastWord.getWordId());
 			}
+			// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자, 용어 영문약어명 최대 길이
+			dataVo.setTermsEngAbrvNm(dictService.checkTermEngAbrv(dataVo.getDictId(), dataVo.getTermsEngAbrvNm()));
+			// 104번 WP6-3 — 코드 유형 검사 (코드일 때)
+			checkCodeType(session, dataVo, true);
 			// 신규 용어 등록
 			session.insert("terms.insertTerms", dataVo);
 			wordList.stream().forEach(v -> v.setTermsId(dataVo.getId()));
@@ -770,6 +785,10 @@ public class DataStandardController {
 				throw new Exception("previously registered terms can not be updated to existing terms("
 						+ dataVo.getTermsNm() + ")");
 			}
+			// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자, 용어 영문약어명 최대 길이
+			dataVo.setTermsEngAbrvNm(dictService.checkTermEngAbrv(dataVo.getDictId(), dataVo.getTermsEngAbrvNm()));
+			// 104번 WP6-3 — 코드 유형 검사 (코드일 때)
+			checkCodeType(session, dataVo, false);
 
 			session.update("terms.updateTerms", dataVo);
 			session.delete("terms.deleteTermsWords", dataVo.getId());
@@ -974,7 +993,29 @@ public class DataStandardController {
 		for (StdTermsVo vo : dataVos) {
 			if (vo.getTermsNm() != null) deletedNames.add(vo.getTermsNm());
 		}
+		// 104번 WP6-3 — 다른 코드가 상위·하위로 쓰는 코드는 지우지 않는다. 지우면 통합 구성도 지운다
+		List<Map<String, Object>> codes = new ArrayList<>();
+		try (SqlSession chk = sqlSessionFactory.openSession()) {
+			for (StdTermsVo vo : dataVos) {
+				Map<String, Object> c = chk.selectOne("codeType.selectCodeById", vo.getId());
+				if (c == null || c.get("codeGrp") == null) continue;
+				Map<String, Object> p = dictService.nameParam((String) c.get("dictId"), "codeGrp", (String) c.get("codeGrp"));
+				int child = chk.selectOne("codeType.countChildCodes", p);
+				int integ = chk.selectOne("codeType.countIntegParents", p);
+				if (child > 0 || integ > 0) {
+					Response r = new Response();
+					r.setResultInfo(RestResult.CODE_500.getCode(), "코드 '" + c.get("termsNm") + "' 를 상위로 쓰는 계층·파생 코드 " + child
+							+ "개, 하위로 쓰는 통합 코드 " + integ + "개가 있어 지울 수 없습니다.");
+					return Mono.just(r);
+				}
+				codes.add(p);
+			}
+		}
 		Mono<Response> resp = deleteTermsList(dataVos);
+		Response r0 = resp.block();
+		if (r0 != null && r0.getResultCode() == RestResult.CODE_200.getCode()) {
+			for (Map<String, Object> p : codes) sqlSessionTemplate.delete("codeType.deleteInteg", p);
+		}
 		String names = String.join(", ", deletedNames);
 		saveChangeHistory("DELETE", "CODE", null, names,
 				names, null, "코드 삭제 " + dataVos.size() + "건: " + names);
@@ -1043,6 +1084,17 @@ public class DataStandardController {
 	}
 
 	/**
+	 * 104번 WP6-3 — 코드 그룹의 값 (코드 유형에 맞게). 통합 코드는 하위 코드 값을 모아 주고(값마다 하위 코드 그룹),
+	 * 계층 코드는 값마다 상위 코드값이 있다. 개별 코드는 값이 없다.
+	 */
+	@RequestMapping(value = "/getCodeValues", method = RequestMethod.GET)
+	public Map<String, Object> getCodeValues(String codeGrp, String dictId) {
+		try (SqlSession session = sqlSessionFactory.openSession()) {
+			return codeTypeService.values(session, resolveDictOrDefault(dictId), codeGrp);
+		}
+	}
+
+	/**
 	 * 코드데이터(항목값) 단건 등록
 	 *
 	 * @param dataVo 코드데이터 정보
@@ -1057,6 +1109,13 @@ public class DataStandardController {
 		log.info(">> createCodeData : {}", dataVo);
 
 		Response result = new Response();
+		try (SqlSession chk = sqlSessionFactory.openSession()) {
+			// 104번 WP6-3 — 코드 유형별 값 검사 (계층 상위 코드값, 파생 범위, 통합·개별 거부)
+			codeTypeService.checkValue(chk, dataVo);
+		} catch (IllegalArgumentException e) {
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			return Mono.just(result);
+		}
 		try {
 			sqlSessionTemplate.insert("codedata.insertCodeData", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
@@ -1083,6 +1142,19 @@ public class DataStandardController {
 		log.info(">> updateCodeData : {}", dataVo);
 
 		Response result = new Response();
+		try (SqlSession chk = sqlSessionFactory.openSession()) {
+			// 104번 WP6-3 — 값의 사전은 저장된 행에서 읽어 코드 유형별 값 검사. 값을 바꾸면 이 값을 상위로 쓰는 계층 값이 없어야 한다
+			StdCodeDataVo cur = chk.selectOne("codeType.selectCodeDataById", dataVo.getId());
+			if (cur == null) throw new IllegalArgumentException("코드값을 찾을 수 없습니다.");
+			dataVo.setDictId(cur.getDictId());
+			if (!cur.getCodeVal().equals(dataVo.getCodeVal()) || !cur.getCodeGrp().equals(dataVo.getCodeGrp())) {
+				codeTypeService.checkValueDeletable(chk, cur);
+			}
+			codeTypeService.checkValue(chk, dataVo);
+		} catch (IllegalArgumentException e) {
+			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			return Mono.just(result);
+		}
 		try {
 			sqlSessionTemplate.update("codedata.updateCodeData", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
@@ -1110,6 +1182,25 @@ public class DataStandardController {
 			List<String> deletedNames = new ArrayList<>();
 			for (StdCodeDataVo vo : dataVos) {
 				if (vo.getCodeNm() != null) deletedNames.add(vo.getCodeNm());
+			}
+			// 104번 WP6-3 — 계층 코드값이 상위로 쓰는 값은 지우지 않는다 (함께 지우는 하위 값은 세지 않는다)
+			java.util.Set<String> delIds = new java.util.HashSet<>();
+			for (StdCodeDataVo vo : dataVos) delIds.add(vo.getId());
+			try (SqlSession chk = sqlSessionFactory.openSession()) {
+				for (StdCodeDataVo vo : dataVos) {
+					StdCodeDataVo cur = chk.selectOne("codeType.selectCodeDataById", vo.getId());
+					if (cur == null) continue;
+					Map<String, Object> code = codeTypeService.codeByGrp(chk, cur.getDictId(), cur.getCodeGrp());
+					if (code == null) continue;
+					Map<String, Object> p = dictService.nameParam(cur.getDictId(), "codeGrp", cur.getCodeGrp());
+					p.put("codeVal", cur.getCodeVal());
+					List<StdCodeDataVo> kids = chk.selectList("codeType.selectChildValues", p);
+					long left = kids.stream().filter(k -> !delIds.contains(k.getId())).count();
+					if (left > 0) {
+						result.setResultInfo(RestResult.CODE_500.getCode(), "코드값 '" + cur.getCodeVal() + "' 를 상위로 쓰는 계층 코드값이 " + left + "건 있어 지울 수 없습니다.");
+						return Mono.just(result);
+					}
+				}
 			}
 			sqlSessionTemplate.delete("codedata.deleteCodeDatas", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
@@ -1232,6 +1323,8 @@ public class DataStandardController {
 		if (wnm.length() > 100) {
 			throw new Exception("단어 한글명이 너무 깁니다 (최대 100자, 입력 길이: " + wnm.length() + ")");
 		}
+		// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자(켜면 대문자로 바꿔 받고, 끄면 소문자 거부)
+		vo.setWordEngAbrvNm(dictService.checkWordEngAbrv(vo.getDictId(), vo.getWordEngAbrvNm()));
 		String abrv = vo.getWordEngAbrvNm();
 		if (abrv == null || abrv.trim().isEmpty()) {
 			throw new Exception("단어 영문약어는 필수입니다.");
@@ -1254,6 +1347,8 @@ public class DataStandardController {
 		if (!eng.matches("^[A-Za-z][A-Za-z0-9]*$")) {
 			throw new Exception("단어 영문명은 영문(A-Z,a-z)으로 시작하고 영문/숫자(0-9)만 사용할 수 있습니다. (입력값: " + eng + ")");
 		}
+		// 104번 WP6-13 — 단어 영문명 중복을 허용하지 않는 사전
+		dictService.checkWordEngNmDup(vo.getDictId(), eng, vo.getId());
 	}
 
 	/** 86번 #30 — 도메인 입력 공통 검증 (createDomain / updateDomain 재사용) */
@@ -1463,6 +1558,8 @@ public class DataStandardController {
 			dataVo.setCretUserId(sessionService.getUserId());
 			// 98번 — 도메인 그룹 화면에서 고른 사전에 넣는다.
 			dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
+			// 104번 WP6-4 — 상위 그룹 (같은 사전, 3단계까지)
+			checkDomainGroupTree(dataVo.getDictId(), dataVo.getId(), dataVo.getParentGrpId());
 			// commStndYn이 null이면 기본값 'N'
 			if (dataVo.getCommStndYn() == null || dataVo.getCommStndYn().isEmpty()) {
 				dataVo.setCommStndYn("N");
@@ -1485,6 +1582,39 @@ public class DataStandardController {
 	}
 
 	/**
+	 * 104번 WP6-4 — 상위 그룹 검사. 상위는 같은 사전의 그룹이어야 하고, 자기 자신·하위 그룹을 상위로 둘 수 없으며,
+	 * 옮긴 뒤 깊이가 3단계를 넘으면 안 된다(옮기는 그룹 아래 단계까지 센다). 상위가 비면(최상위) 검사하지 않는다.
+	 */
+	private void checkDomainGroupTree(String dictId, String id, String parentGrpId) throws Exception {
+		if (parentGrpId == null || parentGrpId.isEmpty()) return;
+		List<StdDomainGroupVo> all = sqlSessionTemplate.selectList("domain.selectDomainGroupList", dictService.dictParam(dictId));
+		Map<String, StdDomainGroupVo> byId = new HashMap<>();
+		Map<String, List<String>> children = new HashMap<>();
+		for (StdDomainGroupVo g : all) {
+			byId.put(g.getId(), g);
+			if (g.getParentGrpId() != null) children.computeIfAbsent(g.getParentGrpId(), k -> new ArrayList<>()).add(g.getId());
+		}
+		StdDomainGroupVo parent = byId.get(parentGrpId);
+		if (parent == null) {
+			throw new Exception("상위 도메인 그룹을 찾을 수 없습니다 (같은 사전의 그룹만 상위로 지정할 수 있습니다).");
+		}
+		for (StdDomainGroupVo p = parent; p != null; p = p.getParentGrpId() == null ? null : byId.get(p.getParentGrpId())) {
+			if (p.getId().equals(id)) throw new Exception("자기 자신이나 하위 그룹을 상위 그룹으로 지정할 수 없습니다.");
+		}
+		int height = groupHeight(id, children);
+		if (parent.getLevel() + height > 3) {
+			throw new Exception("도메인 그룹은 3단계까지입니다 (상위 '" + parent.getPath() + "' 아래로 옮기면 " + (parent.getLevel() + height) + "단계가 됩니다).");
+		}
+	}
+
+	/** 그룹과 그 아래 단계 수 (하위가 없으면 1) */
+	private static int groupHeight(String id, Map<String, List<String>> children) {
+		int h = 0;
+		for (String c : children.getOrDefault(id, new ArrayList<>())) h = Math.max(h, groupHeight(c, children));
+		return h + 1;
+	}
+
+	/**
 	 * 도메인 그룹 수정
 	 *
 	 * @param dataVo 수정할 도메인 그룹 정보
@@ -1503,6 +1633,15 @@ public class DataStandardController {
 			}
 
 			dataVo.setUpdtUserId(sessionService.getUserId());
+			// 104번 WP6-4 — 상위 그룹을 바꾸면(이동) 같은 사전·순환·3단계를 본다. 화면은 사전을 보내지 않아 그룹에서 읽는다
+			if (dataVo.getParentGrpId() != null) {
+				StdDomainGroupVo cur = sqlSessionTemplate.selectOne("domain.selectDomainGroupById", dataVo.getId());
+				if (cur == null) {
+					result.setResultInfo(RestResult.CODE_500.getCode(), "도메인 그룹을 찾을 수 없습니다.");
+					return result;
+				}
+				checkDomainGroupTree(cur.getDictId(), dataVo.getId(), dataVo.getParentGrpId());
+			}
 
 			int cnt = sqlSessionTemplate.update("domain.updateDomainGroup", dataVo);
 
@@ -1530,6 +1669,25 @@ public class DataStandardController {
 	public Mono<Response> deleteDomainGroups(@RequestBody List<StdDomainGroupVo> dataVos) {
 		Response result = new Response();
 		try {
+			// 104번 WP6-4 — 하위 그룹·분류·도메인이 있는 그룹은 지우지 않는다 (선택한 하위 그룹을 함께 지우는 경우는 허용)
+			java.util.Set<String> ids = new java.util.HashSet<>();
+			for (StdDomainGroupVo v : dataVos) ids.add(v.getId());
+			for (StdDomainGroupVo v : dataVos) {
+				Map<String, Object> use = sqlSessionTemplate.selectOne("domain.selectDomainGroupUse", v.getId());
+				if (use == null) continue;
+				long child = ((Number) use.get("childCnt")).longValue();
+				if (child > 0) {
+					List<StdDomainGroupVo> children = sqlSessionTemplate.selectList("domain.selectDomainGroupChildren", v.getId());
+					child = children.stream().filter(c -> !ids.contains(c.getId())).count();
+				}
+				long clsf = ((Number) use.get("clsfCnt")).longValue();
+				long dom = ((Number) use.get("domainCnt")).longValue();
+				if (child > 0 || clsf > 0 || dom > 0) {
+					result.setResultInfo(RestResult.CODE_500.getCode(), "도메인 그룹 '" + use.get("domainGrpNm") + "' 에 하위 그룹 " + child
+							+ "개·도메인 분류 " + clsf + "개·도메인 " + dom + "개가 있어 지울 수 없습니다.");
+					return Mono.just(result);
+				}
+			}
 			sqlSessionTemplate.delete("domain.deleteDomainGroups", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -2233,6 +2391,15 @@ public class DataStandardController {
 			return res;
 		}
 
+		// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자
+		try {
+			wordEngAbrvNm = dictService.checkWordEngAbrv(dictId, wordEngAbrvNm.trim());
+		} catch (IllegalArgumentException e) {
+			res.put("success", false);
+			res.put("message", e.getMessage());
+			return res;
+		}
+
 		// 영문약어 규격 체크: 대문자 영문(A-Z) + 숫자(0-9)만 허용
 		if (!wordEngAbrvNm.trim().matches("^[A-Z0-9]+$")) {
 			res.put("success", false);
@@ -2264,6 +2431,15 @@ public class DataStandardController {
 			return res;
 		}
 
+		// 104번 WP6-13 — 단어 영문명 중복을 허용하지 않는 사전 (같은 한글명 단어는 위에서 기존 단어로 돌려줬다)
+		try {
+			dictService.checkWordEngNmDup(dictId, wordEngNm.trim(), null);
+		} catch (IllegalArgumentException e) {
+			res.put("success", false);
+			res.put("message", e.getMessage());
+			return res;
+		}
+
 		// 유사어 체크: 경고 메시지만 (등록은 진행)
 		String synonymMsg = checkSynonymWord(wordNm.trim(), dictId);
 
@@ -2275,7 +2451,7 @@ public class DataStandardController {
 		wordVo.setId(wordId);
 		wordVo.setDictId(dictId);
 		wordVo.setWordNm(wordNm.trim());
-		wordVo.setWordEngAbrvNm(wordEngAbrvNm.trim().toUpperCase());
+		wordVo.setWordEngAbrvNm(wordEngAbrvNm.trim());
 		wordVo.setWordEngNm(wordEngNm.trim());
 		wordVo.setWordDesc(wordDesc != null ? wordDesc.trim() : wordNm.trim());
 		wordVo.setDomainClsfNm(domainClsfNm != null ? domainClsfNm.trim() : "");
@@ -2393,7 +2569,9 @@ public class DataStandardController {
 						String wordId = StringUtils.getUUID();
 						wordVo.setId(wordId);
 						wordVo.setWordNm((String) nw.get("wordNm"));
-						wordVo.setWordEngAbrvNm((String) nw.get("wordEngAbrvNm"));
+						// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자, 단어 영문명 중복
+						wordVo.setWordEngAbrvNm(dictService.checkWordEngAbrv(dictId, (String) nw.get("wordEngAbrvNm")));
+						dictService.checkWordEngNmDup(dictId, (String) nw.get("wordEngNm"), wordId);
 						wordVo.setWordEngNm((String) nw.get("wordEngNm"));
 						wordVo.setWordDesc((String) nw.get("wordDesc"));
 						wordVo.setDomainClsfNm((String) nw.get("domainClsfNm"));
@@ -2447,7 +2625,8 @@ public class DataStandardController {
 				termsVo.setId(termsId);
 				termsVo.setDictId(dictId);
 				termsVo.setTermsNm(termsNm);
-				termsVo.setTermsEngAbrvNm(termsEngAbrvNm);
+				// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자, 용어 영문약어명 최대 길이
+				termsVo.setTermsEngAbrvNm(dictService.checkTermEngAbrv(dictId, termsEngAbrvNm));
 				termsVo.setTermsDesc(termsDesc != null ? termsDesc : termsNm);
 				termsVo.setDomainNm(domainNm);
 				termsVo.setCommStndYn("N");

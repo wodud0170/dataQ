@@ -207,7 +207,7 @@
                   <v-text-field v-model="addWord_wordEngAbrvNm" ref="addWord_wordEngAbrvNm"
                     :rules="[() => !!addWord_wordEngAbrvNm || '단어 영문 약어명은 필수 입력값입니다.']" clearable required dense
                     placeholder="PSBLTY" color="ndColor"
-                    @input="addWord_wordEngAbrvNm = (addWord_wordEngAbrvNm || '').toUpperCase()"
+                    @input="if (upperAuto) addWord_wordEngAbrvNm = (addWord_wordEngAbrvNm || '').toUpperCase()"
                     @blur="checkEngAbrvDuplicate"></v-text-field>
                   <div v-if="addWord_engAbrvDuplicate" :style="{ color: '#d32f2f', fontSize: '0.75rem', marginTop: '-8px' }">
                     {{ addWord_engAbrvDuplicate }}
@@ -370,7 +370,7 @@
                 <v-text-field v-model="updateWord_wordEngAbrvNm" ref="updateWord_wordEngAbrvNm"
                   :rules="[() => !!updateWord_wordEngAbrvNm || '단어 영문 약어명은 필수 입력값입니다.']" clearable required dense
                   placeholder="PSBLTY" color="ndColor"
-                  @input="updateWord_wordEngAbrvNm = (updateWord_wordEngAbrvNm || '').toUpperCase()"></v-text-field>
+                  @input="if (upperAuto) updateWord_wordEngAbrvNm = (updateWord_wordEngAbrvNm || '').toUpperCase()"></v-text-field>
               </v-col>
             </v-row>
 
@@ -632,6 +632,11 @@ export default {
   computed: {
     // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE): 즉시 등록·수정·삭제·엑셀 업로드
     canManage() { return this.$can('STD_MANAGE'); },
+    // 104번 WP6-13 — 고른 사전의 표준 대문자 옵션 (끄면 영문약어를 바꾸지 않고 서버가 소문자를 거부한다)
+    upperAuto() {
+      const d = this.dictList.find(x => x.dictId === this.dictId);
+      return !d || d.upperYn !== 'N';
+    },
   },
   data: () => ({
     // 단어 목록 리스트
@@ -641,6 +646,7 @@ export default {
     // 검색 단어
     // 98번 — 조회할 표준사전
     dictId: null,
+    dictList: [],
     searchWord: '',
     // 검색 단어영문약어명
     searchEngWord: '',
@@ -1835,6 +1841,7 @@ export default {
     eventBus.$off('NOTICE', this.onUploadNotice);
   },
   mounted() {
+    axios.post(this.$APIURL.base + 'api/dict/list', {}).then(res => { this.dictList = res.data || []; });
     // 테이블 셀 가로길이 조절
     this.$resizableGrid();
   }

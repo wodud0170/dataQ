@@ -310,19 +310,60 @@
   </delete>
 
   <!-- 도메인 그룹-->
+  <!-- 104번 WP6-4 — 다단계 트리. 경로("상위 > 하위")·단계·하위 수를 함께 주고 트리 순서(같은 상위 안 순서 → 이름)로 정렬 -->
   <select id="selectDomainGroupList" resultType="com.ndata.quality.model.std.StdDomainGroupVo">
+			WITH RECURSIVE G (DOMAIN_GRP_ID, LVL, PATH, SORT_PATH) AS (
+				SELECT DOMAIN_GRP_ID, 1, DOMAIN_GRP_NM::text,
+				       lpad(COALESCE(SORT_ORDER, 0)::text, 5, '0') || DOMAIN_GRP_NM
+				  FROM TB_DOMAIN_GRP
+				 WHERE PARENT_GRP_ID IS NULL
+				<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
+				UNION ALL
+				SELECT C.DOMAIN_GRP_ID, G.LVL + 1, G.PATH || ' > ' || C.DOMAIN_GRP_NM,
+				       G.SORT_PATH || '/' || lpad(COALESCE(C.SORT_ORDER, 0)::text, 5, '0') || C.DOMAIN_GRP_NM
+				  FROM TB_DOMAIN_GRP C
+				  JOIN G ON C.PARENT_GRP_ID = G.DOMAIN_GRP_ID
+				 WHERE G.LVL &lt; 10
+			)
 			select 
-				 DOMAIN_GRP_ID		as id
-				,DOMAIN_GRP_NM		
-				,COMM_STND_YN		  
-        ,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
-				,CRET_USER_ID	 
-				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
-				,UPDT_USER_ID	 
-			from TB_DOMAIN_GRP
-			where 1=1
-			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
-			order by DOMAIN_GRP_NM
+				 A.DOMAIN_GRP_ID		as id
+				,A.DOMAIN_GRP_NM		
+				,A.COMM_STND_YN		  
+				,A.PARENT_GRP_ID		as parentGrpId
+				,P.DOMAIN_GRP_NM		as parentGrpNm
+				,A.DFLT_DATA_TYPE		as dfltDataType
+				,A.CLSF_WORD_NM		as clsfWordNm
+				,COALESCE(A.SORT_ORDER, 0)	as sortOrder
+				,G.LVL				as level
+				,G.PATH				as path
+				,(SELECT COUNT(*) FROM TB_DOMAIN_GRP C WHERE C.PARENT_GRP_ID = A.DOMAIN_GRP_ID) as childCnt
+        ,to_char(to_timestamp(A.CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as cretDt
+				,A.CRET_USER_ID	 
+				,to_char(to_timestamp(A.UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as updtDt
+				,A.UPDT_USER_ID	 
+			from TB_DOMAIN_GRP A
+			join G on G.DOMAIN_GRP_ID = A.DOMAIN_GRP_ID
+			left join TB_DOMAIN_GRP P on P.DOMAIN_GRP_ID = A.PARENT_GRP_ID
+			order by G.SORT_PATH
+  </select>
+
+  <!-- 104번 WP6-4 — 그룹을 지우기 전에 확인: 하위 그룹·그 그룹을 쓰는 분류·도메인 수 -->
+  <select id="selectDomainGroupUse" parameterType="String" resultType="java.util.LinkedHashMap">
+			SELECT G.DOMAIN_GRP_NM as "domainGrpNm",
+			       (SELECT COUNT(*) FROM TB_DOMAIN_GRP C WHERE C.PARENT_GRP_ID = G.DOMAIN_GRP_ID) as "childCnt",
+			       (SELECT COUNT(*) FROM TB_DOMAIN_CLSF S WHERE S.DICT_ID = G.DICT_ID AND S.DOMAIN_GRP_NM = G.DOMAIN_GRP_NM) as "clsfCnt",
+			       (SELECT COUNT(*) FROM TB_DOMAIN D WHERE D.DICT_ID = G.DICT_ID AND D.DOMAIN_GRP_NM = G.DOMAIN_GRP_NM) as "domainCnt"
+			  FROM TB_DOMAIN_GRP G
+			 WHERE G.DOMAIN_GRP_ID = #{id}
+  </select>
+
+  <select id="selectDomainGroupChildren" parameterType="String" resultType="com.ndata.quality.model.std.StdDomainGroupVo">
+			SELECT DOMAIN_GRP_ID as id, DOMAIN_GRP_NM FROM TB_DOMAIN_GRP WHERE PARENT_GRP_ID = #{id}
+  </select>
+
+  <select id="selectDomainGroupById" parameterType="String" resultType="com.ndata.quality.model.std.StdDomainGroupVo">
+			SELECT DOMAIN_GRP_ID as id, DOMAIN_GRP_NM, DICT_ID as dictId, PARENT_GRP_ID as parentGrpId
+			  FROM TB_DOMAIN_GRP WHERE DOMAIN_GRP_ID = #{id}
   </select>
 
   <insert id="insertDomainGroup" parameterType="com.ndata.quality.model.std.StdDomainGroupVo">
@@ -334,6 +375,10 @@
 				,CRET_DT			
 				,CRET_USER_ID
             ,DICT_ID
+            ,PARENT_GRP_ID
+            ,DFLT_DATA_TYPE
+            ,CLSF_WORD_NM
+            ,SORT_ORDER
            )
            VALUES
            (
@@ -343,15 +388,24 @@
             ,to_char(now(), 'YYYYMMDDHH24MISS')
             ,#{cretUserId, jdbcType=VARCHAR}
             ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
+            ,NULLIF(#{parentGrpId, jdbcType=VARCHAR}, '')
+            ,NULLIF(#{dfltDataType, jdbcType=VARCHAR}, '')
+            ,NULLIF(#{clsfWordNm, jdbcType=VARCHAR}, '')
+            ,COALESCE(#{sortOrder, jdbcType=INTEGER}, 0)
            )
   </insert>
 
+  <!-- 104번 WP6-4 — 다단계 항목은 보낸 것만 바꾼다. 빈 문자열은 지움(상위 그룹이면 최상위로 이동) -->
   <update id="updateDomainGroup" parameterType="com.ndata.quality.model.std.StdDomainGroupVo">
             UPDATE
               TB_DOMAIN_GRP
             <set>
               <if test="domainGrpNm != null">DOMAIN_GRP_NM = #{domainGrpNm},</if>
               <if test="commStndYn != null">COMM_STND_YN = #{commStndYn},</if>
+              <if test="parentGrpId != null">PARENT_GRP_ID = NULLIF(#{parentGrpId}, ''),</if>
+              <if test="dfltDataType != null">DFLT_DATA_TYPE = NULLIF(#{dfltDataType}, ''),</if>
+              <if test="clsfWordNm != null">CLSF_WORD_NM = NULLIF(#{clsfWordNm}, ''),</if>
+              <if test="sortOrder != null">SORT_ORDER = #{sortOrder},</if>
               UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
               UPDT_USER_ID = #{updtUserId}
             </set>
