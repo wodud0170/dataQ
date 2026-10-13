@@ -5,6 +5,7 @@ import NdLogin from "../views/login/NdLogin.vue";
 import NdContent from "../views/content/NdContent.vue";
 import NdHaederVue from "../views/header/NdHaeder.vue";
 import NdNavVue from "../views/nav/NdNav.vue";
+import { loadPerms } from "../perm";
 
 const routes = [
   // {
@@ -75,7 +76,8 @@ async function router_beforeEnter_setting(next) {
           }
         });
     } else {
-      next();
+      // 104번 WP2 — 세션이 있을 때만 권한을 읽는다 (로그인 전에 부르면 401). 사용자가 바뀌었을 수 있으니 매번 새로 읽는다
+      loadPerms(true).then(() => next());
     }
   } catch (Error) {
     console.log(Error);

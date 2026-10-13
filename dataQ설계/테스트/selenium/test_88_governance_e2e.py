@@ -113,7 +113,7 @@ def main():
         "attrNm": "MBR_NM", "direction": "UP"
     }, timeout=10)
     body = r1.json()
-    record("swap_user_denied", body.get("resultCode") == 500 and "관리자" in (body.get("resultMessage") or ""),
+    record("swap_user_denied", body.get("resultCode") == 500 and "권한이 없습니다" in (body.get("resultMessage") or ""),   # 104 WP2 — 권한 코드 문구
            f"code={body.get('resultCode')}, msg={body.get('resultMessage')}")
     r2 = ss.post(f"{BASE_URL}/api/dm/swapAttrOrd", json={
         "dataModelId": DM, "objOwner": "USER1", "objNm": TBL,
@@ -149,7 +149,7 @@ def main():
     # Step 8 — Area CRUD admin only
     print("\n[Step 8] 영역 CRUD 권한")
     r = sj.post(f"{BASE_URL}/api/area/biz/save", json={"bizAreaNm": "유저시도"}, timeout=10)
-    record("biz_save_user_denied", r.json().get("resultCode") == 500 and "관리자" in (r.json().get("resultMessage") or ""),
+    record("biz_save_user_denied", r.json().get("resultCode") == 500 and "권한이 없습니다" in (r.json().get("resultMessage") or ""),   # 104 WP2 — 권한 코드 문구
            f"msg={r.json().get('resultMessage')}")
     r = ss.post(f"{BASE_URL}/api/area/biz/save", json={"bizAreaNm": "E2E_BIZ_AREA", "bizAreaDesc": "테스트", "sortOrder": 99}, timeout=10)
     record("biz_save_admin_ok", r.json().get("resultCode") == 200, f"code={r.json().get('resultCode')}")
