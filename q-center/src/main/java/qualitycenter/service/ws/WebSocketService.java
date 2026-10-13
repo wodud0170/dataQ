@@ -43,6 +43,22 @@ public class WebSocketService {
         this.template.convertAndSend(this.DEST_MESSAGE, new Gson().toJson(msg, WsVo.class));
     }
 
+    /** 104번 WP1 — 로그인 사용자별 알림. 화면은 /user/exchange/amq.direct/message.user 를 구독한다(UsernameUserDestinationResolver) */
+    public final String DEST_USER = "/exchange/amq.direct/message.user-user";
+
+    public void sendUserNotis(java.util.List<com.ndata.quality.service.AprvService.Noti> notis) {
+        if (notis == null) return;
+        for (com.ndata.quality.service.AprvService.Noti n : notis) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("type", "NOTI");
+            m.put("notiTp", n.notiTp);
+            m.put("title", n.title);
+            m.put("msg", n.msg);
+            m.put("docId", n.docId);
+            this.template.convertAndSend(this.DEST_USER + n.userId, new Gson().toJson(m));
+        }
+    }
+
     /**
      * 변경된 정보를 다시 읽도록 reload 메시지를 전송
      * @param data	reload 시 필요한 정보를 전송(없을시 null)

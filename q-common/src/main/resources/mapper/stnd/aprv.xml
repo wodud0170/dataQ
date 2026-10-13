@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="aprv">
+
+	<!-- 104번 WP1 — 결재선·결재 문서·조직·알림.
+	     TB_APRV_LINE(_STEP) 요청 유형별 결재선, TB_APRV_DOC(_STEP) 결재 문서와 단계별 결재자,
+	     TB_ORG 부서, TB_NOTIFICATION 사용자 알림. 요청 유형: WORD·TERMS·CODE·DOMAIN·DM_CHANGE -->
+
+	<!-- ===== 결재선 ===== -->
+
+	<select id="selectLine" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT REQ_TP as "reqTp", LINE_NM as "lineNm", USE_YN as "useYn", UPDT_DT as "updtDt", UPDT_USER_ID as "updtUserId"
+		  FROM TB_APRV_LINE
+		 WHERE REQ_TP = #{reqTp}
+	</select>
+
+	<select id="selectLineList" resultType="java.util.LinkedHashMap">
+		SELECT REQ_TP as "reqTp", LINE_NM as "lineNm", USE_YN as "useYn", UPDT_DT as "updtDt", UPDT_USER_ID as "updtUserId"
+		  FROM TB_APRV_LINE
+		 ORDER BY REQ_TP
+	</select>
+
+	<select id="selectLineSteps" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT S.REQ_TP as "reqTp", S.STEP_NO as "stepNo", S.STEP_NM as "stepNm",
+		       S.APRVR_TP as "aprvrTp", S.APRVR_ID as "aprvrId", S.AGREE_YN as "agreeYn",
+		       CASE S.APRVR_TP WHEN 'USER' THEN (SELECT U.NM FROM TB_USER U WHERE U.USER_ID = S.APRVR_ID)
+		                       WHEN 'ROLE' THEN (SELECT R.ROLE_NM FROM TB_ROLE R WHERE R.ROLE_ID = S.APRVR_ID)
+		       END as "aprvrNm"
+		  FROM TB_APRV_LINE_STEP S
+		 WHERE S.REQ_TP = #{reqTp}
+		 ORDER BY S.STEP_NO
+	</select>
+
+	<insert id="upsertLine" parameterType="java.util.Map">
+		INSERT INTO TB_APRV_LINE (REQ_TP, LINE_NM, USE_YN, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{reqTp}, #{lineNm, jdbcType=VARCHAR}, #{useYn}, #{now}, #{userId})
+		ON CONFLICT (REQ_TP) DO UPDATE
+		   SET LINE_NM = EXCLUDED.LINE_NM, USE_YN = EXCLUDED.USE_YN, UPDT_DT = EXCLUDED.UPDT_DT, UPDT_USER_ID = EXCLUDED.UPDT_USER_ID
+	</insert>
+
+	<delete id="deleteLineSteps" parameterType="String">
+		DELETE FROM TB_APRV_LINE_STEP WHERE REQ_TP = #{reqTp}
+	</delete>
+
+	<insert id="insertLineStep" parameterType="java.util.Map">
+		INSERT INTO TB_APRV_LINE_STEP (REQ_TP, STEP_NO, STEP_NM, APRVR_TP, APRVR_ID, AGREE_YN)
+		VALUES (#{reqTp}, #{stepNo}, #{stepNm, jdbcType=VARCHAR}, #{aprvrTp}, #{aprvrId, jdbcType=VARCHAR}, #{agreeYn})
+	</insert>
+
+	<!-- ===== 결재자 정하기 ===== -->
+
+	<!-- 역할을 받은 사용자 (삭제되지 않은 사용자, 시스템 범위 무관) -->
+	<select id="selectRoleUserIds" parameterType="String" resultType="String">
+		SELECT DISTINCT UR.USER_ID
+		  FROM TB_USER_ROLE UR
+		  JOIN TB_USER U ON U.USER_ID = UR.USER_ID AND COALESCE(U.DEL_YN, false) = false
+		 WHERE UR.ROLE_ID = #{roleId}
+		 ORDER BY UR.USER_ID
+	</select>
+
+	<select id="selectAdminUserIds" resultType="String">
+		SELECT USER_ID FROM TB_USER WHERE ADM_YN = true AND COALESCE(DEL_YN, false) = false ORDER BY USER_ID
+	</select>
+
+	<select id="selectUserNm" parameterType="String" resultType="String">
+		SELECT COALESCE(NM, USER_ID) FROM TB_USER WHERE USER_ID = #{userId}
+	</select>
+
+	<select id="countActiveUser" parameterType="String" resultType="int">
+		SELECT COUNT(*) FROM TB_USER WHERE USER_ID = #{userId} AND COALESCE(DEL_YN, false) = false
+	</select>
+
+	<select id="selectUserOrgId" parameterType="String" resultType="String">
+		SELECT ORG_ID FROM TB_USER WHERE USER_ID = #{userId}
+	</select>
+
+	<select id="selectOrgHead" parameterType="String" resultType="java.util.HashMap">
+		SELECT P_ORG_ID as "pOrgId", HEAD_USER_ID as "headUserId" FROM TB_ORG WHERE ORG_ID = #{orgId} AND USE_YN = 'Y'
+	</select>
+
+	<!-- ===== 결재 문서 ===== -->
+
+	<insert id="insertDoc" parameterType="java.util.Map">
+		INSERT INTO TB_APRV_DOC (DOC_ID, REQ_TP, TARGET_ID, TARGET_NM, DM_ID, DICT_ID, REQ_USER_ID, REQ_DT, DOC_STAT, CUR_STEP_NO, STEP_CNT)
+		VALUES (#{docId}, #{reqTp}, #{targetId}, #{targetNm, jdbcType=VARCHAR}, #{dmId, jdbcType=VARCHAR}, #{dictId, jdbcType=VARCHAR},
+		        #{reqUserId}, #{now}, 'PROGRESS', 1, #{stepCnt})
+	</insert>
+
+	<insert id="insertDocStep" parameterType="java.util.Map">
+		INSERT INTO TB_APRV_DOC_STEP (DOC_ID, STEP_NO, APRVR_USER_ID, STEP_NM, AGREE_YN, ACT_STAT)
+		VALUES (#{docId}, #{stepNo}, #{aprvrUserId}, #{stepNm, jdbcType=VARCHAR}, #{agreeYn}, 'WAIT')
+	</insert>
+
+	<sql id="docCols">
+		D.DOC_ID as "docId", D.REQ_TP as "reqTp", D.TARGET_ID as "targetId", D.TARGET_NM as "targetNm",
+		D.DM_ID as "dmId", D.DICT_ID as "dictId", D.REQ_USER_ID as "reqUserId",
+		(SELECT U.NM FROM TB_USER U WHERE U.USER_ID = D.REQ_USER_ID) as "reqUserNm",
+		D.REQ_DT as "reqDt", D.DOC_STAT as "docStat", D.CUR_STEP_NO as "curStepNo", D.STEP_CNT as "stepCnt", D.END_DT as "endDt",
+		(SELECT string_agg(COALESCE(U.NM, S.APRVR_USER_ID), ', ' ORDER BY S.APRVR_USER_ID)
+		   FROM TB_APRV_DOC_STEP S LEFT JOIN TB_USER U ON U.USER_ID = S.APRVR_USER_ID
+		  WHERE S.DOC_ID = D.DOC_ID AND S.STEP_NO = D.CUR_STEP_NO AND S.ACT_STAT = 'WAIT') as "curAprvrNms"
+	</sql>
+
+	<select id="selectDoc" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="docCols"/> FROM TB_APRV_DOC D WHERE D.DOC_ID = #{docId}
+	</select>
+
+	<!-- 대상의 진행 중 문서 (한 대상에 진행 중 문서는 하나) -->
+	<select id="selectOpenDoc" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="docCols"/>
+		  FROM TB_APRV_DOC D
+		 WHERE D.REQ_TP = #{reqTp} AND D.TARGET_ID = #{targetId} AND D.DOC_STAT = 'PROGRESS'
+	</select>
+
+	<!-- 여러 대상의 진행 중 문서 — 승인 화면 목록에 단계 표시 -->
+	<select id="selectOpenDocsByTargets" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="docCols"/>
+		  FROM TB_APRV_DOC D
+		 WHERE D.DOC_STAT = 'PROGRESS'
+		   AND D.TARGET_ID IN <foreach collection="targetIds" item="t" open="(" separator="," close=")">#{t}</foreach>
+	</select>
+
+	<select id="selectDocSteps" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT S.STEP_NO as "stepNo", S.STEP_NM as "stepNm", S.AGREE_YN as "agreeYn",
+		       S.APRVR_USER_ID as "aprvrUserId", (SELECT U.NM FROM TB_USER U WHERE U.USER_ID = S.APRVR_USER_ID) as "aprvrUserNm",
+		       S.ACT_STAT as "actStat", S.ACT_CMNT as "actCmnt", S.ACT_DT as "actDt", S.ACT_USER_ID as "actUserId"
+		  FROM TB_APRV_DOC_STEP S
+		 WHERE S.DOC_ID = #{docId}
+		 ORDER BY S.STEP_NO, S.APRVR_USER_ID
+	</select>
+
+	<update id="updateStepAct" parameterType="java.util.Map">
+		UPDATE TB_APRV_DOC_STEP
+		   SET ACT_STAT = #{actStat}, ACT_CMNT = #{actCmnt, jdbcType=VARCHAR}, ACT_DT = #{now}, ACT_USER_ID = #{actUserId}
+		 WHERE DOC_ID = #{docId} AND STEP_NO = #{stepNo} AND APRVR_USER_ID = #{aprvrUserId} AND ACT_STAT = 'WAIT'
+	</update>
+
+	<update id="updateDocStat" parameterType="java.util.Map">
+		UPDATE TB_APRV_DOC
+		   SET DOC_STAT = #{docStat}, CUR_STEP_NO = #{curStepNo}
+		       <if test="endDt != null">, END_DT = #{endDt}</if>
+		 WHERE DOC_ID = #{docId} AND DOC_STAT = 'PROGRESS'
+	</update>
+
+	<!-- 대상이 아직 결재 대기인지 — 표준사전은 미승인 항목, 데이터 모델은 SUBMITTED 이력이 남아 있는지 -->
+	<select id="countTargetPending" parameterType="java.util.Map" resultType="int">
+		<choose>
+			<when test="reqTp == 'WORD'">SELECT COUNT(*) FROM TB_WORD WHERE WORD_ID = #{targetId} AND APRV_YN = 'N'</when>
+			<when test="reqTp == 'TERMS' or reqTp == 'CODE'">SELECT COUNT(*) FROM TB_TERMS WHERE TERMS_ID = #{targetId} AND APRV_YN = 'N'</when>
+			<when test="reqTp == 'DOMAIN'">SELECT COUNT(*) FROM TB_DOMAIN WHERE DOMAIN_ID = #{targetId} AND APRV_YN = 'N'</when>
+			<otherwise>SELECT COUNT(*) FROM TB_DATA_MODEL_CHANGE_HISTORY WHERE SUBMISSION_ID = #{targetId} AND APRV_STATUS = 'SUBMITTED'</otherwise>
+		</choose>
+	</select>
+
+	<!-- 결재함 목록. box: TURN(내 차례) / MINE(내가 올린) / DONE(내가 처리한) / ALL(진행 중 전체 — 관리자) -->
+	<select id="selectBox" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="docCols"/>
+		  FROM TB_APRV_DOC D
+		<where>
+			<choose>
+				<when test="box == 'TURN'">
+					D.DOC_STAT = 'PROGRESS'
+					AND EXISTS (SELECT 1 FROM TB_APRV_DOC_STEP S
+					             WHERE S.DOC_ID = D.DOC_ID AND S.STEP_NO = D.CUR_STEP_NO
+					               AND S.APRVR_USER_ID = #{userId} AND S.ACT_STAT = 'WAIT')
+				</when>
+				<when test="box == 'MINE'">D.REQ_USER_ID = #{userId}</when>
+				<when test="box == 'DONE'">
+					EXISTS (SELECT 1 FROM TB_APRV_DOC_STEP S WHERE S.DOC_ID = D.DOC_ID AND S.ACT_USER_ID = #{userId})
+				</when>
+				<otherwise>D.DOC_STAT = 'PROGRESS'</otherwise>
+			</choose>
+			<if test="reqTp != null and reqTp != ''">AND D.REQ_TP = #{reqTp}</if>
+		</where>
+		 ORDER BY D.REQ_DT DESC, D.DOC_ID
+		 LIMIT 500
+	</select>
+
+	<select id="countTurn" parameterType="String" resultType="int">
+		SELECT COUNT(*)
+		  FROM TB_APRV_DOC D
+		 WHERE D.DOC_STAT = 'PROGRESS'
+		   AND EXISTS (SELECT 1 FROM TB_APRV_DOC_STEP S
+		                WHERE S.DOC_ID = D.DOC_ID AND S.STEP_NO = D.CUR_STEP_NO
+		                  AND S.APRVR_USER_ID = #{userId} AND S.ACT_STAT = 'WAIT')
+	</select>
+
+	<!-- 결재함 상세 — 표준사전 대상 항목 -->
+	<select id="selectStdTarget" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<choose>
+			<when test="reqTp == 'WORD'">
+				SELECT WORD_ID as "id", WORD_NM as "nm", WORD_ENG_NM as "engNm", WORD_ENG_ABRV_NM as "engAbrvNm", WORD_DESC as "desc",
+				       WORD_CLSF_YN as "wordClsfYn", DOMAIN_CLSF_NM as "domainClsfNm", DICT_ID as "dictId", APRV_YN as "aprvYn",
+				       CRET_USER_ID as "cretUserId", CRET_DT as "cretDt"
+				  FROM TB_WORD WHERE WORD_ID = #{targetId}
+			</when>
+			<when test="reqTp == 'TERMS' or reqTp == 'CODE'">
+				SELECT TERMS_ID as "id", TERMS_NM as "nm", TERMS_ENG_ABRV_NM as "engAbrvNm", TERMS_DESC as "desc",
+				       DOMAIN_NM as "domainNm", CODE_GRP as "codeGrp", DICT_ID as "dictId", APRV_YN as "aprvYn",
+				       CRET_USER_ID as "cretUserId", CRET_DT as "cretDt",
+				       (SELECT string_agg(W.WORD_NM || '(' || W.WORD_ENG_ABRV_NM || CASE WHEN W.APRV_YN = 'N' THEN ', 승인 대기' ELSE '' END || ')', ' + ' ORDER BY TW.WORD_ORD)
+				          FROM TB_TERMS_WORDS TW JOIN TB_WORD W ON W.WORD_ID = TW.WORD_ID WHERE TW.TERMS_ID = T.TERMS_ID) as "words"
+				  FROM TB_TERMS T WHERE TERMS_ID = #{targetId}
+			</when>
+			<otherwise>
+				SELECT DOMAIN_ID as "id", DOMAIN_NM as "nm", DOMAIN_DESC as "desc", DATA_TYPE as "dataType", DATA_LEN as "dataLen",
+				       DATA_DECIMAL_LEN as "dataDecimalLen", DOMAIN_GRP_NM as "domainGrpNm", DOMAIN_CLSF_NM as "domainClsfNm",
+				       DICT_ID as "dictId", APRV_YN as "aprvYn", CRET_USER_ID as "cretUserId", CRET_DT as "cretDt"
+				  FROM TB_DOMAIN WHERE DOMAIN_ID = #{targetId}
+			</otherwise>
+		</choose>
+	</select>
+
+	<!-- 결재자 수정 후 승인 — 승인 대기 항목의 설명·영문명만 고친다 -->
+	<update id="updateWordByApprover" parameterType="java.util.Map">
+		UPDATE TB_WORD
+		   SET WORD_ENG_NM = #{engNm}, WORD_ENG_ABRV_NM = #{engAbrvNm}, WORD_DESC = #{desc}, UPDT_DT = #{now}, UPDT_USER_ID = #{userId}
+		 WHERE WORD_ID = #{targetId} AND APRV_YN = 'N'
+	</update>
+
+	<select id="countWordEngAbrvDup" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_WORD
+		 WHERE WORD_ENG_ABRV_NM = #{engAbrvNm} AND DICT_ID = #{dictId} AND WORD_ID &lt;&gt; #{targetId}
+	</select>
+
+	<update id="updateTermsDescByApprover" parameterType="java.util.Map">
+		UPDATE TB_TERMS SET TERMS_DESC = #{desc}, UPDT_DT = #{now}, UPDT_USER_ID = #{userId}
+		 WHERE TERMS_ID = #{targetId} AND APRV_YN = 'N'
+	</update>
+
+	<update id="updateDomainDescByApprover" parameterType="java.util.Map">
+		UPDATE TB_DOMAIN SET DOMAIN_DESC = #{desc}, UPDT_DT = #{now}, UPDT_USER_ID = #{userId}
+		 WHERE DOMAIN_ID = #{targetId} AND APRV_YN = 'N'
+	</update>
+
+	<!-- ===== 알림 ===== -->
+
+	<insert id="insertNoti" parameterType="java.util.Map">
+		INSERT INTO TB_NOTIFICATION (USER_ID, NOTI_TP, TITLE, MSG, LINK_TP, LINK_ID, READ_YN, CRET_DT)
+		VALUES (#{userId}, #{notiTp}, #{title}, #{msg, jdbcType=VARCHAR}, #{linkTp, jdbcType=VARCHAR}, #{linkId, jdbcType=VARCHAR}, 'N', #{now})
+	</insert>
+
+	<select id="selectNotiList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT NOTI_ID as "notiId", NOTI_TP as "notiTp", TITLE as "title", MSG as "msg",
+		       LINK_TP as "linkTp", LINK_ID as "linkId", READ_YN as "readYn", CRET_DT as "cretDt"
+		  FROM TB_NOTIFICATION
+		 WHERE USER_ID = #{userId}
+		 ORDER BY NOTI_ID DESC
+		 LIMIT #{limit}
+	</select>
+
+	<select id="countUnreadNoti" parameterType="String" resultType="int">
+		SELECT COUNT(*) FROM TB_NOTIFICATION WHERE USER_ID = #{userId} AND READ_YN = 'N'
+	</select>
+
+	<update id="markNotiRead" parameterType="java.util.Map">
+		UPDATE TB_NOTIFICATION SET READ_YN = 'Y'
+		 WHERE USER_ID = #{userId} AND READ_YN = 'N'
+		<if test="notiIds != null and notiIds.size() > 0">
+		   AND NOTI_ID IN <foreach collection="notiIds" item="n" open="(" separator="," close=")">#{n}</foreach>
+		</if>
+	</update>
+
+	<!-- ===== 조직 ===== -->
+
+	<select id="selectOrgList" resultType="java.util.LinkedHashMap">
+		SELECT O.ORG_ID as "orgId", O.ORG_NM as "orgNm", O.P_ORG_ID as "pOrgId", O.HEAD_USER_ID as "headUserId",
+		       (SELECT U.NM FROM TB_USER U WHERE U.USER_ID = O.HEAD_USER_ID) as "headUserNm",
+		       O.SORT_ORD as "sortOrd",
+		       (SELECT COUNT(*) FROM TB_USER U WHERE U.ORG_ID = O.ORG_ID AND COALESCE(U.DEL_YN, false) = false) as "userCnt"
+		  FROM TB_ORG O
+		 WHERE O.USE_YN = 'Y'
+		 ORDER BY O.SORT_ORD, O.ORG_NM
+	</select>
+
+	<select id="countOrgByNm" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_ORG
+		 WHERE USE_YN = 'Y' AND ORG_NM = #{orgNm}
+		   AND COALESCE(P_ORG_ID, '') = COALESCE(#{pOrgId, jdbcType=VARCHAR}, '')
+		   <if test="orgId != null">AND ORG_ID &lt;&gt; #{orgId}</if>
+	</select>
+
+	<select id="countOrg" parameterType="String" resultType="int">
+		SELECT COUNT(*) FROM TB_ORG WHERE ORG_ID = #{orgId} AND USE_YN = 'Y'
+	</select>
+
+	<!-- 부서와 그 아래 부서 (자기 포함) — 상위 부서를 자기 아래로 옮기는 것을 막을 때 -->
+	<select id="selectOrgDescendants" parameterType="String" resultType="String">
+		WITH RECURSIVE T (ORG_ID, DEPTH) AS (
+			SELECT ORG_ID, 0 FROM TB_ORG WHERE ORG_ID = #{orgId}
+			UNION ALL
+			SELECT O.ORG_ID, T.DEPTH + 1 FROM TB_ORG O JOIN T ON O.P_ORG_ID = T.ORG_ID WHERE T.DEPTH &lt; 20 AND O.USE_YN = 'Y'
+		)
+		SELECT ORG_ID FROM T
+	</select>
+
+	<insert id="insertOrg" parameterType="java.util.Map">
+		INSERT INTO TB_ORG (ORG_ID, ORG_NM, P_ORG_ID, HEAD_USER_ID, SORT_ORD, USE_YN, CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{orgId}, #{orgNm}, #{pOrgId, jdbcType=VARCHAR}, #{headUserId, jdbcType=VARCHAR}, #{sortOrd}, 'Y', #{now}, #{userId}, #{now}, #{userId})
+	</insert>
+
+	<update id="updateOrg" parameterType="java.util.Map">
+		UPDATE TB_ORG
+		   SET ORG_NM = #{orgNm}, P_ORG_ID = #{pOrgId, jdbcType=VARCHAR}, HEAD_USER_ID = #{headUserId, jdbcType=VARCHAR},
+		       SORT_ORD = #{sortOrd}, UPDT_DT = #{now}, UPDT_USER_ID = #{userId}
+		 WHERE ORG_ID = #{orgId}
+	</update>
+
+	<select id="countOrgChildren" parameterType="String" resultType="int">
+		SELECT COUNT(*) FROM TB_ORG WHERE P_ORG_ID = #{orgId} AND USE_YN = 'Y'
+	</select>
+
+	<delete id="deleteOrg" parameterType="String">
+		DELETE FROM TB_ORG WHERE ORG_ID = #{orgId}
+	</delete>
+
+	<update id="clearUsersOrg" parameterType="String">
+		UPDATE TB_USER SET ORG_ID = NULL WHERE ORG_ID = #{orgId}
+	</update>
+
+	<select id="selectOrgUsers" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT USER_ID as "userId", NM as "userNm", EMAIL as "email"
+		  FROM TB_USER
+		 WHERE ORG_ID = #{orgId} AND COALESCE(DEL_YN, false) = false
+		 ORDER BY NM, USER_ID
+	</select>
+
+	<update id="updateUserOrg" parameterType="java.util.Map">
+		UPDATE TB_USER SET ORG_ID = #{orgId, jdbcType=VARCHAR} WHERE USER_ID = #{userId}
+	</update>
+</mapper>

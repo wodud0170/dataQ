@@ -192,6 +192,7 @@ export default {
                     break;
                 case "myRequest":
                 case "myProfile":
+                case "aprvBox":
                     this._activateGroup("myPageGroup");
                     break;
                 case "dataDiag":
@@ -217,6 +218,8 @@ export default {
                 case "system":
                 case "datasource":
                 case "ddlRule":
+                case "org":
+                case "aprvLine":
                     this._activateGroup("mmGroup");
                     break;
                 case "scurrent":
@@ -376,7 +379,7 @@ export default {
                 // group Active
                 if (tabName === 'boardNotice' || tabName === 'boardQna') {
                     this._activateGroup("communityGroup");
-                } else if (tabName === 'myRequest' || tabName === 'myProfile') {
+                } else if (tabName === 'myRequest' || tabName === 'myProfile' || tabName === 'aprvBox') {
                     this._activateGroup("myPageGroup");
                 } else if (tabName === 'term' || tabName === 'dsCode' || tabName === 'word' || tabName === 'domain' || tabName === 'domainGroup' || tabName === 'domainClassification' || tabName === 'changeHistory') {
                     this._activateGroup("dsGroup");
@@ -399,7 +402,7 @@ export default {
                         this._activateGroup("navDqSub3");
                     }
 
-                } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'system' || tabName ==='datasource' || tabName === 'ddlRule') {
+                } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'system' || tabName ==='datasource' || tabName === 'ddlRule' || tabName === 'org' || tabName === 'aprvLine') {
                     this._activateGroup("mmGroup");
                 } else if (tabName === 'scurrent' || tabName === 'qcurrent') {
                     this._activateGroup("andGroup");
@@ -586,7 +589,7 @@ export default {
             if (tabitem === 'boardNotice' || tabitem === 'boardQna') {
                 this.navCommunityGroup = true;
                 return;
-            } else if (tabitem === 'myRequest' || tabitem === 'myProfile') {
+            } else if (tabitem === 'myRequest' || tabitem === 'myProfile' || tabitem === 'aprvBox') {
                 this.navMyPageGroup = true;
                 return;
             } else if (tabitem === 'termRecommend') {
@@ -634,7 +637,7 @@ export default {
                 }, 500);
 
                 return;
-            } else if (tabitem === 'user' || tabitem === 'roles' || tabitem === 'approval' || tabitem === 'system' || tabitem === 'datasource' || tabitem === 'ddlRule') {
+            } else if (tabitem === 'user' || tabitem === 'roles' || tabitem === 'approval' || tabitem === 'system' || tabitem === 'datasource' || tabitem === 'ddlRule' || tabitem === 'org' || tabitem === 'aprvLine') {
                 this.navMmGroup = true;
                 this.navSubGropClose();
 

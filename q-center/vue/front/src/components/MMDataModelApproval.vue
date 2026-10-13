@@ -25,6 +25,10 @@
             <div style="font-size:.82rem; font-weight:600; color:#283593;">{{ s.changeUserId }}</div>
             <div style="font-size:.72rem; color:#546E7A;">{{ formatDt(s.firstDt) }}</div>
             <div style="font-size:.78rem;">변경 {{ s.itemCnt }}건 · 모델 {{ s.dmId }}</div>
+            <!-- 104번 WP1 — 결재선이 걸린 신청 -->
+            <div v-if="s.aprvDoc" style="font-size:.72rem; color:#1565C0;">
+              결재 {{ s.aprvDoc.curStepNo }}/{{ s.aprvDoc.stepCnt }} · 현재 결재자 {{ s.aprvDoc.curAprvrNms }}
+            </div>
           </div>
         </v-sheet>
 
@@ -34,14 +38,18 @@
             좌측에서 신청 묶음을 선택하세요.
           </div>
           <template v-else>
+            <div v-if="selectedDoc" style="font-size:.78rem; color:#1565C0; background:#E3F2FD; padding:6px 8px; border-radius:4px; margin-bottom:8px;">
+              결재선이 걸린 신청입니다 (결재 {{ selectedDoc.curStepNo }}/{{ selectedDoc.stepCnt }}). 승인·반려는 고른 건과 상관없이 이 신청 전체에 적용되고,
+              마지막 단계가 아니면 다음 결재자에게 넘어갑니다. 반려 사유는 필수입니다.
+            </div>
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
               <v-checkbox v-model="selectAll" dense hide-details class="ma-0" v-on:change="toggleAll" />
               <span style="font-size:.85rem;">전체 선택</span>
               <v-spacer />
-              <v-btn small color="success" depressed :disabled="checkedItems.length === 0" v-on:click="approveSelected">
+              <v-btn small color="success" depressed :disabled="checkedItems.length === 0 && !selectedDoc" v-on:click="approveSelected">
                 <v-icon small left>mdi-check</v-icon>선택 승인 ({{ checkedItems.length }})
               </v-btn>
-              <v-btn small color="error" outlined :disabled="checkedItems.length === 0" v-on:click="rejectSelected">
+              <v-btn small color="error" outlined :disabled="checkedItems.length === 0 && !selectedDoc" v-on:click="rejectSelected">
                 <v-icon small left>mdi-close</v-icon>선택 반려
               </v-btn>
             </div>
@@ -79,6 +87,7 @@ export default {
   data: () => ({
     submissions: [],
     selectedSubmissionId: null,
+    selectedDoc: null,   // 104번 WP1 — 선택 신청의 진행 중 결재 문서
     items: [],
     checkedItems: [],
     selectAll: false,
@@ -103,6 +112,7 @@ export default {
     },
     selectSubmission(s) {
       this.selectedSubmissionId = s.submissionId;
+      this.selectedDoc = s.aprvDoc || null;
       this.checkedItems = [];
       axios.post(this.$APIURL.base + 'api/dmApproval/submissionItems', {
         submissionId: s.submissionId,
@@ -114,7 +124,7 @@ export default {
       this.checkedItems = v ? [...this.items] : [];
     },
     approveSelected() {
-      const seqList = this.checkedItems.map(i => i.changeSeq);
+      const seqList = (this.selectedDoc ? this.items : this.checkedItems).map(i => i.changeSeq);
       this.$swal.fire({
         title: `${seqList.length}건 승인하시겠습니까?`,
         icon: 'question', showCancelButton: true,
@@ -128,7 +138,12 @@ export default {
             this.$swal.fire({ title: '승인 실패', text: res.data.resultMessage || '', icon: 'error' });
             return;
           }
-          this.$swal.fire({ title: '승인 완료', icon: 'success', timer: 1200, showConfirmButton: false });
+          const c = res.data.contents ? JSON.parse(res.data.contents) : {};
+          if (c.steps && c.steps.length) {
+            this.$swal.fire({ title: '결재 단계를 승인했습니다', text: c.steps.join(' / '), icon: 'info' });
+          } else {
+            this.$swal.fire({ title: '승인 완료', icon: 'success', timer: 1200, showConfirmButton: false });
+          }
           this.loadSubmissions();
           this.selectedSubmissionId = null;
           this.items = [];
@@ -137,12 +152,13 @@ export default {
       });
     },
     rejectSelected() {
-      const seqList = this.checkedItems.map(i => i.changeSeq);
+      const seqList = (this.selectedDoc ? this.items : this.checkedItems).map(i => i.changeSeq);
       this.$swal.fire({
         title: `${seqList.length}건 반려`,
         input: 'textarea',
-        inputLabel: '반려 사유 (선택)',
+        inputLabel: this.selectedDoc ? '반려 사유 (필수)' : '반려 사유 (선택)',
         inputPlaceholder: '사유를 입력하세요',
+        inputValidator: v => (this.selectedDoc && !(v && v.trim()) ? '결재선이 걸린 신청은 반려 사유가 필수입니다.' : null),
         showCancelButton: true,
         confirmButtonText: '반려', cancelButtonText: '취소',
       }).then(r => {

@@ -23,4 +23,7 @@ public class AdminVo {
     private String updateDate;
     private String updateUserId;
     private String blockTime;
+    /** 104번 WP1 — 부서 (조회 전용, 바꾸는 것은 /api/org/assignUser) */
+    private String orgId;
+    private String orgNm;
 }

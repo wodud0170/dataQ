@@ -21,7 +21,9 @@
             NM       as name,
             EMAIL    as email,
             PHONE    as phone,
-            ADM_YN   as admin
+            ADM_YN   as admin,
+            ORG_ID   as orgId,
+            (SELECT O.ORG_NM FROM tb_org O WHERE O.ORG_ID = tb_user.ORG_ID) as orgNm
         FROM
             tb_user
         WHERE USER_ID != 'space' AND (DEL_YN = false or DEL_YN is null)

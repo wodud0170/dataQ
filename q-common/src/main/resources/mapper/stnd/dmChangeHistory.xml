@@ -195,7 +195,7 @@
 		       CONSTRAINT_NM as constraint_nm, INDEX_NM as index_nm,
 		       APRV_STATUS as aprv_status, CHANGE_USER_ID as change_user_id,
 		       BEFORE_JSON as before_json, AFTER_JSON as after_json,
-		       DDL_SNIPPET as ddl_snippet, DDL_DBMS_TP as ddl_dbms_tp,
+		       DDL_SNIPPET as ddl_snippet, DDL_DBMS_TP as ddl_dbms_tp, SUBMISSION_ID as submission_id,
 		       DDL_EXEC_DT as ddl_exec_dt, DDL_EXEC_RESULT as ddl_exec_result
 		  FROM TB_DATA_MODEL_CHANGE_HISTORY
 		 WHERE CHANGE_SEQ = #{value}

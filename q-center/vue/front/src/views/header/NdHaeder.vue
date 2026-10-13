@@ -31,6 +31,34 @@
             <v-chip x-small :color="loginIsAdmin ? 'indigo' : 'grey'" text-color="white" class="ml-1">{{ loginIsAdmin ? '관리자' : '일반' }}</v-chip>
         </span>
 
+        <!-- 104번 WP1 — 알림 (결재 요청·승인·반려) -->
+        <v-menu bottom left offset-y :close-on-content-click="false" v-model="notiMenu" max-width="380" transition="slide-y-transition">
+            <template v-slot:activator="{ on }">
+                <v-btn icon v-on="on" class="mr-2" title="알림" id="headerNotiBtn" @click="loadNotis">
+                    <v-badge :value="unreadCnt > 0" :content="unreadCnt > 99 ? '99+' : unreadCnt" color="red" overlap>
+                        <v-icon color="ndColor">mdi-bell-outline</v-icon>
+                    </v-badge>
+                </v-btn>
+            </template>
+            <v-card min-width="320" class="noti-card">
+                <div class="d-flex align-center px-3 py-2" style="border-bottom:1px solid #eee;">
+                    <strong style="font-size:.85rem;">알림</strong>
+                    <v-spacer />
+                    <v-btn x-small text color="primary" :disabled="unreadCnt === 0" @click="readAll">모두 읽음</v-btn>
+                </div>
+                <div v-if="notis.length === 0" class="pa-4 text-center grey--text" style="font-size:.8rem;">알림이 없습니다.</div>
+                <v-list dense class="py-0" style="max-height:420px; overflow:auto;">
+                    <v-list-item v-for="n in notis" :key="n.notiId" @click="openNoti(n)" :class="{ 'noti-unread': n.readYn === 'N' }">
+                        <v-list-item-content>
+                            <v-list-item-title style="font-size:.8rem;">{{ n.title }}</v-list-item-title>
+                            <v-list-item-subtitle style="font-size:.72rem; white-space:normal;">{{ n.msg }}</v-list-item-subtitle>
+                            <v-list-item-subtitle style="font-size:.68rem;">{{ fmtDt(n.cretDt) }}</v-list-item-subtitle>
+                        </v-list-item-content>
+                    </v-list-item>
+                </v-list>
+            </v-card>
+        </v-menu>
+
         <v-menu bottom rounded offset-y :max-width="isMobile ? '120px' : '150px'" transition="slide-y-transition">
             <template v-slot:activator="{ on }">
                 <!-- header의 오른쪽 아바타입니다. 모바일 이외의 화면에서 사이즈를 지정합니다. -->
@@ -76,6 +104,10 @@ export default {
         searchKeyword: '',
         loginUserId: '',
         loginIsAdmin: false,
+        notiMenu: false,
+        notis: [],
+        unreadCnt: 0,
+        notiTimer: null,
     }),
     mounted() {
         var self = this;
@@ -85,8 +117,57 @@ export default {
             axios.get(self.$APIURL.base + 'api/login/isAdmin', { params: { user: loginData.id } })
                 .then(function(res) { self.loginIsAdmin = res.data === true; });
         }
+        // 104번 WP1 — 알림: 실시간(WebSocket) + 1분마다 개수 (q-executor 가 만든 알림은 실시간 전송이 없다)
+        this.loadUnread();
+        this.notiTimer = setInterval(this.loadUnread, 60000);
+        eventBus.$on('USER_NOTI', this.onUserNoti);
+    },
+    beforeDestroy() {
+        clearInterval(this.notiTimer);
+        eventBus.$off('USER_NOTI', this.onUserNoti);
     },
     methods: {
+        loadUnread() {
+            axios.get(this.$APIURL.base + 'api/noti/unreadCount').then(res => {
+                this.unreadCnt = typeof res.data === 'number' ? res.data : 0;
+            }).catch(() => { /* 세션 만료 등은 공통 401 처리가 맡는다 */ });
+        },
+        loadNotis() {
+            axios.get(this.$APIURL.base + 'api/noti/list').then(res => {
+                this.notis = Array.isArray(res.data) ? res.data : [];
+            });
+        },
+        onUserNoti(msg) {
+            this.unreadCnt++;
+            if (this.notiMenu) this.loadNotis();
+            this.$swal.fire({ toast: true, position: 'top-end', timer: 4000, showConfirmButton: false,
+                icon: msg.notiTp === 'APRV_REJECT' ? 'warning' : 'info', title: msg.title, text: msg.msg });
+            eventBus.$emit('APRV_CHANGED');
+        },
+        readAll() {
+            axios.post(this.$APIURL.base + 'api/noti/read', {}).then(() => {
+                this.unreadCnt = 0;
+                this.notis.forEach(n => { n.readYn = 'Y'; });
+            });
+        },
+        openNoti(n) {
+            if (n.readYn === 'N') {
+                axios.post(this.$APIURL.base + 'api/noti/read', { notiIds: [n.notiId] }).then(() => {
+                    n.readYn = 'Y';
+                    this.unreadCnt = Math.max(0, this.unreadCnt - 1);
+                });
+            }
+            this.notiMenu = false;
+            if (n.linkTp === 'APRV_DOC') {
+                eventBus.pendingAprvDoc = n.linkId;
+                this.addTabItem('결재함', 'aprvBox');
+                this.$nextTick(() => eventBus.$emit('openAprvDoc'));
+            }
+        },
+        fmtDt(dt) {
+            if (!dt || dt.length < 12) return dt || '';
+            return dt.substr(0, 4) + '-' + dt.substr(4, 2) + '-' + dt.substr(6, 2) + ' ' + dt.substr(8, 2) + ':' + dt.substr(10, 2);
+        },
         navIconClick() {
             if (this.isMobile) {
                 // this.drawer의 초깃값은 null이므로 null이 들어오면 무조건 열어주는 true를 넘겨준다.
@@ -153,6 +234,9 @@ export default {
 <style scoped>
 .modern-header {
     border-bottom: 1px solid #E8EAF6 !important;
+}
+.noti-unread {
+    background: #E8EAF6;
 }
 .header-avatar {
     cursor: pointer;

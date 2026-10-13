@@ -50,6 +50,10 @@
         <v-chip small :color="getStatusChipColor(item.aprvStatRaw)" :text-color="getStatusTextColor(item.aprvStatRaw)">
           {{ item.aprvStat }}
         </v-chip>
+        <div v-if="item.aprvStatRaw === 0 && aprvDocs[item.reqItemId]" style="font-size:.7rem; color:#1565C0;"
+          :title="'현재 결재자: ' + (aprvDocs[item.reqItemId].curAprvrNms || '')">
+          결재 {{ aprvDocs[item.reqItemId].curStepNo }}/{{ aprvDocs[item.reqItemId].stepCnt }} · {{ aprvDocs[item.reqItemId].curAprvrNms }}
+        </div>
       </template>
       <!-- 행별 처리 — 그리드 가장 오른쪽 -->
       <template v-slot:[`item.rowActions`]="{ item }">
@@ -233,6 +237,7 @@ export default {
   props: ['isMobile', 'approvalStatus'],
   data: () => ({
     approvalAllItems: [],
+    aprvDocs: {},   // 104번 WP1 — 항목 ID → 진행 중 결재 문서
     selectedItem: [],
     loadTable: true,
     page: 1,
@@ -448,6 +453,8 @@ export default {
         .then(result => {
           if (result.data.resultCode === 200) {
             let msg = aprvStat === 'APPROVED' ? '승인이 완료되었습니다.' : '반려가 완료되었습니다.';
+            // 104번 WP1 — 결재선이 걸린 항목은 단계만 넘어갈 수 있다
+            if (aprvStat === 'APPROVED' && (result.data.resultMessage || '').indexOf('다음 ') >= 0) msg = '결재 단계를 승인했습니다.';
             // 경고 메시지가 있으면 표시
             if (result.data.resultMessage) {
               this.$swal.fire({ title: msg, text: result.data.resultMessage, icon: 'warning', confirmButtonText: '확인' });
@@ -507,6 +514,14 @@ export default {
             }
             this.approvalAllItems = res.data;
             this.selectedItem = [];
+            // 104번 WP1 — 승인 대기 항목 중 결재선이 걸린 것은 결재 단계·현재 결재자를 보인다
+            const pendingIds = res.data.filter(r => r.aprvStatRaw === 0).map(r => r.reqItemId);
+            if (pendingIds.length) {
+              axios.post(this.$APIURL.base + "api/aprv/openDocs", { targetIds: pendingIds })
+                .then(r2 => { this.aprvDocs = r2.data || {}; });
+            } else {
+              this.aprvDocs = {};
+            }
           }
         })
         .catch(error => {

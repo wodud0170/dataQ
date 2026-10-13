@@ -61,6 +61,10 @@ public class ExcelUploadService {
 	@Autowired
 	private PermService permService;
 
+	/** 104번 WP1 — 승인 대기로 들어간 행에 결재선이 있으면 결재 문서. 알림은 저장만 하고(화면은 헤더가 주기적으로 읽는다) 여기서 실시간 전송은 하지 않는다 */
+	@Autowired
+	private AprvService aprvService;
+
 	/**
 	 * 98번 — 이름으로 사전 항목을 찾을 때 쓰는 파라미터.
 	 *
@@ -163,6 +167,7 @@ public class ExcelUploadService {
 					session.insert("word.insertWord", stdWordVo);
 					session.commit();
 					result.addSuccess();
+					if ("N".equals(aprvYn)) aprvService.open("WORD", stdWordVo.getId(), stdWordVo.getWordNm(), null, dictId, userId);
 				} catch (Exception e) {
 					session.rollback();
 					String errMsg = translateDuplicateError(e.getMessage());
@@ -286,6 +291,10 @@ public class ExcelUploadService {
 					session.insert("terms.insertTermsWords", wordList);
 					session.commit();
 					result.addSuccess();
+					if ("N".equals(aprvYn)) {
+						String reqTp = stdTermsVo.getCodeGrp() != null && !stdTermsVo.getCodeGrp().isEmpty() ? "CODE" : "TERMS";
+						aprvService.open(reqTp, stdTermsVo.getId(), stdTermsVo.getTermsNm(), null, dictId, userId);
+					}
 				} catch (Exception e) {
 					session.rollback();
 					String errMsg = translateDuplicateError(e.getMessage());
@@ -436,6 +445,7 @@ public class ExcelUploadService {
 					session.insert("domain.insertDomain", stdDomainVo);
 					session.commit();
 					result.addSuccess();
+					if ("N".equals(aprvYn)) aprvService.open("DOMAIN", stdDomainVo.getId(), stdDomainVo.getDomainNm(), null, dictId, userId);
 				} catch (Exception e) {
 					session.rollback();
 					String domainNm = stdDomainVo.getDomainNm() != null ? stdDomainVo.getDomainNm() : dataRow.get(4);

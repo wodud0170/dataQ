@@ -333,6 +333,25 @@
                     <system :key="systemKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 104번 WP1 — 결재함·결재선·조직 -->
+            <div v-if="this.activeContent === 'aprvBox'" id="tab_aprv_box" class="tab_contents"
+                :class="{ active: this.activeContent === 'aprvBox' }">
+                <keep-alive>
+                    <aprvBox :key="aprvBoxKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'aprvLine'" id="tab_aprv_line" class="tab_contents"
+                :class="{ active: this.activeContent === 'aprvLine' }">
+                <keep-alive>
+                    <aprvLine :key="aprvLineKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
+            <div v-if="this.activeContent === 'org'" id="tab_org" class="tab_contents"
+                :class="{ active: this.activeContent === 'org' }">
+                <keep-alive>
+                    <org :key="orgKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <!-- 104번 WP3 — DDL 규칙 -->
             <div v-if="this.activeContent === 'ddlRule'" id="tab_ddl_rule" class="tab_contents"
                 :class="{ active: this.activeContent === 'ddlRule' }">
@@ -459,6 +478,9 @@ import DSQualStats        from "./../../components/DSQualStats.vue"
 import DSScheduleLog from "./../../components/DSScheduleLog.vue"
 import MMSystem from "./../../components/MMSystem.vue"
 import MMDdlRule from "./../../components/MMDdlRule.vue"
+import DSAprvBox from "./../../components/DSAprvBox.vue"
+import MMAprvLine from "./../../components/MMAprvLine.vue"
+import MMOrg from "./../../components/MMOrg.vue"
 import ANDscurrent from "./../../components/ANDscurrent.vue"
 import ANDqcurrent from "./../../components/ANDqcurrent.vue"
 import draggable from "vuedraggable"
@@ -544,6 +566,9 @@ export default {
             qualStatsKey:        this.createUUID(),
             systemKey: this.createUUID(),
             ddlRuleKey: this.createUUID(),
+            aprvBoxKey: this.createUUID(),
+            aprvLineKey: this.createUUID(),
+            orgKey: this.createUUID(),
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
             changeHistoryKey: this.createUUID(),
@@ -605,6 +630,9 @@ export default {
         "qualStats":        DSQualStats,
         "system": MMSystem,
         "ddlRule": MMDdlRule,
+        "aprvBox": DSAprvBox,
+        "aprvLine": MMAprvLine,
+        "org": MMOrg,
         "scurrent": ANDscurrent,
         "qcurrent": ANDqcurrent,
         "changeHistory": DSChangeHistory,
@@ -754,6 +782,15 @@ export default {
                     break;
                 case "ddlRule":
                     this.ddlRuleKey = this.createUUID();
+                    break;
+                case "aprvBox":
+                    this.aprvBoxKey = this.createUUID();
+                    break;
+                case "aprvLine":
+                    this.aprvLineKey = this.createUUID();
+                    break;
+                case "org":
+                    this.orgKey = this.createUUID();
                     break;
                 case "scurrent":
                     this.scurrentKey = this.createUUID();

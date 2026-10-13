@@ -48,6 +48,8 @@ public class DataModelApprovalController {
 	@Autowired private com.ndata.quality.tool.DataSourceUtils dataSourceUtils;
 	@Autowired private DdlDialects ddlDialects;
 	@Autowired private DdlGenerator ddlGenerator;
+	@Autowired private com.ndata.quality.service.AprvService aprvService;
+	@Autowired private qualitycenter.service.ws.WebSocketService websocketService;
 
 	private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -75,8 +77,25 @@ public class DataModelApprovalController {
 			p.put("changeSeqList", seqList);
 			p.put("submissionId",  submissionId);
 			int n = sqlSessionTemplate.update("dmChangeHistory.submitDrafts", p);
+			// 104번 WP1 — 데이터 모델 변경에 결재선이 있으면 이 신청으로 결재 문서를 만든다
+			String aprvMsg = null;
+			if (n > 0) {
+				Map<String, Object> first = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seqList.get(0));
+				String dmId = first == null ? null : (String) first.get("dm_id");
+				Map<String, Object> model = dmId == null ? null : sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dmId);
+				String dmNm = model == null ? dmId : String.valueOf(model.get("dataModelNm"));
+				com.ndata.quality.service.AprvService.Result r = aprvService.open("DM_CHANGE", submissionId, dmNm + " 변경 " + n + "건", dmId, null, changeHistory.safeUserId());
+				if (r != null) {
+					websocketService.sendUserNotis(r.notis);
+					aprvMsg = r.message;
+				}
+			}
+			Map<String, Object> out = new java.util.LinkedHashMap<>();
+			out.put("submitted", n);
+			out.put("submissionId", submissionId);
+			out.put("aprvMsg", aprvMsg);
 			res.setResultInfo(RestResult.CODE_200);
-			res.setContents("{\"submitted\":" + n + ",\"submissionId\":\"" + submissionId + "\"}");
+			res.setContents(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(out));
 		} catch (Exception e) {
 			log.error(">> submit failed: {}", e.getMessage(), e);
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -104,66 +123,110 @@ public class DataModelApprovalController {
 		return Mono.just(res);
 	}
 
-	/** 모델 승인 권한(관리자 또는 DM_APPROVE) — SUBMITTED 묶음 목록 (승인 화면용) */
+	/**
+	 * SUBMITTED 묶음 목록 (승인 화면용). 모델 승인 권한(관리자 또는 DM_APPROVE)은 전체,
+	 * 104번 WP1 — 그 밖에는 내가 현재 결재자인 결재 문서의 신청만. 결재 문서가 있으면 aprvDoc 에 진행 단계를 싣는다.
+	 */
 	@PostMapping("/submissions")
 	public List<Map<String, Object>> submissions(@RequestBody Map<String, Object> body) {
-		if (!sessionService.hasPerm(PermCode.DM_APPROVE)) return new ArrayList<>();
 		Map<String, Object> p = new HashMap<>();
 		p.put("changeUserId", body.get("changeUserId"));
-		return sqlSessionTemplate.selectList("dmChangeHistory.selectSubmissions", p);
+		List<Map<String, Object>> rows = sqlSessionTemplate.selectList("dmChangeHistory.selectSubmissions", p);
+		if (rows.isEmpty()) return rows;
+		List<String> ids = new ArrayList<>();
+		for (Map<String, Object> r : rows) ids.add((String) r.get("submissionId"));
+		Map<String, Object> q = new HashMap<>();
+		q.put("targetIds", ids);
+		Map<String, Map<String, Object>> docs = new HashMap<>();
+		for (Map<String, Object> d : sqlSessionTemplate.<Map<String, Object>>selectList("aprv.selectOpenDocsByTargets", q)) {
+			if ("DM_CHANGE".equals(d.get("reqTp"))) docs.put((String) d.get("targetId"), d);
+		}
+		boolean dmApprover = sessionService.hasPerm(PermCode.DM_APPROVE);
+		String userId = changeHistory.safeUserId();
+		List<Map<String, Object>> out = new ArrayList<>();
+		for (Map<String, Object> r : rows) {
+			Map<String, Object> d = docs.get(r.get("submissionId"));
+			r.put("aprvDoc", d);
+			if (dmApprover || (d != null && aprvService.canAct((String) d.get("docId"), userId))) out.add(r);
+		}
+		return out;
 	}
 
-	/** 모델 승인 권한 — 특정 묶음의 항목들 */
+	/** 특정 묶음의 항목들 — 모델 승인 권한, 또는 그 신청 결재 문서의 현재 결재자 */
 	@PostMapping("/submissionItems")
 	public List<com.ndata.quality.model.std.StdDataModelChangeHistoryVo> submissionItems(@RequestBody Map<String, Object> body) {
-		if (!sessionService.hasPerm(PermCode.DM_APPROVE)) return new ArrayList<>();
 		String submissionId = (String) body.get("submissionId");
+		if (!sessionService.hasPerm(PermCode.DM_APPROVE)) {
+			Map<String, Object> d = aprvService.openDoc("DM_CHANGE", submissionId);
+			if (d == null || !aprvService.canAct((String) d.get("docId"), changeHistory.safeUserId())) return new ArrayList<>();
+		}
 		return sqlSessionTemplate.selectList("dmChangeHistory.selectBySubmissionId", submissionId);
 	}
 
-	/** 모델 승인 권한 — 선택 항목 승인 */
+	/** 선택 항목 승인 */
 	@PostMapping("/approve")
-	@SuppressWarnings("unchecked")
 	public Mono<Response> approve(@RequestBody Map<String, Object> body) {
-		Response res = new Response();
-		try {
-			if (!sessionService.hasPerm(PermCode.DM_APPROVE)) throw new IllegalStateException("권한이 없습니다 (모델 승인 권한 필요)");
-			List<Object> seqList = (List<Object>) body.get("changeSeqList");
-			if (seqList == null || seqList.isEmpty()) throw new IllegalArgumentException("changeSeqList 필수");
-			String now = LocalDateTime.now().format(DT_FMT);
-			String adminId = changeHistory.safeUserId();
-			int n = 0;
-			for (Object seq : seqList) {
-				n += applyApprovalStatus(seq, "APPROVED", adminId, now, body.get("aprvComment"));
-			}
-			res.setResultInfo(RestResult.CODE_200);
-			res.setContents("{\"approved\":" + n + "}");
-		} catch (Exception e) {
-			log.error(">> approve failed: {}", e.getMessage(), e);
-			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
-		}
-		return Mono.just(res);
+		return decide(body, "APPROVED");
 	}
 
-	/** 모델 승인 권한 — 선택 항목 반려 + 사유 */
+	/** 선택 항목 반려 + 사유 */
 	@PostMapping("/reject")
-	@SuppressWarnings("unchecked")
 	public Mono<Response> reject(@RequestBody Map<String, Object> body) {
+		return decide(body, "REJECTED");
+	}
+
+	/**
+	 * 승인·반려. 결재 문서가 없는 건은 모델 승인 권한(관리자 또는 DM_APPROVE)으로 지금처럼 선택 건만 처리한다.
+	 * 104번 WP1 — 건이 속한 신청에 진행 중 결재 문서가 있으면 그 문서의 현재 결재자(관리자 대결 포함)가 단계를 진행하고,
+	 * 최종 승인·반려일 때만 <b>그 신청의 SUBMITTED 건 전체</b>에 기존 처리를 한다 (결재 문서가 있으면 일부만 골라 처리하지 않는다).
+	 * 응답 contents = {approved|rejected: 처리 건수, steps: [단계만 진행한 신청의 안내]}
+	 */
+	@SuppressWarnings("unchecked")
+	private Mono<Response> decide(Map<String, Object> body, String status) {
 		Response res = new Response();
+		boolean approve = "APPROVED".equals(status);
 		try {
-			if (!sessionService.hasPerm(PermCode.DM_APPROVE)) throw new IllegalStateException("권한이 없습니다 (모델 승인 권한 필요)");
 			List<Object> seqList = (List<Object>) body.get("changeSeqList");
 			if (seqList == null || seqList.isEmpty()) throw new IllegalArgumentException("changeSeqList 필수");
 			String now = LocalDateTime.now().format(DT_FMT);
-			String adminId = changeHistory.safeUserId();
-			int n = 0;
+			String userId = changeHistory.safeUserId();
+			boolean dmApprover = sessionService.hasPerm(PermCode.DM_APPROVE);
+			Object comment = body.get("aprvComment");
+
+			// 신청별로 나눈다 — 결재 문서가 있는 신청은 문서 단위로 한 번만 처리
+			List<Object> plain = new ArrayList<>();
+			Map<String, Map<String, Object>> docBySub = new java.util.LinkedHashMap<>();
 			for (Object seq : seqList) {
-				n += applyApprovalStatus(seq, "REJECTED", adminId, now, body.get("aprvComment"));
+				Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+				String sub = h == null ? null : (String) h.get("submission_id");
+				Map<String, Object> d = sub == null ? null : aprvService.openDoc("DM_CHANGE", sub);
+				if (d != null) docBySub.put(sub, d);
+				else plain.add(seq);
 			}
+			if (!plain.isEmpty() && !dmApprover) throw new IllegalStateException("권한이 없습니다 (모델 승인 권한 필요)");
+
+			int n = 0;
+			for (Object seq : plain) n += applyApprovalStatus(seq, status, userId, now, comment);
+			List<String> steps = new ArrayList<>();
+			for (Map.Entry<String, Map<String, Object>> e : docBySub.entrySet()) {
+				com.ndata.quality.service.AprvService.Result r = aprvService.act((String) e.getValue().get("docId"), userId, approve, comment == null ? null : String.valueOf(comment));
+				websocketService.sendUserNotis(r.notis);
+				if (!r.done) {
+					steps.add(e.getValue().get("targetNm") + ": " + r.message);
+					continue;
+				}
+				for (com.ndata.quality.model.std.StdDataModelChangeHistoryVo i : sqlSessionTemplate.<com.ndata.quality.model.std.StdDataModelChangeHistoryVo>selectList(
+						"dmChangeHistory.selectBySubmissionId", e.getKey())) {
+					if ("SUBMITTED".equals(i.getAprvStatus())) n += applyApprovalStatus(i.getChangeSeq(), status, userId, now, comment);
+				}
+			}
+			Map<String, Object> out = new java.util.LinkedHashMap<>();
+			out.put(approve ? "approved" : "rejected", n);
+			out.put("steps", steps);
 			res.setResultInfo(RestResult.CODE_200);
-			res.setContents("{\"rejected\":" + n + "}");
+			res.setContents(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(out));
 		} catch (Exception e) {
-			log.error(">> reject failed: {}", e.getMessage(), e);
+			log.error(">> {} failed: {}", approve ? "approve" : "reject", e.getMessage(), e);
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(res);

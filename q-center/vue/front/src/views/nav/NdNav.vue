@@ -413,6 +413,14 @@
                         <v-list-item-title>표준 사전 변경 요청 현황</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 104번 WP1 — 결재함 (결재선이 있는 요청의 결재, 로그인 사용자 모두) -->
+                    <v-list-item link id="nav_aprvBox" href="#tab_aprv_box" active-class="ndColor--text"
+                        title="결재함"
+                        v-on:click.stop="addTabItem('결재함', 'aprvBox');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>결재함</v-list-item-title>
+                    </v-list-item>
+
                     <!-- 88번 거버넌스 — 변경이 승인 대기로 남는 사용자(DM_MANAGE 없음): 내 변경 신청 / 모델 승인 권한(DM_APPROVE): 데이터 모델 변경 승인 -->
                     <v-list-item v-if="!$can('DM_MANAGE')" link id="nav_mypage_dm_changes" href="#tab_my_dm_changes"
                         active-class="ndColor--text" title="내 변경 신청"
@@ -452,6 +460,23 @@
                             <v-icon></v-icon>
                         </v-list-item-icon>
                         <v-list-item-title>역할 및 권한</v-list-item-title>
+                    </v-list-item>
+
+                    <!-- 104번 WP1 — 조직·결재선 (사용자·권한 관리 권한) -->
+                    <v-list-item v-if="$can('USER_ADMIN')" link id="nav_org" href="#tab_org" active-class="ndColor--text" title="조직"
+                        v-on:click.stop=" addTabItem('조직', 'org'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>조직</v-list-item-title>
+                    </v-list-item>
+
+                    <v-list-item v-if="$can('USER_ADMIN')" link id="nav_aprvLine" href="#tab_aprv_line" active-class="ndColor--text" title="결재선"
+                        v-on:click.stop=" addTabItem('결재선', 'aprvLine'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>결재선</v-list-item-title>
                     </v-list-item>
 
                     <v-list-item v-if="$can('STD_APPROVE')" link id="nav_approval" href="#tab_approval" active-class="ndColor--text" title="표준 사전 변경 승인"

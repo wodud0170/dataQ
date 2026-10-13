@@ -47,6 +47,7 @@ import com.ndata.quality.model.std.StdDomainVo;
 import com.ndata.quality.model.std.TermAnalysisResult;
 import com.ndata.quality.model.std.StdTermsVo;
 import com.ndata.quality.model.std.StdWordVo;
+import com.ndata.quality.service.AprvService;
 import com.ndata.quality.service.ExcelDownloadService;
 import com.ndata.quality.service.ExcelUploadService;
 import com.ndata.quality.tool.StringWordAnalyzer;
@@ -167,6 +168,9 @@ public class DataStandardController {
 	@Autowired
 	private WebSocketService websocketService;
 
+	@Autowired
+	private AprvService aprvService;
+
 	/**
 	 * 통합 검색 API - 단어/용어/도메인/컬럼을 키워드로 일괄 검색
 	 *
@@ -238,7 +242,7 @@ public class DataStandardController {
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
 			String msg = synonymMsg;
 			if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
-				String approvalMsg = "관리자 승인 후 조회 가능합니다.";
+				String approvalMsg = pendingMsg(openAprv("WORD", dataVo.getId(), dataVo.getWordNm(), dataVo.getDictId()));
 				msg = msg != null ? msg + " " + approvalMsg : approvalMsg;
 			}
 			if (msg != null) {
@@ -263,6 +267,22 @@ public class DataStandardController {
 		}
 
 		return Mono.just(result);
+	}
+
+	/**
+	 * 104번 WP1 — 승인 대기로 등록한 항목에 결재선이 있으면 결재 문서를 만들고 1단계 결재자에게 알린다.
+	 * 결재선이 없으면 null (지금처럼 표준 승인 권한자가 승인).
+	 */
+	private String openAprv(String reqTp, String itemId, String itemNm, String dictId) {
+		AprvService.Result r = aprvService.open(reqTp, itemId, itemNm, null, dictId, sessionService.getUserId());
+		if (r == null) return null;
+		websocketService.sendUserNotis(r.notis);
+		return r.message;
+	}
+
+	/** 승인 대기 등록 안내 — 결재 문서가 생겼으면 결재 단계, 아니면 기존 문구 */
+	private static String pendingMsg(String aprvMsg) {
+		return aprvMsg == null ? "관리자 승인 후 조회 가능합니다." : aprvMsg + ". 결재가 끝나면 조회 가능합니다.";
 	}
 
 	/**
@@ -570,7 +590,10 @@ public class DataStandardController {
 			session.insert("terms.insertTermsWords", wordList);
 			session.commit();
 			if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
-				result.setResultInfo(RestResult.CODE_200.getCode(), "관리자 승인 후 조회 가능합니다.");
+				// 코드도 TB_TERMS 에 저장된다 — 코드 그룹이 있으면 결재 요청 유형은 CODE
+				String reqTp = dataVo.getCodeGrp() != null && !dataVo.getCodeGrp().isEmpty() ? "CODE" : "TERMS";
+				result.setResultInfo(RestResult.CODE_200.getCode(),
+						pendingMsg(openAprv(reqTp, dataVo.getId(), dataVo.getTermsNm(), dataVo.getDictId())));
 			} else {
 				result.setResultInfo(RestResult.CODE_200);
 			}
@@ -1176,7 +1199,8 @@ public class DataStandardController {
 			}
 			sqlSessionTemplate.insert("domain.insertDomain", dataVo);
 			if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
-				result.setResultInfo(RestResult.CODE_200.getCode(), "관리자 승인 후 조회 가능합니다.");
+				result.setResultInfo(RestResult.CODE_200.getCode(),
+						pendingMsg(openAprv("DOMAIN", dataVo.getId(), dataVo.getDomainNm(), dataVo.getDictId())));
 			} else {
 				result.setResultInfo(RestResult.CODE_200);
 			}
@@ -1785,25 +1809,50 @@ public class DataStandardController {
 
 		// DEF-15 — 승인·반려는 승인 권한(관리자 또는 STD_APPROVE)만. 화면에서는 메뉴가 안 보이지만 이 API 는 열려 있어
 		// 일반 사용자가 자기 신청을 스스로 승인할 수 있었다. 서버에서 다시 막는다.
-		if (!sessionService.hasPerm(PermCode.STD_APPROVE)) {
-			result.setResultInfo(403, "승인·반려 권한이 없습니다 (표준 승인 권한 필요).");
-			return Mono.just(result);
-		}
+		// 104번 WP1 — 결재 문서가 있는 항목은 승인 권한 대신 그 문서의 현재 단계 결재자(관리자 대결 포함)가 처리한다.
+		// 단계 승인이면 단계만 넘기고, 마지막 단계 승인·반려일 때 아래 기존 처리를 그대로 한다.
+		boolean stdApprover = sessionService.hasPerm(PermCode.STD_APPROVE);
+		List<String> stepMsgs = new ArrayList<>();
 
 		for (StdApproveStatVo dataVo : dataVos) {
 			dataVo.setId(StringUtils.getUUID());
 			dataVo.setAprvUserId(sessionService.getUserId());
 
+			Map<String, Object> aprvDoc = aprvService.openDoc(dataVo.getReqTp(), dataVo.getReqItemId());
+			if (aprvDoc == null && !stdApprover) {
+				result.setResultInfo(403, "승인·반려 권한이 없습니다 (표준 승인 권한 필요).");
+				continue;
+			}
+
 			SqlSession session = sqlSessionFactory.openSession();
 
 			try {
 				NDQualityStdObjectType objType = NDQualityStdObjectType.valueOf(dataVo.getReqTp());
+				boolean approve = dataVo.getAprvStat() == NDQualityApproveStat.APPROVED.getValue();
+				boolean lastStep = aprvDoc == null
+						|| ((Number) aprvDoc.get("curStepNo")).intValue() == ((Number) aprvDoc.get("stepCnt")).intValue();
 
-				// 용어 승인 시: 구성 단어 미승인 여부 체크
+				// 단어 반려 가드 — 결재 문서 단계를 넘기기 전에 먼저 본다 (반려는 어느 단계든 바로 끝나므로)
+				if (objType == NDQualityStdObjectType.WORD && !approve) {
+					// 승인된 용어가 이 단어를 참조 중이면 물리삭제가 FK(tb_terms_words_fk_2, ON DELETE 없음)
+					// 위반으로 터지면서 트랜잭션 전체가 롤백된다. raw PSQLException 이 그대로 나가지 않도록
+					// deleteWords 와 동일한 형태의 친화 메시지로 미리 차단한다.
+					List<String> approvedTerms = session.selectList(
+							"approve.selectApprovedTermsByWordId", dataVo.getReqItemId());
+					if (approvedTerms != null && !approvedTerms.isEmpty()) {
+						String termList = approvedTerms.size() <= 3
+								? String.join(", ", approvedTerms)
+								: String.join(", ", approvedTerms.subList(0, 3)) + " 외 " + (approvedTerms.size() - 3) + "건";
+						throw new Exception("승인된 용어에서 사용 중이므로 반려할 수 없습니다: " + termList
+								+ " (해당 용어를 먼저 정리한 뒤 반려하세요)");
+					}
+				}
+
+				// 용어 승인 시: 구성 단어 미승인 여부 체크 (결재 문서가 있으면 마지막 단계에서만)
 				// DEF-13 — 코드도 TB_TERMS 에 저장되는 용어라 같은 가드를 태워야 한다.
 				// TERMS 만 검사하면 코드로 등록한 용어는 미승인 단어로 이뤄져도 승인됐다.
 				if ((objType == NDQualityStdObjectType.TERMS || objType == NDQualityStdObjectType.CODE)
-						&& dataVo.getAprvStat() == NDQualityApproveStat.APPROVED.getValue()) {
+						&& approve && lastStep) {
 					List<Map<String, Object>> unapprovedWords = session.selectList(
 							"approve.selectUnapprovedWordsByTermsId", dataVo.getReqItemId());
 					if (unapprovedWords != null && !unapprovedWords.isEmpty()) {
@@ -1816,24 +1865,23 @@ public class DataStandardController {
 					}
 				}
 
+				if (aprvDoc != null) {
+					AprvService.Result step = aprvService.act((String) aprvDoc.get("docId"), sessionService.getUserId(),
+							approve, dataVo.getAprvStatUpdtRsn());
+					websocketService.sendUserNotis(step.notis);
+					if (!step.done) {
+						stepMsgs.add(dataVo.getReqItemNm() + ": " + step.message);
+						result.setResultInfo(RestResult.CODE_200);
+						continue;
+					}
+				}
+
 				if (dataVo.getAprvStat() == NDQualityApproveStat.REJECTED.getValue()) {
 					// === 반려: 물리 삭제 ===
 					session.insert("approve.insertStdAprvStat", dataVo);
 
 					switch (objType) {
 						case WORD:
-							// 승인된 용어가 이 단어를 참조 중이면 물리삭제가 FK(tb_terms_words_fk_2, ON DELETE 없음)
-							// 위반으로 터지면서 트랜잭션 전체가 롤백된다. raw PSQLException 이 그대로 나가지 않도록
-							// deleteWords 와 동일한 형태의 친화 메시지로 미리 차단한다.
-							List<String> approvedTerms = session.selectList(
-									"approve.selectApprovedTermsByWordId", dataVo.getReqItemId());
-							if (approvedTerms != null && !approvedTerms.isEmpty()) {
-								String termList = approvedTerms.size() <= 3
-										? String.join(", ", approvedTerms)
-										: String.join(", ", approvedTerms.subList(0, 3)) + " 외 " + (approvedTerms.size() - 3) + "건";
-								throw new Exception("승인된 용어에서 사용 중이므로 반려할 수 없습니다: " + termList
-										+ " (해당 용어를 먼저 정리한 뒤 반려하세요)");
-							}
 							// 단어 반려 → 연관 미승인 용어 cascade 삭제
 							List<Map<String, Object>> relatedTerms = session.selectList(
 									"approve.selectUnapprovedTermsByWordId", dataVo.getReqItemId());
@@ -1949,6 +1997,12 @@ public class DataStandardController {
 						.append(String.join(", ", termNames)).append(". ");
 			}
 			result.setResultInfo(RestResult.CODE_200.getCode(), warnMsg.toString());
+		}
+		// 104번 WP1 — 결재 단계만 넘긴 항목 안내
+		if (!stepMsgs.isEmpty() && result.getResultCode() == 200) {
+			String prev = result.getResultMessage();
+			result.setResultInfo(RestResult.CODE_200.getCode(),
+					String.join(" / ", stepMsgs) + (prev == null || prev.isEmpty() || "OK".equalsIgnoreCase(prev) ? "" : " / " + prev));
 		}
 
 		return Mono.just(result);
@@ -2237,6 +2291,8 @@ public class DataStandardController {
 		if (directApprove) {
 			saveChangeHistory("INSERT", "WORD", wordId, wordVo.getWordNm(),
 					null, wordVo.toString(), "단어 등록(표준화 추천): " + wordVo.getWordNm(), "AUTO_RECOMMEND");
+		} else {
+			openAprv("WORD", wordId, wordVo.getWordNm(), dictId);
 		}
 
 		res.put("success", true);
@@ -2315,6 +2371,7 @@ public class DataStandardController {
 				// 신규 단어 등록
 				int newWordCount = 0;
 				Map<Integer, String> newWordIdMap = new HashMap<>();
+				Map<String, String> newWordNms = new java.util.LinkedHashMap<>();   // 104번 WP1 — 결재 문서용 (ID → 이름)
 				if (newWords != null) {
 					for (int i = 0; i < newWords.size(); i++) {
 						Map<String, Object> nw = newWords.get(i);
@@ -2347,6 +2404,7 @@ public class DataStandardController {
 						else wordVo.setAprvYn("N");
 						session.insert("word.insertWord", wordVo);
 						newWordIdMap.put(i, wordId);
+						newWordNms.put(wordId, wordVo.getWordNm());
 						newWordCount++;
 					}
 				}
@@ -2434,6 +2492,11 @@ public class DataStandardController {
 				session.commit();
 				registeredTerms++;
 				registeredWords += newWordCount;
+				// 104번 WP1 — 승인 대기로 들어간 새 단어·용어에 결재선이 있으면 결재 문서
+				if (!directApprove) {
+					for (Map.Entry<String, String> nw : newWordNms.entrySet()) openAprv("WORD", nw.getKey(), nw.getValue(), dictId);
+					openAprv("TERMS", termsId, termsNm, dictId);
+				}
 
 				// 88번 §16 — 변환 이력 기록 (사용자 원본 입력 → 등록된 표준 용어)
 				String originalInput = (String) item.get("originalInput");

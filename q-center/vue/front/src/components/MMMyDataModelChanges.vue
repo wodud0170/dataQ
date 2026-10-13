@@ -114,11 +114,11 @@ export default {
       axios.post(this.$APIURL.base + 'api/dmApproval/myDrafts', {}).then(res => {
         this.drafts = res.data || [];
       }).catch(() => { this.drafts = []; });
-      // 본인의 SUBMITTED / REJECTED — history endpoint 호출 후 클라이언트에서 분류
-      axios.post(this.$APIURL.base + 'api/dmApproval/history', { dmId: '' }).then(res => {
+      // 본인의 SUBMITTED / REJECTED — history endpoint 호출 후 클라이언트에서 분류.
+      // 104번 WP1 — 모델 승인 권한이 있으면 history 가 모든 사용자 건을 주므로 본인 ID 로 거른다
+      const login = JSON.parse(sessionStorage.getItem('loginStatus') || '{}');
+      axios.post(this.$APIURL.base + 'api/dmApproval/history', { dmId: '', changeUserId: login.id || '' }).then(res => {
         const all = res.data || [];
-        const myUser = window.__myUserId || '';
-        // 본인 신청 + status filter
         this.submitted = all.filter(r => r.aprvStatus === 'SUBMITTED');
         this.rejected  = all.filter(r => r.aprvStatus === 'REJECTED');
       }).catch(() => { this.submitted = []; this.rejected = []; });

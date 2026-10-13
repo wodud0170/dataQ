@@ -178,6 +178,11 @@ export const wsVue = new Vue({
         "/user/exchange/amq.direct/message.window",
         this.onMessage
       );
+      // 104번 WP1 — 로그인 사용자별 알림 (결재 요청·승인·반려). 헤더 알림이 받는다
+      this.stompClient.subscribe(
+        "/user/exchange/amq.direct/message.user",
+        response => eventBus.$emit("USER_NOTI", JSON.parse(JSON.parse(response.body)))
+      );
       //heartbeat 설정
       this.stompClient.heartbeat.outgoing = 0;
       this.stompClient.heartbeat.incoming = 0;

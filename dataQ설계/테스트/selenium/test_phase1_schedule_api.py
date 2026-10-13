@@ -71,7 +71,8 @@ def login(session, user, pw):
 def get_any_data_model(session):
     r = session.post(BASE + "/api/dm/getDataModelStatsList", json={}, timeout=10)
     r.raise_for_status()
-    arr = r.json() or []
+    # 예약 진단은 표준사전이 지정된 모델만 등록된다 — 사전 없는 모델을 고르면 create 가 400
+    arr = [d for d in (r.json() or []) if d.get("dictId")]
     if not arr:
         return None
     return arr[0]

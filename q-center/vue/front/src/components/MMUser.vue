@@ -50,6 +50,10 @@
                 <v-col cols="6">
                   <v-text-field v-model="detailUser.phone" label="전화번호" dense outlined hide-details></v-text-field>
                 </v-col>
+                <!-- 104번 WP1 — 부서 (결재선의 요청자 부서장) -->
+                <v-col cols="6">
+                  <v-select v-model="detailUser.orgId" :items="orgItems" label="부서" dense outlined hide-details clearable></v-select>
+                </v-col>
               </v-row>
             </v-card>
 
@@ -112,9 +116,11 @@ export default {
       { text: '계정', value: 'id', width: '100px' },
       { text: '이름', value: 'name', width: '80px' },
       { text: '이메일', value: 'email' },
+      { text: '부서', value: 'orgNm', width: '100px' },
       { text: '권한', value: 'admin', width: '70px' },
     ],
     userItems: [],
+    orgItems: [],
     selectedUserId: null,
     detailUser: {},
     // 추가 다이얼로그
@@ -123,6 +129,9 @@ export default {
   }),
   created() {
     this.getUserData();
+    axios.get(this.$APIURL.base + "api/org/list").then(res => {
+      this.orgItems = (res.data || []).map(o => ({ text: o.orgNm, value: o.orgId }));
+    });
   },
   methods: {
     getUserData() {
@@ -151,11 +160,23 @@ export default {
       if (self.detailUser.newPassword) {
         data.password = btoa(self.detailUser.newPassword);
       }
+      var orig = self.userItems.find(function(u) { return u.id === self.detailUser.id; }) || {};
+      var orgChanged = (orig.orgId || null) !== (self.detailUser.orgId || null);
       axios.post(this.$APIURL.base + "api/login/updateUser", data)
         .then(function(res) {
           if (res.data && res.data.resultCode === 200) {
-            self.$swal.fire({ title: '저장 완료', icon: 'success', timer: 1500, showConfirmButton: false });
-            self.getUserData();
+            // 104번 WP1 — 부서는 따로 저장
+            var after = orgChanged
+              ? axios.post(self.$APIURL.base + "api/org/assignUser", { userId: self.detailUser.id, orgId: self.detailUser.orgId || null })
+              : Promise.resolve({ data: { resultCode: 200 } });
+            return after.then(function(r2) {
+              if (r2.data && r2.data.resultCode === 200) {
+                self.$swal.fire({ title: '저장 완료', icon: 'success', timer: 1500, showConfirmButton: false });
+              } else {
+                self.$swal.fire({ title: '부서 저장 실패', text: r2.data && r2.data.resultMessage, icon: 'error', confirmButtonText: '확인' });
+              }
+              self.getUserData();
+            });
           } else {
             self.$swal.fire({ title: '저장 실패', text: res.data && res.data.resultMessage, icon: 'error', confirmButtonText: '확인' });
           }

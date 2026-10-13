@@ -82,6 +82,154 @@ CREATE TABLE quality.imsi_comment_comdb (
 
 
 --
+-- Name: tb_aprv_doc; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_aprv_doc (
+    doc_id character varying(40) NOT NULL,
+    req_tp character varying(20) NOT NULL,
+    target_id character varying(50) NOT NULL,
+    target_nm character varying(300),
+    dm_id character varying(22),
+    dict_id character varying(22),
+    req_user_id character varying(50) NOT NULL,
+    req_dt character varying(14) NOT NULL,
+    doc_stat character varying(20) NOT NULL,
+    cur_step_no integer NOT NULL,
+    step_cnt integer NOT NULL,
+    end_dt character varying(14)
+);
+
+
+--
+-- Name: TABLE tb_aprv_doc; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_aprv_doc IS '결재 문서 (104번 WP1) — 표준사전 항목 하나 또는 데이터 모델 신청(SUBMISSION_ID) 하나';
+
+
+--
+-- Name: COLUMN tb_aprv_doc.target_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_doc.target_id IS 'WORD·TERMS·CODE·DOMAIN 은 항목 ID, DM_CHANGE 는 SUBMISSION_ID';
+
+
+--
+-- Name: COLUMN tb_aprv_doc.doc_stat; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_doc.doc_stat IS 'PROGRESS, APPROVED, REJECTED, CANCELED(대상이 다른 경로로 없어짐)';
+
+
+--
+-- Name: tb_aprv_doc_step; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_aprv_doc_step (
+    doc_id character varying(40) NOT NULL,
+    step_no integer NOT NULL,
+    aprvr_user_id character varying(50) NOT NULL,
+    step_nm character varying(100),
+    agree_yn character(1) DEFAULT 'N'::bpchar NOT NULL,
+    act_stat character varying(20) DEFAULT 'WAIT'::character varying NOT NULL,
+    act_cmnt character varying(500),
+    act_dt character varying(14),
+    act_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_aprv_doc_step; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_aprv_doc_step IS '결재 문서의 단계별 결재자 (104번 WP1). 문서를 만들 때 결재자를 정해 둔다';
+
+
+--
+-- Name: COLUMN tb_aprv_doc_step.act_stat; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_doc_step.act_stat IS 'WAIT, APPROVED, REJECTED';
+
+
+--
+-- Name: COLUMN tb_aprv_doc_step.act_user_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_doc_step.act_user_id IS '실제 처리자 — 관리자가 대신 처리하면 관리자 ID';
+
+
+--
+-- Name: tb_aprv_line; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_aprv_line (
+    req_tp character varying(20) NOT NULL,
+    line_nm character varying(100),
+    use_yn character(1) DEFAULT 'Y'::bpchar NOT NULL,
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_aprv_line; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_aprv_line IS '요청 유형별 결재선 (104번 WP1). 행이 없거나 USE_YN=N 이면 결재선 없이 지금처럼 승인';
+
+
+--
+-- Name: COLUMN tb_aprv_line.req_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_line.req_tp IS '요청 유형 — WORD, TERMS, CODE, DOMAIN, DM_CHANGE';
+
+
+--
+-- Name: tb_aprv_line_step; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_aprv_line_step (
+    req_tp character varying(20) NOT NULL,
+    step_no integer NOT NULL,
+    step_nm character varying(100),
+    aprvr_tp character varying(20) NOT NULL,
+    aprvr_id character varying(50),
+    agree_yn character(1) DEFAULT 'N'::bpchar NOT NULL
+);
+
+
+--
+-- Name: TABLE tb_aprv_line_step; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_aprv_line_step IS '결재선 단계 (104번 WP1)';
+
+
+--
+-- Name: COLUMN tb_aprv_line_step.aprvr_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_line_step.aprvr_tp IS '결재자 방식 — USER(지정 사용자), ROLE(역할의 사용자), ADMIN(관리자 전원), ORG_HEAD(요청자 부서장)';
+
+
+--
+-- Name: COLUMN tb_aprv_line_step.aprvr_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_line_step.aprvr_id IS 'USER 면 사용자 ID, ROLE 이면 역할 ID, ADMIN·ORG_HEAD 면 NULL';
+
+
+--
+-- Name: COLUMN tb_aprv_line_step.agree_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_line_step.agree_yn IS '합의 — Y 면 단계 결재자 전원 승인, N 이면 한 명 승인으로 다음 단계';
+
+
+--
 -- Name: tb_aprv_stats; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -223,7 +371,7 @@ COMMENT ON COLUMN quality.tb_change_history.target_type IS 'WORD, TERM, DOMAIN, 
 -- Name: COLUMN tb_change_history.change_source; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_change_history.change_source IS 'ADMIN_DIRECT / USER_REQUEST / ADMIN_APPROVE / ADMIN_REJECT / BULK_UPLOAD / AUTO_RECOMMEND';
+COMMENT ON COLUMN quality.tb_change_history.change_source IS 'ADMIN_DIRECT / USER_REQUEST / ADMIN_APPROVE / ADMIN_REJECT / BULK_UPLOAD / AUTO_RECOMMEND / APPROVER_EDIT(결재자 수정, 104번 WP1)';
 
 
 --
@@ -1147,6 +1295,102 @@ COMMENT ON TABLE quality.tb_domain_rule IS '도메인별 룰 정의 (1:N) — 70
 
 
 --
+-- Name: tb_notification; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_notification (
+    noti_id bigint NOT NULL,
+    user_id character varying(50) NOT NULL,
+    noti_tp character varying(20) NOT NULL,
+    title character varying(200) NOT NULL,
+    msg character varying(1000),
+    link_tp character varying(20),
+    link_id character varying(50),
+    read_yn character(1) DEFAULT 'N'::bpchar NOT NULL,
+    cret_dt character varying(14) NOT NULL
+);
+
+
+--
+-- Name: TABLE tb_notification; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_notification IS '사용자 알림 (104번 WP1)';
+
+
+--
+-- Name: COLUMN tb_notification.noti_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_notification.noti_tp IS 'APRV_REQ(결재 요청), APRV_STEP(단계 승인), APRV_DONE(최종 승인), APRV_REJECT(반려)';
+
+
+--
+-- Name: COLUMN tb_notification.link_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_notification.link_tp IS '누르면 열 대상 — APRV_DOC';
+
+
+--
+-- Name: tb_notification_noti_id_seq; Type: SEQUENCE; Schema: quality; Owner: -
+--
+
+CREATE SEQUENCE quality.tb_notification_noti_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tb_notification_noti_id_seq; Type: SEQUENCE OWNED BY; Schema: quality; Owner: -
+--
+
+ALTER SEQUENCE quality.tb_notification_noti_id_seq OWNED BY quality.tb_notification.noti_id;
+
+
+--
+-- Name: tb_org; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_org (
+    org_id character varying(40) NOT NULL,
+    org_nm character varying(100) NOT NULL,
+    p_org_id character varying(40),
+    head_user_id character varying(50),
+    sort_ord integer DEFAULT 0 NOT NULL,
+    use_yn character(1) DEFAULT 'Y'::bpchar NOT NULL,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_org; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_org IS '부서 (104번 WP1)';
+
+
+--
+-- Name: COLUMN tb_org.p_org_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_org.p_org_id IS '상위 부서 (NULL = 최상위)';
+
+
+--
+-- Name: COLUMN tb_org.head_user_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_org.head_user_id IS '부서장 (TB_USER.USER_ID) — 결재선의 "요청자 부서장"';
+
+
+--
 -- Name: tb_qual_col_rule; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -2013,8 +2257,16 @@ CREATE TABLE quality.tb_user (
     block_time character varying(14),
     login_fail_count smallint,
     del_yn boolean,
-    phone character varying(20)
+    phone character varying(20),
+    org_id character varying(40)
 );
+
+
+--
+-- Name: COLUMN tb_user.org_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_user.org_id IS '부서 (TB_ORG.ORG_ID) (104번 WP1)';
 
 
 --
@@ -2144,6 +2396,13 @@ ALTER TABLE ONLY quality.tb_data_model_change_history ALTER COLUMN change_seq SE
 --
 
 ALTER TABLE ONLY quality.tb_diag_result ALTER COLUMN result_id SET DEFAULT nextval('quality.tb_diag_result_result_id_seq'::regclass);
+
+
+--
+-- Name: tb_notification noti_id; Type: DEFAULT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_notification ALTER COLUMN noti_id SET DEFAULT nextval('quality.tb_notification_noti_id_seq'::regclass);
 
 
 --
@@ -2354,6 +2613,38 @@ ALTER TABLE ONLY quality.tb_word_dict
 
 
 --
+-- Name: tb_aprv_doc tb_aprv_doc_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_aprv_doc
+    ADD CONSTRAINT tb_aprv_doc_pk PRIMARY KEY (doc_id);
+
+
+--
+-- Name: tb_aprv_doc_step tb_aprv_doc_step_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_aprv_doc_step
+    ADD CONSTRAINT tb_aprv_doc_step_pk PRIMARY KEY (doc_id, step_no, aprvr_user_id);
+
+
+--
+-- Name: tb_aprv_line tb_aprv_line_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_aprv_line
+    ADD CONSTRAINT tb_aprv_line_pk PRIMARY KEY (req_tp);
+
+
+--
+-- Name: tb_aprv_line_step tb_aprv_line_step_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_aprv_line_step
+    ADD CONSTRAINT tb_aprv_line_step_pk PRIMARY KEY (req_tp, step_no);
+
+
+--
 -- Name: tb_aprv_stats tb_aprv_req_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -2471,6 +2762,22 @@ ALTER TABLE ONLY quality.tb_domain_grp
 
 ALTER TABLE ONLY quality.tb_domain
     ADD CONSTRAINT tb_domain_pkey PRIMARY KEY (domain_id);
+
+
+--
+-- Name: tb_notification tb_notification_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_notification
+    ADD CONSTRAINT tb_notification_pk PRIMARY KEY (noti_id);
+
+
+--
+-- Name: tb_org tb_org_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_org
+    ADD CONSTRAINT tb_org_pk PRIMARY KEY (org_id);
 
 
 --
@@ -2613,6 +2920,27 @@ CREATE INDEX imsi_comment_attr_name_idx ON quality.imsi_comment USING btree (att
 
 
 --
+-- Name: ix_aprv_doc_req_user; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_aprv_doc_req_user ON quality.tb_aprv_doc USING btree (req_user_id);
+
+
+--
+-- Name: ix_aprv_doc_step_user; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_aprv_doc_step_user ON quality.tb_aprv_doc_step USING btree (aprvr_user_id, act_stat);
+
+
+--
+-- Name: ix_aprv_doc_target; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_aprv_doc_target ON quality.tb_aprv_doc USING btree (req_tp, target_id);
+
+
+--
 -- Name: ix_diag_result_owner_obj; Type: INDEX; Schema: quality; Owner: -
 --
 
@@ -2638,6 +2966,13 @@ CREATE INDEX ix_diag_schedule_log_schedule ON quality.tb_diag_schedule_log USING
 --
 
 CREATE INDEX ix_domain_rule_dom ON quality.tb_domain_rule USING btree (domain_id, sort_ord);
+
+
+--
+-- Name: ix_notification_user; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_notification_user ON quality.tb_notification USING btree (user_id, read_yn);
 
 
 --
@@ -2907,6 +3242,22 @@ CREATE TRIGGER ts_insert_blocker BEFORE INSERT ON quality.tb_event_log FOR EACH 
 
 
 --
+-- Name: tb_aprv_doc_step tb_aprv_doc_step_doc_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_aprv_doc_step
+    ADD CONSTRAINT tb_aprv_doc_step_doc_fk FOREIGN KEY (doc_id) REFERENCES quality.tb_aprv_doc(doc_id) ON DELETE CASCADE;
+
+
+--
+-- Name: tb_aprv_line_step tb_aprv_line_step_line_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_aprv_line_step
+    ADD CONSTRAINT tb_aprv_line_step_line_fk FOREIGN KEY (req_tp) REFERENCES quality.tb_aprv_line(req_tp) ON DELETE CASCADE;
+
+
+--
 -- Name: tb_data_model tb_data_model_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -2936,6 +3287,14 @@ ALTER TABLE ONLY quality.tb_domain
 
 ALTER TABLE ONLY quality.tb_domain
     ADD CONSTRAINT tb_domain_fk_2 FOREIGN KEY (dict_id, domain_clsf_nm) REFERENCES quality.tb_domain_clsf(dict_id, domain_clsf_nm) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: tb_org tb_org_parent_fk; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_org
+    ADD CONSTRAINT tb_org_parent_fk FOREIGN KEY (p_org_id) REFERENCES quality.tb_org(org_id);
 
 
 --
