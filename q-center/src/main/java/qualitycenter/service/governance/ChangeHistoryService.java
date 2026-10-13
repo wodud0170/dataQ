@@ -2,6 +2,10 @@ package qualitycenter.service.governance;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import org.apache.ibatis.session.SqlSession;
 import org.mybatis.spring.SqlSessionTemplate;
@@ -9,9 +13,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.ndata.quality.common.PermCode;
+import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelChangeHistoryVo;
+import com.ndata.quality.model.std.StdDataModelObjVo;
 
 import qualitycenter.service.auth.SessionService;
+import qualitycenter.service.ddl.DdlDialects;
+import qualitycenter.service.ddl.DdlRuleService;
+import qualitycenter.service.ddl.OracleDialect;
+import qualitycenter.service.ddl.SqlDialect;
 
 /**
  * 88번 거버넌스 — 데이터 모델 변경 이력 INSERT 헬퍼.
@@ -26,6 +36,10 @@ import qualitycenter.service.auth.SessionService;
  *   - TIER1   : schema 영향 변경. 사용자=DRAFT/SUBMITTED, 관리자=APPROVED 즉시
  *   - TIER1_5 : 사용자 UI 차단, 관리자만 가능 (컬럼 순서). 관리자=APPROVED
  *   - TIER2   : 메타 변경. 항상 APPROVED 즉시
+ *
+ * 104번 WP3 — DDL 조각은 모델 데이터소스의 DBMS 문법(SqlDialect)으로 만든다. 데이터소스가 없는 모델은
+ * DDL 내려받기와 같이 Oracle 문법, DDL 규칙이 없는 DBMS 는 "-- … 규칙이 없습니다" 주석 조각([DB 반영] 은 SKIPPED).
+ * 이력의 DDL_DBMS_TP 에 조각의 DBMS 를 남긴다 (데이터소스 없는 모델은 NULL).
  */
 @Service
 public class ChangeHistoryService {
@@ -35,6 +49,12 @@ public class ChangeHistoryService {
 
 	@Autowired
 	private SessionService sessionService;
+
+	@Autowired
+	private DdlDialects dialects;
+
+	@Autowired
+	private DdlRuleService ddlRules;
 
 	private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -62,6 +82,7 @@ public class ChangeHistoryService {
 		vo.setBeforeJson(beforeJson);
 		vo.setAfterJson(afterJson);
 		vo.setDdlSnippet(ddlSnippet);
+		vo.setDdlDbmsTp(ddlSnippet == null ? null : modelDbms(dmId));
 		vo.setAprvStatus(aprvStatus == null ? "APPROVED" : aprvStatus);
 		if ("APPROVED".equals(vo.getAprvStatus())) {
 			vo.setAprvUserId(safeUserId());
@@ -86,80 +107,104 @@ public class ChangeHistoryService {
 		return LocalDateTime.now().format(DT_FMT);
 	}
 
+	// ---- 104번 WP3 — DBMS 별 DDL 조각
+
+	/** 모델 데이터소스의 DBMS_TP. 데이터소스가 없으면 null */
+	private String modelDbms(String dmId) {
+		Map<String, Object> ds = dialects.modelDs(dmId);
+		return ds == null ? null : (String) ds.get("dbmsTp");
+	}
+
+	/** 조각을 만들 dialect. 데이터소스 없으면 Oracle, 규칙 없는 DBMS 면 null */
+	private SqlDialect dialectOf(String dbms) {
+		return dbms == null ? new OracleDialect(ddlRules) : dialects.forDbms(dbms);
+	}
+
+	private static String noRule(String dbms) {
+		return "-- " + dbms + " 용 DDL 규칙이 없습니다";
+	}
+
+	/** 문장들을 ';' 로 잇는다 */
+	private static String join(List<String> stmts) {
+		return stmts.isEmpty() ? null : String.join(";\n", stmts) + ";";
+	}
+
 	/**
-	 * 88번 §8 — Tier 1 변경에 대해 ALTER 문 생성 (DBMS 일반 SQL 기준).
-	 * dialect 분기는 차후. NULL 반환 = snippet 불필요.
+	 * 88번 §8 — 테이블 추가·삭제, 컬럼 추가·삭제의 조각. NULL 반환 = 조각 없음.
+	 * 테이블 추가는 표시(`(...)`)만 남기고, [DB 반영] 때 승인된 컬럼으로 CREATE TABLE 을 만든다.
 	 */
-	public String generateDdlSnippet(String changeType, String objOwner, String objNm, String attrNm,
-	                                  com.ndata.quality.model.std.StdDataModelAttrVo attrVo,
-	                                  com.ndata.quality.model.std.StdDataModelObjVo objVo) {
+	public String generateDdlSnippet(String dmId, String changeType, String objOwner, String objNm, String attrNm,
+	                                  StdDataModelAttrVo attrVo, StdDataModelObjVo objVo) {
 		if (changeType == null) return null;
-		String qOwner = (objOwner != null && !objOwner.isEmpty()) ? (objOwner + ".") : "";
-		String table = qOwner + objNm;
+		String dbms = modelDbms(dmId);
+		SqlDialect d = dialectOf(dbms);
+		if (d == null) return noRule(dbms);
 		switch (changeType) {
 			case "ADD_OBJ":
-				if (objVo != null) {
-					StringBuilder sb = new StringBuilder("CREATE TABLE ").append(table).append(" (...)");
-					if (objVo.getTablespaceNm() != null && !objVo.getTablespaceNm().isEmpty())
-						sb.append(" TABLESPACE ").append(objVo.getTablespaceNm());
-					sb.append(";");
-					return sb.toString();
-				}
-				return "CREATE TABLE " + table + " (...);";
+				StringBuilder sb = new StringBuilder("CREATE TABLE ").append(d.qualify(objOwner, objNm)).append(" (...)");
+				if (objVo != null && objVo.getTablespaceNm() != null && !objVo.getTablespaceNm().isEmpty())
+					sb.append(" TABLESPACE ").append(objVo.getTablespaceNm());
+				return sb.append(";").toString();
 			case "DEL_OBJ":
-				return "DROP TABLE " + table + ";";
+				return d.dropTable(objOwner, objNm) + ";";
 			case "ADD_ATTR":
-				if (attrVo != null) {
-					return "ALTER TABLE " + table + " ADD COLUMN " + attrNm + " "
-						+ (attrVo.getDataType() == null ? "VARCHAR(255)" : attrVo.getDataType())
-						+ (attrVo.getDataLen() > 0 ? "(" + attrVo.getDataLen() + ")" : "")
-						+ ("N".equalsIgnoreCase(attrVo.getNullableYn()) ? " NOT NULL" : "")
-						+ ";";
-				}
-				return "ALTER TABLE " + table + " ADD COLUMN " + attrNm + ";";
+				return attrVo == null ? null : d.addColumn(objOwner, objNm, attrVo) + ";";
 			case "DEL_ATTR":
-				return "ALTER TABLE " + table + " DROP COLUMN " + attrNm + ";";
-			case "MODIFY_ATTR":
-				if (attrVo != null) {
-					return "ALTER TABLE " + table + " ALTER COLUMN " + attrNm + " TYPE "
-						+ (attrVo.getDataType() == null ? "VARCHAR(255)" : attrVo.getDataType())
-						+ (attrVo.getDataLen() > 0 ? "(" + attrVo.getDataLen() + ")" : "")
-						+ ";";
-				}
-				return null;
-			case "SWAP_ATTR_ORD":
-				// 대부분 DBMS 는 컬럼 순서 ALTER 안 함 — DDL snippet 없음
-				return null;
-			case "MODIFY_OBJ":
-				return "-- 테이블 메타 변경: " + table;
+				return d.dropColumn(objOwner, objNm, attrNm) + ";";
 			default:
 				return null;
 		}
 	}
 
+	/** 컬럼 변경 — 이름이 바뀌면 이름 변경, 타입·길이·소수점이 바뀌면 타입 변경 (둘 다면 두 문장, 이름 변경 먼저) */
+	public String generateModifyAttrSnippet(String dmId, String objOwner, String objNm, StdDataModelAttrVo before, StdDataModelAttrVo after) {
+		String dbms = modelDbms(dmId);
+		SqlDialect d = dialectOf(dbms);
+		if (d == null) return noRule(dbms);
+		List<String> stmts = new ArrayList<>();
+		if (!Objects.equals(before.getAttrNm(), after.getAttrNm()))
+			stmts.add(d.renameColumn(objOwner, objNm, before.getAttrNm(), after.getAttrNm(), after));
+		if (!Objects.equals(before.getDataType(), after.getDataType()) || before.getDataLen() != after.getDataLen()
+				|| before.getDataDecimalLen() != after.getDataDecimalLen())
+			stmts.add(d.modifyColumn(objOwner, objNm, after));
+		return join(stmts);
+	}
+
+	/** 테이블 이름·소유자 변경. 소유자를 옮기는 DDL 이 없는 DBMS(Oracle·Tibero)는 주석 조각 */
+	public String generateModifyObjSnippet(String dmId, String origOwner, String origObjNm, String objOwner, String objNm) {
+		String dbms = modelDbms(dmId);
+		SqlDialect d = dialectOf(dbms);
+		if (d == null) return noRule(dbms);
+		List<String> stmts = new ArrayList<>();
+		if (!Objects.equals(origObjNm, objNm)) stmts.add(d.renameTable(origOwner, origObjNm, objNm));
+		if (!Objects.equals(origOwner, objOwner)) {
+			String move = d.changeOwner(origOwner, objNm, objOwner);
+			if (move == null) return "-- " + d.dbmsTp() + " 은 테이블 소유자를 바꾸는 DDL 이 없습니다 (" + origOwner + " → " + objOwner + ")";
+			stmts.add(move);
+		}
+		return join(stmts);
+	}
+
 	/**
-	 * WP0 — PK/FK 변경(ADD_PK·DEL_PK·ADD_FK·DEL_FK)의 ALTER 문. 컬럼은 제약조건 안의 순서대로 준다.
-	 * DEL_PK 에서 cascade 면 이 PK 를 참조하는 FK 도 함께 지운다 (PostgreSQL·Oracle 모두 DROP CONSTRAINT … CASCADE).
-	 * dialect 분기는 generateDdlSnippet 과 함께 WP3 에서.
+	 * WP0 — PK/FK 변경(ADD_PK·DEL_PK·ADD_FK·DEL_FK)의 조각. 컬럼은 제약조건 안의 순서대로 준다.
+	 * DEL_PK 에서 cascade 면 이 PK 를 참조하는 FK 도 함께 지운다 (DBMS 가 지원할 때).
 	 */
-	public String generateConstraintDdlSnippet(String changeType, String objOwner, String objNm, String constraintNm,
-	                                           java.util.List<String> columns,
-	                                           String refOwner, String refTableNm, java.util.List<String> refColumns,
+	public String generateConstraintDdlSnippet(String dmId, String changeType, String objOwner, String objNm, String constraintNm,
+	                                           List<String> columns,
+	                                           String refOwner, String refTableNm, List<String> refColumns,
 	                                           boolean cascade) {
-		String table = (objOwner != null && !objOwner.isEmpty() ? objOwner + "." : "") + objNm;
+		String dbms = modelDbms(dmId);
+		SqlDialect d = dialectOf(dbms);
+		if (d == null) return noRule(dbms);
 		switch (changeType) {
 			case "ADD_PK":
-				return "ALTER TABLE " + table + " ADD CONSTRAINT " + constraintNm
-					+ " PRIMARY KEY (" + String.join(", ", columns) + ");";
+				return d.addPrimaryKey(objOwner, objNm, constraintNm, columns) + ";";
 			case "ADD_FK":
-				String refTable = (refOwner != null && !refOwner.isEmpty() ? refOwner + "." : "") + refTableNm;
-				return "ALTER TABLE " + table + " ADD CONSTRAINT " + constraintNm
-					+ " FOREIGN KEY (" + String.join(", ", columns) + ") REFERENCES " + refTable
-					+ " (" + String.join(", ", refColumns) + ");";
+				return d.addForeignKey(objOwner, objNm, constraintNm, columns, refOwner, refTableNm, refColumns) + ";";
 			case "DEL_PK":
-				return "ALTER TABLE " + table + " DROP CONSTRAINT " + constraintNm + (cascade ? " CASCADE" : "") + ";";
+				return d.dropPrimaryKey(objOwner, objNm, constraintNm, cascade) + ";";
 			case "DEL_FK":
-				return "ALTER TABLE " + table + " DROP CONSTRAINT " + constraintNm + ";";
+				return d.dropForeignKey(objOwner, objNm, constraintNm) + ";";
 			default:
 				return null;
 		}

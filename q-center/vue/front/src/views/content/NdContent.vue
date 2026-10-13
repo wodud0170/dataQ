@@ -333,6 +333,13 @@
                     <system :key="systemKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 104번 WP3 — DDL 규칙 -->
+            <div v-if="this.activeContent === 'ddlRule'" id="tab_ddl_rule" class="tab_contents"
+                :class="{ active: this.activeContent === 'ddlRule' }">
+                <keep-alive>
+                    <ddlRule :key="ddlRuleKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'scurrent'" id="tab_scurrent" class="tab_contents"
                 :class="{ active: this.activeContent === 'scurrent' }">
                 <keep-alive>
@@ -451,6 +458,7 @@ import DSQualColRule      from "./../../components/DSQualColRule.vue"
 import DSQualStats        from "./../../components/DSQualStats.vue"
 import DSScheduleLog from "./../../components/DSScheduleLog.vue"
 import MMSystem from "./../../components/MMSystem.vue"
+import MMDdlRule from "./../../components/MMDdlRule.vue"
 import ANDscurrent from "./../../components/ANDscurrent.vue"
 import ANDqcurrent from "./../../components/ANDqcurrent.vue"
 import draggable from "vuedraggable"
@@ -535,6 +543,7 @@ export default {
             qualColRuleKey:      this.createUUID(),
             qualStatsKey:        this.createUUID(),
             systemKey: this.createUUID(),
+            ddlRuleKey: this.createUUID(),
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
             changeHistoryKey: this.createUUID(),
@@ -595,6 +604,7 @@ export default {
         "qualColRule":      DSQualColRule,
         "qualStats":        DSQualStats,
         "system": MMSystem,
+        "ddlRule": MMDdlRule,
         "scurrent": ANDscurrent,
         "qcurrent": ANDqcurrent,
         "changeHistory": DSChangeHistory,
@@ -741,6 +751,9 @@ export default {
                     break;
                 case "system":
                     this.systemKey = this.createUUID();
+                    break;
+                case "ddlRule":
+                    this.ddlRuleKey = this.createUUID();
                     break;
                 case "scurrent":
                     this.scurrentKey = this.createUUID();

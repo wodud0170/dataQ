@@ -25,6 +25,9 @@ public class StdDataModelChangeHistoryVo {
 	private String beforeJson;
 	private String afterJson;
 	private String ddlSnippet;
+	private String ddlDbmsTp;      // 104번 WP3 — 조각을 만든 DBMS (모델 데이터소스 DBMS_TP, 데이터소스 없는 모델은 null)
+	private String dsNm;           // 조회 전용 — 모델 데이터소스 이름 ([DB 반영] 대상)
+	private String dsDbmsTp;       // 조회 전용 — 모델 데이터소스 DBMS
 	private String aprvStatus;     // DRAFT / SUBMITTED / APPROVED / REJECTED (해당 변경의 승인 상태)
 	private String aprvUserId;
 	private String aprvDt;

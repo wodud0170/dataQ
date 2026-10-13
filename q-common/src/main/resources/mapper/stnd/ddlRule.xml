@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ddlRule">
+
+	<!-- 104번 WP3 — DDL 규칙.
+	     TB_DATA_TYPE_MAP 데이터 타입 → DBMS 별 물리 타입 틀. 틀의 {len}·{dec} 는 길이·소수점, [...] 는 안의 값이 모두 있을 때만 남는 구간.
+	     TB_SYS_CONF 설정 (DDL_PK_NM_TMPL = PK 이름 규칙). -->
+
+	<select id="selectTypeMapList" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT DATA_TYPE      as "dataType"
+		      ,DBMS_TP        as "dbmsTp"
+		      ,PHYS_DATA_TYPE as "physDataType"
+		      ,DFLT_DATA_LEN  as "dfltDataLen"
+		      ,UPDT_DT        as "updtDt"
+		      ,UPDT_USER_ID   as "updtUserId"
+		  FROM TB_DATA_TYPE_MAP
+		<where>
+			<if test="dbmsTp != null and dbmsTp != ''">DBMS_TP = #{dbmsTp}</if>
+		</where>
+		 ORDER BY DBMS_TP, DATA_TYPE
+	</select>
+
+	<select id="countTypeMap" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_TYPE_MAP WHERE DATA_TYPE = #{dataType} AND DBMS_TP = #{dbmsTp}
+	</select>
+
+	<insert id="insertTypeMap" parameterType="java.util.Map">
+		INSERT INTO TB_DATA_TYPE_MAP (DATA_TYPE, DBMS_TP, PHYS_DATA_TYPE, DFLT_DATA_LEN, CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{dataType}, #{dbmsTp}, #{physDataType}, #{dfltDataLen, jdbcType=INTEGER}, #{now}, #{userId}, #{now}, #{userId})
+	</insert>
+
+	<update id="updateTypeMap" parameterType="java.util.Map">
+		UPDATE TB_DATA_TYPE_MAP
+		   SET PHYS_DATA_TYPE = #{physDataType}
+		      ,DFLT_DATA_LEN  = #{dfltDataLen, jdbcType=INTEGER}
+		      ,UPDT_DT        = #{now}
+		      ,UPDT_USER_ID   = #{userId}
+		 WHERE DATA_TYPE = #{dataType} AND DBMS_TP = #{dbmsTp}
+	</update>
+
+	<delete id="deleteTypeMap" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_TYPE_MAP WHERE DATA_TYPE = #{dataType} AND DBMS_TP = #{dbmsTp}
+	</delete>
+
+	<select id="selectConf" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT CONF_KEY     as "confKey"
+		      ,CONF_VAL     as "confVal"
+		      ,CONF_DESC    as "confDesc"
+		      ,UPDT_DT      as "updtDt"
+		      ,UPDT_USER_ID as "updtUserId"
+		  FROM TB_SYS_CONF
+		 WHERE CONF_KEY = #{confKey}
+	</select>
+
+	<update id="updateConf" parameterType="java.util.Map">
+		UPDATE TB_SYS_CONF
+		   SET CONF_VAL     = #{confVal}
+		      ,UPDT_DT      = #{now}
+		      ,UPDT_USER_ID = #{userId}
+		 WHERE CONF_KEY = #{confKey}
+	</update>
+
+	<!-- 모델의 데이터소스 DBMS (데이터소스가 없으면 행 없음) -->
+	<select id="selectModelDs" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT D.DS_ID   as "dsId"
+		      ,D.DSN     as "dsn"
+		      ,D.DBMS_TP as "dbmsTp"
+		  FROM TB_DATA_MODEL M
+		  JOIN ndata.TB_DATA_SOURCE D ON D.DS_ID = M.DM_DS_ID
+		 WHERE M.DM_ID = #{dmId}
+	</select>
+
+	<!-- 신규 테이블 생성용 — 테이블 1개 -->
+	<select id="selectObj" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
+		SELECT O.DM_ID         as dataModelId
+		      ,O.OBJ_OWNER     as objOwner
+		      ,O.OBJ_NM        as objNm
+		      ,O.OBJ_NM_KR     as objNmKr
+		      ,O.OBJ_DESC      as objDesc
+		      ,O.OBJ_COMMENT   as objComment
+		      ,O.TABLESPACE_NM as tablespaceNm
+		  FROM TB_DATA_MODEL_OBJ O
+		 WHERE O.DM_ID = #{dmId}
+		   AND COALESCE(O.OBJ_OWNER, '') = #{objOwner}
+		   AND O.OBJ_NM = #{objNm}
+	</select>
+
+	<!-- 신규 테이블 생성용 — 테이블 1개의 승인된 컬럼 (승인 대기 중인 추가 컬럼은 빼고, 승인 대기 중인 삭제는 아직 있는 컬럼으로 넣는다) -->
+	<select id="selectApprovedAttrsOfObj" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdDataModelAttrVo">
+		SELECT A.ATTR_NM          as attrNm
+		      ,A.ATTR_NM_KR       as attrNmKr
+		      ,A.DATA_TYPE        as dataType
+		      ,A.DATA_LEN         as dataLen
+		      ,A.DATA_DECIMAL_LEN as dataDecimalLen
+		      ,A.NULLABLE_YN      as nullableYn
+		      ,A.DEFAULT_VAL      as defaultVal
+		      ,A.PK_YN            as pkYn
+		      ,A.ATTR_COMMENT     as attrComment
+		      ,A.ATTR_ORD         as attrOrder
+		  FROM TB_DATA_MODEL_ATTR A
+		 WHERE A.DM_ID = #{dmId}
+		   AND COALESCE(A.OBJ_OWNER, '') = #{objOwner}
+		   AND A.OBJ_NM = #{objNm}
+		   AND COALESCE(A.APRV_STATUS, 'APPROVED') = 'APPROVED'
+		 ORDER BY A.ATTR_ORD, A.ATTR_NM
+	</select>
+
+	<!-- 신규 테이블 생성용 — 테이블 1개의 승인된 제약조건 (DdlGenerator 의 PK·UK·FK 줄) -->
+	<select id="selectApprovedConstraintsOfObj" parameterType="java.util.Map" resultType="java.util.HashMap">
+		SELECT OBJ_OWNER AS "objOwner", TABLE_NM AS "tableNm", CONSTRAINT_NM AS "constraintNm",
+			CONSTRAINT_TYPE AS "constraintType", COLUMN_NM AS "columnNm", COLUMN_POS AS "columnPos",
+			REF_OWNER AS "refOwner", REF_TABLE_NM AS "refTableNm", REF_COLUMN_NM AS "refColumnNm",
+			DELETE_RULE AS "deleteRule"
+		  FROM TB_DATA_MODEL_CONSTRAINT
+		 WHERE DM_ID = #{dmId}
+		   AND COALESCE(OBJ_OWNER, '') = #{objOwner}
+		   AND TABLE_NM = #{objNm}
+		   AND USE_YN = 'Y'
+		   AND COALESCE(APRV_STATUS, 'APPROVED') = 'APPROVED'
+		 ORDER BY CONSTRAINT_NM, COLUMN_POS
+	</select>
+</mapper>

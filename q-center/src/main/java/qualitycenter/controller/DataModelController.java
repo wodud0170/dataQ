@@ -58,7 +58,9 @@ import com.ndata.quality.service.ExcelDownloadService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
+import qualitycenter.service.ddl.DdlDialects;
 import qualitycenter.service.ddl.DdlGenerator;
+import qualitycenter.service.ddl.DdlRuleService;
 import qualitycenter.service.ws.WebSocketService;
 import qualitycenter.util.ErwinXmlParser;
 import qualitycenter.util.ErwinXmlParser.ErwinParseResult;
@@ -169,6 +171,12 @@ public class DataModelController {
 	@Autowired
 	private DdlGenerator ddlGenerator;
 
+	@Autowired
+	private DdlRuleService ddlRules;
+
+	@Autowired
+	private DdlDialects ddlDialects;
+
 	/**
 	 * 데이터모델 등록 API
 	 *
@@ -262,8 +270,8 @@ public class DataModelController {
 	 * 데이터모델 DDL 다운로드
 	 *
 	 * @param dataModelId 데이터모델 ID
-	 * @param dbType      DB 타입 (oracle/postgres 등). 미지정 시 모델의 데이터소스 driverName 으로 자동 판정.
-	 *                    물리 DB 미연결(데이터소스 미지정/누락)이거나 driverName 식별 불가 시 'oracle' 로 폴백.
+	 * @param dbType      DBMS (Oracle·Tibero·PostgreSQL·MariaDB·SQLServer). 미지정 시 모델 데이터소스의 DBMS.
+	 *                    데이터소스가 없거나 DDL 규칙이 없는 DBMS 면 Oracle 문법 (DdlGenerator).
 	 * @param response    HTTP 응답 (파일 스트림)
 	 */
 	@RequestMapping(value = "/downloadDdl", method = RequestMethod.GET)
@@ -277,7 +285,8 @@ public class DataModelController {
 
 			String resolvedDbType = dbType;
 			if (resolvedDbType == null || resolvedDbType.trim().isEmpty()) {
-				resolvedDbType = resolveDbTypeByModel(dataModelId);
+				Map<String, Object> ds = ddlDialects.modelDs(dataModelId);
+				resolvedDbType = ds == null ? null : (String) ds.get("dbmsTp");
 			}
 
 			String ddl = ddlGenerator.generate(dataModelId, resolvedDbType);
@@ -295,27 +304,6 @@ public class DataModelController {
 		} catch (Exception e) {
 			log.error(">> downloadDdl failed : {}", e.getMessage(), e);
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-		}
-	}
-
-	private String resolveDbTypeByModel(String dataModelId) {
-		// 정책: 물리 DB 가 연결돼 있으면 그 DBMS 의 타입 (driverName 으로 판별), 미연결/식별 불가 시 'oracle' 폴백
-		try {
-			Map<String, Object> model = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataModelId);
-			if (model == null) return "oracle";
-			String dsId = model.get("dataModelDsId") == null ? null : String.valueOf(model.get("dataModelDsId"));
-			if (dsId == null || dsId.trim().isEmpty() || "null".equals(dsId)) return "oracle";
-			DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
-			if (ds == null) return "oracle";
-			String driverName = ds.getDriverName();
-			if (driverName == null) return "oracle";
-			String lower = driverName.toLowerCase();
-			if (lower.contains("oracle")) return "oracle";
-			if (lower.contains("postgres")) return "postgres";
-			return "oracle";
-		} catch (Exception e) {
-			log.warn("resolveDbTypeByModel failed: {}", e.getMessage());
-			return "oracle";
 		}
 	}
 
@@ -988,7 +976,7 @@ public class DataModelController {
 			changeHistory.record(session, objVo.getDataModelId(), "ADD_OBJ", "TIER1",
 					objVo.getObjOwner(), objVo.getObjNm(), null, null, null,
 					null, toJsonSafe(objVo),
-					changeHistory.generateDdlSnippet("ADD_OBJ", objVo.getObjOwner(), objVo.getObjNm(), null, null, objVo),
+					changeHistory.generateDdlSnippet(objVo.getDataModelId(), "ADD_OBJ", objVo.getObjOwner(), objVo.getObjNm(), null, null, objVo),
 					addObjAprvStatus);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
@@ -1090,7 +1078,7 @@ public class DataModelController {
 			if (pendingDel > 0) throw new IllegalStateException("이 테이블의 PK 삭제가 승인 대기 중입니다. 승인·반려된 뒤에 PK 를 만드세요.");
 
 			String pkName = (String) body.get("pkName");
-			if (pkName == null || pkName.trim().isEmpty()) pkName = "PK_" + tableNm.toUpperCase();
+			if (pkName == null || pkName.trim().isEmpty()) pkName = ddlRules.pkName(tableNm.toUpperCase());   // 104번 WP3 — DDL 규칙의 PK 이름 규칙
 			pkName = pkName.trim().toUpperCase();
 			// 모델 내 이름 중복이면 _2, _3 접미
 			Map<String, Object> chk = new HashMap<>();
@@ -1156,7 +1144,7 @@ public class DataModelController {
 			changeHistory.record(session, dataModelId, "ADD_PK", "TIER1",
 					objOwner, tableNm, null, pkName, idxName,
 					toJsonSafe(before), toJsonSafe(after),
-					changeHistory.generateConstraintDdlSnippet("ADD_PK", objOwner, tableNm, pkName, columns,
+					changeHistory.generateConstraintDdlSnippet(dataModelId, "ADD_PK", objOwner, tableNm, pkName, columns,
 							null, null, null, false),
 					aprvStatus);
 			session.commit();
@@ -1265,7 +1253,7 @@ public class DataModelController {
 			changeHistory.record(session, dataModelId, "ADD_FK", "TIER1",
 					objOwner, tableNm, null, fkName, null,
 					toJsonSafe(before), toJsonSafe(after),
-					changeHistory.generateConstraintDdlSnippet("ADD_FK", objOwner, tableNm, fkName, ownCols,
+					changeHistory.generateConstraintDdlSnippet(dataModelId, "ADD_FK", objOwner, tableNm, fkName, ownCols,
 							refOwner, refTableNm, refCols, false),
 					aprvStatus);
 			session.commit();
@@ -1446,7 +1434,7 @@ public class DataModelController {
 			changeHistory.record(session, dataModelId, "DEL_PK", "TIER1",
 					objOwner, tableNm, null, pkName, pkName,
 					toJsonSafe(before), null,
-					changeHistory.generateConstraintDdlSnippet("DEL_PK", objOwner, tableNm, pkName, pkCols,
+					changeHistory.generateConstraintDdlSnippet(dataModelId, "DEL_PK", objOwner, tableNm, pkName, pkCols,
 							null, null, null, !cascadedFks.isEmpty()),
 					aprvStatus);
 			session.commit();
@@ -1523,7 +1511,7 @@ public class DataModelController {
 			changeHistory.record(session, dataModelId, "DEL_FK", "TIER1",
 					objOwner, tableNm, null, fkName, null,
 					toJsonSafe(before), null,
-					changeHistory.generateConstraintDdlSnippet("DEL_FK", objOwner, tableNm, fkName, ownCols,
+					changeHistory.generateConstraintDdlSnippet(dataModelId, "DEL_FK", objOwner, tableNm, fkName, ownCols,
 							null, null, null, false),
 					aprvStatus);
 			session.commit();
@@ -1728,9 +1716,14 @@ public class DataModelController {
 			Map<String, Object> afterObj = new HashMap<>();
 			afterObj.put("objOwner", objOwner);
 			afterObj.put("objNm",    newObjNm != null ? newObjNm : origObjNm);
+			// 104번 WP3 — 이름·소유자가 바뀐 경우(TIER1)만 조각
 			changeHistory.record(null, dataModelId, "MODIFY_OBJ", updObjTier,
 					objOwner, newObjNm != null ? newObjNm : origObjNm, null, null, null,
-					toJsonSafe(beforeObj), toJsonSafe(afterObj), null, updObjAprvStatus);
+					toJsonSafe(beforeObj), toJsonSafe(afterObj),
+					"TIER1".equals(updObjTier)
+							? changeHistory.generateModifyObjSnippet(dataModelId, origOwner, origObjNm, objOwner, newObjNm != null ? newObjNm : origObjNm)
+							: null,
+					updObjAprvStatus);
 
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -1773,7 +1766,7 @@ public class DataModelController {
 			changeHistory.record(session, objVo.getDataModelId(), "DEL_OBJ", "TIER1",
 					(String)param.get("objOwner"), objVo.getObjNm(), null, null, null,
 					null, null,
-					changeHistory.generateDdlSnippet("DEL_OBJ", (String)param.get("objOwner"), objVo.getObjNm(), null, null, null),
+					changeHistory.generateDdlSnippet(objVo.getDataModelId(), "DEL_OBJ", (String)param.get("objOwner"), objVo.getObjNm(), null, null, null),
 					delObjAprvStatus);
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
@@ -1839,7 +1832,7 @@ public class DataModelController {
 					changeHistory.record(session, dataModelId, "DEL_OBJ", "TIER1",
 							objOwner, objNm, null, null, null,
 							null, null,
-							changeHistory.generateDdlSnippet("DEL_OBJ", objOwner, objNm, null, null, null),
+							changeHistory.generateDdlSnippet(dataModelId, "DEL_OBJ", objOwner, objNm, null, null, null),
 							aprvStatus);
 					deleted++;
 				} catch (Exception inner) {
@@ -2178,7 +2171,7 @@ public class DataModelController {
 			changeHistory.record(session, attrVo.getDataModelId(), "ADD_ATTR", "TIER1",
 					attrVo.getObjOwner(), attrVo.getObjNm(), attrVo.getAttrNm(), null, null,
 					null, toJsonSafe(attrVo),
-					changeHistory.generateDdlSnippet("ADD_ATTR", attrVo.getObjOwner(), attrVo.getObjNm(),
+					changeHistory.generateDdlSnippet(attrVo.getDataModelId(), "ADD_ATTR", attrVo.getObjOwner(), attrVo.getObjNm(),
 							attrVo.getAttrNm(), attrVo, null),
 					addAprvStatus);
 			session.commit();
@@ -2266,7 +2259,7 @@ public class DataModelController {
 			changeHistory.record(session, attrVo.getDataModelId(), "DEL_ATTR", "TIER1",
 					(String) param.get("objOwner"), attrVo.getObjNm(), attrVo.getAttrNm(), null, null,
 					null, null,
-					changeHistory.generateDdlSnippet("DEL_ATTR", (String) param.get("objOwner"),
+					changeHistory.generateDdlSnippet(attrVo.getDataModelId(), "DEL_ATTR", (String) param.get("objOwner"),
 							attrVo.getObjNm(), attrVo.getAttrNm(), null, null),
 					delAttrStatus);
 			session.commit();
@@ -2486,7 +2479,7 @@ public class DataModelController {
 						changeHistory.record(session, dataModelId, "ADD_ATTR", "TIER1",
 								objOwner, objNm, addAttrNm, null, null,
 								null, toJsonSafe(vo),
-								changeHistory.generateDdlSnippet("ADD_ATTR", objOwner, objNm, addAttrNm, vo, null),
+								changeHistory.generateDdlSnippet(dataModelId, "ADD_ATTR", objOwner, objNm, addAttrNm, vo, null),
 								addAprvStatus);
 					} else if ("UPDATE".equalsIgnoreCase(mode)) {
 						// origAttrNm = DB 의 PK 매칭용 — DB 에 저장된 case 그대로 유지 (UPPER 처리 X)
@@ -2646,7 +2639,7 @@ public class DataModelController {
 						changeHistory.record(session, dataModelId, "MODIFY_ATTR", updTier,
 								objOwner, objNm, newAttrNm, null, null,
 								toJsonSafe(existing), toJsonSafe(vo),
-								"TIER1".equals(updTier) ? changeHistory.generateDdlSnippet("MODIFY_ATTR", objOwner, objNm, newAttrNm, vo, null) : null,
+								"TIER1".equals(updTier) ? changeHistory.generateModifyAttrSnippet(dataModelId, objOwner, objNm, existing, vo) : null,
 								updAprvStatus);
 					} else if ("DELETE".equalsIgnoreCase(mode)) {
 						String attrNm = str(row.get("attrNm"));
@@ -2671,7 +2664,7 @@ public class DataModelController {
 						changeHistory.record(session, dataModelId, "DEL_ATTR", "TIER1",
 								objOwner, objNm, attrNm, null, null,
 								null, null,
-								changeHistory.generateDdlSnippet("DEL_ATTR", objOwner, objNm, attrNm, null, null),
+								changeHistory.generateDdlSnippet(dataModelId, "DEL_ATTR", objOwner, objNm, attrNm, null, null),
 								delAprvStatus);
 					} else {
 						throw new IllegalArgumentException("알 수 없는 mode: " + mode);

@@ -337,7 +337,7 @@
         <v-card-title class="indigo white--text">PK 생성 — {{ pkForm.objNm }}</v-card-title>
         <v-card-text class="pt-4">
           <v-text-field v-model="pkForm.pkName" label="PK 이름" dense
-            :placeholder="'PK_' + (pkForm.objNm || '').toUpperCase()" hint="비우면 자동 생성"
+            :placeholder="pkNameTemplate.split('{TABLE}').join((pkForm.objNm || '').toUpperCase())" hint="비우면 PK 이름 규칙(관리 > DDL 규칙)으로 자동 생성"
             persistent-hint />
           <div class="mt-3" style="font-size:.85rem; color:#37474F;">
             PK 구성 컬럼 (순서 중요)
@@ -587,6 +587,7 @@ export default {
     constraintsByKey: {},
     pkDialog: false,
     pkForm: { dataModelId: null, objOwner: '', objNm: '', pkName: '', columns: [] },
+    pkNameTemplate: 'PK_{TABLE}',
     fkDialog: false,
     fkForm: { dataModelId: null, objOwner: '', objNm: '', fkName: '',
               refOwner: '', refTableNm: '', refTableKey: null,
@@ -933,6 +934,10 @@ export default {
         columns: [item.attrNm],
       };
       this.pkDialog = true;
+      // 104번 WP3 — 비우면 쓰일 이름을 DDL 규칙(PK 이름 규칙)으로 보여 준다
+      axios.get(this.$APIURL.base + 'api/ddlRule/pkTemplate').then(res => {
+        if (res.data && res.data.resultCode === 200 && res.data.contents) this.pkNameTemplate = res.data.contents;
+      });
     },
     submitPk() {
       const cols = (this.pkForm.columns || []).filter(c => c);

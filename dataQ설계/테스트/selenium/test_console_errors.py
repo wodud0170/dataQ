@@ -40,6 +40,7 @@ MENUS = [
     "nav_scheduleManage", "nav_scheduleLog",
     "nav_myProfile", "nav_myRequest", "nav_my_dm_changes",
     "nav_approval", "nav_dm_approval", "nav_area_mgmt", "nav_datasource", "nav_user",
+    "nav_roles", "nav_system", "nav_ddlRule",   # 104 WP2·WP3
 ]
 
 results = []

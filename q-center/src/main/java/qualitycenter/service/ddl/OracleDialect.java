@@ -1,58 +1,31 @@
 package qualitycenter.service.ddl;
 
-public class OracleDialect implements SqlDialect {
+import com.ndata.quality.model.std.StdDataModelAttrVo;
 
-	@Override
-	public String name() { return "oracle"; }
+public class OracleDialect extends AbstractDialect {
 
-	@Override
-	public String columnType(String dataType, Long dataLen, Short dataDecimalLen) {
-		if (dataType == null) return "VARCHAR2(255 CHAR)";
-		String t = dataType.trim().toUpperCase();
-		long len = dataLen == null ? 0L : dataLen;
-		short dec = dataDecimalLen == null ? 0 : dataDecimalLen;
-
-		switch (t) {
-			case "VARCHAR":
-			case "VARCHAR2":
-				return "VARCHAR2(" + (len > 0 ? len : 255) + " CHAR)";
-			case "CHAR":
-				return "CHAR(" + (len > 0 ? len : 1) + ")";
-			case "NUMERIC":
-			case "NUMBER":
-			case "DECIMAL":
-				if (len > 0 && dec > 0) return "NUMBER(" + len + "," + dec + ")";
-				if (len > 0) return "NUMBER(" + len + ")";
-				return "NUMBER";
-			case "INT":
-			case "INTEGER":
-				return "NUMBER(10)";
-			case "BIGINT":
-				return "NUMBER(19)";
-			case "DATE":
-				return "DATE";
-			case "TIMESTAMP":
-				return "TIMESTAMP";
-			case "TEXT":
-			case "CLOB":
-				return "CLOB";
-			case "BLOB":
-			case "BYTEA":
-				return "BLOB";
-			default:
-				if (len > 0 && dec > 0) return t + "(" + len + "," + dec + ")";
-				if (len > 0) return t + "(" + len + ")";
-				return t;
-		}
+	public OracleDialect(DdlRuleService rules) {
+		super(rules);
 	}
 
 	@Override
-	public String commentOnTable(String tableName, String comment) {
-		return "COMMENT ON TABLE " + tableName + " IS '" + escapeStringLiteral(comment) + "';";
+	public String dbmsTp() { return "Oracle"; }
+
+	/** Oracle 은 테이블을 다른 스키마로 옮기는 DDL 이 없다 (새 스키마에 다시 만들어야 한다) */
+	@Override
+	public String changeOwner(String owner, String table, String newOwner) {
+		return null;
 	}
 
 	@Override
-	public String commentOnColumn(String tableName, String columnName, String comment) {
-		return "COMMENT ON COLUMN " + tableName + "." + columnName + " IS '" + escapeStringLiteral(comment) + "';";
+	public String addColumn(String owner, String table, StdDataModelAttrVo a) {
+		return "ALTER TABLE " + qualify(owner, table) + " ADD (" + columnDef(a) + ")";
+	}
+
+	/** 타입만 바꾼다. NULL 여부를 같이 적으면 이미 그 상태일 때 ORA-01442·01451 이 난다 */
+	@Override
+	public String modifyColumn(String owner, String table, StdDataModelAttrVo a) {
+		return "ALTER TABLE " + qualify(owner, table) + " MODIFY (" + a.getAttrNm() + " "
+				+ columnType(a.getDataType(), a.getDataLen(), a.getDataDecimalLen()) + ")";
 	}
 }

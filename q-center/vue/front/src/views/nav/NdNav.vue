@@ -497,6 +497,15 @@
                         <v-list-item-title>데이터 소스</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 104번 WP3 — DDL 규칙 (데이터 소스 관리 권한) -->
+                    <v-list-item v-if="$can('DS_ADMIN')" link id="nav_ddlRule" href="#tab_ddl_rule" active-class="ndColor--text" title="DDL 규칙"
+                        v-on:click.stop=" addTabItem('DDL 규칙', 'ddlRule'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>DDL 규칙</v-list-item-title>
+                    </v-list-item>
+
                     <!-- 104번 WP2 — 시스템 계층 (시스템 관리 권한) -->
                     <v-list-item v-if="$can('SYS_ADMIN')" link id="nav_system" href="#tab_system" active-class="ndColor--text" title="시스템"
                         v-on:click.stop=" addTabItem('시스템', 'system'); ">

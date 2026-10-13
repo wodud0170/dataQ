@@ -109,16 +109,12 @@
                       <v-list dense>
                         <v-list-item @click="downloadDdl(props.item, '')">
                           <v-list-item-icon class="mr-2"><v-icon small>mdi-auto-fix</v-icon></v-list-item-icon>
-                          <v-list-item-title>자동 (연결된 DBMS, 미연결 시 Oracle)</v-list-item-title>
+                          <v-list-item-title>자동 (연결된 DBMS, 미연결·규칙 없는 DBMS 는 Oracle)</v-list-item-title>
                         </v-list-item>
                         <v-divider />
-                        <v-list-item @click="downloadDdl(props.item, 'postgres')">
-                          <v-list-item-icon class="mr-2"><v-icon small>mdi-elephant</v-icon></v-list-item-icon>
-                          <v-list-item-title>PostgreSQL</v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="downloadDdl(props.item, 'oracle')">
-                          <v-list-item-icon class="mr-2"><v-icon small>mdi-database</v-icon></v-list-item-icon>
-                          <v-list-item-title>Oracle</v-list-item-title>
+                        <v-list-item v-for="d in ddlDbmsList" :key="d.value" @click="downloadDdl(props.item, d.value)">
+                          <v-list-item-icon class="mr-2"><v-icon small>{{ d.icon }}</v-icon></v-list-item-icon>
+                          <v-list-item-title>{{ d.text }}</v-list-item-title>
                         </v-list-item>
                       </v-list>
                     </v-menu>
@@ -237,7 +233,15 @@ export default {
 
   },
   data: () => ({
-    // 
+    // 104번 WP3 — DDL 규칙이 있는 DBMS (값은 데이터소스 DBMS 유형)
+    ddlDbmsList: [
+      { value: 'Oracle', text: 'Oracle', icon: 'mdi-database' },
+      { value: 'Tibero', text: 'Tibero', icon: 'mdi-database' },
+      { value: 'PostgreSQL', text: 'PostgreSQL', icon: 'mdi-elephant' },
+      { value: 'MariaDB', text: 'MariaDB', icon: 'mdi-database' },
+      { value: 'SQLServer', text: 'SQL Server', icon: 'mdi-database' },
+    ],
+    //
     dmStatusItems: [],
     // 데이터 모델 테이블 리스트
     dmTableItems: [],

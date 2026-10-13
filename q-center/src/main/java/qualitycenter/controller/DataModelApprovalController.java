@@ -22,6 +22,9 @@ import com.ndata.common.message.RestResult;
 
 import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
+import qualitycenter.service.ddl.DdlDialects;
+import qualitycenter.service.ddl.DdlGenerator;
+import qualitycenter.service.ddl.SqlDialect;
 import qualitycenter.service.governance.ChangeHistoryService;
 import reactor.core.publisher.Mono;
 
@@ -43,6 +46,8 @@ public class DataModelApprovalController {
 	@Autowired private SessionService sessionService;
 	@Autowired private ChangeHistoryService changeHistory;
 	@Autowired private com.ndata.quality.tool.DataSourceUtils dataSourceUtils;
+	@Autowired private DdlDialects ddlDialects;
+	@Autowired private DdlGenerator ddlGenerator;
 
 	private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -477,9 +482,13 @@ public class DataModelApprovalController {
 	}
 
 	/**
-	 * 88번 §8 — 변경 이력의 DDL_SNIPPET 을 실제 DB 에 실행.
+	 * 88번 §8 — 변경 이력의 DDL 을 실제 DB 에 실행.
 	 * 104번 WP2 — DB 반영 권한(DDL_EXEC)은 시스템 단위다. 건마다 그 변경의 모델이 속한 시스템
 	 * (TB_DATA_MODEL.DM_SYS_CD)에 대한 권한을 본다. 시스템이 없는 모델은 모든 시스템으로 받은 권한만 통한다.
+	 * 104번 WP3 — 실행 대상은 모델의 데이터소스로 고정한다. 조각의 DBMS 가 데이터소스 DBMS 와 다르면 실행하지 않는다.
+	 * 테이블 추가는 그 테이블의 승인된 컬럼·제약조건으로 CREATE TABLE 을 만들어 실행하고(실행한 문장으로 조각을 바꾼다),
+	 * 같은 테이블의 그 뒤 승인된 미반영 변경은 CREATE TABLE 에 포함된 것으로 기록한다. 조각은 문장 단위로 나눠 차례로 실행한다.
+	 * 응답 contents = {success, failed, noPriv, skipped, messages}
 	 */
 	@PostMapping("/execDdl")
 	@SuppressWarnings("unchecked")
@@ -488,46 +497,84 @@ public class DataModelApprovalController {
 		try {
 			if (!sessionService.hasPerm(PermCode.DDL_EXEC)) throw new IllegalStateException("권한이 없습니다 (DB 반영 권한 필요)");
 			List<Object> seqList = (List<Object>) body.get("changeSeqList");
-			String dsId = (String) body.get("dsId");
 			if (seqList == null || seqList.isEmpty()) throw new IllegalArgumentException("changeSeqList 필수");
-			if (dsId == null || dsId.isEmpty()) throw new IllegalArgumentException("dsId 필수");
 
-			com.ndata.model.DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
-			if (ds == null) throw new IllegalStateException("데이터소스 없음: " + dsId);
-
-			int success = 0, failed = 0, noPriv = 0;
-			java.util.List<String> messages = new java.util.ArrayList<>();
+			int success = 0, failed = 0, noPriv = 0, skipped = 0;
+			List<String> messages = new ArrayList<>();
 			String adminId = changeHistory.safeUserId();
 			String now = LocalDateTime.now().format(DT_FMT);
 			for (Object seq : seqList) {
 				Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
-				if (hist == null) { failed++; messages.add(seq + ": history 없음"); continue; }
+				if (hist == null) { failed++; messages.add(seq + ": 이력이 없습니다"); continue; }
 				String sysCd = sqlSessionTemplate.selectOne("role.selectSysCdByChangeSeq", seq);
 				if (!sessionService.hasPerm(PermCode.DDL_EXEC, sysCd)) {
 					failed++;
 					messages.add(seq + ": 이 모델의 시스템(" + (sysCd == null ? "지정 안 됨" : sysCd) + ")에 대한 DB 반영 권한이 없습니다");
 					continue;
 				}
-				String ddl = (String) hist.get("ddl_snippet");
-				if (ddl == null || ddl.trim().isEmpty() || ddl.startsWith("--") || ddl.contains("(...)")) {
-					failed++; messages.add(seq + ": 실행 가능한 DDL 없음 (snippet=" + ddl + ")");
+				if (!"APPROVED".equals(hist.get("aprv_status"))) { failed++; messages.add(seq + ": 승인되지 않은 변경입니다"); continue; }
+				if ("SUCCESS".equals(hist.get("ddl_exec_result"))) { failed++; messages.add(seq + ": 이미 반영된 변경입니다"); continue; }
+
+				String dmId = (String) hist.get("dm_id");
+				String changeType = (String) hist.get("change_type");
+				String owner = hist.get("obj_owner") == null ? "" : (String) hist.get("obj_owner");
+				String objNm = (String) hist.get("obj_nm");
+				Map<String, Object> mds = ddlDialects.modelDs(dmId);
+				String skip = null;
+				List<String> stmts = null;
+				String createSnippet = null;
+				if (mds == null) {
+					skip = "모델에 데이터소스가 없어 DB 에 반영할 수 없습니다";
+				} else if (hist.get("ddl_dbms_tp") != null && !String.valueOf(hist.get("ddl_dbms_tp")).equalsIgnoreCase((String) mds.get("dbmsTp"))) {
+					skip = "DDL 은 " + hist.get("ddl_dbms_tp") + " 용인데 모델 데이터소스는 " + mds.get("dbmsTp") + " 입니다";
+				} else if ("ADD_OBJ".equals(changeType)) {
+					SqlDialect d = ddlDialects.forDbms((String) mds.get("dbmsTp"));
+					stmts = d == null ? null : ddlGenerator.createTableDdl(dmId, owner, objNm, d);
+					if (d == null) skip = mds.get("dbmsTp") + " 용 DDL 규칙이 없습니다";
+					else if (stmts == null) skip = "모델에 테이블이 없습니다: " + objNm;
+					else createSnippet = String.join(";\n", stmts) + ";";
+				} else {
+					String ddl = (String) hist.get("ddl_snippet");
+					if (ddl == null || ddl.trim().isEmpty()) skip = "실행할 DDL 이 없습니다";
+					else if (hasCommentLine(ddl)) skip = "DDL 을 만들 수 없는 변경입니다 — " + ddl.trim();
+					else stmts = splitStatements(ddl);
+				}
+				if (skip != null) {
+					skipped++;
+					messages.add(seq + ": SKIPPED — " + skip);
 					Map<String, Object> u = new HashMap<>();
 					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
-					u.put("ddlExecResult", "SKIPPED"); u.put("ddlExecMessage", "DDL 미완성 또는 미지원");
+					u.put("ddlExecResult", "SKIPPED"); u.put("ddlExecMessage", skip);
 					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
 					continue;
 				}
+
+				com.ndata.model.DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", mds.get("dsId"));
 				com.ndata.datasource.dbms.handler.DBHandler h = null;
+				int done = 0;
 				try {
 					h = dataSourceUtils.getDBHandler(ds);
-					h.execute(ddl);
+					for (String s : stmts) {
+						h.execute(s);
+						done++;
+					}
 					success++;
 					Map<String, Object> u = new HashMap<>();
 					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
-					u.put("ddlExecResult", "SUCCESS"); u.put("ddlExecMessage", "OK");
+					u.put("ddlExecResult", "SUCCESS"); u.put("ddlExecMessage", "OK (" + ds.getDsn() + ", " + stmts.size() + "문장)");
+					u.put("ddlSnippet", createSnippet);
 					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
+					if (createSnippet != null) {
+						Map<String, Object> inc = new HashMap<>();
+						inc.put("dmId", dmId); inc.put("objOwner", owner); inc.put("objNm", objNm); inc.put("changeSeq", seq);
+						inc.put("ddlExecDt", now); inc.put("ddlExecUserId", adminId);
+						inc.put("ddlExecMessage", "테이블 생성(#" + seq + ")에 포함");
+						int n = sqlSessionTemplate.update("dmChangeHistory.markIncludedInCreate", inc);
+						if (n > 0) messages.add(seq + ": 같은 테이블의 뒤 변경 " + n + "건은 테이블 생성에 포함");
+					}
 				} catch (Exception ex) {
 					String msg = ex.getMessage() == null ? "" : ex.getMessage();
+					if (stmts.size() > 1) msg = "(" + (done + 1) + "/" + stmts.size() + "번째 문장, 앞 " + done + "문장은 반영됨) " + msg;
 					boolean priv = msg.contains("ORA-01031") || msg.contains("insufficient")
 							|| msg.contains("denied") || msg.contains("permission");
 					String result = priv ? "NO_PRIVILEGE" : "FAILED";
@@ -541,13 +588,42 @@ public class DataModelApprovalController {
 					if (h != null) try { h.close(); } catch (Exception e) {}
 				}
 			}
+			Map<String, Object> out = new java.util.LinkedHashMap<>();
+			out.put("success", success); out.put("failed", failed); out.put("noPriv", noPriv); out.put("skipped", skipped);
+			out.put("messages", messages);
 			res.setResultInfo(RestResult.CODE_200);
-			res.setContents("{\"success\":" + success + ",\"failed\":" + failed + ",\"noPriv\":" + noPriv + "}");
+			res.setContents(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(out));
 		} catch (Exception e) {
 			log.error(">> execDdl failed: {}", e.getMessage(), e);
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(res);
+	}
+
+	/** 조각을 ';' 로 나눈다. 작은따옴표 안(주석 문자열)의 ';' 는 나누지 않는다. 빈 문장은 버린다 */
+	static List<String> splitStatements(String ddl) {
+		List<String> out = new ArrayList<>();
+		StringBuilder cur = new StringBuilder();
+		boolean inQuote = false;
+		for (char c : ddl.toCharArray()) {
+			if (c == '\'') inQuote = !inQuote;
+			if (c == ';' && !inQuote) {
+				if (cur.toString().trim().length() > 0) out.add(cur.toString().trim());
+				cur.setLength(0);
+			} else {
+				cur.append(c);
+			}
+		}
+		if (cur.toString().trim().length() > 0) out.add(cur.toString().trim());
+		return out;
+	}
+
+	/** '--' 로 시작하는 줄이 있으면 DDL 을 만들 수 없는 변경(규칙 없는 DBMS, 소유자 이동 불가 등) */
+	private static boolean hasCommentLine(String ddl) {
+		for (String line : ddl.split("\n")) {
+			if (line.trim().startsWith("--")) return true;
+		}
+		return false;
 	}
 
 	/** 변경 이력 조회 (관리자·DM_APPROVE: 전체, 그 밖: 본인 + APPROVED) */

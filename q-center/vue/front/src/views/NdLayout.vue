@@ -216,6 +216,7 @@ export default {
                 case "approval":
                 case "system":
                 case "datasource":
+                case "ddlRule":
                     this._activateGroup("mmGroup");
                     break;
                 case "scurrent":
@@ -398,7 +399,7 @@ export default {
                         this._activateGroup("navDqSub3");
                     }
 
-                } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'system' || tabName ==='datasource') {
+                } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'system' || tabName ==='datasource' || tabName === 'ddlRule') {
                     this._activateGroup("mmGroup");
                 } else if (tabName === 'scurrent' || tabName === 'qcurrent') {
                     this._activateGroup("andGroup");
@@ -633,7 +634,7 @@ export default {
                 }, 500);
 
                 return;
-            } else if (tabitem === 'user' || tabitem === 'roles' || tabitem === 'approval' || tabitem === 'system' || tabitem === 'datasource') {
+            } else if (tabitem === 'user' || tabitem === 'roles' || tabitem === 'approval' || tabitem === 'system' || tabitem === 'datasource' || tabitem === 'ddlRule') {
                 this.navMmGroup = true;
                 this.navSubGropClose();
 

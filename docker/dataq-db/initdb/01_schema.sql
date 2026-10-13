@@ -1156,8 +1156,16 @@ CREATE TABLE quality.tb_data_model_change_history (
     ddl_exec_dt character varying(14),
     ddl_exec_user_id character varying(50),
     ddl_exec_result character varying(20),
-    ddl_exec_message character varying(2000)
+    ddl_exec_message character varying(2000),
+    ddl_dbms_tp character varying(20)
 );
+
+
+--
+-- Name: COLUMN tb_data_model_change_history.ddl_dbms_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_change_history.ddl_dbms_tp IS 'DDL_SNIPPET 을 만든 DBMS (모델 데이터소스 DBMS_TP). 데이터소스 없는 모델은 NULL (104번 WP3)';
 
 
 --
@@ -1472,6 +1480,57 @@ CREATE TABLE quality.tb_data_model_schema (
     cret_dt character varying(14),
     cret_user_id character varying(50)
 );
+
+
+--
+-- Name: tb_data_type_map; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_data_type_map (
+    data_type character varying(50) NOT NULL,
+    dbms_tp character varying(20) NOT NULL,
+    phys_data_type character varying(100) NOT NULL,
+    dflt_data_len integer,
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_data_type_map; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_data_type_map IS '데이터 타입 → DBMS 별 물리 타입 (104번 WP3, 관리 > DDL 규칙)';
+
+
+--
+-- Name: COLUMN tb_data_type_map.data_type; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_type_map.data_type IS '모델·도메인의 데이터 타입 (대문자)';
+
+
+--
+-- Name: COLUMN tb_data_type_map.dbms_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_type_map.dbms_tp IS '데이터소스 DBMS_TP — Oracle, Tibero, PostgreSQL, MariaDB, SQLServer';
+
+
+--
+-- Name: COLUMN tb_data_type_map.phys_data_type; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_type_map.phys_data_type IS '물리 타입 틀. {len}·{dec} = 길이·소수점, [...] = 안의 값이 모두 있을 때만 남는 구간';
+
+
+--
+-- Name: COLUMN tb_data_type_map.dflt_data_len; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_type_map.dflt_data_len IS '길이가 없는 컬럼에 쓸 길이 ([ ] 밖에 {len} 이 있으면 필수)';
 
 
 --
@@ -2473,6 +2532,26 @@ CREATE TABLE quality.tb_subj_area (
 
 
 --
+-- Name: tb_sys_conf; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_sys_conf (
+    conf_key character varying(50) NOT NULL,
+    conf_val character varying(500),
+    conf_desc character varying(500),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_sys_conf; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_sys_conf IS '설정 (104번 WP3~)';
+
+
+--
 -- Name: tb_sys_info; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -3303,6 +3382,14 @@ ALTER TABLE ONLY quality.tb_data_model_schema
 
 
 --
+-- Name: tb_data_type_map tb_data_type_map_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_data_type_map
+    ADD CONSTRAINT tb_data_type_map_pk PRIMARY KEY (data_type, dbms_tp);
+
+
+--
 -- Name: tb_domain_clsf tb_domain_clsf_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -3364,6 +3451,14 @@ ALTER TABLE ONLY quality.tb_std_dict
 
 ALTER TABLE ONLY quality.tb_subj_area
     ADD CONSTRAINT tb_subj_area_pkey PRIMARY KEY (subj_area_id);
+
+
+--
+-- Name: tb_sys_conf tb_sys_conf_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_sys_conf
+    ADD CONSTRAINT tb_sys_conf_pk PRIMARY KEY (conf_key);
 
 
 --

@@ -20,6 +20,9 @@
 		<result property="beforeJson"      column="BEFORE_JSON"/>
 		<result property="afterJson"       column="AFTER_JSON"/>
 		<result property="ddlSnippet"      column="DDL_SNIPPET"/>
+		<result property="ddlDbmsTp"       column="DDL_DBMS_TP"/>
+		<result property="dsNm"            column="DS_NM"/>
+		<result property="dsDbmsTp"        column="DS_DBMS_TP"/>
 		<result property="aprvStatus"      column="APRV_STATUS"/>
 		<result property="aprvUserId"      column="APRV_USER_ID"/>
 		<result property="aprvDt"          column="APRV_DT"/>
@@ -34,7 +37,7 @@
 		INSERT INTO TB_DATA_MODEL_CHANGE_HISTORY
 		( DM_ID, CHANGE_DT, CHANGE_USER_ID, CHANGE_TYPE, CHANGE_TIER, SUBMISSION_ID,
 		  OBJ_OWNER, OBJ_NM, ATTR_NM, CONSTRAINT_NM, INDEX_NM,
-		  BEFORE_JSON, AFTER_JSON, DDL_SNIPPET,
+		  BEFORE_JSON, AFTER_JSON, DDL_SNIPPET, DDL_DBMS_TP,
 		  APRV_STATUS, APRV_USER_ID, APRV_DT, APRV_COMMENT,
 		  DDL_EXEC_DT, DDL_EXEC_USER_ID, DDL_EXEC_RESULT, DDL_EXEC_MESSAGE )
 		VALUES
@@ -42,7 +45,7 @@
 		  #{submissionId, jdbcType=VARCHAR},
 		  #{objOwner, jdbcType=VARCHAR}, #{objNm, jdbcType=VARCHAR},
 		  #{attrNm, jdbcType=VARCHAR}, #{constraintNm, jdbcType=VARCHAR}, #{indexNm, jdbcType=VARCHAR},
-		  #{beforeJson, jdbcType=VARCHAR}, #{afterJson, jdbcType=VARCHAR}, #{ddlSnippet, jdbcType=VARCHAR},
+		  #{beforeJson, jdbcType=VARCHAR}, #{afterJson, jdbcType=VARCHAR}, #{ddlSnippet, jdbcType=VARCHAR}, #{ddlDbmsTp, jdbcType=VARCHAR},
 		  COALESCE(#{aprvStatus, jdbcType=VARCHAR}, 'APPROVED'),
 		  #{aprvUserId, jdbcType=VARCHAR}, #{aprvDt, jdbcType=VARCHAR}, #{aprvComment, jdbcType=VARCHAR},
 		  #{ddlExecDt, jdbcType=VARCHAR}, #{ddlExecUserId, jdbcType=VARCHAR},
@@ -51,31 +54,35 @@
 	</insert>
 
 	<!-- 모델 단위 이력 목록 (viewAll — 관리자 또는 DM_APPROVE: 전체, 그 밖: 본인 + APPROVED) -->
+	<!-- 104번 WP3 — DS_NM·DS_DBMS_TP 는 [DB 반영] 대상인 모델 데이터소스 -->
 	<select id="selectByDmId" parameterType="java.util.Map" resultMap="map">
-		SELECT * FROM TB_DATA_MODEL_CHANGE_HISTORY
+		SELECT H.*, D.DSN AS DS_NM, D.DBMS_TP AS DS_DBMS_TP
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY H
+		  LEFT JOIN TB_DATA_MODEL M ON M.DM_ID = H.DM_ID
+		  LEFT JOIN ndata.TB_DATA_SOURCE D ON D.DS_ID = M.DM_DS_ID
 		WHERE 1=1
 		<if test="dmId != null and dmId != ''">
-			AND DM_ID = #{dmId}
+			AND H.DM_ID = #{dmId}
 		</if>
 		<if test="viewAll == null or viewAll == false">
-			AND (APRV_STATUS = 'APPROVED' OR CHANGE_USER_ID = #{currentUserId})
+			AND (H.APRV_STATUS = 'APPROVED' OR H.CHANGE_USER_ID = #{currentUserId})
 		</if>
 		<if test="changeUserId != null and changeUserId != ''">
-			AND CHANGE_USER_ID = #{changeUserId}
+			AND H.CHANGE_USER_ID = #{changeUserId}
 		</if>
 		<if test="changeTier != null and changeTier != ''">
-			AND CHANGE_TIER = #{changeTier}
+			AND H.CHANGE_TIER = #{changeTier}
 		</if>
 		<if test="aprvStatus != null and aprvStatus != ''">
-			AND APRV_STATUS = #{aprvStatus}
+			AND H.APRV_STATUS = #{aprvStatus}
 		</if>
 		<if test="fromDt != null and fromDt != ''">
-			AND CHANGE_DT &gt;= #{fromDt}
+			AND H.CHANGE_DT &gt;= #{fromDt}
 		</if>
 		<if test="toDt != null and toDt != ''">
-			AND CHANGE_DT &lt;= #{toDt}
+			AND H.CHANGE_DT &lt;= #{toDt}
 		</if>
-		ORDER BY CHANGE_SEQ DESC
+		ORDER BY H.CHANGE_SEQ DESC
 		LIMIT 500
 	</select>
 
@@ -152,7 +159,25 @@
 		       DDL_EXEC_USER_ID = #{ddlExecUserId},
 		       DDL_EXEC_RESULT  = #{ddlExecResult},
 		       DDL_EXEC_MESSAGE = #{ddlExecMessage, jdbcType=VARCHAR}
+		       <if test="ddlSnippet != null">, DDL_SNIPPET = #{ddlSnippet}</if>
 		 WHERE CHANGE_SEQ = #{changeSeq}
+	</update>
+
+	<!-- 104번 WP3 — 신규 테이블을 CREATE TABLE 로 반영한 뒤, 같은 테이블의 그 뒤 승인된 미반영 컬럼·PK·FK 변경은
+	     그 CREATE TABLE 에 이미 들어갔으므로 SUCCESS(포함)로 기록한다 -->
+	<update id="markIncludedInCreate" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
+		   SET DDL_EXEC_DT      = #{ddlExecDt},
+		       DDL_EXEC_USER_ID = #{ddlExecUserId},
+		       DDL_EXEC_RESULT  = 'SUCCESS',
+		       DDL_EXEC_MESSAGE = #{ddlExecMessage}
+		 WHERE DM_ID = #{dmId}
+		   AND COALESCE(OBJ_OWNER, '') = #{objOwner}
+		   AND OBJ_NM = #{objNm}
+		   AND CHANGE_SEQ &gt; #{changeSeq}
+		   AND APRV_STATUS = 'APPROVED'
+		   AND DDL_EXEC_DT IS NULL
+		   AND CHANGE_TYPE IN ('ADD_ATTR', 'MODIFY_ATTR', 'DEL_ATTR', 'ADD_PK', 'DEL_PK', 'ADD_FK', 'DEL_FK')
 	</update>
 
 	<!-- DRAFT 삭제 (사용자 본인의 롤백) -->
@@ -169,7 +194,9 @@
 		       OBJ_OWNER as obj_owner, OBJ_NM as obj_nm, ATTR_NM as attr_nm,
 		       CONSTRAINT_NM as constraint_nm, INDEX_NM as index_nm,
 		       APRV_STATUS as aprv_status, CHANGE_USER_ID as change_user_id,
-		       BEFORE_JSON as before_json, AFTER_JSON as after_json
+		       BEFORE_JSON as before_json, AFTER_JSON as after_json,
+		       DDL_SNIPPET as ddl_snippet, DDL_DBMS_TP as ddl_dbms_tp,
+		       DDL_EXEC_DT as ddl_exec_dt, DDL_EXEC_RESULT as ddl_exec_result
 		  FROM TB_DATA_MODEL_CHANGE_HISTORY
 		 WHERE CHANGE_SEQ = #{value}
 	</select>

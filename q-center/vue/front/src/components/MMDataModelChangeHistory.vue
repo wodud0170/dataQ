@@ -46,7 +46,8 @@
             x-small text color="success" v-on:click="execDdl(item)">
             <v-icon x-small>mdi-database-arrow-up</v-icon>DB 반영
           </v-btn>
-          <v-chip v-if="item.ddlExecDt" x-small outlined :color="item.ddlExecResult==='SUCCESS' ? 'success' : 'error'">
+          <v-chip v-if="item.ddlExecDt" x-small outlined :color="item.ddlExecResult==='SUCCESS' ? 'success' : 'error'"
+            :title="item.ddlExecMessage">
             {{ item.ddlExecResult }}
           </v-chip>
         </template>
@@ -69,8 +70,11 @@
             </div>
           </div>
           <div v-if="detail.ddlSnippet" class="mt-3">
-            <div class="diff-title">DDL Snippet</div>
+            <div class="diff-title">DDL Snippet{{ detail.ddlDbmsTp ? ' (' + detail.ddlDbmsTp + ')' : '' }}</div>
             <pre class="ddl-box">{{ detail.ddlSnippet }}</pre>
+          </div>
+          <div v-if="detail.ddlExecDt" class="mt-2" style="font-size:.85rem;">
+            DB 반영: {{ detail.ddlExecResult }} — {{ detail.ddlExecMessage }} ({{ formatDt(detail.ddlExecDt) }}, {{ detail.ddlExecUserId }})
           </div>
           <div v-if="detail.aprvComment" class="mt-2" style="color:#C62828;">
             반려 사유: {{ detail.aprvComment }}
@@ -98,7 +102,6 @@ export default {
   },
   data: () => ({
     items: [],
-    dsId: '',
     filter: { dmId: '', changeUserId: '', changeTier: '', aprvStatus: '' },
     tierOptions: [
       { text: '전체', value: '' },
@@ -167,26 +170,35 @@ export default {
         this.$swal.fire({ title: 'DDL 복사됨', icon: 'success', timer: 1000, showConfirmButton: false });
       });
     },
+    // 104번 WP3 — 실행 대상은 모델의 데이터소스로 고정 (서버가 정한다). 테이블 추가는 승인된 컬럼으로 CREATE TABLE 을 만든다
     execDdl(item) {
+      const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const target = item.dsNm
+        ? `${esc(item.dsNm)} (${esc(item.dsDbmsTp)})`
+        : '<span style="color:#C62828;">모델에 데이터소스가 없습니다 — 반영할 수 없습니다</span>';
+      const ddlNote = item.changeType === 'ADD_OBJ'
+        ? '<div style="color:#546E7A;">테이블 추가는 실행 때 이 테이블의 승인된 컬럼·제약조건으로 CREATE TABLE 을 만듭니다.</div>' : '';
       this.$swal.fire({
         title: 'DB 직접 반영',
-        html: `<div style="text-align:left;font-size:.85rem;"><b>실행될 DDL:</b><pre style="background:#263238;color:#B0BEC5;padding:6px;border-radius:4px;font-size:.78rem;">${item.ddlSnippet}</pre><br>대상 데이터소스 ID:</div>`,
-        input: 'text',
-        inputValue: this.dsId,
+        html: `<div style="text-align:left;font-size:.85rem;"><b>대상 데이터소스:</b> ${target}<br><br><b>실행될 DDL</b>${item.ddlDbmsTp ? ' (' + esc(item.ddlDbmsTp) + ')' : ''}:`
+          + `<pre style="background:#263238;color:#B0BEC5;padding:6px;border-radius:4px;font-size:.78rem;white-space:pre-wrap;">${esc(item.ddlSnippet)}</pre>${ddlNote}</div>`,
         showCancelButton: true,
         confirmButtonText: '실행', cancelButtonText: '취소',
       }).then(r => {
         if (!r.isConfirmed) return;
-        this.dsId = r.value || '';
         axios.post(this.$APIURL.base + 'api/dmApproval/execDdl', {
-          changeSeqList: [item.changeSeq], dsId: r.value,
+          changeSeqList: [item.changeSeq],
         }).then(res => {
           if (res.data.resultCode !== 200) {
             this.$swal.fire({ title: 'DB 반영 실패', text: res.data.resultMessage || '', icon: 'error' });
             return;
           }
           const c = res.data && res.data.contents ? JSON.parse(res.data.contents) : {};
-          this.$swal.fire({ title: `DB 반영: success ${c.success||0} / failed ${c.failed||0} / noPriv ${c.noPriv||0}`, icon: 'info' });
+          this.$swal.fire({
+            title: `DB 반영: 성공 ${c.success || 0} / 실패 ${c.failed || 0} / 권한 없음 ${c.noPriv || 0} / 건너뜀 ${c.skipped || 0}`,
+            html: (c.messages || []).map(m => `<div style="text-align:left;font-size:.8rem;">${esc(m)}</div>`).join(''),
+            icon: (c.success || 0) > 0 && !(c.failed || c.noPriv || c.skipped) ? 'success' : 'info',
+          });
           this.load();
         }).catch(e => this.$swal.fire({ title: 'DB 반영 실패', text: (e.response && e.response.data && e.response.data.resultMessage) || '', icon: 'error' }));
       });
