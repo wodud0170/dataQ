@@ -1,6 +1,9 @@
 package qualitycenter.security;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+
+import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,11 +21,14 @@ import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.PortMapperImpl;
 import org.springframework.security.web.PortResolverImpl;
+import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 import org.springframework.web.cors.CorsConfiguration;
@@ -65,29 +71,19 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
 
-        // 로그인 설정
+        // 로그인 없이 허용하는 경로 (104번 WP0 §3.3).
+        // 화면 진입(인덱스·로그인·로그아웃), WebSocket 핸드셰이크, 로그인 전에 부르는 세션 확인·최초 관리자 생성만 연다.
+        // 최초 관리자 생성은 내장 관리자가 없을 때만 동작한다 (LoginController.createAdmin).
+        // swagger 도 로그인 세션이 있어야 열린다.
         http.cors().and().authorizeRequests()
             .antMatchers("/").permitAll() // 인덱스, 메뉴 페이지
             .antMatchers("/*.html").permitAll() // 인덱스, 메뉴 페이지
             .antMatchers("/sockjs/**").permitAll()
             .antMatchers("/login").permitAll()
             .antMatchers("/logout").permitAll()
-            .antMatchers("/swagger-ui/**").permitAll()
-            .antMatchers("/swagger-resources/**").permitAll()
-            .antMatchers("/v3/api-docs/**").permitAll()
-            .antMatchers("/api/login/**").permitAll()
-            .antMatchers("/api/search/**").permitAll()
-            .antMatchers("/api/std/**").permitAll()
-            .antMatchers("/api/dm/**").permitAll()
-            .antMatchers("/api/sysinfo/**").permitAll()
-            .antMatchers("/api/diag/**").permitAll()
-            //.antMatchers("/dashboard").hasAnyAuthority(NDConstant.ROLE_ADMIN) // 어드민 대시보드
-            //.antMatchers("/userDashboard").hasAnyAuthority(NDConstant.ROLE_MEMBER) // 사용자 대시보드
-            //.antMatchers("/api/admin/**").hasAnyAuthority(NDConstant.ROLE_ADMIN) // 관리
-            .antMatchers("/api/admin/**").permitAll() // 관리
-            //.antMatchers("/**").permitAll()//; // 개발 편의를 위해 모든페이지를 열어놓음
+            .antMatchers("/api/login/checkSession", "/api/login/existAdmin", "/api/login/createAdmin").permitAll()
             .anyRequest().authenticated();
-        
+
         // port mapping for preventing https redirect to serverPort
         PortMapperImpl portMapper = new PortMapperImpl();
         java.util.Map<String, String> portMappings = new java.util.HashMap<>();
@@ -103,14 +99,26 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
     			"/login");
     	entryPoint.setPortMapper(portMapper);
     	entryPoint.setPortResolver(portResolver);
-    	
+
+    	// /api/** 는 로그인 화면으로 돌리지 않고 401 을 준다. 화면(main.js)이 401 을 받으면 로그인 화면으로 보낸다.
+    	// 리다이렉트를 주면 axios 가 로그인 화면 HTML 을 정상 응답으로 받아 화면마다 엉뚱한 오류가 난다.
+    	AuthenticationEntryPoint apiEntryPoint = (request, response, authException) -> {
+    		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    		response.setContentType("application/json;charset=UTF-8");
+    		response.getWriter().write("{\"resultCode\":401,\"resultMessage\":\"로그인이 필요합니다.\"}");
+    	};
+    	LinkedHashMap<RequestMatcher, AuthenticationEntryPoint> entryPoints = new LinkedHashMap<>();
+    	entryPoints.put(new AntPathRequestMatcher("/api/**"), apiEntryPoint);
+    	DelegatingAuthenticationEntryPoint delegatingEntryPoint = new DelegatingAuthenticationEntryPoint(entryPoints);
+    	delegatingEntryPoint.setDefaultEntryPoint(entryPoint);
+
     	//HttpSessionRequestCache cache = new HttpSessionRequestCache();
     	//cache.setPortResolver(portResolver);
     	//http.setSharedObject(RequestCache.class, cache);
 
         // 로그인 페이지 및 로그인 성공 url, handler, 로그인시 사용되는 id, password 정의
         http.exceptionHandling()
-		    .authenticationEntryPoint(entryPoint).and().cors().and().formLogin()
+		    .authenticationEntryPoint(delegatingEntryPoint).and().cors().and().formLogin()
             .loginPage("/login")
             .failureHandler(customAuthFailureHandler)
             .successHandler(customAuthSuccessHandler)

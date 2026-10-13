@@ -17,7 +17,7 @@
           item-key="changeSeq" show-select v-model="checked"
           :items-per-page="50" hide-default-footer dense>
           <template #[`item.changeType`]="{ item }">
-            <v-chip x-small outlined>{{ item.changeType }}</v-chip>
+            <v-chip x-small outlined :title="item.changeType">{{ changeTypeLabel(item.changeType) }}</v-chip>
           </template>
           <template #[`item.path`]="{ item }">
             <span style="font-family:monospace; font-size:.8rem;">{{ pathOf(item) }}</span>
@@ -45,6 +45,7 @@
 
 <script>
 import axios from 'axios';
+import { dmChangeTypeLabel } from './dmChangeType';
 
 export default {
   name: 'DMSubmitModal',
@@ -77,7 +78,12 @@ export default {
       }).catch(() => { this.drafts = []; });
     },
     pathOf(item) {
-      return (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '');
+      // PK/FK 변경은 컬럼 대신 제약조건 이름을 붙인다
+      return (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '')
+        + (item.constraintNm ? ' [' + item.constraintNm + ']' : '');
+    },
+    changeTypeLabel(code) {
+      return dmChangeTypeLabel(code);
     },
     formatDt(s) {
       if (!s || s.length < 14) return s || '';

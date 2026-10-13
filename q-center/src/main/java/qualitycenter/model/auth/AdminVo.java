@@ -2,11 +2,15 @@ package qualitycenter.model.auth;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 
 @Data
 public class AdminVo {
     private String id;
+    /** 요청(사용자 등록·수정)에서만 받는다. 응답에는 싣지 않는다 — 저장된 해시가 사용자 상세로 나가지 않게. */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     private String name;
     private String email;

@@ -48,14 +48,14 @@
             <v-data-table :headers="headers" :items="items" item-key="changeSeq" show-select
               v-model="checkedItems" :items-per-page="50" hide-default-footer dense>
               <template #item.changeType="{ item }">
-                <v-chip x-small outlined>{{ item.changeType }}</v-chip>
+                <v-chip x-small outlined :title="item.changeType">{{ changeTypeLabel(item.changeType) }}</v-chip>
               </template>
               <template #item.changeTier="{ item }">
                 <span :class="'tier-' + item.changeTier.toLowerCase()">{{ item.changeTier }}</span>
               </template>
               <template #item.path="{ item }">
                 <span style="font-family:monospace;">
-                  {{ (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '') }}
+                  {{ (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '') + (item.constraintNm ? ' [' + item.constraintNm + ']' : '') }}
                 </span>
               </template>
               <template #item.aprvStatus="{ item }">
@@ -71,6 +71,7 @@
 
 <script>
 import axios from 'axios';
+import { dmChangeTypeLabel } from './dmChangeType';
 
 export default {
   name: 'MMDataModelApproval',
@@ -92,6 +93,9 @@ export default {
   mounted() { this.loadSubmissions(); },
   activated() { this.loadSubmissions(); },
   methods: {
+    changeTypeLabel(code) {
+      return dmChangeTypeLabel(code);
+    },
     loadSubmissions() {
       axios.post(this.$APIURL.base + 'api/dmApproval/submissions', {}).then(res => {
         this.submissions = res.data || [];

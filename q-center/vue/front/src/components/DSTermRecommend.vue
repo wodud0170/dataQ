@@ -458,6 +458,7 @@ export default {
 
       // 분류어/도메인 선택 (수정 모달 cascade)
       classWords: [],           // [{wordId, wordNm, wordEngAbrvNm, wordEngNm, domainClsfNm}]
+      classWordsDictId: null,   // 98번 — classWords 를 읽은 사전 (사전을 바꾸면 다시 읽는다)
       domainsInClsf: [],        // 선택된 분류어의 도메인 리스트
       selectedClsfWord: null,   // 현재 선택된 분류어 (object)
       selectedDomain: null,     // 현재 선택된 도메인 (object)
@@ -497,6 +498,11 @@ export default {
     selectedDictNm: function() {
       var d = this.dictList.find(function(x) { return x.dictId === this.dictId; }, this);
       return d ? d.dictNm : '';
+    },
+    // 98번 — 등록할 사전이 "용어의 마지막 단어를 형식단어로 강제" 하는가 (사전 속성, 서버 registerTermsBatch 와 같은 기준)
+    lastWordClsfRequired: function() {
+      var d = this.dictList.find(function(x) { return x.dictId === this.dictId; }, this);
+      return !!(d && d.termLastWordClsfYn === 'Y');
     },
     // 모델에 지정된 사전과 지금 고른 사전이 다른가.
     // 다르다고 막지는 않는다 — 다른 사전으로 등록해 보는 경우가 있다. 알리기만 한다.
@@ -810,7 +816,7 @@ export default {
       w._dictTimer = setTimeout(function() {
         w._lastLookup = nm;
         // 경량 API: TB_WORD + TB_WORD_DICT 동시 조회
-        axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: nm } }).then(function(res) {
+        axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: nm, dictId: self.dictId } }).then(function(res) {
           var data = res.data;
           if (data && data.found) {
             if (data.source === 'WORD') {
@@ -894,7 +900,7 @@ export default {
         newWord: { wordEngAbrvNm: '', wordEngNm: '', domainClsfNm: '' }
       };
       // TB_WORD에서 먼저 조회
-      axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', { params: { wordNm: nm } }).then(function(res) {
+      axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', { params: { wordNm: nm, dictId: self.dictId } }).then(function(res) {
         var info = res.data;
         if (info && info.length > 0) {
           // 등록된 단어
@@ -969,10 +975,11 @@ export default {
     },
     loadClassificationWords: function() {
       var self = this;
-      if (self.classWords.length > 0) return; // 세션 캐시
+      if (self.classWords.length > 0 && self.classWordsDictId === self.dictId) return; // 사전별 세션 캐시
       self.loadingClsfWords = true;
-      axios.get(self.$APIURL.base + 'api/std/getClassificationWords').then(function(res) {
+      axios.get(self.$APIURL.base + 'api/std/getClassificationWords', { params: { dictId: self.dictId } }).then(function(res) {
         self.classWords = res.data || [];
+        self.classWordsDictId = self.dictId;
       }).catch(function() {
         self.$swal.fire({ title: '형식단어 조회 실패', icon: 'error', confirmButtonText: '확인' });
       }).finally(function() {
@@ -984,7 +991,7 @@ export default {
       if (!clsfNm) { self.domainsInClsf = []; self.selectedDomain = null; return; }
       self.loadingDomains = true;
       axios.get(self.$APIURL.base + 'api/std/getDomainsByClsf', {
-        params: { domainClsfNm: clsfNm }
+        params: { domainClsfNm: clsfNm, dictId: self.dictId }
       }).then(function(res) {
         self.domainsInClsf = res.data || [];
         // 기존 editingItem 의 추천 도메인이 현재 목록에 있으면 preselect, 없으면 첫번째
@@ -1165,8 +1172,8 @@ export default {
         return;
       }
 
-      // 형식단어 검증: 마지막 단어가 형식단어(WORD_CLSF_YN='Y')인지 서버에서 확인
-      if (words.length >= 2) {
+      // 형식단어 검증: 등록할 사전이 강제할 때만 마지막 단어가 형식단어(WORD_CLSF_YN='Y')인지 서버에서 확인
+      if (this.lastWordClsfRequired && words.length >= 2) {
         var lastW = words[words.length - 1];
         var lastWordId = null;
         if (lastW.status === 'MATCHED' && lastW.selected) {

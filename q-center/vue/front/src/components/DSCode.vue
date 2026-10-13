@@ -1241,7 +1241,8 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/getCodeDataListByNm", {
           params: {
-            codeNm: codeNm
+            codeNm: codeNm,
+            dictId: this.dictId
           }
         }).then(result => {
           // console.log(result)
@@ -1292,6 +1293,8 @@ export default {
       const _url = this.$APIURL.base + "api/std/uploadCodeInfoList";
       const formData = new FormData();
       formData.append('file', this.excelFile);
+      // 98번 — 화면에서 고른 사전에 올린다 (비면 서버가 기본 사전으로 정한다)
+      formData.append('dictId', this.dictId || '');
       const headers = { 'Content-Type': 'multipart/form-data' };
 
       axios.post(_url, formData, { headers }).catch(() => {
@@ -1332,6 +1335,8 @@ export default {
       const _url = this.$APIURL.base + "api/std/uploadCodeDataList";
       const formData = new FormData();
       formData.append('file', this.codeValExcelFile);
+      // 98번 — 화면에서 고른 사전에 올린다 (비면 서버가 기본 사전으로 정한다)
+      formData.append('dictId', this.dictId || '');
       const headers = { 'Content-Type': 'multipart/form-data' };
 
       axios.post(_url, formData, { headers }).catch(() => {
@@ -1385,7 +1390,8 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/getCodeDataListByNm", {
           params: {
-            'codeNm': this.searchCodeData
+            'codeNm': this.searchCodeData,
+            'dictId': this.dictId
           }
         }).then((res) => {
           this.codeDataItems = res.data;
@@ -1908,6 +1914,8 @@ export default {
           'reqSysCd': this.addTerm_reqSysCd,
           'wordList': this.addTerm_wordList,
           "allophSynmLst": arr_allophSynmLst,
+          // 98번 — 고른 사전에 등록한다. 형식단어 강제 여부도 이 사전의 속성을 따른다.
+          'dictId': this.dictId,
         }
 
         axios.post(this.$APIURL.base + 'api/std/createCode', codeData).then(res => {
@@ -1963,6 +1971,8 @@ export default {
           'reqSysCd': this.updateTerm_reqSysCd,
           'wordList': this.updateTerm_wordList,
           "allophSynmLst": arr_allophSynmLst,
+          // 98번 — 코드명 중복 검사를 이 사전 안에서 한다
+          'dictId': this.dictId,
         }
 
         axios.post(this.$APIURL.base + 'api/std/updateCode', codeData).then(res => {
@@ -2011,7 +2021,8 @@ export default {
           'codeNm': this.addCodeValCodeNm,
           'codeEngNm': this.addCodeValCodeEngNm,
           'codeVal': this.addCodeValCodeVal,
-          'codeValDesc': this.addCodeValCodeValDesc
+          'codeValDesc': this.addCodeValCodeValDesc,
+          'dictId': this.dictId
         }
 
         console.log(codeValData)
@@ -2479,7 +2490,8 @@ export default {
 
       axios.get(this.$APIURL.base + "api/std/getTermsTokenListByNm", {
         params: {
-          'termsNm': _term_name
+          'termsNm': _term_name,
+          'dictId': this.dictId
         }
       }).then((res) => {
         // console.log(res.data)
@@ -2610,7 +2622,8 @@ export default {
     getDomainData() {
       // 도메인 리스트에서 도메인명을 가지고 와 도메인명을 추출하여 배열 생성
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainList", { params: { dictId: this.dictId } }).then(result => {
+        // 98번 — getDomainList 는 검색조건을 본문으로 받는다 (GET 쿼리의 dictId 는 읽히지 않아 기본 사전이 나왔다)
+        axios.post(this.$APIURL.base + "api/std/getDomainList", { dictId: this.dictId }).then(result => {
           let _data = result.data;
           // console.log(_data);
 
@@ -2636,7 +2649,8 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/getDomainInfoByClsfNm", {
           params: {
-            'clsfNm': _domainClsfNm
+            'clsfNm': _domainClsfNm,
+            'dictId': this.dictId
           }
         }).then(result => {
           let _data = result.data;

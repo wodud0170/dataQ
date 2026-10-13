@@ -1,8 +1,9 @@
 import axios from "axios";
 
 const DEVELOP_MODE = process.env.NODE_ENV === "production" ? false : true;
-const APIURLBASE =
-  process.env.NODE_ENV === "production" ? "/" : "http://127.0.0.1:28090/";
+// 운영(q-center 가 화면을 서빙)과 개발 서버 모두 같은 출처로 부른다.
+// 개발 서버는 config/index.js 의 proxyTable 이 q-center(28090)로 넘긴다 — 세션 쿠키가 실려야 API 가 열린다.
+const APIURLBASE = "/";
 const LOGINSTATUSDATA = JSON.parse(sessionStorage.getItem("loginStatus"));
 
 const methods = {

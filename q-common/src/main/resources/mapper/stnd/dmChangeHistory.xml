@@ -283,4 +283,38 @@
 		   AND OBJ_NM = #{objNm}
 	</update>
 
+	<!-- WP0 — PK/FK 추가(ADD_PK·ADD_FK) 승인: 대기 상태로 넣어 둔 제약조건·인덱스 행을 승인 상태로 -->
+	<update id="syncConstraintAprvStatus" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CONSTRAINT
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt}
+		 WHERE DM_ID = #{dmId}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND TABLE_NM = #{objNm}
+		   AND CONSTRAINT_NM = #{constraintNm}
+	</update>
+	<update id="syncIndexAprvStatus" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_INDEX
+		   SET APRV_STATUS  = #{aprvStatus},
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt}
+		 WHERE DM_ID = #{dmId}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND TABLE_NM = #{objNm}
+		   AND INDEX_NM = #{indexNm}
+	</update>
+
+	<!-- WP0 — 테이블 단위 대기 중(DRAFT·SUBMITTED) 변경 건수. PK 삭제가 대기 중인 테이블에 새 PK 를 받지 않는 데 쓴다
+	     (반려되면 기존 PK 가 되살아나 PK 가 둘이 된다). -->
+	<select id="countPendingByObj" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*)
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY
+		 WHERE DM_ID = #{dmId}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND OBJ_NM = #{objNm}
+		   AND CHANGE_TYPE = #{changeType}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</select>
+
 </mapper>

@@ -21,6 +21,8 @@ public class StdApproveStatVo {
     private String aprvUserId;
     private String aprvStatUpdtDt;
     private String aprvStatUpdtRsn;
+    /** 98번 — 신청 항목이 속한 표준사전 (승인 화면의 상세 조회가 이 사전으로 찾는다) */
+    private String dictId;
 
     @Data
 	public static class RetrieveCond {

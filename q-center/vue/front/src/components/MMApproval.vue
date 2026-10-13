@@ -337,12 +337,13 @@ export default {
       this.approvalHistory = [];
 
       let reqTpRaw = item._reqTpRaw;
+      // 98번 — 용어·도메인은 이름으로 찾으므로 신청 항목이 속한 사전(item.dictId)으로 찾는다
       if (reqTpRaw === 'TERMS') {
-        this.getTermDetail(item.reqItemNm);
+        this.getTermDetail(item.reqItemNm, item.dictId);
       } else if (reqTpRaw === 'WORD') {
         this.getWordDetail(item.reqItemId);
       } else if (reqTpRaw === 'DOMAIN') {
-        this.getDomainDetail(item.reqItemNm);
+        this.getDomainDetail(item.reqItemNm, item.dictId);
       }
       // 승인 이력 조회
       if (item.reqItemId) {
@@ -351,16 +352,16 @@ export default {
           .catch(() => {});
       }
     },
-    getTermDetail(nm) {
-      axios.get(this.$APIURL.base + "api/std/getTermsInfoByNm", { params: { termsNm: nm } })
+    getTermDetail(nm, dictId) {
+      axios.get(this.$APIURL.base + "api/std/getTermsInfoByNm", { params: { termsNm: nm, dictId: dictId } })
         .then(res => { this.detailData = res.data && res.data.length > 0 ? res.data[0] : {}; });
     },
     getWordDetail(id) {
       axios.get(this.$APIURL.base + "api/std/getWordInfoById", { params: { wordId: id } })
         .then(res => { this.detailData = res.data && res.data.length > 0 ? res.data[0] : {}; });
     },
-    getDomainDetail(nm) {
-      axios.get(this.$APIURL.base + "api/std/getDomainInfoByNm", { params: { domainNm: nm } })
+    getDomainDetail(nm, dictId) {
+      axios.get(this.$APIURL.base + "api/std/getDomainInfoByNm", { params: { domainNm: nm, dictId: dictId } })
         .then(res => { this.detailData = res.data && res.data.length > 0 ? res.data[0] : {}; });
     },
     approveItem(item) {

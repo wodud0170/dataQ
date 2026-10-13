@@ -17,6 +17,7 @@
         ,APRV_USER_ID as aprvUserId
         ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt 
         ,''           as aprvStatUpdtRsn
+        ,DICT_ID      as dictId
 			from TB_TERMS
 			where APRV_YN = 'N'
 				AND CODE_GRP IS NULL
@@ -49,6 +50,7 @@
         ,APRV_USER_ID as aprvUserId
         ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt
         ,''           as aprvStatUpdtRsn
+        ,DICT_ID      as dictId
 			from TB_TERMS
 			where APRV_YN = 'N'
 				AND CODE_GRP IS NOT NULL
@@ -81,6 +83,7 @@
         ,APRV_USER_ID as aprvUserId
         ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt 
         ,''           as aprvStatUpdtRsn
+        ,DICT_ID      as dictId
 			from TB_WORD
 			where APRV_YN = 'N'
 				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = WORD_ID AND s.REQ_TP = 'WORD')
@@ -112,6 +115,7 @@
         ,APRV_USER_ID as aprvUserId
         ,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt 
         ,''           as aprvStatUpdtRsn
+        ,DICT_ID      as dictId
 			from TB_DOMAIN
 			where APRV_YN = 'N'
 				AND NOT EXISTS (SELECT 1 FROM TB_APRV_STATS s WHERE s.REQ_ITEM_ID = DOMAIN_ID AND s.REQ_TP = 'DOMAIN')
@@ -157,6 +161,11 @@
             ,A.APRV_USER_ID       as aprvUserId
             ,to_char(to_timestamp(A.APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as aprvStatUpdtDt
             ,A.APRV_STAT_UPDT_RSN as aprvStatUpdtRsn
+            ,CASE
+              WHEN A.REQ_TP = 'WORD'   THEN (select DICT_ID from tb_word where WORD_ID = A.REQ_ITEM_ID)
+              WHEN A.REQ_TP IN ('TERMS','CODE') THEN (select DICT_ID from tb_terms where TERMS_ID = A.REQ_ITEM_ID)
+              WHEN A.REQ_TP = 'DOMAIN' THEN (select DICT_ID from tb_domain where DOMAIN_ID = A.REQ_ITEM_ID)
+             END                  as dictId
 			from TB_APRV_STATS A
 			inner join (
 				select REQ_ITEM_ID, REQ_TP, MAX(APRV_STAT_UPDT_DT) as max_dt

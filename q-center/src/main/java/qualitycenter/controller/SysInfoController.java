@@ -1,6 +1,7 @@
 package qualitycenter.controller;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -110,9 +111,23 @@ public class SysInfoController {
 		return sqlSessionTemplate.selectOne("sysinfo.selectSysInfoBySysCd", sysCd);
 	}
 
+	/**
+	 * 데이터 소스 등록·수정·삭제·연결 테스트는 관리자만 (관리 > 데이터 소스 화면).
+	 * 수정·테스트는 화면이 모르는 저장 비밀번호를 서버에서 이어 쓰므로 서버에서 막는다.
+	 * 관리자면 null, 아니면 거부 응답.
+	 */
+	private Response rejectIfNotAdmin() {
+		if (sessionService.isAdmin()) return null;
+		Response r = new Response();
+		r.setResultInfo(403, "데이터 소스 관리는 관리자만 할 수 있습니다.");
+		return r;
+	}
+
 	// 데이터소스
 	@RequestMapping(value = "/createDataSource", method = RequestMethod.POST)
 	public Mono<Response> createDataSource(@RequestBody DataSourceVo dataVo) {
+		Response denied = rejectIfNotAdmin();
+		if (denied != null) return Mono.just(denied);
 		dataVo.setId(StringUtils.getUUID());
 		log.info(">> createDataSource : id={}, dsn={}, dbmsTp={}, svrAddr={}:{}, userId={}",
 				dataVo.getId(), dataVo.getDsn(), dataVo.getDbmsTp(), dataVo.getSvrAddr(), dataVo.getPort(), dataVo.getUserId());
@@ -133,13 +148,21 @@ public class SysInfoController {
 
 	@RequestMapping(value = "/updateDataSource", method = RequestMethod.POST)
 	public Mono<Response> updateDataSource(@RequestBody DataSourceVo dataVo) {
+		Response denied = rejectIfNotAdmin();
+		if (denied != null) return Mono.just(denied);
 		log.info(">> updateDataSource : id={}, dsn={}, dbmsTp={}, svrAddr={}:{}, userId={}",
 				dataVo.getId(), dataVo.getDsn(), dataVo.getDbmsTp(), dataVo.getSvrAddr(), dataVo.getPort(), dataVo.getUserId());
 		
 		Response result = new Response();
 
 		try {
-			dataVo.setPwd(securityUtils.encryptStr(dataVo.getPwd()));	// password를 암호화해서 저장한다.
+			// 목록·상세 응답에 비밀번호를 싣지 않으므로 수정 창은 비밀번호 칸이 빈 채로 열린다.
+			// 비어 있으면 "바꾸지 않음" — 저장된 값을 그대로 둔다 (sysinfo.updateDataSource 의 PWD 조건).
+			if (StringUtils.isNotEmpty(dataVo.getPwd())) {
+				dataVo.setPwd(securityUtils.encryptStr(dataVo.getPwd()));	// password를 암호화해서 저장한다.
+			} else {
+				dataVo.setPwd(null);
+			}
 			sqlSessionTemplate.update("sysinfo.updateDataSource", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -151,6 +174,8 @@ public class SysInfoController {
 
 	@RequestMapping(value = "/deleteDataSources", method = RequestMethod.POST)
 	public Mono<Response> deleteDataSources(@RequestBody List<DataSourceVo> dataVos) {
+		Response denied = rejectIfNotAdmin();
+		if (denied != null) return Mono.just(denied);
 		Response result = new Response();
 
 		try {
@@ -163,13 +188,10 @@ public class SysInfoController {
 		return Mono.just(result);
 	}
 
+	/** 데이터 소스 목록. 비밀번호는 조회하지 않는다 (sysinfo.selectDataSourceList 에 PWD 없음). */
 	@RequestMapping(value = "/getDataSourceList", method = RequestMethod.GET)
 	public List<DataSourceExtVo> getDataSourceList() {
-		List<DataSourceExtVo> dsVos = sqlSessionTemplate.selectList("sysinfo.selectDataSourceList");
-		for (DataSourceExtVo dsVo : dsVos) {
-			dsVo.setPwd(securityUtils.decryptStr(dsVo.getPwd()));
-		}
-		return dsVos;
+		return sqlSessionTemplate.selectList("sysinfo.selectDataSourceList");
 	}
 
 	@RequestMapping(value = "/getDataSourceListBySysCd", method = RequestMethod.GET)
@@ -178,21 +200,38 @@ public class SysInfoController {
 		return dsVos;
 	}
 
+	/** 데이터 소스 단건. 비밀번호는 응답에 싣지 않는다 (수집·진단은 서버 안에서 sysinfo.selectDataSourceById 로 직접 읽는다). */
 	@RequestMapping(value = "/getDataSourceById", method = RequestMethod.GET)
 	public DataSourceVo getDataSourceById(String dsId) {
 		DataSourceVo dsVo = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
-		dsVo.setPwd(securityUtils.decryptStr(dsVo.getPwd()));	// password를 복호화해서 전달한다.
+		dsVo.setPwd(null);
 		return dsVo;
 	}
 
 	@RequestMapping(value = "/testDataSource", method = RequestMethod.POST)
 	public Mono<Response> testDataSource(@RequestBody DataSourceVo dataVo) {
+		Response denied = rejectIfNotAdmin();
+		if (denied != null) return Mono.just(denied);
 		Response result = new Response();
 		DBConnection dbConn = null;
 
 		try {
 			log.info(">> testDataSourceById : id={}, dsn={}, dbmsTp={}, svrAddr={}:{}, userId={}",
 					dataVo.getId(), dataVo.getDsn(), dataVo.getDbmsTp(), dataVo.getSvrAddr(), dataVo.getPort(), dataVo.getUserId());
+			// 화면은 저장된 비밀번호를 모른다 (목록·상세 응답에서 뺐다). 행 테스트·수정 창 테스트처럼
+			// 등록된 데이터 소스(id 있음)를 비밀번호 없이 보내면 저장된 비밀번호로 시험한다.
+			// 저장된 비밀번호는 저장된 서버·포트·사용자에게만 보낸다 — 접속 대상을 바꿔 보내 비밀번호를
+			// 다른 서버로 빼낼 수 없게. 대상을 바꿨으면 비밀번호를 다시 입력해야 한다.
+			if (StringUtils.isEmpty(dataVo.getPwd()) && StringUtils.isNotEmpty(dataVo.getId())) {
+				DataSourceVo stored = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dataVo.getId());
+				if (!Objects.equals(stored.getSvrAddr(), dataVo.getSvrAddr()) || stored.getPort() != dataVo.getPort()
+						|| !Objects.equals(stored.getUserId(), dataVo.getUserId())) {
+					result.setResultInfo(RestResult.CODE_500.getCode(),
+							"서버주소·포트·사용자를 바꿨으면 비밀번호를 다시 입력해야 연결 테스트를 할 수 있습니다.");
+					return Mono.just(result);
+				}
+				dataVo.setPwd(securityUtils.decryptStr(stored.getPwd()));
+			}
 			// Oracle/Tibero Service Name: driverName 임시 변경
 			if ("Service Name".equals(dataVo.getConnProps())) {
 				String dbmsTp = dataVo.getDbmsTp();

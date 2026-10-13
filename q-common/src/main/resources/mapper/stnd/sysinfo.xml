@@ -224,7 +224,8 @@
         WHERE SYS_CD IN (SELECT SYS_CD FROM CODE_LIST)
   </delete>
 
-  <!-- 데이터소스 -->
+  <!-- 데이터소스 — 화면 목록용. 비밀번호(PWD)는 조회하지 않는다 (WP0 — 응답에 실리지 않게).
+       수집·진단처럼 접속이 필요한 곳은 selectDataSourceById 로 서버 안에서 읽는다. -->
   <select id="selectDataSourceList" resultType="com.ndata.quality.model.mgmt.DataSourceExtVo">
         SELECT
              DS_ID              as id
@@ -235,7 +236,6 @@
             ,SVR_ADDR           as svrAddr
             ,PORT               as port
             ,USER_ID            as userId
-            ,PWD                as pwd
             ,CHARSET            as charSet
             ,PRIVATE_KEY        as privateKey
             ,DB_NAME            as dbName
@@ -377,7 +377,10 @@
                ,SVR_ADDR = #{svrAddr}
                ,PORT = #{port}
                ,USER_ID = #{userId}
+               <!-- 비밀번호를 안 보내면(수정 창에서 비워 둠) 저장된 값을 유지한다 -->
+               <if test="pwd != null">
                ,PWD = #{pwd}
+               </if>
                ,CHARSET = #{charSet}
                ,PRIVATE_KEY = #{privateKey}
                ,DB_NAME = #{dbName}

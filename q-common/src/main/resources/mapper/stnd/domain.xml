@@ -108,6 +108,36 @@
 			  and DICT_ID = #{dictId}
   </select>
 
+  <!-- 98번 — ID 로 도메인 1건 (승인 이력에 남길 값). 사전마다 같은 이름이 있을 수 있어 이름으로 찾지 않는다. -->
+  <select id="selectDomainInfoById" parameterType="String" resultMap="stdDomainMap">
+			select
+				 DOMAIN_ID
+				,DOMAIN_NM
+				,DOMAIN_GRP_NM
+				,DOMAIN_CLSF_NM
+				,DOMAIN_DESC
+				,DATA_TYPE
+				,DATA_LEN
+				,DATA_DECIMAL_LEN
+				,DATA_UNIT
+				,STOR_FMT
+				,EXPR_FMT_LST
+				,ALLOW_VAL_LST
+				,COMM_STND_YN
+				,MAGNTD_ORD
+				,APRV_YN
+				,APRV_USER_ID
+				,to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT
+				,CRET_USER_ID
+				,to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT
+				,UPDT_USER_ID
+				,to_char(to_timestamp(APRV_STAT_UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as APRV_STAT_UPDT_DT
+        ,REQ_SYS_CD
+				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
+			from TB_DOMAIN
+			where DOMAIN_ID = #{id}
+  </select>
+
   <select id="selectDomainInfoByClsfNm" parameterType="java.util.Map" resultMap="stdDomainMap">
 			select 
 				 DOMAIN_ID

@@ -842,6 +842,14 @@ export default {
       if (!this.selectedJobId) return {};
       return this.jobList.find(j => j.diagJobId === this.selectedJobId) || {};
     },
+    /**
+     * 98번 — 용어 빠른 등록이 조회·등록할 사전 = 이 진단에 쓴 사전(TB_DIAG_JOB.DICT_ID).
+     * 진단 실행 때 고른 사전이고 기본값은 모델의 사전이다. 이슈("용어 미존재" 등)가 이 사전 기준이므로
+     * 같은 사전에 등록해야 재진단에서 해소된다.
+     */
+    termRegDictId() {
+      return this.selectedJobInfo.dictId || null;
+    },
     /** 진단 결과 요약 통계 */
     overviewStats() {
       const detail = this.detailList;
@@ -1300,8 +1308,10 @@ export default {
       this.termRegWords = parts.map(p => ({
         abrv: p, wordNm: '', wordEngNm: '', wordDesc: '', exists: false, wordId: null, domainClsfNm: '', saving: false,
       }));
-      // 일괄 조회
-      axios.post(this.$APIURL.base + 'api/std/getWordsByEngAbrvNms', parts).then(res => {
+      // 일괄 조회 — 98번: 이 진단에 쓴 사전에서 (본문이 배열이라 사전은 쿼리로)
+      axios.post(this.$APIURL.base + 'api/std/getWordsByEngAbrvNms', parts, {
+        params: { dictId: this.termRegDictId },
+      }).then(res => {
         const wordMap = {};
         (res.data || []).forEach(w => { wordMap[w.wordEngAbrvNm] = w; });
         this.termRegWords.forEach(tw => {
@@ -1337,6 +1347,7 @@ export default {
     loadDomainCandidates(dataType, dataLen) {
       axios.post(this.$APIURL.base + 'api/std/getDomainList', {
         schDataType: dataType || '',
+        dictId: this.termRegDictId,
       }).then(res => {
         this.termRegDomainList = res.data || [];
         // 타입+길이 정확 매치가 있으면 자동 선택
@@ -1350,7 +1361,7 @@ export default {
     /** 등록된 코드 목록 조회 */
     loadCodeList() {
       var self = this;
-      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', {}).then(function(res) {
+      axios.post(this.$APIURL.base + 'api/std/getCodeInfoList', { dictId: this.termRegDictId }).then(function(res) {
         self.termRegCodeList = res.data || [];
       });
     },
@@ -1380,6 +1391,7 @@ export default {
         commStndYn: 'N',
         magntdOrd: '',
         reqSysCd: '',
+        dictId: this.termRegDictId,
       }).then(res => {
         // 86번 #11 — 백엔드는 비즈니스 실패도 HTTP 200 + Response{resultCode:500,...} 로 내려옴.
         // .then() 에서 resultCode 검사 누락하면 가짜 success → 화면 거짓말. 반드시 체크.
@@ -1398,7 +1410,7 @@ export default {
         w.wordId = null;
         this.$set(this.termRegWords, idx, { ...w });
         // 영문약어로 단어를 다시 조회해서 정확한 ID 확보 (StdWordVo.id 필드)
-        axios.get(this.$APIURL.base + 'api/std/getWordByEngAbrvNm', { params: { wordEngAbrvNm: w.abrv } }).then(r2 => {
+        axios.get(this.$APIURL.base + 'api/std/getWordByEngAbrvNm', { params: { wordEngAbrvNm: w.abrv, dictId: this.termRegDictId } }).then(r2 => {
           if (r2.data) {
             w.wordId = r2.data.id;
             this.$set(this.termRegWords, idx, { ...w });
@@ -1443,6 +1455,8 @@ export default {
         reqSysCd: '',
         wordList: wordList,
         allophSynmLst: [],
+        // 98번 — 이 진단에 쓴 사전에 등록한다. 형식단어 강제 여부도 그 사전의 속성을 따른다.
+        dictId: this.termRegDictId,
       }).then(function(res) {
         self.termRegLoading = false;
         // 86번 #11 — 가짜 success 차단. 백엔드 Response.resultCode 가 500 이면 실패로 처리.

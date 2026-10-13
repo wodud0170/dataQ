@@ -1,4 +1,5 @@
 import Vue from "vue"
+import axios from "axios"
 import App from "./../src/App.vue"
 import SockJS from "sockjs-client"
 import Stomp from "webstomp-client"
@@ -19,6 +20,28 @@ Vue.use(common);
 Vue.use(VueSplit);
 Vue.use(VueSweetalert2);
 Vue.use(VueApexCharts)
+
+// WP0 — 로그인 세션이 없거나 끊기면 서버는 /api/** 에 401 을 돌려준다(로그인 화면 리다이렉트 아님).
+// 어느 화면에서 받든 한 번만 안내하고 로그인 화면으로 보낸다. 로그인 화면 자체에서는 하지 않는다.
+// 401 은 화면의 catch 로 넘기지 않는다 — 넘기면 화면마다 띄우는 "서버 오류" 창이 이 안내를 덮어
+// 로그인 화면으로 가지 못한다. 곧 페이지를 떠나므로 그 요청은 끝나지 않은 채로 둔다.
+let sessionExpiredNotified = false;
+axios.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401 && window.location.pathname !== "/signin") {
+      if (!sessionExpiredNotified) {
+        sessionExpiredNotified = true;
+        sessionStorage.removeItem("loginStatus");
+        Vue.swal
+          .fire({ title: "로그인이 필요합니다.", confirmButtonText: "확인", icon: "info" })
+          .then(() => { window.location.href = "/signin"; });
+      }
+      return new Promise(() => {});
+    }
+    return Promise.reject(error);
+  }
+);
 
 new Vue({
   el: "#app",

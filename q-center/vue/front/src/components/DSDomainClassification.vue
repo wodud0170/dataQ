@@ -447,6 +447,7 @@ export default {
           'domainClsfNm': this.addDomainClassification_domainClsfNm,
           'domainGrpNm': this.addDomainClassification_domainGrpNm,
           'commStndYn': this.addDomainClassification_commStndYn,
+          'dictId': this.dictId,
         };
 
         axios.post(this.$APIURL.base + "api/std/createDomainClassification", domainClassificationData).then(result => {
@@ -655,6 +656,8 @@ export default {
       const _url = this.$APIURL.base + "api/std/uploadDomainClsfs";
       const formData = new FormData();
       formData.append('file', this.excelFile);
+      // 98번 — 화면에서 고른 사전에 올린다 (비면 서버가 기본 사전으로 정한다)
+      formData.append('dictId', this.dictId || '');
       const headers = { 'Content-Type': 'multipart/form-data' };
 
       axios.post(_url, formData, { headers }).catch(() => {
@@ -774,6 +777,7 @@ export default {
         axios.get(this.$APIURL.base + "api/std/getDomainClassificationListByNm", {
           params: {
             'domainClsfNm': this.searchDomainClassification,
+            'dictId': this.dictId,
           }
         }).then((res) => {
           this.domainClassificationItems = res.data;

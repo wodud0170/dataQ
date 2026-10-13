@@ -1,0 +1,522 @@
+<meta charset="utf-8">
+<title>NavidM Meta 기능명세서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: 101번 보고서와 같은 틀 — 본문 최대 940px + 넓은 화면에서 왼쪽 고정 목차. 전체 그림(구성·규모·메뉴·흐름) → 영역별 기능 목록 순서 */
+:root{
+  --bg:#F3F6F7; --surface:#FFFFFF; --sunken:#E9EFF1; --ink:#122029; --muted:#566874; --faint:#7F919C; --line:#D5DEE3;
+  --accent:#0A6E7E; --accent-soft:#DDF0F2;
+  --work:#4F67A8; --work-soft:#E4E9F6; --api:#A9B8C1;
+  --adm:#5B4BB7; --adm-soft:#ECE9FA; --usr:#2F7D4E; --usr-soft:#E2F2E8;
+  --off:#A35A00; --off-soft:#FCEFDD; --hide:#78868F; --hide-soft:#ECEFF1;
+  --yes:#23803A; --no:#B23A2E;
+  --font-display:'Hahmlet','Noto Serif KR','Batang',serif;
+  --font-body:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --font-mono:'IBM Plex Mono','D2Coding',Consolas,ui-monospace,monospace;
+  --radius:6px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1417; --surface:#151D21; --sunken:#1C262B; --ink:#E4ECEF; --muted:#A0B0BA; --faint:#73858F; --line:#2A373D;
+    --accent:#4CC6D6; --accent-soft:#10303A;
+    --work:#8FA6E8; --work-soft:#1C2540; --api:#4E5E67;
+    --adm:#A99BF5; --adm-soft:#241F44; --usr:#6CCB8F; --usr-soft:#15301F;
+    --off:#F2A54A; --off-soft:#352612; --hide:#9AA7B0; --hide-soft:#222B30;
+    --yes:#5BC977; --no:#FF7F73;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1417; --surface:#151D21; --sunken:#1C262B; --ink:#E4ECEF; --muted:#A0B0BA; --faint:#73858F; --line:#2A373D;
+  --accent:#4CC6D6; --accent-soft:#10303A;
+  --work:#8FA6E8; --work-soft:#1C2540; --api:#4E5E67;
+  --adm:#A99BF5; --adm-soft:#241F44; --usr:#6CCB8F; --usr-soft:#15301F;
+  --off:#F2A54A; --off-soft:#352612; --hide:#9AA7B0; --hide-soft:#222B30;
+  --yes:#5BC977; --no:#FF7F73;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.72;word-break:keep-all;overflow-wrap:anywhere}
+a{color:var(--accent);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--sunken);padding:1px 5px;border-radius:4px}
+[hidden]{display:none!important}
+
+.page{display:grid;grid-template-columns:minmax(0,1fr);max-width:1260px;margin:0 auto;padding-inline:16px;padding-block:0 72px}
+@media (min-width:1100px){.page{grid-template-columns:200px minmax(0,1fr);column-gap:52px;padding-inline:32px}}
+
+.toc{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:8px;overflow-x:auto}
+.toc ol{list-style:none;margin:0;padding:0;display:flex;gap:6px;white-space:nowrap}
+.toc a{display:block;text-decoration:none;color:var(--muted);font-size:13px;padding:4px 10px;border-radius:999px}
+.toc a:hover{color:var(--ink);background:var(--sunken)}
+.toc .n{font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-right:6px}
+.toc .grp{display:none}
+@media (min-width:1100px){
+  .toc{align-self:start;max-height:100vh;border-bottom:0;padding-block:40px 24px;overflow:auto}
+  .toc ol{flex-direction:column;gap:1px;white-space:normal}
+  .toc a{border-radius:4px;padding:4px 10px}
+  .toc .grp{display:block;margin-top:14px;font-size:11px;letter-spacing:.08em;color:var(--faint);padding-left:10px}
+}
+@media (max-width:1099px){section[id]{scroll-margin-top:56px}}
+
+.doc{min-width:0;max-width:940px}
+.hero{padding-block:48px 28px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--muted)}
+.hero h1{font-family:var(--font-display);font-weight:800;font-size:clamp(28px,4.6vw,46px);line-height:1.2;margin:12px 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.lede{font-size:17px;color:var(--muted);max-width:44em;margin:0}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-top:28px}
+.fig{background:var(--surface);padding:16px 18px}
+.fig b{display:block;font-family:var(--font-display);font-size:34px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--accent)}
+.fig span{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+.basis{margin-top:14px;font-size:13px;color:var(--faint)}
+
+section.blk{padding-block:44px 8px}
+.blk>h2{font-family:var(--font-display);font-weight:700;font-size:clamp(22px,3vw,28px);line-height:1.3;margin:0 0 6px;text-wrap:balance}
+.blk>h2 .sn{font-family:var(--font-mono);font-size:14px;font-weight:500;color:var(--faint);margin-right:10px;vertical-align:3px}
+.blk>.sub{color:var(--muted);margin:0 0 22px;max-width:46em}
+h3{font-size:17px;margin:0}
+
+/* 구성도 */
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+.diagram svg{display:block;width:100%;min-width:760px;height:auto}
+.d-box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.d-key{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+.d-store{fill:var(--sunken);stroke:var(--line);stroke-width:1.5}
+.d-t{fill:var(--ink);font:600 15px var(--font-body)}
+.d-s{fill:var(--muted);font:400 12.5px var(--font-body)}
+.d-m{fill:var(--faint);font:500 11.5px var(--font-mono)}
+.d-l{fill:var(--muted);font:500 12px var(--font-body)}
+.d-line{stroke:var(--muted);stroke-width:1.4;fill:none}
+.d-dash{stroke:var(--faint);stroke-width:1.2;fill:none;stroke-dasharray:4 4}
+.d-arr{fill:var(--muted)}
+.mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:16px}
+.mod{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;min-width:0}
+.mod h3{font-size:15px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.mod h3 code{font-size:12px}
+.mod p{margin:6px 0 0;font-size:14px;color:var(--muted)}
+
+/* 규모 막대 */
+.bars{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.bar-row{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr) 44px;gap:12px;align-items:center}
+.bar-label{color:var(--ink);text-decoration:none;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bar-label:hover{color:var(--accent)}
+.bar-no{font-family:var(--font-mono);font-size:11px;color:var(--faint);width:16px}
+.bar-track{display:flex;height:16px;background:var(--sunken);border-radius:3px;overflow:hidden}
+.seg{height:100%}
+.seg-ui{background:var(--accent)}
+.seg-bg{background:var(--work)}
+.seg-api{background:var(--api)}
+.is-off .seg-ui,.is-off .seg-bg{opacity:.45}
+.bar-num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:14px;text-align:right}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:16px 0 0;padding:0;list-style:none;font-size:13px;color:var(--muted)}
+.legend li{display:flex;align-items:center;gap:7px}
+.sw{width:12px;height:12px;border-radius:2px;display:inline-block}
+@media (max-width:560px){.bar-row{grid-template-columns:minmax(0,1fr) 40px}.bar-label{grid-column:1/-1}.bar-track{grid-column:1}}
+
+/* 메뉴 지도 */
+.menumap{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:12px;align-items:start}
+.mg{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;min-width:0}
+.mg h4{margin:0 0 8px;font-size:13px;letter-spacing:.02em;color:var(--muted);font-weight:600}
+.mg ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.mg-off{background:transparent;border-style:dashed}
+.mg-adm{border-color:var(--adm)}
+.mi{display:flex;justify-content:space-between;gap:8px;font-size:14px;align-items:baseline}
+.mi-off,.mi-hide{color:var(--faint)}
+.mi-tag,.tag{font-size:11px;padding:0 6px;border-radius:3px;white-space:nowrap;font-weight:500;line-height:1.7}
+.mi-adm .mi-tag{background:var(--adm-soft);color:var(--adm)}
+.mi-usr .mi-tag{background:var(--usr-soft);color:var(--usr)}
+.mi-off .mi-tag,.tag-off{background:var(--off-soft);color:var(--off)}
+.mi-hide .mi-tag{background:var(--hide-soft);color:var(--hide)}
+.tag-note{background:var(--hide-soft);color:var(--hide)}
+
+/* 업무 흐름 */
+.flow{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 18px 16px;margin-bottom:16px}
+.flow>h3{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.flow>h3 small{font-weight:400;color:var(--muted);font-size:13px}
+.steps{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;counter-reset:st}
+.steps li{position:relative;background:var(--sunken);border-radius:5px;padding:10px 12px 11px;counter-increment:st;min-width:0}
+.steps li::before{content:counter(st);font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--accent);display:block}
+.steps b{display:block;font-size:14px;margin-bottom:2px}
+.steps span{display:block;font-size:13px;color:var(--muted);line-height:1.6}
+.flow .note{margin:12px 0 0;font-size:13.5px;color:var(--muted)}
+.states{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px}
+.st{font-family:var(--font-mono);font-size:13px;font-weight:600;padding:6px 10px;border-radius:4px;border:1.5px solid var(--line);background:var(--surface);display:flex;flex-direction:column;line-height:1.3}
+.st small{font-family:var(--font-body);font-weight:400;font-size:12px;color:var(--muted)}
+.st-ok{border-color:var(--yes)}
+.st-no{border-color:var(--no)}
+.st-arr{color:var(--faint);font-size:18px}
+.st-fork{display:flex;flex-direction:column;gap:6px}
+.diag-split{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+.diag-card{background:var(--sunken);border-radius:5px;padding:12px 14px;min-width:0}
+.diag-card h4{margin:0 0 6px;font-size:14px}
+.diag-card ol,.diag-card ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--muted)}
+.diag-card li+li{margin-top:2px}
+.formula{font-family:var(--font-mono);font-size:12.5px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:6px 8px;margin-top:8px;color:var(--ink)}
+
+/* 구현 범위 */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table.mx{border-collapse:collapse;width:100%;min-width:560px;font-size:14px}
+.mx th,.mx td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.mx thead th{font-size:12.5px;color:var(--muted);font-weight:600;background:var(--sunken)}
+.mx td.c{text-align:center;font-weight:600}
+.mx tr:last-child td{border-bottom:0}
+.y{color:var(--yes)} .n{color:var(--no)} .dim{color:var(--faint)}
+.cat{display:flex;height:22px;border-radius:3px;overflow:hidden;margin:12px 0 8px}
+.cat span{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;color:var(--surface);white-space:nowrap;overflow:hidden}
+.c-regex{background:var(--accent)} .c-range{background:var(--work)} .c-enum{background:var(--adm)} .c-nn{background:var(--hide)}
+
+/* 기능 목록 */
+.finder{display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;top:calc(env(safe-area-inset-top,0px) + 44px);z-index:4;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line)}
+@media (min-width:1100px){.finder{top:env(safe-area-inset-top,0px)}}
+.finder input{flex:1 1 240px;min-width:0;font:inherit;font-size:15px;padding:8px 12px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink)}
+.finder button{font:inherit;font-size:13px;padding:7px 12px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink);cursor:pointer}
+.finder button:hover{border-color:var(--accent);color:var(--accent)}
+.finder output{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:4em}
+.chap{padding-block:26px 6px;border-bottom:1px solid var(--line)}
+.chap.nohit{display:none}
+.chap-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:start}
+.chap-no{font-family:var(--font-display);font-size:34px;font-weight:700;line-height:1;color:var(--accent);min-width:1.3em}
+.chap-title h3{font-family:var(--font-display);font-size:20px;font-weight:700;line-height:1.35;text-wrap:balance}
+.chap-title p{margin:6px 0 0;color:var(--muted);font-size:14.5px;max-width:44em}
+.chap-meta{display:flex;gap:16px;margin:0}
+.chap-meta div{text-align:right}
+.chap-meta dt{font-size:11.5px;color:var(--faint)}
+.chap-meta dd{margin:0;font-family:var(--font-mono);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+@media (max-width:620px){.chap-head{grid-template-columns:auto minmax(0,1fr)}.chap-meta{grid-column:1/-1;justify-content:flex-start}.chap-meta div{text-align:left}}
+.screens{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.screens li{font-size:12.5px;padding:2px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+details.flist{margin-top:14px}
+details.flist>summary{cursor:pointer;font-size:14px;color:var(--accent);padding:4px 0;list-style:none;display:inline-flex;gap:6px;align-items:center}
+details.flist>summary::-webkit-details-marker{display:none}
+details.flist>summary::before{content:'▸';font-size:12px;transition:transform .15s}
+details.flist[open]>summary::before{transform:rotate(90deg)}
+details.flist .tbl-wrap{margin-top:8px}
+table.ftable{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.62}
+.ftable th,.ftable td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.ftable thead th{font-size:12px;color:var(--muted);font-weight:600;background:var(--sunken);position:sticky;top:0}
+.ftable tr.sec th{background:var(--accent-soft);color:var(--ink);font-size:13px;font-weight:600}
+.ftable tr.sec code{background:transparent;padding:0}
+.ftable td.fid{font-family:var(--font-mono);font-size:12px;white-space:nowrap;color:var(--muted);width:84px}
+.ftable td.fname{font-weight:600;width:170px}
+.ftable td.fact code{font-size:.82em}
+@media (max-width:640px){
+  .ftable thead{display:none}
+  .ftable tr{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:10px 10px;border-bottom:1px solid var(--line)}
+  .ftable tr.sec{padding:0}
+  .ftable tr.sec th{display:block;border:0}
+  .ftable td{border:0;padding:0;width:auto}
+  .ftable td.fact{grid-column:1/-1}
+}
+
+.appx p,.appx li{font-size:14px;color:var(--muted)}
+.ctl{columns:2 220px;column-gap:28px;list-style:none;margin:0;padding:0}
+.ctl li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted var(--line);padding:3px 0;break-inside:avoid;font-size:13.5px;color:var(--ink)}
+.ctl li span:last-child{font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--muted)}
+footer{margin-top:40px;font-size:12.5px;color:var(--faint)}
+</style>
+
+<div class="page">
+<nav class="toc" aria-label="목차">
+  <ol>
+    <li><a href="#top"><span class="n">0</span>요약</a></li>
+    <li><a href="#arch"><span class="n">1</span>제품 구성</a></li>
+    <li><a href="#scale"><span class="n">2</span>영역별 규모</a></li>
+    <li><a href="#menu"><span class="n">3</span>메뉴 구성</a></li>
+    <li><a href="#flows"><span class="n">4</span>핵심 업무 흐름</a></li>
+    <li><a href="#scope"><span class="n">5</span>구현 범위</a></li>
+    <li><a href="#funcs"><span class="n">6</span>영역별 기능</a></li>
+    <li class="grp">영역</li>
+    {{TOC_CH}}
+    <li class="grp">부록</li>
+    <li><a href="#appx"><span class="n">A</span>기준·API 분포</a></li>
+  </ol>
+</nav>
+
+<main class="doc">
+<header class="hero" id="top">
+  <div class="eyebrow">102 · 기능명세서 · 2026-10-12</div>
+  <h1>NavidM Meta 기능명세서</h1>
+  <p class="lede">NavidM Meta 소스 코드를 전부 읽고, 지금 코드에 들어 있는 기능을 화면·서버 처리·백그라운드 작업 단위로 정리했다. 코드를 근거로 한 명세이고, 실데이터·실사용 검증은 따로 해야 한다.</p>
+  <div class="figs">
+    <div class="fig"><b>{{TOTAL}}</b><span>기능 (화면 {{SUM_UI}} · 백그라운드·규칙 {{SUM_BG}} · 화면 없는 API {{SUM_API}})</span></div>
+    <div class="fig"><b>250</b><span>API (웹 서버 236 · 작업 서버 14)</span></div>
+    <div class="fig"><b>{{SCREENS}}</b><span>화면</span></div>
+    <div class="fig"><b>{{MENUS}}</b><span>메뉴 항목 (관리자 전용 포함)</span></div>
+    <div class="fig"><b>10</b><span>기능 영역</span></div>
+  </div>
+  <p class="basis">기준: main 브랜치 소스 (q-common · q-center · q-executor, Vue 화면 포함). 기능별 API·검증 메시지·근거 파일 위치는 같은 이름의 md 원문에 있다.</p>
+</header>
+
+<section class="blk" id="arch">
+  <h2><span class="sn">1</span>제품 구성</h2>
+  <p class="sub">화면과 API 를 맡는 웹 서버, 오래 걸리는 작업을 맡는 작업 서버, 둘이 함께 쓰는 공용 모듈과 메타 저장소로 이뤄진다. 고객 DB 에는 수집·진단·DDL 반영 때만 접속한다.</p>
+  <div class="diagram">
+    <svg viewBox="0 0 960 340" role="img" aria-label="구성도: 사용자 브라우저가 웹 서버 q-center 와 HTTP·WebSocket 으로 통신하고, q-center 가 작업 서버 q-executor 에 작업을 요청하며, q-executor 가 대상 DB 에서 수집·진단한다. 두 서버는 메타 저장소 PostgreSQL 을 함께 쓴다.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="d-arr" d="M0 0 L10 5 L0 10 z"/></marker>
+      </defs>
+      <!-- 브라우저 -->
+      <rect class="d-box" x="16" y="92" width="160" height="104" rx="8"/>
+      <text class="d-t" x="32" y="122">사용자 브라우저</text>
+      <text class="d-s" x="32" y="146">Vue 2 · Vuetify 2</text>
+      <text class="d-s" x="32" y="166">탭으로 여는 화면</text>
+      <!-- q-center -->
+      <rect class="d-key" x="256" y="60" width="230" height="168" rx="8"/>
+      <text class="d-t" x="272" y="90">q-center 웹 서버</text>
+      <text class="d-s" x="272" y="116">화면 제공 · API 236개</text>
+      <text class="d-s" x="272" y="137">로그인 · 권한 · 세션</text>
+      <text class="d-s" x="272" y="158">실시간 알림 중계</text>
+      <text class="d-m" x="272" y="208">포트 28091</text>
+      <!-- q-executor -->
+      <rect class="d-key" x="556" y="60" width="220" height="168" rx="8"/>
+      <text class="d-t" x="572" y="90">q-executor 작업 서버</text>
+      <text class="d-s" x="572" y="116">데이터 모델 수집</text>
+      <text class="d-s" x="572" y="137">표준 진단 · 구조 변경 진단</text>
+      <text class="d-s" x="572" y="158">엑셀 일괄등록 · 스케줄러</text>
+      <text class="d-m" x="572" y="208">API 14개 · 포트 28098</text>
+      <!-- 대상 DB -->
+      <rect class="d-box" x="826" y="92" width="118" height="104" rx="8"/>
+      <text class="d-t" x="840" y="122">대상 DB</text>
+      <text class="d-s" x="840" y="146">고객 운영 DB</text>
+      <text class="d-s" x="840" y="166">(5장 참고)</text>
+      <!-- 메타 저장소 -->
+      <rect class="d-store" x="256" y="270" width="520" height="56" rx="8"/>
+      <text class="d-t" x="272" y="296">메타 저장소 · PostgreSQL</text>
+      <text class="d-s" x="272" y="316">표준 사전 · 데이터 모델 · 진단 결과 · 이력 — quality 스키마 52개 테이블 + 데이터 소스</text>
+      <!-- 연결 -->
+      <line class="d-line" x1="176" y1="144" x2="254" y2="144" marker-start="url(#ah)" marker-end="url(#ah)"/>
+      <text class="d-l" x="215" y="134" text-anchor="middle">HTTP</text>
+      <text class="d-l" x="215" y="164" text-anchor="middle">WebSocket</text>
+      <line class="d-line" x1="486" y1="120" x2="554" y2="120" marker-end="url(#ah)"/>
+      <text class="d-l" x="521" y="110" text-anchor="middle">작업 요청</text>
+      <line class="d-line" x1="554" y1="170" x2="488" y2="170" marker-end="url(#ah)"/>
+      <text class="d-l" x="521" y="190" text-anchor="middle">진행 알림</text>
+      <line class="d-line" x1="776" y1="144" x2="824" y2="144" marker-end="url(#ah)"/>
+      <text class="d-l" x="800" y="134" text-anchor="middle">JDBC</text>
+      <path class="d-dash" d="M371 60 V30 H885 V90" marker-end="url(#ah)"/>
+      <text class="d-l" x="628" y="22" text-anchor="middle">연결 테스트 · 스키마 목록 · DDL 반영</text>
+      <line class="d-line" x1="371" y1="228" x2="371" y2="268" marker-start="url(#ah)" marker-end="url(#ah)"/>
+      <line class="d-line" x1="666" y1="228" x2="666" y2="268" marker-start="url(#ah)" marker-end="url(#ah)"/>
+      <text class="d-m" x="518" y="253" text-anchor="middle">공용 모듈 q-common (VO · MyBatis 매퍼)</text>
+    </svg>
+  </div>
+  <div class="mods">
+    <div class="mod"><h3>q-center <code>웹 서버</code></h3><p>Vue 화면을 내려주고 API 를 받는다. 로그인·세션·관리자 판정, 표준 사전과 데이터 모델 편집, 승인 처리, 작업 서버로 보내는 요청과 진행 알림 중계를 맡는다.</p></div>
+    <div class="mod"><h3>q-executor <code>작업 서버</code></h3><p>오래 걸리는 일을 별도 스레드로 돌린다. 데이터 모델 수집, 표준 진단, 구조 변경 진단, 엑셀 일괄등록, 정해진 시각에 진단을 띄우는 스케줄러.</p></div>
+    <div class="mod"><h3>q-common <code>공용 모듈</code></h3><p>두 서버가 함께 쓰는 데이터 객체, MyBatis 매퍼 XML 24개, 엑셀 처리 같은 공용 서비스.</p></div>
+  </div>
+</section>
+
+<section class="blk" id="scale">
+  <h2><span class="sn">2</span>영역별 기능 규모</h2>
+  <p class="sub">기능 {{TOTAL}}개를 10개 영역으로 나눴다. 막대 길이는 기능 수다. 영역 이름을 누르면 6장의 해당 기능 목록으로 간다.</p>
+  <ul class="bars">
+{{BARS}}
+  </ul>
+  <ul class="legend">
+    <li><span class="sw seg-ui"></span>화면 기능 {{SUM_UI}}</li>
+    <li><span class="sw seg-bg"></span>백그라운드 처리·업무 규칙 {{SUM_BG}}</li>
+    <li><span class="sw seg-api"></span>화면에서 부르지 않는 API {{SUM_API}}</li>
+  </ul>
+</section>
+
+<section class="blk" id="menu">
+  <h2><span class="sn">3</span>메뉴 구성</h2>
+  <p class="sub">왼쪽 메뉴에 나오는 그대로다. '관리' 그룹은 관리자에게만 보인다.</p>
+  <div class="menumap">
+{{MENU}}
+  </div>
+  <ul class="legend">
+    <li><span class="mi-tag" style="background:var(--adm-soft);color:var(--adm)">관리자</span>관리자에게만 보임</li>
+    <li><span class="mi-tag" style="background:var(--usr-soft);color:var(--usr)">일반 사용자</span>일반 사용자에게만 보임</li>
+    <li><span class="mi-tag" style="background:var(--hide-soft);color:var(--hide)">숨김</span>메뉴 항목을 화면에서 가림</li>
+  </ul>
+</section>
+
+<section class="blk" id="flows">
+  <h2><span class="sn">4</span>핵심 업무 흐름</h2>
+  <p class="sub">여러 화면에 걸친 기능을 업무 순서로 묶었다. 각 단계의 세부는 6장의 해당 영역에 있다.</p>
+
+  <div class="flow">
+    <h3>표준 사전 등록과 승인 <small>3장 표준 사전 · 8장 승인</small></h3>
+    <ol class="steps">
+      <li><b>등록</b><span>단어·용어·코드·도메인을 화면에서 하나씩, 엑셀로 일괄, 한글컬럼 일괄 표준화로 한꺼번에 등록</span></li>
+      <li><b>승인 상태 결정</b><span>관리자가 등록하면 바로 승인. 일반 사용자가 등록하면 승인 대기</span></li>
+      <li><b>관리자 승인·반려</b><span>표준 사전 변경 승인 화면에서 건별·일괄 처리. 용어·코드는 구성 단어가 먼저 승인돼야 승인된다. 반려하면 사유를 남기고 항목을 지운다</span></li>
+      <li><b>결과 확인</b><span>승인 내역과 변경 이력이 쌓이고, 요청자는 표준 사전 변경 요청 현황에서 처리 결과와 사유를 본다</span></li>
+    </ol>
+    <p class="note">단어·용어·도메인·코드는 표준사전 단위로 나뉜다. 기관마다 표준화 관례가 다르면 사전을 따로 두고, 데이터 모델마다 쓸 사전을 지정한다.</p>
+  </div>
+
+  <div class="flow">
+    <h3>데이터 모델 수집 <small>4장 데이터 모델 · 11장 데이터 소스</small></h3>
+    <ol class="steps">
+      <li><b>데이터 소스 등록</b><span>DBMS 유형·드라이버·접속 정보를 넣고 연결 테스트. Oracle·Tibero 는 SID 와 Service Name 중 고른다</span></li>
+      <li><b>데이터 모델 등록</b><span>데이터 소스와 표준사전을 지정한다</span></li>
+      <li><b>수집 범위</b><span>대상 DB 에서 스키마 목록을 읽어 고른다. 시스템 스키마는 빠진다</span></li>
+      <li><b>수집 실행</b><span>작업 서버가 테이블·컬럼·인덱스·제약조건을 읽어 저장한다. 진행 상황이 화면에 바로 뜬다</span></li>
+      <li><b>활용</b><span>테이블·컬럼 화면에서 조회·편집, 데이터 모델 현황, ERD, DDL 내려받기, XMI 2.1 내보내기</span></li>
+    </ol>
+    <p class="note">수집 말고도 엑셀 업로드나 모델링 도구 파일(ERwin XML, XMI 2.1)로 테이블·컬럼을 들여올 수 있다. 수집 때 같은 물리명 행은 DB 메타데이터로 덮어쓰고, 이번 수집에 없는 기존 행은 지우지 않는다.</p>
+  </div>
+
+  <div class="flow">
+    <h3>데이터 모델 변경 승인 <small>5장 거버넌스</small></h3>
+    <div class="states" aria-label="상태 흐름: DRAFT 에서 SUBMITTED 로, SUBMITTED 에서 APPROVED 또는 REJECTED 로">
+      <span class="st">DRAFT<small>저장, 신청 전</small></span>
+      <span class="st-arr" aria-hidden="true">→</span>
+      <span class="st">SUBMITTED<small>신청, 승인 대기</small></span>
+      <span class="st-arr" aria-hidden="true">→</span>
+      <span class="st-fork">
+        <span class="st st-ok">APPROVED<small>승인 — 모델에 반영</small></span>
+        <span class="st st-no">REJECTED<small>반려 — 변경 전으로</small></span>
+      </span>
+    </div>
+    <div class="diag-split">
+      <div class="diag-card"><h4>어떤 변경이 승인을 거치나</h4><ul>
+        <li>스키마에 영향을 주는 변경 (TIER1): 테이블·컬럼 추가·삭제, 영문명·소유자·타입·길이 변경 — 일반 사용자는 승인 필요</li>
+        <li>그 밖의 수정 (TIER2): 한글명·설명·NULL 여부·디폴트 등 — 바로 반영, 이력만 남김</li>
+        <li>관리자가 한 변경은 바로 승인 상태</li>
+      </ul></div>
+      <div class="diag-card"><h4>승인 뒤</h4><ul>
+        <li>변경마다 변경 전후 값과 DDL 조각을 이력에 남긴다</li>
+        <li>관리자가 [DB 반영] 으로 대상 DB 에 DDL 을 실행한다</li>
+        <li>실행 결과를 성공 · 권한 없음 · 실패 · 건너뜀 으로 나눠 기록한다</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <h3>진단 <small>6장 진단·스케줄</small></h3>
+    <div class="diag-split">
+      <div class="diag-card"><h4>표준 진단</h4><ol>
+        <li>진단 대상 컬럼을 고른다 (진단 제외로 지정한 테이블·컬럼은 빠짐)</li>
+        <li>컬럼마다 네 가지를 판정: 용어 미존재 · 한글명 불일치 · 데이터 타입 불일치 · 데이터 길이 불일치</li>
+        <li>결과를 저장하고 준수율을 낸다</li>
+        <li>결과 화면에서 용어 바로 등록, 컬럼 표준화·코멘트 변경 스크립트 생성</li>
+      </ol>
+      <div class="formula">준수율 = (전체 컬럼 − 이슈 컬럼) ÷ 전체 컬럼 × 100</div></div>
+      <div class="diag-card"><h4>구조 변경 진단</h4><ol>
+        <li>저장된 데이터 모델(승인된 테이블·컬럼)을 기준으로 삼는다</li>
+        <li>지금 대상 DB 의 구조를 다시 읽는다 (진단 제외 대상은 양쪽에서 뺌)</li>
+        <li>컬럼 · 인덱스 · 제약조건의 추가·삭제·변경을 찾는다</li>
+        <li>일치율을 내고 결과를 엑셀로 내려받는다</li>
+      </ol>
+      <div class="formula">일치율 = (1 − 바뀐 테이블·컬럼 ÷ 전체 테이블·컬럼) × 100</div></div>
+      <div class="diag-card"><h4>스케줄</h4><ul>
+        <li>간편 설정 (매일 · 매주 · 매월 + 시각) 또는 Cron 식</li>
+        <li>표준 진단·구조 변경 진단을 정해진 시각에 띄운다. 같은 모델·같은 유형의 예약 진단이 돌고 있으면 건너뛰고 기록한다</li>
+        <li>즉시 실행, 실행 이력 (실행 중 · 완료 · 오류 · 건너뜀)과 소요 시간</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <h3>한글컬럼 일괄 표준화 <small>7장 표준화 도구</small></h3>
+    <ol class="steps">
+      <li><b>입력</b><span>엑셀·CSV 업로드나 직접 입력. 대상 데이터 모델과 등록할 표준사전을 고른다</span></li>
+      <li><b>단어 분리</b><span>이미 있는 용어인지 먼저 보고, 형태소 분석(OKT)으로 단어를 1순위·2순위로 나눈다. 동의어를 찾고 없는 단어는 새로 제안한다</span></li>
+      <li><b>조합·추천</b><span>단어 영문약어를 이어 붙여 용어 영문약어를 만들고, 마지막 단어로 도메인을 추천한다</span></li>
+      <li><b>리뷰</b><span>행마다 단어 교체·도메인 변경. 등록할 수 있는지와 못 하는 이유를 표시한다</span></li>
+      <li><b>등록</b><span>새 단어와 용어를 한 번에 등록하고, 원래 입력과 표준 매핑을 변환 이력에 남긴다</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="blk" id="scope">
+  <h2><span class="sn">5</span>구현 범위</h2>
+  <p class="sub">코드에 있는 범위를 그대로 적었다. 드라이버만 있고 수집 쿼리가 없는 DBMS 는 접속은 되지만 수집은 되지 않는다.</p>
+  <h3 style="margin-bottom:10px">DBMS 별 수집 범위</h3>
+  <div class="tbl-wrap">
+    <table class="mx">
+      <thead><tr><th scope="col">DBMS</th><th scope="col">테이블</th><th scope="col">컬럼</th><th scope="col">인덱스</th><th scope="col">제약조건</th><th scope="col">비고</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Oracle</th><td class="c y">○</td><td class="c y">○</td><td class="c y">○</td><td class="c y">○</td><td>SID · Service Name 접속</td></tr>
+        <tr><th scope="row">PostgreSQL</th><td class="c y">○</td><td class="c y">○</td><td class="c y">○</td><td class="c y">○</td><td></td></tr>
+        <tr><th scope="row">MariaDB</th><td class="c y">○</td><td class="c y">○</td><td class="c dim">—</td><td class="c dim">—</td><td>인덱스·제약조건 수집 쿼리 없음</td></tr>
+        <tr><th scope="row">Cubrid</th><td class="c y">○</td><td class="c y">○</td><td class="c dim">—</td><td class="c dim">—</td><td>인덱스·제약조건 수집 쿼리 없음</td></tr>
+        <tr><th scope="row">Tibero · SQL Server · Altibase · Goldilocks</th><td class="c dim">—</td><td class="c dim">—</td><td class="c dim">—</td><td class="c dim">—</td><td>드라이버만 있음 (접속·연결 테스트 가능, 수집 쿼리 없음)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<section class="blk" id="funcs">
+  <h2><span class="sn">6</span>영역별 기능</h2>
+  <p class="sub">영역마다 하는 일과 화면을 요약하고, 아래에 기능 목록 전체를 접어 두었다. 검색창에 기능명·기능ID·단어를 넣으면 전 영역에서 찾는다.</p>
+  <div class="finder">
+    <label for="fsearch" class="sr" style="position:absolute;left:-9999px">기능 검색</label>
+    <input id="fsearch" type="search" placeholder="기능 검색 — 예: 엑셀 업로드, 승인, DM-034" autocomplete="off">
+    <button type="button" id="openAll">모두 펼치기</button>
+    <button type="button" id="closeAll">모두 접기</button>
+    <output id="fcount" for="fsearch" aria-live="polite"></output>
+  </div>
+{{CHAPTERS}}
+</section>
+
+<section class="blk appx" id="appx">
+  <h2><span class="sn">A</span>기준과 API 분포</h2>
+  <ul>
+    <li>근거: main 브랜치 소스 전체 — 화면(Vue), 웹 서버·작업 서버 컨트롤러, 서비스, MyBatis 매퍼, 수집 쿼리, DDL.</li>
+    <li>기능 수는 기능ID 가 붙은 행 수다. 백그라운드 처리(<code>-B</code>)와 승인 규칙(<code>-R</code>)도 한 행으로 센다.</li>
+    <li>"화면 없는 API" 는 서버에 있지만 어느 화면도 부르지 않거나, 진입 경로 없는 화면만 부르는 API 다.</li>
+    <li>API 250개는 컨트롤러의 매핑 어노테이션에서 뽑은 메서드·경로 조합이고, 모두 기능 목록의 어느 행엔가 연결된다.</li>
+  </ul>
+  <h3 style="margin:18px 0 8px">컨트롤러별 API 수</h3>
+  <ul class="ctl">
+    <li><span>표준 사전 (DataStandard)</span><span>85</span></li>
+    <li><span>데이터 모델 (DataModel)</span><span>56</span></li>
+    <li><span>시스템·데이터 소스 (SysInfo)</span><span>13</span></li>
+    <li><span>게시판 (Board)</span><span>12</span></li>
+    <li><span>로그인 (Login)</span><span>11</span></li>
+    <li><span>구조 변경 진단 (StructDiag)</span><span>10</span></li>
+    <li><span>진단 스케줄 (DiagSchedule)</span><span>10</span></li>
+    <li><span>데이터 모델 승인 (DataModelApproval)</span><span>9</span></li>
+    <li><span>표준 진단 (Diag)</span><span>7</span></li>
+    <li><span>진단 제외 (DiagTarget)</span><span>6</span></li>
+    <li><span>영역 (BizSubjArea)</span><span>6</span></li>
+    <li><span>표준사전 관리 (StdDict)</span><span>5</span></li>
+    <li><span>검색·대시보드 (Search)</span><span>4</span></li>
+    <li><span>한글 변환 이력 (TermResolveHistory)</span><span>2</span></li>
+    <li><span>작업 서버 q-executor (5개 컨트롤러)</span><span>14</span></li>
+  </ul>
+  <footer>NavidM Meta 기능명세서 · 2026-10-12 · 원문 dataQ설계/102_기능명세서_2026-10-12.md</footer>
+</section>
+</main>
+</div>
+
+<script>
+(function(){
+  var input = document.getElementById('fsearch');
+  var out = document.getElementById('fcount');
+  var lists = Array.prototype.slice.call(document.querySelectorAll('details.flist'));
+  function apply(){
+    var v = input.value.trim().toLowerCase();
+    var hits = 0;
+    lists.forEach(function(d){
+      var any = 0;
+      d.querySelectorAll('tr[data-q]').forEach(function(tr){
+        var ok = !v || tr.getAttribute('data-q').indexOf(v) !== -1;
+        tr.hidden = !ok; if (ok) any++;
+      });
+      d.querySelectorAll('tr.sec').forEach(function(sec){
+        var n = sec.nextElementSibling, vis = false;
+        while (n && !n.classList.contains('sec')) { if (!n.hidden) { vis = true; break; } n = n.nextElementSibling; }
+        sec.hidden = !vis;
+      });
+      d.closest('.chap').classList.toggle('nohit', !!v && !any);
+      d.open = v ? any > 0 : false;
+      hits += any;
+    });
+    out.textContent = v ? hits + '건' : '';
+  }
+  input.addEventListener('input', apply);
+  document.getElementById('openAll').addEventListener('click', function(){ lists.forEach(function(d){ d.open = true; }); });
+  document.getElementById('closeAll').addEventListener('click', function(){ lists.forEach(function(d){ d.open = false; }); });
+})();
+</script>

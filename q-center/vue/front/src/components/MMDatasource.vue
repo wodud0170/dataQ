@@ -292,9 +292,10 @@
                   <v-subheader class="reqText">비밀번호</v-subheader>
                 </v-col>
                 <v-col cols="8">
+                  <!-- 저장된 비밀번호는 화면에 내려오지 않는다. 비워 두면 기존 비밀번호를 그대로 쓴다. -->
                   <v-text-field v-model="updateDatasource_pwd" ref="updateDatasource_pwd" type="password"
-                    :rules="[() => !!updateDatasource_pwd || '비밀번호는 필수 입력값입니다.']" clearable required dense
-                    color="ndColor"></v-text-field>
+                    placeholder="변경할 때만 입력" hint="비워 두면 저장된 비밀번호를 그대로 사용합니다." persistent-hint
+                    clearable dense color="ndColor" autocomplete="new-password"></v-text-field>
                 </v-col>
               </v-row>
 
@@ -648,7 +649,7 @@ export default {
       this.updateDatasource_svrAddr = this.selectedItem[0].svrAddr;
       this.updateDatasource_port = this.selectedItem[0].port;
       this.updateDatasource_userId = this.selectedItem[0].userId;
-      this.updateDatasource_pwd = this.selectedItem[0].pwd;
+      this.updateDatasource_pwd = '';
       this.updateDatasource_charSet = this.selectedItem[0].charSet;
       this.updateDatasource_privateKey = this.selectedItem[0].privateKey;
       this.updateDatasource_dbName = this.selectedItem[0].dbName;
@@ -923,8 +924,6 @@ export default {
           _attr = '포트';
         } else if (this.updateDatasource_userId === null || this.updateDatasource_userId === '') {
           _attr = '사용자 아이디';
-        } else if (this.updateDatasource_pwd === null || this.updateDatasource_pwd === '') {
-          _attr = '사용자 비밀번호';
         } else if (this.updateDatasource_dbName === null || this.updateDatasource_dbName === '') {
           _attr = '데이터베이스명';
         }
@@ -1034,6 +1033,7 @@ export default {
     testDatasourceRow(item) {
       if (!item || !item.id) return;
       this.rowTestingId = item.id;
+      // 비밀번호는 보내지 않는다 — 서버가 id 로 저장된 비밀번호를 찾아 시험한다.
       const payload = {
         "id": item.id,
         "dsn": item.dsn,
@@ -1043,7 +1043,6 @@ export default {
         "svrAddr": item.svrAddr,
         "port": item.port,
         "userId": item.userId,
-        "pwd": item.pwd,
         "dbName": item.dbName,
         "charSet": item.charSet,
         "connProps": item.connProps,

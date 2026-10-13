@@ -1096,6 +1096,8 @@ export default {
       const _url = this.$APIURL.base + "api/std/uploadWords";
       const formData = new FormData();
       formData.append('file', this.excelFile);
+      // 98번 — 화면에서 고른 사전에 올린다 (비면 서버가 기본 사전으로 정한다)
+      formData.append('dictId', this.dictId || '');
       const headers = { 'Content-Type': 'multipart/form-data' };
 
       axios.post(_url, formData, { headers }).catch(() => {
@@ -1444,6 +1446,7 @@ export default {
           'commStndYn': this.addWord_commStndYn,
           'magntdOrd': this.addWord_magntdOrd,
           'reqSysCd': this.addWord_reqSysCd,
+          'dictId': this.dictId,
         };
 
         // console.log(wordData);

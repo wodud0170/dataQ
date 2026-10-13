@@ -1010,7 +1010,8 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/getDomainClassificationListByDomainGrpNm", {
           params: {
-            'domainGrpNm': _domainGroupName
+            'domainGrpNm': _domainGroupName,
+            'dictId': this.dictId
           }
         }).then(result => {
 
@@ -1176,6 +1177,7 @@ export default {
           'commStndYn': this.addDomain_commStndYn,
           'magntdOrd': this.addDomain_magntdOrd,
           'reqSysCd': this.addDomain_reqSysCd,
+          'dictId': this.dictId,
         };
 
         axios.post(this.$APIURL.base + "api/std/createDomain", domainData)
@@ -1251,6 +1253,7 @@ export default {
           'commStndYn': this.updateDomain_commStndYn,
           'magntdOrd': this.updateDomain_magntdOrd,
           'reqSysCd': this.updateDomain_reqSysCd,
+          'dictId': this.dictId,
         };
 
         axios.post(this.$APIURL.base + "api/std/updateDomain", domainData)
@@ -1504,6 +1507,8 @@ export default {
       const _url = this.$APIURL.base + "api/std/uploadDomains";
       const formData = new FormData();
       formData.append('file', this.excelFile);
+      // 98번 — 화면에서 고른 사전에 올린다 (비면 서버가 기본 사전으로 정한다)
+      formData.append('dictId', this.dictId || '');
       const headers = { 'Content-Type': 'multipart/form-data' };
 
       axios.post(_url, formData, { headers }).catch(() => {

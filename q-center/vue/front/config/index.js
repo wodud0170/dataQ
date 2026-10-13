@@ -10,7 +10,19 @@ module.exports = {
     // Paths
     assetsSubDirectory: 'static',
     assetsPublicPath: '/',
-    proxyTable: {},
+    // WP0 — API 는 로그인 세션(쿠키)이 있어야 열린다. 개발 서버(8080)가 q-center(28090)를 다른 출처로 부르면
+    // 쿠키가 실리지 않으므로 같은 출처로 프록시한다. /login 은 화면 주소이기도 해서 POST(로그인 요청)만 넘긴다.
+    proxyTable: {
+      '/api': { target: 'http://127.0.0.1:28090' },
+      '/logout': { target: 'http://127.0.0.1:28090' },
+      '/sockjs': { target: 'http://127.0.0.1:28090', ws: true },
+      '/login': {
+        target: 'http://127.0.0.1:28090',
+        bypass: function (req) {
+          if (req.method !== 'POST') return '/index.html';
+        }
+      }
+    },
 
     // Various Dev Server settings
     host: 'localhost', // can be overwritten by process.env.HOST

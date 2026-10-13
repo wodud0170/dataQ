@@ -1003,13 +1003,63 @@ public class DataModelController {
 	}
 
 	// ======== 87-3: PK / FK 자동 생성·삭제 endpoint ========
+	// WP0 — 네 API 모두 변경 이력·승인을 거친다 (deleteAttr·saveAttrs 와 같은 방식).
+	//   관리자: 지금처럼 바로 반영 + APPROVED 이력.
+	//   일반 사용자: 모델에 대기 상태로 반영 + DRAFT 이력 — 추가는 대기 상태 행(APRV_STATUS='DRAFT'),
+	//   삭제는 USE_YN='N' 으로 감춤. 승인하면 확정, 반려하면 이력의 BEFORE_JSON 으로 되돌린다
+	//   (DataModelApprovalController.applyConstraintDecision).
+
+	/** WP0 — PK/FK 변경 전 컬럼의 PK·FK 표시값. 반려 때 이 값으로 되돌린다. */
+	private Map<String, Object> attrKeySnapshot(SqlSession session, String dataModelId, String objOwner,
+	                                            String objNm, String attrNm) {
+		Map<String, Object> sel = new HashMap<>();
+		sel.put("dataModelId", dataModelId);
+		sel.put("objOwner",    objOwner);
+		sel.put("objNm",       objNm);
+		sel.put("attrNm",      attrNm);
+		StdDataModelAttrVo a = session.selectOne("datamodel.selectDataModelAttrOne", sel);
+		Map<String, Object> snap = new HashMap<>();
+		snap.put("objOwner", objOwner);
+		snap.put("objNm",    objNm);
+		snap.put("attrNm",   attrNm);
+		if (a != null) {
+			snap.put("pkYn",             a.getPkYn());
+			snap.put("fkYn",             a.getFkYn());
+			snap.put("fkParentObjNm",    a.getFkParentObjNm());
+			snap.put("fkParentObjOwner", a.getFkParentObjOwner());
+			snap.put("fkParentAttrNm",   a.getFkParentAttrNm());
+		}
+		return snap;
+	}
+
+	/** WP0 — 제약조건·인덱스 행에 승인 상태를 싣는다 (insertConstraintRow / insertIndexRow). */
+	private void putAprvColumns(Map<String, Object> row, String aprvStatus, String requester, String reqDt) {
+		row.put("aprvStatus",      aprvStatus);
+		row.put("requesterUserId", requester);
+		row.put("reqDt",           reqDt);
+		if ("APPROVED".equals(aprvStatus)) {
+			row.put("aprvUserId", requester);
+			row.put("aprvDt",     reqDt);
+		}
+	}
+
+	/** WP0 — 승인 대기로 남긴 변경이면 응답 문구로 알린다 (관리자는 바로 반영이라 OK). */
+	private void setChangeResult(Response res, String aprvStatus) {
+		if ("APPROVED".equals(aprvStatus)) {
+			res.setResultInfo(RestResult.CODE_200);
+		} else {
+			res.setResultInfo(RestResult.CODE_200.getCode(),
+					"승인 대기(DRAFT)로 저장했습니다. [내 변경 신청]으로 관리자에게 신청하세요.");
+		}
+	}
 
 	/**
 	 * PK 생성. body: { dataModelId, objOwner, tableNm, pkName(옵션), columns: [attrNm, ...] }
 	 * - pkName 미입력 시 PK_<TABLE> 자동 (중복이면 _2 _3 접미)
-	 * - 같은 테이블에 PK 이미 있으면 거부 (PK 1개 제한)
+	 * - 같은 테이블에 PK 이미 있으면 거부 (PK 1개 제한). PK 삭제가 승인 대기 중이어도 거부
 	 * - TB_DATA_MODEL_CONSTRAINT (TYPE='P') + TB_DATA_MODEL_INDEX (UNIQUENESS='UNIQUE') row 들 INSERT
 	 * - 해당 ATTR 들의 PK_YN='Y' 갱신
+	 * - 변경 이력 ADD_PK (관리자 APPROVED / 일반 사용자 DRAFT)
 	 */
 	@SuppressWarnings("unchecked")
 	@PostMapping("/createPk")
@@ -1030,6 +1080,14 @@ public class DataModelController {
 			p.put("objNm",       tableNm);
 			int existing = session.selectOne("datamodel.countPkOfTable", p);
 			if (existing > 0) throw new IllegalStateException("이미 PK 가 있는 테이블입니다. 기존 PK 를 먼저 삭제하세요.");
+			// WP0 — PK 삭제가 승인 대기 중이면 받지 않는다. 그 삭제가 반려되면 기존 PK 가 되살아나 PK 가 둘이 된다.
+			Map<String, Object> pend = new HashMap<>();
+			pend.put("dmId",       dataModelId);
+			pend.put("objOwner",   objOwner);
+			pend.put("objNm",      tableNm);
+			pend.put("changeType", "DEL_PK");
+			int pendingDel = session.selectOne("dmChangeHistory.countPendingByObj", pend);
+			if (pendingDel > 0) throw new IllegalStateException("이 테이블의 PK 삭제가 승인 대기 중입니다. 승인·반려된 뒤에 PK 를 만드세요.");
 
 			String pkName = (String) body.get("pkName");
 			if (pkName == null || pkName.trim().isEmpty()) pkName = "PK_" + tableNm.toUpperCase();
@@ -1048,6 +1106,11 @@ public class DataModelController {
 			pkName = candidate;
 
 			String idxName = pkName; // 인덱스 이름은 PK 이름과 동일 (관례)
+			// WP0 — 관리자=APPROVED 즉시, 일반 사용자=DRAFT
+			String aprvStatus = changeHistory.resolveAprvStatusForUserChange();
+			String requester  = changeHistory.safeUserId();
+			String reqDt      = changeHistory.currentDt();
+			List<Map<String, Object>> beforeCols = new ArrayList<>();
 			// CONSTRAINT row 들 + INDEX row 들 INSERT
 			for (int i = 0; i < columns.size(); i++) {
 				String col = columns.get(i);
@@ -1060,6 +1123,7 @@ public class DataModelController {
 				cr.put("columnNm",    col);
 				cr.put("columnPos",   i + 1);
 				cr.put("status",      "ENABLED");
+				putAprvColumns(cr, aprvStatus, requester, reqDt);
 				session.insert("datamodel.insertConstraintRow", cr);
 
 				Map<String, Object> ir = new HashMap<>();
@@ -1072,8 +1136,10 @@ public class DataModelController {
 				ir.put("columnNm",    col);
 				ir.put("columnPos",   i + 1);
 				ir.put("sortOrder",   "ASC");
+				putAprvColumns(ir, aprvStatus, requester, reqDt);
 				session.insert("datamodel.insertIndexRow", ir);
 
+				beforeCols.add(attrKeySnapshot(session, dataModelId, objOwner, tableNm, col));
 				Map<String, Object> ap = new HashMap<>();
 				ap.put("dataModelId", dataModelId);
 				ap.put("objOwner",    objOwner);
@@ -1082,9 +1148,20 @@ public class DataModelController {
 				ap.put("pkYn",        "Y");
 				session.update("datamodel.updateAttrPkYn", ap);
 			}
+			Map<String, Object> before = new HashMap<>();
+			before.put("columns", beforeCols);
+			Map<String, Object> after = new HashMap<>();
+			after.put("pkName",  pkName);
+			after.put("columns", columns);
+			changeHistory.record(session, dataModelId, "ADD_PK", "TIER1",
+					objOwner, tableNm, null, pkName, idxName,
+					toJsonSafe(before), toJsonSafe(after),
+					changeHistory.generateConstraintDdlSnippet("ADD_PK", objOwner, tableNm, pkName, columns,
+							null, null, null, false),
+					aprvStatus);
 			session.commit();
 			res.setContents(pkName);
-			res.setResultInfo(RestResult.CODE_200);
+			setChangeResult(res, aprvStatus);
 		} catch (IllegalArgumentException | IllegalStateException e) {
 			session.rollback();
 			res.setResultInfo(400, e.getMessage());
@@ -1101,6 +1178,7 @@ public class DataModelController {
 	/**
 	 * FK 생성. body: { dataModelId, objOwner, tableNm, fkName(옵션), refOwner, refTableNm,
 	 *                  mappings: [{ ownAttrNm, refAttrNm }, ...] }
+	 * 변경 이력 ADD_FK (관리자 APPROVED / 일반 사용자 DRAFT).
 	 */
 	@SuppressWarnings("unchecked")
 	@PostMapping("/createFk")
@@ -1134,12 +1212,21 @@ public class DataModelController {
 			}
 			fkName = candidate;
 
+			// WP0 — 관리자=APPROVED 즉시, 일반 사용자=DRAFT
+			String aprvStatus = changeHistory.resolveAprvStatusForUserChange();
+			String requester  = changeHistory.safeUserId();
+			String reqDt      = changeHistory.currentDt();
+			List<Map<String, Object>> beforeCols = new ArrayList<>();
+			List<String> ownCols = new ArrayList<>();
+			List<String> refCols = new ArrayList<>();
 			for (int i = 0; i < mappings.size(); i++) {
 				Map<String, String> m = mappings.get(i);
 				String ownCol = m.get("ownAttrNm");
 				String refCol = m.get("refAttrNm");
 				if (ownCol == null || refCol == null)
 					throw new IllegalArgumentException("mappings[].ownAttrNm/refAttrNm 누락");
+				ownCols.add(ownCol);
+				refCols.add(refCol);
 
 				Map<String, Object> cr = new HashMap<>();
 				cr.put("dataModelId",  dataModelId);
@@ -1153,8 +1240,10 @@ public class DataModelController {
 				cr.put("refTableNm",   refTableNm);
 				cr.put("refColumnNm",  refCol);
 				cr.put("status",       "ENABLED");
+				putAprvColumns(cr, aprvStatus, requester, reqDt);
 				session.insert("datamodel.insertConstraintRow", cr);
 
+				beforeCols.add(attrKeySnapshot(session, dataModelId, objOwner, tableNm, ownCol));
 				Map<String, Object> ap = new HashMap<>();
 				ap.put("dataModelId",     dataModelId);
 				ap.put("objOwner",        objOwner);
@@ -1166,9 +1255,22 @@ public class DataModelController {
 				ap.put("fkParentAttrNm",  refCol);
 				session.update("datamodel.updateAttrFk", ap);
 			}
+			Map<String, Object> before = new HashMap<>();
+			before.put("columns", beforeCols);
+			Map<String, Object> after = new HashMap<>();
+			after.put("fkName",     fkName);
+			after.put("refOwner",   refOwner);
+			after.put("refTableNm", refTableNm);
+			after.put("mappings",   mappings);
+			changeHistory.record(session, dataModelId, "ADD_FK", "TIER1",
+					objOwner, tableNm, null, fkName, null,
+					toJsonSafe(before), toJsonSafe(after),
+					changeHistory.generateConstraintDdlSnippet("ADD_FK", objOwner, tableNm, fkName, ownCols,
+							refOwner, refTableNm, refCols, false),
+					aprvStatus);
 			session.commit();
 			res.setContents(fkName);
-			res.setResultInfo(RestResult.CODE_200);
+			setChangeResult(res, aprvStatus);
 		} catch (IllegalArgumentException e) {
 			session.rollback();
 			res.setResultInfo(400, e.getMessage());
@@ -1234,6 +1336,12 @@ public class DataModelController {
 			if (dataModelId == null || tableNm == null || pkName == null)
 				throw new IllegalArgumentException("dataModelId/tableNm/pkName 필수");
 
+			// WP0 — 관리자는 지금처럼 바로 지우고(APPROVED), 일반 사용자는 USE_YN='N' 으로 감춰 두고
+			// 승인 때 지운다(DRAFT). 컬럼 PK·FK 표시는 둘 다 바로 내리고, 반려 때 BEFORE_JSON 으로 되돌린다.
+			String aprvStatus = changeHistory.resolveAprvStatusForUserChange();
+			boolean immediate = "APPROVED".equals(aprvStatus);
+			String deletedDt  = changeHistory.currentDt();
+
 			// 1) 삭제 전 — 어떤 컬럼들이 PK 구성원인지 조회
 			Map<String, Object> sp = new HashMap<>();
 			sp.put("dataModelId", dataModelId);
@@ -1241,9 +1349,12 @@ public class DataModelController {
 			sp.put("objNm",       tableNm);
 			List<Map<String, Object>> rows = session.selectList("datamodel.selectConstraintsByTable", sp);
 			List<String> pkCols = new ArrayList<>();
+			List<Map<String, Object>> beforeCols = new ArrayList<>();
 			for (Map<String, Object> r : rows) {
 				if (!pkName.equalsIgnoreCase((String) r.get("constraintNm"))) continue;
+				pkName = (String) r.get("constraintNm");   // DB 에 저장된 이름 그대로 (이력·승인 처리가 이 이름으로 찾는다)
 				pkCols.add((String) r.get("columnNm"));
+				beforeCols.add(attrKeySnapshot(session, dataModelId, objOwner, tableNm, (String) r.get("columnNm")));
 				Map<String, Object> ap = new HashMap<>();
 				ap.put("dataModelId", dataModelId);
 				ap.put("objOwner",    objOwner);
@@ -1254,6 +1365,7 @@ public class DataModelController {
 			}
 
 			// 87-x — PK 컬럼을 참조하는 외부 FK constraint 도 cascade 삭제 (cascadeFk=true 일 때만)
+			List<Map<String, Object>> cascadedFks = new ArrayList<>();
 			if (cascadeFk && !pkCols.isEmpty()) {
 				Map<String, Object> fp = new HashMap<>();
 				fp.put("dataModelId", dataModelId);
@@ -1270,8 +1382,10 @@ public class DataModelController {
 					rows2.put("objOwner",    fkOwner);
 					rows2.put("objNm",       fkTableNm);
 					List<Map<String, Object>> fkRows = session.selectList("datamodel.selectConstraintsByTable", rows2);
+					List<Map<String, Object>> fkBeforeCols = new ArrayList<>();
 					for (Map<String, Object> rr : fkRows) {
 						if (!fkName.equalsIgnoreCase((String) rr.get("constraintNm"))) continue;
+						fkBeforeCols.add(attrKeySnapshot(session, dataModelId, fkOwner, fkTableNm, (String) rr.get("columnNm")));
 						Map<String, Object> ap2 = new HashMap<>();
 						ap2.put("dataModelId", dataModelId);
 						ap2.put("objOwner",    fkOwner);
@@ -1288,26 +1402,55 @@ public class DataModelController {
 					dp2.put("objOwner",     fkOwner);
 					dp2.put("objNm",        fkTableNm);
 					dp2.put("constraintNm", fkName);
-					session.delete("datamodel.deleteConstraintByName", dp2);
+					if (immediate) {
+						session.delete("datamodel.deleteConstraintByName", dp2);
+					} else {
+						dp2.put("deletedDt", deletedDt);
+						session.update("datamodel.softDeleteConstraintPending", dp2);
+					}
+					Map<String, Object> cascaded = new HashMap<>();
+					cascaded.put("objOwner",     fkOwner);
+					cascaded.put("objNm",        fkTableNm);
+					cascaded.put("constraintNm", fkName);
+					cascaded.put("columns",      fkBeforeCols);
+					cascadedFks.add(cascaded);
 				}
 			}
 
-			// 2) CONSTRAINT / INDEX 물리 DELETE
+			// 2) CONSTRAINT / INDEX — 관리자는 물리 DELETE, 일반 사용자는 감춤
 			Map<String, Object> dp = new HashMap<>();
 			dp.put("dataModelId",  dataModelId);
 			dp.put("objOwner",     objOwner);
 			dp.put("objNm",        tableNm);
 			dp.put("constraintNm", pkName);
-			session.delete("datamodel.deleteConstraintByName", dp);
 
 			Map<String, Object> dx = new HashMap<>();
 			dx.put("dataModelId", dataModelId);
 			dx.put("objOwner",    objOwner);
 			dx.put("objNm",       tableNm);
 			dx.put("indexNm",     pkName);
-			session.delete("datamodel.deleteIndexByName", dx);
+			if (immediate) {
+				session.delete("datamodel.deleteConstraintByName", dp);
+				session.delete("datamodel.deleteIndexByName", dx);
+			} else {
+				dp.put("deletedDt", deletedDt);
+				dx.put("deletedDt", deletedDt);
+				session.update("datamodel.softDeleteConstraintPending", dp);
+				session.update("datamodel.softDeleteIndexPending", dx);
+			}
+
+			Map<String, Object> before = new HashMap<>();
+			before.put("pkName",      pkName);
+			before.put("columns",     beforeCols);
+			before.put("cascadedFks", cascadedFks);
+			changeHistory.record(session, dataModelId, "DEL_PK", "TIER1",
+					objOwner, tableNm, null, pkName, pkName,
+					toJsonSafe(before), null,
+					changeHistory.generateConstraintDdlSnippet("DEL_PK", objOwner, tableNm, pkName, pkCols,
+							null, null, null, !cascadedFks.isEmpty()),
+					aprvStatus);
 			session.commit();
-			res.setResultInfo(RestResult.CODE_200);
+			setChangeResult(res, aprvStatus);
 		} catch (IllegalArgumentException e) {
 			session.rollback();
 			res.setResultInfo(400, e.getMessage());
@@ -1322,7 +1465,8 @@ public class DataModelController {
 	}
 
 	/**
-	 * FK 삭제 (이름 기준). 관련 ATTR 들의 FK_YN='N', FK_PARENT_* clear, CONSTRAINT 물리 DELETE.
+	 * FK 삭제 (이름 기준). 관련 ATTR 들의 FK_YN='N', FK_PARENT_* clear, CONSTRAINT DELETE.
+	 * 변경 이력 DEL_FK — 관리자는 물리 삭제(APPROVED), 일반 사용자는 USE_YN='N' 으로 감추고 승인 때 지운다(DRAFT).
 	 */
 	@PostMapping("/deleteFk")
 	public Mono<Response> deleteFk(@RequestBody Map<String, String> body) {
@@ -1336,13 +1480,20 @@ public class DataModelController {
 			if (dataModelId == null || tableNm == null || fkName == null)
 				throw new IllegalArgumentException("dataModelId/tableNm/fkName 필수");
 
+			String aprvStatus = changeHistory.resolveAprvStatusForUserChange();
+
 			Map<String, Object> sp = new HashMap<>();
 			sp.put("dataModelId", dataModelId);
 			sp.put("objOwner",    objOwner);
 			sp.put("objNm",       tableNm);
 			List<Map<String, Object>> rows = session.selectList("datamodel.selectConstraintsByTable", sp);
+			List<Map<String, Object>> beforeCols = new ArrayList<>();
+			List<String> ownCols = new ArrayList<>();
 			for (Map<String, Object> r : rows) {
 				if (!fkName.equalsIgnoreCase((String) r.get("constraintNm"))) continue;
+				fkName = (String) r.get("constraintNm");   // DB 에 저장된 이름 그대로 (이력·승인 처리가 이 이름으로 찾는다)
+				ownCols.add((String) r.get("columnNm"));
+				beforeCols.add(attrKeySnapshot(session, dataModelId, objOwner, tableNm, (String) r.get("columnNm")));
 				Map<String, Object> ap = new HashMap<>();
 				ap.put("dataModelId",     dataModelId);
 				ap.put("objOwner",        objOwner);
@@ -1360,9 +1511,23 @@ public class DataModelController {
 			dp.put("objOwner",     objOwner);
 			dp.put("objNm",        tableNm);
 			dp.put("constraintNm", fkName);
-			session.delete("datamodel.deleteConstraintByName", dp);
+			if ("APPROVED".equals(aprvStatus)) {
+				session.delete("datamodel.deleteConstraintByName", dp);
+			} else {
+				dp.put("deletedDt", changeHistory.currentDt());
+				session.update("datamodel.softDeleteConstraintPending", dp);
+			}
+			Map<String, Object> before = new HashMap<>();
+			before.put("fkName",  fkName);
+			before.put("columns", beforeCols);
+			changeHistory.record(session, dataModelId, "DEL_FK", "TIER1",
+					objOwner, tableNm, null, fkName, null,
+					toJsonSafe(before), null,
+					changeHistory.generateConstraintDdlSnippet("DEL_FK", objOwner, tableNm, fkName, ownCols,
+							null, null, null, false),
+					aprvStatus);
 			session.commit();
-			res.setResultInfo(RestResult.CODE_200);
+			setChangeResult(res, aprvStatus);
 		} catch (IllegalArgumentException e) {
 			session.rollback();
 			res.setResultInfo(400, e.getMessage());
@@ -1932,7 +2097,9 @@ public class DataModelController {
 	}
 
 	/**
-	 * 컬럼(ATTR) 추가 — 표준 검증 후 INSERT
+	 * 컬럼(ATTR) 추가 — 표준 검증 후 INSERT.
+	 * WP0 — saveAttrs 의 ADD 와 같이 변경 이력(ADD_ATTR)·승인을 거친다:
+	 * 관리자=APPROVED 즉시, 일반 사용자=DRAFT (승인 전에는 본인에게만 보이고 집계·진단에서 빠진다).
 	 */
 	@RequestMapping(value = "/addAttr", method = RequestMethod.POST)
 	public Mono<Response> addAttr(@RequestBody StdDataModelAttrVo attrVo) {
@@ -1997,10 +2164,25 @@ public class DataModelController {
 			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelAttr", dupParam);
 			if (dup > 0) throw new IllegalStateException("이미 존재하는 컬럼입니다: " + attrVo.getAttrNm());
 
+			// WP0 — 88번 거버넌스. 관리자=APPROVED 즉시, 사용자=DRAFT (saveAttrs ADD 와 같은 처리)
+			String addAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+			attrVo.setAprvStatus(addAprvStatus);
+			attrVo.setRequesterUserId(changeHistory.safeUserId());
+			attrVo.setReqDt(changeHistory.currentDt());
+			if ("APPROVED".equals(addAprvStatus)) {
+				attrVo.setAprvUserId(attrVo.getRequesterUserId());
+				attrVo.setAprvDt(attrVo.getReqDt());
+			}
 			session.insert("datamodel.insertDataModelAttr", attrVo);
 			session.update("datamodel.syncDataModelObjAttrCnt", dupParam);
+			changeHistory.record(session, attrVo.getDataModelId(), "ADD_ATTR", "TIER1",
+					attrVo.getObjOwner(), attrVo.getObjNm(), attrVo.getAttrNm(), null, null,
+					null, toJsonSafe(attrVo),
+					changeHistory.generateDdlSnippet("ADD_ATTR", attrVo.getObjOwner(), attrVo.getObjNm(),
+							attrVo.getAttrNm(), attrVo, null),
+					addAprvStatus);
 			session.commit();
-			result.setResultInfo(RestResult.CODE_200);
+			setChangeResult(result, addAprvStatus);
 		} catch (Exception e) {
 			session.rollback();
 			log.error(">> addAttr failed : {}", e.getMessage());
@@ -2433,6 +2615,7 @@ public class DataModelController {
 						} else {
 							// 새 값으로 표준 검증 재실행
 							StdDataModelAttrVo recheck = new StdDataModelAttrVo();
+							recheck.setDataModelId(dataModelId);   // 98번 — 모델의 사전으로 재검증
 							recheck.setAttrNm(newAttrNm);
 							recheck.setAttrNmKr(newKr);
 							recheck.setDataType(newType);
@@ -2595,8 +2778,9 @@ public class DataModelController {
 			result.put("domainNm", terms.getDomainNm());
 
 			if (terms.getDomainNm() != null) {
+				// 98번 — 용어를 찾은 사전에서 도메인도 찾는다 (용어→도메인 FK 가 사전 단위다).
 				com.ndata.quality.model.std.StdDomainVo domain =
-					sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", terms.getDomainNm()));
+					sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(dictId, "domainNm", terms.getDomainNm()));
 				if (domain != null) {
 					result.put("domainId", domain.getId());
 					result.put("dataType", domain.getDataType());
@@ -2648,6 +2832,7 @@ public class DataModelController {
 		}
 
 		StdDataModelAttrVo flagsVo = new StdDataModelAttrVo();
+		flagsVo.setDataModelId(attr.getDataModelId());   // 98번 — 모델의 사전으로 검증
 		flagsVo.setAttrNm(newAttrNm);
 		flagsVo.setDataType((String) resolved.get("dataType"));
 		validateAttrStandards(flagsVo);
@@ -2762,6 +2947,7 @@ public class DataModelController {
 
 		// 영문명은 유지하면서 표준 검증 통과 여부 평가 (단어 분리)
 		StdDataModelAttrVo flagsVo = new StdDataModelAttrVo();
+		flagsVo.setDataModelId(attr.getDataModelId());   // 98번 — 모델의 사전으로 검증
 		flagsVo.setAttrNm(engNm);
 		flagsVo.setDataType(dataType);
 		validateAttrStandards(flagsVo);
@@ -2803,8 +2989,10 @@ public class DataModelController {
 		String attrNm = attrVo.getAttrNm();
 		if (attrNm == null || attrNm.trim().isEmpty())
 			throw new IllegalArgumentException("컬럼 물리명(attrNm)은 필수입니다.");
+		// 98번 — 단어·용어 모두 이 컬럼이 속한 모델의 사전에서 찾는다.
+		String dictId = dictService.resolve(null, attrVo.getDataModelId());
 		List<String> tokens = splitTokens(attrNm);
-		List<String> missing = findMissingWords(tokens);
+		List<String> missing = findMissingWords(tokens, dictId);
 		if (!missing.isEmpty()) {
 			throw new IllegalStateException("표준 미준수: 컬럼명에 표준 단어가 아닌 토큰이 있습니다 → " + String.join(", ", missing));
 		}
@@ -2813,11 +3001,9 @@ public class DataModelController {
 		}
 
 		// 영문명 기준 표준 용어 매칭 (TB_TERMS.TERMS_ENG_ABRV_NM = attrNm)
-		// 98번 — 이 컬럼이 속한 모델의 사전에서 찾는다.
 		com.ndata.quality.model.std.StdTermsVo term =
 			sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
-				dictService.nameParam(dictService.resolve(null, attrVo.getDataModelId()),
-						"termsEngAbrvNm", attrNm.trim()));
+				dictService.nameParam(dictId, "termsEngAbrvNm", attrNm.trim()));
 		if (term == null) {
 			throw new IllegalStateException("표준 미준수: '" + attrNm + "' 에 해당하는 표준 용어가 등록되어있지 않습니다.");
 		}
@@ -2874,10 +3060,10 @@ public class DataModelController {
 		return tokens;
 	}
 
-	private List<String> findMissingWords(List<String> tokens) {
+	private List<String> findMissingWords(List<String> tokens, String dictId) {
 		List<String> missing = new ArrayList<>();
 		if (tokens.isEmpty()) return missing;
-		List<StdWordVo> found = sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", dictService.listParam(null, "engAbrvNms", tokens));
+		List<StdWordVo> found = sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", dictService.listParam(dictId, "engAbrvNms", tokens));
 		java.util.Set<String> foundSet = new java.util.HashSet<>();
 		for (StdWordVo w : found) {
 			if (w.getWordEngAbrvNm() != null) foundSet.add(w.getWordEngAbrvNm().toUpperCase());

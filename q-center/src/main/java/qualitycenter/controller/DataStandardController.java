@@ -118,6 +118,42 @@ public class DataStandardController {
 		return c;
 	}
 
+	/**
+	 * 98번 — 엑셀 일괄등록 파일을 q-executor 로 넘긴다. 화면에서 고른 사전을 함께 보낸다.
+	 *
+	 * <p>외부 jar 의 WebClientHandler.postMultipartData 는 파일 파트만 싣기 때문에 사전은
+	 * 쿼리 파라미터(dictId)로 붙인다. q-executor 업로드 API 는 이미 dictId 를 받는다.
+	 * 사전 id 는 서버가 만든 값이므로 사용 중인 사전인지 확인하고 넘긴다 — 중지된 사전이나
+	 * 엉뚱한 값이 주소에 섞이지 않게.</p>
+	 */
+	private Mono<Response> forwardUploadToExecutor(HttpServletRequest request, MultipartFile excelFile,
+			String path, String dictIdParam) {
+		String dictId = resolveDictOrDefault(dictIdParam);
+		if (dictService.list().stream().noneMatch(d -> dictId.equals(d.get("dictId")))) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "사용할 수 없는 표준사전입니다: " + dictId);
+			return Mono.just(r);
+		}
+		log.info(">> forward {} file : {}, dictId : {}", path, excelFile.getOriginalFilename(), dictId);
+		WebClientHandler webClientHandler = new WebClientHandler(
+				NDQualityConstant.SVC_Q_EXECUTOR_URL + path + "?dictId=" + dictId, MediaType.MULTIPART_FORM_DATA_VALUE);
+		return webClientHandler.postMultipartData(sessionService.getUserId(),
+				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+	}
+
+	/**
+	 * 98번 — 용어의 마지막 단어가 형식단어인지 검사한다. 사전 속성 "용어의 마지막 단어를 형식단어로 강제"
+	 * (TB_STD_DICT.TERM_LAST_WORD_CLSF_YN) 가 켜진 사전에 등록할 때만 부른다 —
+	 * 화면 등록(createTerms, 진단 결과 등록 포함)과 한글컬럼 일괄 표준화(registerTermsBatch).
+	 * 엑셀 일괄등록은 q-executor(ExcelUploadService)에서 같은 사전 속성을 읽는다.
+	 */
+	private void checkLastWordClsf(SqlSession session, String lastWordId) {
+		List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWordId);
+		if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
+			throw new IllegalStateException("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
+		}
+	}
+
 	@Autowired
 	private SqlSessionFactory sqlSessionFactory; // transaction 사용할 경우 사용
 
@@ -338,22 +374,25 @@ public class DataStandardController {
 	 * @return 해당 단어 정보 목록 (동음이의어 포함)
 	 */
 	@RequestMapping(value = "/getWordInfoByNm", method = RequestMethod.GET)
-	public List<StdWordVo> getWordInfoByNm(@RequestParam("wordNm") String wordNm) {
-		return sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(null, "wordNm", wordNm));
+	public List<StdWordVo> getWordInfoByNm(@RequestParam("wordNm") String wordNm,
+			@RequestParam(value = "dictId", required = false) String dictId) {
+		// 98번 — 화면에서 고른 사전 안에서 찾는다 (없으면 기본 사전).
+		return sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(dictId, "wordNm", wordNm));
 	}
 
 	/**
 	 * 단어명으로 TB_WORD + TB_WORD_DICT 동시 조회 (실시간 입력 조회용, 경량)
 	 */
 	@RequestMapping(value = "/lookupWord", method = RequestMethod.GET)
-	public Map<String, Object> lookupWord(@RequestParam("wordNm") String wordNm) {
+	public Map<String, Object> lookupWord(@RequestParam("wordNm") String wordNm,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 		Map<String, Object> result = new HashMap<>();
 		if (wordNm == null || wordNm.trim().isEmpty()) {
 			result.put("found", false);
 			return result;
 		}
-		// 1. TB_WORD 조회
-		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(null, "wordNm", wordNm.trim()));
+		// 1. TB_WORD 조회 — 98번: 화면에서 고른 사전 안에서
+		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(dictId, "wordNm", wordNm.trim()));
 		if (words != null && !words.isEmpty()) {
 			StdWordVo w = words.get(0);
 			result.put("found", true);
@@ -373,7 +412,7 @@ public class DataStandardController {
 			// 영문약어가 TB_WORD에 이미 등록되어 있으면 중복 경고
 			boolean abrvDuplicate = false;
 			if (!dictAbrv.isEmpty()) {
-				StdWordVo existing = sqlSessionTemplate.selectOne("word.selectWordByEngAbrvNm", dictService.nameParam(null, "wordEngAbrvNm", dictAbrv));
+				StdWordVo existing = sqlSessionTemplate.selectOne("word.selectWordByEngAbrvNm", dictService.nameParam(dictId, "wordEngAbrvNm", dictAbrv));
 				if (existing != null) {
 					abrvDuplicate = true;
 				}
@@ -405,18 +444,19 @@ public class DataStandardController {
 		return sqlSessionTemplate.selectList("word.selectWordInfoById", wordId);
 	}
 
-	/** 영문약어로 단어 조회 (용어 빠른 등록용) */
+	/** 영문약어로 단어 조회 (용어 빠른 등록용). 98번 — 진단 결과 화면은 그 진단의 사전을 보낸다. */
 	@RequestMapping(value = "/getWordByEngAbrvNm", method = RequestMethod.GET)
-	public StdWordVo getWordByEngAbrvNm(String wordEngAbrvNm) {
-		List<StdWordVo> list = sqlSessionTemplate.selectList("word.selectWordByEngAbrvNm", dictService.nameParam(null, "wordEngAbrvNm", wordEngAbrvNm));
+	public StdWordVo getWordByEngAbrvNm(String wordEngAbrvNm, String dictId) {
+		List<StdWordVo> list = sqlSessionTemplate.selectList("word.selectWordByEngAbrvNm", dictService.nameParam(dictId, "wordEngAbrvNm", wordEngAbrvNm));
 		return list.isEmpty() ? null : list.get(0);
 	}
 
-	/** 영문약어 목록으로 단어 일괄 조회 (용어 빠른 등록용) */
+	/** 영문약어 목록으로 단어 일괄 조회 (용어 빠른 등록용). 본문은 영문약어 배열이라 사전은 쿼리 파라미터로 받는다. */
 	@RequestMapping(value = "/getWordsByEngAbrvNms", method = RequestMethod.POST)
-	public List<StdWordVo> getWordsByEngAbrvNms(@RequestBody List<String> engAbrvNms) {
+	public List<StdWordVo> getWordsByEngAbrvNms(@RequestBody List<String> engAbrvNms,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 		if (engAbrvNms == null || engAbrvNms.isEmpty()) return java.util.Collections.emptyList();
-		return sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", dictService.listParam(null, "engAbrvNms", engAbrvNms));
+		return sqlSessionTemplate.selectList("word.selectWordsByEngAbrvNms", dictService.listParam(dictId, "engAbrvNms", engAbrvNms));
 	}
 
 	/**
@@ -427,7 +467,8 @@ public class DataStandardController {
 	 * @return 업로드 처리 결과 (성공/실패 건수)
 	 */
 	@RequestMapping(value = "/uploadWords", method = RequestMethod.POST)
-	public Mono<Response> uploadWords(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
+	public Mono<Response> uploadWords(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 
 		// websocketService.sendMessage(Objects.toString(request.getSession().getAttribute("SSID"), null),
 		// WsNoticeLevel.INFO, ">> uploadWords start");
@@ -437,10 +478,7 @@ public class DataStandardController {
 
 		log.info(">> started uploadWords file : {}", excelFile.getOriginalFilename());
 
-		WebClientHandler webClientHandler = new WebClientHandler(
-				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadWords", MediaType.MULTIPART_FORM_DATA_VALUE);
-		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadWords", dictId);
 
 		log.info(">> finished uploadWords file : {}", excelFile.getOriginalFilename());
 
@@ -481,6 +519,8 @@ public class DataStandardController {
 	public Mono<Response> createTerms(@RequestBody StdTermsVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
+		// 98번 — 어느 사전에 등록하는지. 용어 화면은 고른 사전, 진단 결과 화면은 그 진단의 사전을 보낸다.
+		dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
 		// termsDesc가 null이면 termsNm을 자동으로 채움
 		if (dataVo.getTermsDesc() == null || dataVo.getTermsDesc().isEmpty()) {
 			dataVo.setTermsDesc(dataVo.getTermsNm());
@@ -515,16 +555,13 @@ public class DataStandardController {
 			if (wordList == null) {
 				throw new Exception("terms word list is invalid");
 			}
-			// 형식단어 검증: 마지막 단어는 형식단어여야 함 (단일 단어 용어도 허용)
 			if (wordList.isEmpty()) {
 				throw new Exception("용어는 최소 1개 이상의 단어로 구성되어야 합니다");
 			}
+			// 형식단어 검증: 등록할 사전이 요구할 때만 마지막 단어가 형식단어인지 본다 (단일 단어 용어도 허용)
 			StdTermsVo.Word lastWord = wordList.get(wordList.size() - 1);
-			if (lastWord.getWordId() != null) {
-				List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWord.getWordId());
-				if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
-					throw new Exception("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
-				}
+			if (dictService.isTermLastWordClsfRequired(dataVo.getDictId()) && lastWord.getWordId() != null) {
+				checkLastWordClsf(session, lastWord.getWordId());
 			}
 			// 신규 용어 등록
 			session.insert("terms.insertTerms", dataVo);
@@ -563,13 +600,13 @@ public class DataStandardController {
 	 * @return 토큰명 -> 단어 정보 목록 (LinkedHashMap, 순서 보존)
 	 */
 	@RequestMapping(value = "/getTermsTokensByNm", method = RequestMethod.GET)
-	public Map<String, List<StdWordVo>> getTermsTokens(String termsNm) {
-		log.info(">> request termsNm : {}", termsNm);
+	public Map<String, List<StdWordVo>> getTermsTokens(String termsNm, String dictId) {
+		log.info(">> request termsNm : {}, dictId : {}", termsNm, dictId);
 		Map<String, List<StdWordVo>> wordMap = new LinkedHashMap<String, List<StdWordVo>>();
 		List<StdWordVo> wordVoLst = new ArrayList<StdWordVo>();
 
-		// 요청된 용어가 단어이고, 형식단어(도메인)인 경우에는 바로 리턴한다.
-		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(null, "wordNm", termsNm));
+		// 요청된 용어가 단어이고, 형식단어(도메인)인 경우에는 바로 리턴한다. 98번 — 요청 사전 안에서 찾는다.
+		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(dictId, "wordNm", termsNm));
 		log.info(">> word info by termsNm : {}", wordVoLst);
 		if (wordVoLst.size() == 1) {
 			StdWordVo wordVo = wordVoLst.get(0);
@@ -586,7 +623,7 @@ public class DataStandardController {
 			String pos = tokenMap.get(token);
 			wordVoLst = new ArrayList<StdWordVo>();
 			if (pos.equals("NN")) {// 단어가 명사인 경우
-				wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(null, "wordNm", token));
+				wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(dictId, "wordNm", token));
 				log.info(">> word list : {}-{}", token, wordVoLst);
 				if (wordVoLst.size() > 0) {
 					for (StdWordVo wordVo : wordVoLst) {
@@ -617,13 +654,13 @@ public class DataStandardController {
 	 * @return WordDataVo 목록 (토큰명 + 후보 단어 리스트)
 	 */
 	@RequestMapping(value = "/getTermsTokenListByNm", method = RequestMethod.GET)
-	public List<WordDataVo> getTermsTokenListByNm(String termsNm) {
-		log.info(">> request termsNm : {}", termsNm);
+	public List<WordDataVo> getTermsTokenListByNm(String termsNm, String dictId) {
+		log.info(">> request termsNm : {}, dictId : {}", termsNm, dictId);
 		List<WordDataVo> wordDatas = new ArrayList<>();
 		List<StdWordVo> wordVoLst = new ArrayList<StdWordVo>();
 
-		// 요청된 용어가 단어이고, 형식단어(도메인)인 경우에는 바로 리턴한다.
-		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(null, "wordNm", termsNm));
+		// 요청된 용어가 단어이고, 형식단어(도메인)인 경우에는 바로 리턴한다. 98번 — 요청 사전 안에서 찾는다.
+		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(dictId, "wordNm", termsNm));
 		log.info(">> word info by termsNm : {}", wordVoLst);
 		if (wordVoLst.size() == 1) {
 			StdWordVo wordVo = wordVoLst.get(0);
@@ -644,7 +681,7 @@ public class DataStandardController {
 			String pos = tokenMap.get(token);
 			wordVoLst = new ArrayList<StdWordVo>();
 			if (pos.equals("NN")) {// 단어가 명사인 경우
-				wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(null, "wordNm", token));
+				wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(dictId, "wordNm", token));
 				log.info(">> word list : {}-{}", token, wordVoLst);
 				if (wordVoLst.size() > 0) {
 					for (StdWordVo wordVo : wordVoLst) {
@@ -816,14 +853,12 @@ public class DataStandardController {
 	 * @return 업로드 처리 결과
 	 */
 	@RequestMapping(value = "/uploadTermsList", method = RequestMethod.POST)
-	public Mono<Response> uploadTermsList(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
+	public Mono<Response> uploadTermsList(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 
 		log.info(">> started uploadTermsList file : {}", excelFile.getOriginalFilename());
 
-		WebClientHandler webClientHandler = new WebClientHandler(
-				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadTermsList", MediaType.MULTIPART_FORM_DATA_VALUE);
-		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadTermsList", dictId);
 
 		log.info(">> finished uploadTermsList file : {}", excelFile.getOriginalFilename());
 
@@ -931,15 +966,12 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/uploadCodeInfoList", method = RequestMethod.POST)
 	public Mono<Response> uploadCodeInfoList(HttpServletRequest request,
-			@RequestParam("file") MultipartFile excelFile) {
+			@RequestParam("file") MultipartFile excelFile,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 
 		log.info(">> started uploadCodeInfoList file : {}", excelFile.getOriginalFilename());
 
-		WebClientHandler webClientHandler = new WebClientHandler(
-				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadCodeInfoList",
-				MediaType.MULTIPART_FORM_DATA_VALUE);
-		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadCodeInfoList", dictId);
 
 		log.info(">> finished uploadCodeInfoList file : {}", excelFile.getOriginalFilename());
 
@@ -996,6 +1028,8 @@ public class DataStandardController {
 	public Mono<Response> createCodeData(@RequestBody StdCodeDataVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
+		// 98번 — 코드 화면에서 고른 사전에 넣는다.
+		dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
 		log.info(">> createCodeData : {}", dataVo);
 
 		Response result = new Response();
@@ -1075,15 +1109,12 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/uploadCodeDataList", method = RequestMethod.POST)
 	public Mono<Response> uploadCodeDataList(HttpServletRequest request,
-			@RequestParam("file") MultipartFile excelFile) {
+			@RequestParam("file") MultipartFile excelFile,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 
 		log.info(">> started uploadCodeDataList file : {}", excelFile.getOriginalFilename());
 
-		WebClientHandler webClientHandler = new WebClientHandler(
-				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadCodeDataList",
-				MediaType.MULTIPART_FORM_DATA_VALUE);
-		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadCodeDataList", dictId);
 
 		log.info(">> finished uploadCodeDataList file : {}", excelFile.getOriginalFilename());
 
@@ -1122,6 +1153,8 @@ public class DataStandardController {
 	public Mono<Response> createDomain(@RequestBody StdDomainVo dataVo) {
 		dataVo.setId(StringUtils.getUUID());
 		dataVo.setCretUserId(sessionService.getUserId());
+		// 98번 — 도메인 화면에서 고른 사전에 넣는다.
+		dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
 		// 사용자가 어드민인 경우에 자동승인 처리
 		if (sessionService.isAdmin()) {
 			dataVo.setAprvYn("Y");
@@ -1132,8 +1165,8 @@ public class DataStandardController {
 		try {
 			// 86번 #30 — 입력 검증 강화 (raw DB 에러 노출 방지 + 빈값/이상치 차단)
 			validateDomainInput(dataVo);
-			// 중복 체크: 동일 도메인명이 이미 존재하면 승인 상태에 따라 메시지 분기
-			StdDomainVo existingDomain = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", dataVo.getDomainNm()));
+			// 중복 체크: 같은 사전에 동일 도메인명이 이미 존재하면 승인 상태에 따라 메시지 분기
+			StdDomainVo existingDomain = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(dataVo.getDictId(), "domainNm", dataVo.getDomainNm()));
 			if (existingDomain != null) {
 				String dupMsg = "Y".equals(existingDomain.getAprvYn())
 						? "이미 승인된 도메인명입니다."
@@ -1299,8 +1332,8 @@ public class DataStandardController {
 		try {
 			// 86번 #30 — updateDomain 도 동일 검증
 			validateDomainInput(dataVo);
-			// 변경 전 값 조회
-			List<StdDomainVo> prevList = sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", dataVo.getDomainNm()));
+			// 변경 전 값 조회 — 98번: 도메인 화면에서 고른(수정 대상이 속한) 사전
+			List<StdDomainVo> prevList = sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dictService.nameParam(dataVo.getDictId(), "domainNm", dataVo.getDomainNm()));
 			String prevValue = prevList != null && !prevList.isEmpty() ? prevList.get(0).toString() : null;
 			sqlSessionTemplate.update("domain.updateDomain", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
@@ -1370,19 +1403,21 @@ public class DataStandardController {
 	 * @return 해당 도메인 정보 목록
 	 */
 	@RequestMapping(value = "/getDomainInfoByNm", method = RequestMethod.GET)
-	public List<StdDomainVo> getDomainInfoByNm(String domainNm) {
-		return sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", domainNm));
+	public List<StdDomainVo> getDomainInfoByNm(String domainNm, String dictId) {
+		// 98번 — 승인 화면은 신청 항목의 사전을 보낸다.
+		return sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dictService.nameParam(dictId, "domainNm", domainNm));
 	}
 
 	/**
 	 * 도메인분류명으로 도메인 정보 조회
 	 *
 	 * @param clsfNm 도메인분류명
+	 * @param dictId 표준사전 (없으면 기본 사전)
 	 * @return 해당 분류의 도메인 목록
 	 */
 	@RequestMapping(value = "/getDomainInfoByClsfNm", method = RequestMethod.GET)
-	public List<StdDomainVo> getDomainInfoByClsfNm(String clsfNm) {
-		return sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", dictService.nameParam(null, "domainClsfNm", clsfNm));
+	public List<StdDomainVo> getDomainInfoByClsfNm(String clsfNm, String dictId) {
+		return sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", dictService.nameParam(dictId, "domainClsfNm", clsfNm));
 	}
 
 	/**
@@ -1401,6 +1436,8 @@ public class DataStandardController {
 
 			dataVo.setId(StringUtils.getUUID());
 			dataVo.setCretUserId(sessionService.getUserId());
+			// 98번 — 도메인 그룹 화면에서 고른 사전에 넣는다.
+			dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
 			// commStndYn이 null이면 기본값 'N'
 			if (dataVo.getCommStndYn() == null || dataVo.getCommStndYn().isEmpty()) {
 				dataVo.setCommStndYn("N");
@@ -1503,6 +1540,8 @@ public class DataStandardController {
 
 			dataVo.setId(StringUtils.getUUID());
 			dataVo.setCretUserId(sessionService.getUserId());
+			// 98번 — 도메인 분류 화면에서 고른 사전에 넣는다.
+			dataVo.setDictId(resolveDictOrDefault(dataVo.getDictId()));
 			// commStndYn이 null이면 기본값 'N'
 			if (dataVo.getCommStndYn() == null || dataVo.getCommStndYn().isEmpty()) {
 				dataVo.setCommStndYn("N");
@@ -1613,14 +1652,12 @@ public class DataStandardController {
 	 * @return 업로드 처리 결과
 	 */
 	@RequestMapping(value = "/uploadDomains", method = RequestMethod.POST)
-	public Mono<Response> uploadDomains(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
+	public Mono<Response> uploadDomains(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 
 		log.info(">> started uploadDomains file : {}", excelFile.getOriginalFilename());
 
-		WebClientHandler webClientHandler = new WebClientHandler(
-				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadDomains", MediaType.MULTIPART_FORM_DATA_VALUE);
-		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadDomains", dictId);
 
 		log.info(">> finished uploadDomains file : {}", excelFile.getOriginalFilename());
 
@@ -1650,12 +1687,10 @@ public class DataStandardController {
 	 * 도메인 그룹 Excel 일괄 업로드 - q-executor로 전달
 	 */
 	@RequestMapping(value = "/uploadDomainGroups", method = RequestMethod.POST)
-	public Mono<Response> uploadDomainGroups(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
+	public Mono<Response> uploadDomainGroups(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 		log.info(">> started uploadDomainGroups file : {}", excelFile.getOriginalFilename());
-		WebClientHandler webClientHandler = new WebClientHandler(
-				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadDomainGroups", MediaType.MULTIPART_FORM_DATA_VALUE);
-		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadDomainGroups", dictId);
 		log.info(">> finished uploadDomainGroups file : {}", excelFile.getOriginalFilename());
 		return mResponse;
 	}
@@ -1678,12 +1713,10 @@ public class DataStandardController {
 	 * 도메인 분류 Excel 일괄 업로드 - q-executor로 전달
 	 */
 	@RequestMapping(value = "/uploadDomainClsfs", method = RequestMethod.POST)
-	public Mono<Response> uploadDomainClsfs(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile) {
+	public Mono<Response> uploadDomainClsfs(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 		log.info(">> started uploadDomainClsfs file : {}", excelFile.getOriginalFilename());
-		WebClientHandler webClientHandler = new WebClientHandler(
-				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/std/uploadDomainClsfs", MediaType.MULTIPART_FORM_DATA_VALUE);
-		Mono<Response> mResponse = webClientHandler.postMultipartData(sessionService.getUserId(),
-				Objects.toString(request.getSession().getAttribute("SSID"), null), excelFile);
+		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadDomainClsfs", dictId);
 		log.info(">> finished uploadDomainClsfs file : {}", excelFile.getOriginalFilename());
 		return mResponse;
 	}
@@ -1881,10 +1914,9 @@ public class DataStandardController {
 								if (targetNm == null && !wordInfoList.isEmpty()) targetNm = wordInfoList.get(0).getWordNm();
 								break;
 							case DOMAIN:
-								if (targetNm != null) {
-									Object domainObj = sqlSessionTemplate.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(null, "domainNm", targetNm));
-									currValue = domainObj != null ? domainObj.toString() : null;
-								}
+								// 98번 — 이름이 아니라 ID 로 찾는다. 사전이 여럿이면 같은 이름의 도메인이 사전마다 있다.
+								Object domainObj = sqlSessionTemplate.selectOne("domain.selectDomainInfoById", dataVo.getReqItemId());
+								currValue = domainObj != null ? domainObj.toString() : null;
 								break;
 						}
 					} catch (Exception ex) {
@@ -2320,25 +2352,24 @@ public class DataStandardController {
 
 				// 구성 단어 승인 여부 체크는 용어 승인 시점에 수행 (등록은 자유)
 
-				// 형식단어 검증: 마지막 단어는 형식단어여야 함 (단일 단어 용어도 허용)
 				if (words == null || words.isEmpty()) {
 					throw new RuntimeException("용어는 최소 1개 이상의 단어로 구성되어야 합니다");
 				}
-				Map<String, Object> lastWordEntry = words.get(words.size() - 1);
-				String lastWordId = (String) lastWordEntry.get("wordId");
-				if (lastWordId == null) {
-					// 신규 단어인 경우 newWordIndex로 ID 가져오기
-					Number lastNewWordIndex = (Number) lastWordEntry.get("newWordIndex");
-					if (lastNewWordIndex != null) {
-						lastWordId = newWordIdMap.get(lastNewWordIndex.intValue());
+				// 형식단어 검증: 등록할 사전이 요구할 때만 마지막 단어가 형식단어인지 본다 (단일 단어 용어도 허용)
+				if (dictService.isTermLastWordClsfRequired(dictId)) {
+					Map<String, Object> lastWordEntry = words.get(words.size() - 1);
+					String lastWordId = (String) lastWordEntry.get("wordId");
+					if (lastWordId == null) {
+						// 신규 단어인 경우 newWordIndex로 ID 가져오기
+						Number lastNewWordIndex = (Number) lastWordEntry.get("newWordIndex");
+						if (lastNewWordIndex != null) {
+							lastWordId = newWordIdMap.get(lastNewWordIndex.intValue());
+						}
 					}
-				}
-				if (lastWordId == null) {
-					throw new RuntimeException("마지막 단어의 ID를 확인할 수 없습니다. 단어 등록 후 다시 시도해주세요.");
-				}
-				List<StdWordVo> lastWordInfo = session.selectList("word.selectWordInfoById", lastWordId);
-				if (!lastWordInfo.isEmpty() && !"Y".equals(lastWordInfo.get(0).getWordClsfYn())) {
-					throw new RuntimeException("용어의 마지막 단어는 형식단어여야 합니다. (현재: " + lastWordInfo.get(0).getWordNm() + ")");
+					if (lastWordId == null) {
+						throw new RuntimeException("마지막 단어의 ID를 확인할 수 없습니다. 단어 등록 후 다시 시도해주세요.");
+					}
+					checkLastWordClsf(session, lastWordId);
 				}
 
 				// 도메인 유효성 체크
@@ -2544,8 +2575,9 @@ public class DataStandardController {
 	 * 프론트가 이 값으로 도메인 드롭다운 cascade 로드 가능.
 	 */
 	@GetMapping(value = "/getClassificationWords")
-	public List<Map<String, Object>> getClassificationWords() {
-		List<StdWordVo> all = sqlSessionTemplate.selectList("word.selectAllWords");
+	public List<Map<String, Object>> getClassificationWords(@RequestParam(value = "dictId", required = false) String dictId) {
+		// 98번 — 화면에서 고른 사전의 형식단어만 (없으면 기본 사전). 예전엔 사전 조건 없이 전 사전을 읽었다.
+		List<StdWordVo> all = sqlSessionTemplate.selectList("word.selectAllWords", dictService.dictParam(dictId));
 		List<Map<String, Object>> result = new ArrayList<>();
 		for (StdWordVo w : all) {
 			if (!"Y".equals(w.getWordClsfYn())) continue;
@@ -2565,8 +2597,9 @@ public class DataStandardController {
 	 * 분류어로 묶인 도메인 목록 조회 (자동 표준화 수정 모달 cascade 용).
 	 */
 	@GetMapping(value = "/getDomainsByClsf")
-	public List<Map<String, Object>> getDomainsByClsf(@RequestParam("domainClsfNm") String domainClsfNm) {
-		List<StdDomainVo> domains = sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", dictService.nameParam(null, "domainClsfNm", domainClsfNm));
+	public List<Map<String, Object>> getDomainsByClsf(@RequestParam("domainClsfNm") String domainClsfNm,
+			@RequestParam(value = "dictId", required = false) String dictId) {
+		List<StdDomainVo> domains = sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", dictService.nameParam(dictId, "domainClsfNm", domainClsfNm));
 		List<Map<String, Object>> result = new ArrayList<>();
 		for (StdDomainVo d : domains) {
 			if (!"Y".equals(d.getAprvYn())) continue;

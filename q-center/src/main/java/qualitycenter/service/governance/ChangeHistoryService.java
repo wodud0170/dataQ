@@ -16,7 +16,8 @@ import qualitycenter.service.auth.SessionService;
  * 88번 거버넌스 — 데이터 모델 변경 이력 INSERT 헬퍼.
  *
  * 사용 패턴:
- *   - 변경 endpoint (saveAttrs / updateObj / addObj / deleteObj / createPk / ...) 가 변경 직후 호출
+ *   - 변경 endpoint (saveAttrs / addAttr / deleteAttr / updateObj / addObj / deleteObj /
+ *     createPk / deletePk / createFk / deleteFk) 가 변경 직후 호출
  *   - 단일 트랜잭션 유지 시 session 인자로 SqlSession 전달
  *   - 트랜잭션 외부에선 sqlSessionTemplate 자동 사용
  *
@@ -130,6 +131,34 @@ public class ChangeHistoryService {
 				return null;
 			case "MODIFY_OBJ":
 				return "-- 테이블 메타 변경: " + table;
+			default:
+				return null;
+		}
+	}
+
+	/**
+	 * WP0 — PK/FK 변경(ADD_PK·DEL_PK·ADD_FK·DEL_FK)의 ALTER 문. 컬럼은 제약조건 안의 순서대로 준다.
+	 * DEL_PK 에서 cascade 면 이 PK 를 참조하는 FK 도 함께 지운다 (PostgreSQL·Oracle 모두 DROP CONSTRAINT … CASCADE).
+	 * dialect 분기는 generateDdlSnippet 과 함께 WP3 에서.
+	 */
+	public String generateConstraintDdlSnippet(String changeType, String objOwner, String objNm, String constraintNm,
+	                                           java.util.List<String> columns,
+	                                           String refOwner, String refTableNm, java.util.List<String> refColumns,
+	                                           boolean cascade) {
+		String table = (objOwner != null && !objOwner.isEmpty() ? objOwner + "." : "") + objNm;
+		switch (changeType) {
+			case "ADD_PK":
+				return "ALTER TABLE " + table + " ADD CONSTRAINT " + constraintNm
+					+ " PRIMARY KEY (" + String.join(", ", columns) + ");";
+			case "ADD_FK":
+				String refTable = (refOwner != null && !refOwner.isEmpty() ? refOwner + "." : "") + refTableNm;
+				return "ALTER TABLE " + table + " ADD CONSTRAINT " + constraintNm
+					+ " FOREIGN KEY (" + String.join(", ", columns) + ") REFERENCES " + refTable
+					+ " (" + String.join(", ", refColumns) + ");";
+			case "DEL_PK":
+				return "ALTER TABLE " + table + " DROP CONSTRAINT " + constraintNm + (cascade ? " CASCADE" : "") + ";";
+			case "DEL_FK":
+				return "ALTER TABLE " + table + " DROP CONSTRAINT " + constraintNm + ";";
 			default:
 				return null;
 		}

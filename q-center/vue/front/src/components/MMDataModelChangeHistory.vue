@@ -21,7 +21,7 @@
       <v-data-table :headers="headers" :items="items" item-key="changeSeq"
         :items-per-page="30" dense fixed-header :height="600">
         <template #item.changeType="{ item }">
-          <v-chip x-small outlined>{{ item.changeType }}</v-chip>
+          <v-chip x-small outlined :title="item.changeType">{{ changeTypeLabel(item.changeType) }}</v-chip>
         </template>
         <template #item.changeTier="{ item }">
           <span :class="'tier-' + (item.changeTier || '').toLowerCase()">{{ item.changeTier }}</span>
@@ -87,6 +87,7 @@
 
 <script>
 import axios from 'axios';
+import { dmChangeTypeLabel } from './dmChangeType';
 
 export default {
   name: 'MMDataModelChangeHistory',
@@ -136,7 +137,12 @@ export default {
       }).catch(() => { this.items = []; });
     },
     pathOf(item) {
-      return (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '');
+      // PK/FK 변경은 컬럼 대신 제약조건 이름을 붙인다
+      return (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '')
+        + (item.constraintNm ? ' [' + item.constraintNm + ']' : '');
+    },
+    changeTypeLabel(code) {
+      return dmChangeTypeLabel(code);
     },
     statusColor(s) {
       if (s === 'APPROVED') return 'success';

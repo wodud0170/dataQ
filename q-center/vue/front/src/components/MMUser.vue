@@ -153,9 +153,11 @@ export default {
       }
       axios.post(this.$APIURL.base + "api/login/updateUser", data)
         .then(function(res) {
-          if (res.data) {
+          if (res.data && res.data.resultCode === 200) {
             self.$swal.fire({ title: '저장 완료', icon: 'success', timer: 1500, showConfirmButton: false });
             self.getUserData();
+          } else {
+            self.$swal.fire({ title: '저장 실패', text: res.data && res.data.resultMessage, icon: 'error', confirmButtonText: '확인' });
           }
         })
         .catch(function() {

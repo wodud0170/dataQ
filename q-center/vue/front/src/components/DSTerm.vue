@@ -950,6 +950,7 @@ export default {
     addTerm_manualWordInput: '',       // 수동 추가 입력
     // 86번 #39 — 형식단어 검색/추가
     addTerm_classWords: [],            // [{wordId, wordNm, wordEngAbrvNm, wordEngNm, domainClsfNm}]
+    addTerm_classWordsDictId: null,    // 98번 — 위 목록을 읽은 사전 (사전을 바꾸면 다시 읽는다)
     addTerm_selectedClsfWord: null,
     addTerm_loadingClsfWords: false,
     // 수정 관련
@@ -1266,6 +1267,8 @@ export default {
       const _url = this.$APIURL.base + "api/std/uploadTermsList";
       const formData = new FormData();
       formData.append('file', this.excelFile);
+      // 98번 — 화면에서 고른 사전에 올린다 (비면 서버가 기본 사전으로 정한다)
+      formData.append('dictId', this.dictId || '');
       const headers = { 'Content-Type': 'multipart/form-data' };
 
       axios.post(_url, formData, { headers }).then((res) => {
@@ -1620,6 +1623,8 @@ export default {
           'reqSysCd': this.addTerm_reqSysCd,
           'wordList': this.addTerm_wordList,
           "allophSynmLst": arr_allophSynmLst,
+          // 98번 — 고른 사전에 등록한다. 형식단어 강제 여부도 이 사전의 속성을 따른다.
+          'dictId': this.dictId,
         }
 
         axios.post(this.$APIURL.base + 'api/std/createTerms', termData).then(res => {
@@ -1696,6 +1701,8 @@ export default {
           'reqSysCd': this.updateTerm_reqSysCd,
           'wordList': this.updateTerm_wordList,
           "allophSynmLst": arr_allophSynmLst,
+          // 98번 — 용어명 중복 검사를 이 사전 안에서 한다
+          'dictId': this.dictId,
         }
 
         axios.post(this.$APIURL.base + 'api/std/updateTerms', termData).then(res => {
@@ -2108,7 +2115,7 @@ export default {
       self.addTerm_analyzing = true;
       self.addTerm_lastCheckedNm = nm;
 
-      axios.post(this.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm] })
+      axios.post(this.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm], dictId: this.dictId })
         .then(function(res) {
           var arr = res.data || [];
           var result = arr[0];
@@ -2198,7 +2205,7 @@ export default {
         var nm = (item.inlineWordNm || item.wordNm || '').trim();
         if (!nm) continue;
         (function(idx, wordNm) {
-          axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: wordNm } })
+          axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: wordNm, dictId: self.dictId } })
             .then(function(res) {
               var data = res.data;
               if (!data || !data.found) return;
@@ -2246,7 +2253,7 @@ export default {
         if (!nm) return;
         if (item._lastLookup === nm) return;
         item._lastLookup = nm;
-        axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: nm } })
+        axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: nm, dictId: self.dictId } })
           .then(function(res) {
             var data = res.data;
             var cur = self.addTerm_wordListArr[index];
@@ -2285,10 +2292,11 @@ export default {
     /** 86번 #39 — 형식단어 목록 로드 (모달 진입 시 1회) */
     loadClassificationWords() {
       var self = this;
-      if (self.addTerm_classWords.length > 0) return;
+      if (self.addTerm_classWords.length > 0 && self.addTerm_classWordsDictId === self.dictId) return;
       self.addTerm_loadingClsfWords = true;
-      axios.get(self.$APIURL.base + 'api/std/getClassificationWords').then(function(res) {
+      axios.get(self.$APIURL.base + 'api/std/getClassificationWords', { params: { dictId: self.dictId } }).then(function(res) {
         self.addTerm_classWords = res.data || [];
+        self.addTerm_classWordsDictId = self.dictId;
       }).catch(function() { /* 조용히 실패 */ }).finally(function() {
         self.addTerm_loadingClsfWords = false;
       });
@@ -2375,7 +2383,7 @@ export default {
         // 용어명 중복 체크 후 다음 단계
         var self = this;
         axios.get(this.$APIURL.base + 'api/std/getTermsInfoByNm', {
-          params: { termsNm: this.addTerm_termNm }
+          params: { termsNm: this.addTerm_termNm, dictId: this.dictId }
         }).then(function(res) {
           if (res.data && res.data.length > 0) {
             self.$swal.fire({
@@ -2432,7 +2440,8 @@ export default {
 
       axios.get(this.$APIURL.base + "api/std/getTermsTokenListByNm", {
         params: {
-          'termsNm': _term_name
+          'termsNm': _term_name,
+          'dictId': this.dictId
         }
       }).then((res) => {
         // console.log(res.data)
@@ -2471,7 +2480,8 @@ export default {
     getDomainData() {
       // 도메인 리스트에서 도메인명을 가지고 와 도메인명을 추출하여 배열 생성
       try {
-        axios.get(this.$APIURL.base + "api/std/getDomainList", { params: { dictId: this.dictId } }).then(result => {
+        // 98번 — getDomainList 는 검색조건을 본문으로 받는다 (GET 쿼리의 dictId 는 읽히지 않아 기본 사전이 나왔다)
+        axios.post(this.$APIURL.base + "api/std/getDomainList", { dictId: this.dictId }).then(result => {
           let _data = result.data;
           // console.log(_data);
 
@@ -2501,7 +2511,8 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/getDomainInfoByClsfNm", {
           params: {
-            'clsfNm': _domainClsfNm
+            'clsfNm': _domainClsfNm,
+            'dictId': this.dictId
           }
         }).then(result => {
           let _data = result.data;
@@ -2563,6 +2574,7 @@ export default {
         commStndYn: 'N',
         magntdOrd: '',
         reqSysCd: '',
+        dictId: this.dictId,
       }).then(function(res) {
         // resultCode 검사
         var rc = res && res.data && res.data.resultCode;
@@ -2587,7 +2599,7 @@ export default {
         });
         // 등록 성공 → 단어 목록 조회하여 갱신 (current arr[index] 에 직접 set, item 변수 의존 X)
         axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', {
-          params: { wordNm: item.inlineWordNm }
+          params: { wordNm: item.inlineWordNm, dictId: self.dictId }
         }).then(function(res2) {
           var words = res2.data || [];
           var cur = arr[index];

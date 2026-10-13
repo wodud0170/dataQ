@@ -947,8 +947,11 @@ export default {
         columns: cols,
       }).then((res) => {
         if (res.data.resultCode === 200) {
-          this.$swal.fire({ title: 'PK 생성 완료', text: 'PK 이름: ' + res.data.contents,
-            icon: 'success', timer: 1500, showConfirmButton: false });
+          // WP0 — 일반 사용자의 PK 생성은 승인 대기(DRAFT)로 남는다. 서버 문구로 알린다.
+          const pending = res.data.resultMessage && res.data.resultMessage !== 'OK';
+          this.$swal.fire({ title: pending ? 'PK 생성 — 승인 대기' : 'PK 생성 완료',
+            text: 'PK 이름: ' + res.data.contents + (pending ? '\n' + res.data.resultMessage : ''),
+            icon: pending ? 'info' : 'success', timer: pending ? undefined : 1500, showConfirmButton: pending });
           this.pkDialog = false;
           this.load();
         } else {
@@ -994,10 +997,17 @@ export default {
             tableNm: item.objNm,
             pkName: info.name,
             cascadeFk: deps.length > 0,
-          }).then(() => {
+          }).then((res) => {
+            if (res.data.resultCode !== 200) {
+              this.$swal.fire({ title: 'PK 삭제 실패', text: res.data.resultMessage || '', icon: 'error' });
+              return;
+            }
+            // WP0 — 일반 사용자의 PK 삭제는 승인 대기(DRAFT)로 남는다 (승인 전까지 감춰지고, 반려되면 되살아난다)
+            const pending = res.data.resultMessage && res.data.resultMessage !== 'OK';
             this.$swal.fire({
-              title: deps.length > 0 ? `PK + FK ${deps.length}건 삭제 완료` : 'PK 삭제 완료',
-              icon: 'success', timer: 1500, showConfirmButton: false,
+              title: (deps.length > 0 ? `PK + FK ${deps.length}건 삭제` : 'PK 삭제') + (pending ? ' — 승인 대기' : ' 완료'),
+              text: pending ? res.data.resultMessage : '',
+              icon: pending ? 'info' : 'success', timer: pending ? undefined : 1500, showConfirmButton: pending,
             });
             this.load();
           }).catch(() => this.$swal.fire({ title: 'PK 삭제 실패', icon: 'error' }));
@@ -1060,8 +1070,11 @@ export default {
           mappings: maps,
         }).then((res) => {
           if (res.data.resultCode === 200) {
-            this.$swal.fire({ title: 'FK 생성 완료', text: 'FK 이름: ' + res.data.contents,
-              icon: 'success', timer: 1500, showConfirmButton: false });
+            // WP0 — 일반 사용자의 FK 생성은 승인 대기(DRAFT)로 남는다. 서버 문구로 알린다.
+            const pending = res.data.resultMessage && res.data.resultMessage !== 'OK';
+            this.$swal.fire({ title: pending ? 'FK 생성 — 승인 대기' : 'FK 생성 완료',
+              text: 'FK 이름: ' + res.data.contents + (pending ? '\n' + res.data.resultMessage : ''),
+              icon: pending ? 'info' : 'success', timer: pending ? undefined : 1500, showConfirmButton: pending });
             this.fkDialog = false;
             this.load();
           } else {
@@ -1166,8 +1179,15 @@ export default {
           objOwner: item.objOwner || '',
           tableNm: item.objNm,
           fkName: info.name,
-        }).then(() => {
-          this.$swal.fire({ title: 'FK 삭제 완료', icon: 'success', timer: 1200, showConfirmButton: false });
+        }).then((res) => {
+          if (res.data.resultCode !== 200) {
+            this.$swal.fire({ title: 'FK 삭제 실패', text: res.data.resultMessage || '', icon: 'error' });
+            return;
+          }
+          // WP0 — 일반 사용자의 FK 삭제는 승인 대기(DRAFT)로 남는다
+          const pending = res.data.resultMessage && res.data.resultMessage !== 'OK';
+          this.$swal.fire({ title: pending ? 'FK 삭제 — 승인 대기' : 'FK 삭제 완료', text: pending ? res.data.resultMessage : '',
+            icon: pending ? 'info' : 'success', timer: pending ? undefined : 1200, showConfirmButton: pending });
           this.load();
         }).catch(() => this.$swal.fire({ title: 'FK 삭제 실패', icon: 'error' }));
       });

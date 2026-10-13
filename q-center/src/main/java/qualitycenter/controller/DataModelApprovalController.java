@@ -208,6 +208,13 @@ public class DataModelApprovalController {
 				restoreFromBeforeJson(hist, changeType, dmId, objOwner, objNm, attrNm);
 			}
 
+			// WP0 — PK/FK 변경 (createPk·deletePk·createFk·deleteFk). 승인은 확정, 반려는 신청 전 상태로.
+			if (CONSTRAINT_CHANGE_TYPES.contains(changeType)) {
+				sp.put("constraintNm", hist.get("constraint_nm"));
+				applyConstraintDecision(changeType, status, sp, (String) hist.get("before_json"));
+				return n;
+			}
+
 			// DEF-05 — 대기 중 삭제(USE_YN='N') 의 확정/복구.
 			// 승인이면 이제 진짜로 지우고, 반려면 되살린다.
 			if ("DEL_ATTR".equals(changeType)) {
@@ -282,6 +289,92 @@ public class DataModelApprovalController {
 			}
 		}
 		return n;
+	}
+
+	/** WP0 — PK/FK 변경 유형. 이름이 _ATTR/_OBJ 로 끝나지 않아 아래 컬럼·테이블 동기화를 타지 않는다. */
+	private static final java.util.Set<String> CONSTRAINT_CHANGE_TYPES =
+			new java.util.HashSet<>(java.util.Arrays.asList("ADD_PK", "DEL_PK", "ADD_FK", "DEL_FK"));
+
+	/**
+	 * WP0 — PK/FK 변경의 승인·반려.
+	 *
+	 * 신청 때 이미 모델에 대기 상태로 반영돼 있다 (DataModelController createPk·deletePk·createFk·deleteFk):
+	 * 추가는 APRV_STATUS='DRAFT' 행, 삭제는 USE_YN='N' 으로 감춘 행, 컬럼 PK·FK 표시는 바뀐 값.
+	 * <ul>
+	 *   <li>ADD_PK·ADD_FK 승인 — 제약조건(과 PK 인덱스) 행을 APPROVED 로</li>
+	 *   <li>ADD_PK·ADD_FK 반려 — 그 행을 지우고 컬럼 표시를 BEFORE_JSON 값으로</li>
+	 *   <li>DEL_PK·DEL_FK 승인 — 감춰 둔 행(PK 삭제에 딸린 FK 포함)을 물리 삭제</li>
+	 *   <li>DEL_PK·DEL_FK 반려 — 감춰 둔 행을 되살리고 컬럼 표시를 BEFORE_JSON 값으로</li>
+	 * </ul>
+	 * PK 인덱스 이름은 PK 이름과 같다 (createPk).
+	 */
+	@SuppressWarnings("unchecked")
+	private void applyConstraintDecision(String changeType, String status, Map<String, Object> sp, String beforeJson) {
+		boolean pk = changeType.endsWith("_PK");
+		Map<String, Object> key = new HashMap<>();
+		key.put("dataModelId",  sp.get("dmId"));
+		key.put("objOwner",     sp.get("objOwner"));
+		key.put("objNm",        sp.get("objNm"));
+		key.put("constraintNm", sp.get("constraintNm"));
+		key.put("indexNm",      sp.get("constraintNm"));
+		Map<String, Object> before;
+		try {
+			before = new com.fasterxml.jackson.databind.ObjectMapper().readValue(beforeJson, Map.class);
+		} catch (Exception e) {
+			throw new IllegalStateException(changeType + " 처리에 필요한 변경 전 값(BEFORE_JSON)을 읽지 못했습니다: " + e.getMessage(), e);
+		}
+		List<Map<String, Object>> cascadedFks = before.containsKey("cascadedFks")
+				? (List<Map<String, Object>>) before.get("cascadedFks") : new ArrayList<>();
+		boolean approved = "APPROVED".equals(status);
+
+		if (changeType.startsWith("ADD_")) {
+			if (approved) {
+				Map<String, Object> s = new HashMap<>(sp);
+				s.put("indexNm", sp.get("constraintNm"));
+				sqlSessionTemplate.update("dmChangeHistory.syncConstraintAprvStatus", s);
+				if (pk) sqlSessionTemplate.update("dmChangeHistory.syncIndexAprvStatus", s);
+			} else {
+				sqlSessionTemplate.delete("datamodel.deleteConstraintByName", key);
+				if (pk) sqlSessionTemplate.delete("datamodel.deleteIndexByName", key);
+				restoreAttrKeys((List<Map<String, Object>>) before.get("columns"), sp.get("dmId"), pk);
+			}
+		} else {
+			if (approved) {
+				sqlSessionTemplate.delete("datamodel.deleteConstraintByName", key);
+				if (pk) sqlSessionTemplate.delete("datamodel.deleteIndexByName", key);
+				for (Map<String, Object> fk : cascadedFks) {
+					sqlSessionTemplate.delete("datamodel.deleteConstraintByName", fkKey(sp.get("dmId"), fk));
+				}
+			} else {
+				sqlSessionTemplate.update("datamodel.restoreConstraintPendingDelete", key);
+				if (pk) sqlSessionTemplate.update("datamodel.restoreIndexPendingDelete", key);
+				restoreAttrKeys((List<Map<String, Object>>) before.get("columns"), sp.get("dmId"), pk);
+				for (Map<String, Object> fk : cascadedFks) {
+					sqlSessionTemplate.update("datamodel.restoreConstraintPendingDelete", fkKey(sp.get("dmId"), fk));
+					restoreAttrKeys((List<Map<String, Object>>) fk.get("columns"), sp.get("dmId"), false);
+				}
+			}
+		}
+		log.info(">> {} {} — {}.{} {}", changeType, status, sp.get("objOwner"), sp.get("objNm"), sp.get("constraintNm"));
+	}
+
+	/** PK 삭제에 딸려 지운 FK 의 제약조건 키 */
+	private Map<String, Object> fkKey(Object dmId, Map<String, Object> fk) {
+		Map<String, Object> k = new HashMap<>();
+		k.put("dataModelId",  dmId);
+		k.put("objOwner",     fk.get("objOwner"));
+		k.put("objNm",        fk.get("objNm"));
+		k.put("constraintNm", fk.get("constraintNm"));
+		return k;
+	}
+
+	/** 컬럼의 PK 표시(pk=true) 또는 FK 표시(pk=false)를 신청 전 값으로 되돌린다. */
+	private void restoreAttrKeys(List<Map<String, Object>> columns, Object dmId, boolean pk) {
+		for (Map<String, Object> c : columns) {
+			Map<String, Object> p = new HashMap<>(c);
+			p.put("dataModelId", dmId);
+			sqlSessionTemplate.update(pk ? "datamodel.updateAttrPkYn" : "datamodel.updateAttrFk", p);
+		}
 	}
 
 	/**

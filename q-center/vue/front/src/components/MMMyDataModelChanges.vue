@@ -28,7 +28,7 @@
           item-key="changeSeq" show-select v-model="checkedDrafts"
           :items-per-page="20" hide-default-footer dense>
           <template #item.changeType="{ item }">
-            <v-chip x-small outlined>{{ item.changeType }}</v-chip>
+            <v-chip x-small outlined :title="item.changeType">{{ changeTypeLabel(item.changeType) }}</v-chip>
           </template>
           <template #item.path="{ item }">
             <span style="font-family:monospace;">{{ pathOf(item) }}</span>
@@ -46,7 +46,7 @@
         <v-data-table v-if="submitted.length > 0" :headers="headers" :items="submitted"
           item-key="changeSeq" :items-per-page="20" hide-default-footer dense>
           <template #item.changeType="{ item }">
-            <v-chip x-small outlined>{{ item.changeType }}</v-chip>
+            <v-chip x-small outlined :title="item.changeType">{{ changeTypeLabel(item.changeType) }}</v-chip>
           </template>
           <template #item.path="{ item }">
             <span style="font-family:monospace;">{{ pathOf(item) }}</span>
@@ -64,7 +64,7 @@
         <v-data-table v-if="rejected.length > 0" :headers="headersRej" :items="rejected"
           item-key="changeSeq" :items-per-page="20" hide-default-footer dense>
           <template #item.changeType="{ item }">
-            <v-chip x-small outlined>{{ item.changeType }}</v-chip>
+            <v-chip x-small outlined :title="item.changeType">{{ changeTypeLabel(item.changeType) }}</v-chip>
           </template>
           <template #item.path="{ item }">
             <span style="font-family:monospace;">{{ pathOf(item) }}</span>
@@ -81,6 +81,7 @@
 
 <script>
 import axios from 'axios';
+import { dmChangeTypeLabel } from './dmChangeType';
 
 export default {
   name: 'MMMyDataModelChanges',
@@ -105,6 +106,9 @@ export default {
   mounted() { this.loadAll(); },
   activated() { this.loadAll(); },
   methods: {
+    changeTypeLabel(code) {
+      return dmChangeTypeLabel(code);
+    },
     loadAll() {
       // 본인 DRAFT
       axios.post(this.$APIURL.base + 'api/dmApproval/myDrafts', {}).then(res => {
@@ -120,7 +124,9 @@ export default {
       }).catch(() => { this.submitted = []; this.rejected = []; });
     },
     pathOf(item) {
-      return (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '');
+      // PK/FK 변경은 컬럼 대신 제약조건 이름을 붙인다
+      return (item.objOwner ? item.objOwner + '.' : '') + (item.objNm || '') + (item.attrNm ? '.' + item.attrNm : '')
+        + (item.constraintNm ? ' [' + item.constraintNm + ']' : '');
     },
     submitSelected() {
       const seqList = this.checkedDrafts.map(d => d.changeSeq);
