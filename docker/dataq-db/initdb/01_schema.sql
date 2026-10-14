@@ -3096,7 +3096,14 @@ CREATE TABLE quality.tb_struct_diag_detail (
     curr_data_len integer,
     prev_nullable character(1),
     curr_nullable character(1),
-    owner character varying(100)
+    owner character varying(100),
+    curr_attr_nm_kr character varying(500),
+    curr_data_decimal_len integer,
+    curr_pk_yn character(1),
+    curr_default_val character varying(4000),
+    curr_attr_ord integer,
+    applied_dt character varying(14),
+    applied_user_id character varying(50)
 );
 
 
@@ -3182,6 +3189,20 @@ COMMENT ON COLUMN quality.tb_struct_diag_detail.prev_nullable IS '이전 Nullabl
 --
 
 COMMENT ON COLUMN quality.tb_struct_diag_detail.curr_nullable IS '현재 Nullable 여부';
+
+
+--
+-- Name: COLUMN tb_struct_diag_detail.curr_attr_nm_kr; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_struct_diag_detail.curr_attr_nm_kr IS '실 DB 컬럼 코멘트 — 모델에 반영할 때 한글명 (104번 WP8-63)';
+
+
+--
+-- Name: COLUMN tb_struct_diag_detail.applied_dt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_struct_diag_detail.applied_dt IS '모델에 반영한 시각 — 비면 아직 반영 안 함 (104번 WP8-63)';
 
 
 --
@@ -3529,6 +3550,79 @@ CREATE TABLE quality.tb_terms_words (
     word_nm character varying(100) NOT NULL,
     word_ord smallint NOT NULL
 );
+
+
+--
+-- Name: tb_udp_def; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_udp_def (
+    udp_id character varying(40) NOT NULL,
+    target_tp character varying(10) DEFAULT 'OBJ'::character varying NOT NULL,
+    udp_nm character varying(100) NOT NULL,
+    data_tp character varying(10) DEFAULT 'TEXT'::character varying NOT NULL,
+    select_vals text[],
+    required_yn character(1) DEFAULT 'N'::bpchar,
+    sort_order integer DEFAULT 0,
+    use_yn character(1) DEFAULT 'Y'::bpchar,
+    dflt_set_yn character(1) DEFAULT 'N'::bpchar,
+    udp_desc character varying(500),
+    cret_dt character varying(14),
+    cret_user_id character varying(50),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_udp_def; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_udp_def IS '사용자 정의 속성 정의 — 데이터 모델 테이블에 기관이 더하는 관리 항목 (104번 WP8-31·75)';
+
+
+--
+-- Name: COLUMN tb_udp_def.target_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_udp_def.target_tp IS '대상 — OBJ(테이블)';
+
+
+--
+-- Name: COLUMN tb_udp_def.data_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_udp_def.data_tp IS 'TEXT·NUMBER·DATE·SELECT';
+
+
+--
+-- Name: COLUMN tb_udp_def.dflt_set_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_udp_def.dflt_set_yn IS '기본 세트(보존기간·데이터 볼륨)';
+
+
+--
+-- Name: tb_udp_val; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_udp_val (
+    udp_id character varying(40) NOT NULL,
+    dm_id character varying(40) NOT NULL,
+    obj_owner character varying(100) DEFAULT ''::character varying NOT NULL,
+    obj_nm character varying(255) NOT NULL,
+    attr_nm character varying(255) DEFAULT ''::character varying NOT NULL,
+    val character varying(4000),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_udp_val; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_udp_val IS '사용자 정의 속성 값 — 테이블(ATTR_NM 빈 값)마다 (104번 WP8-31·75)';
 
 
 --
@@ -4510,6 +4604,22 @@ ALTER TABLE ONLY quality.tb_terms_words
 
 
 --
+-- Name: tb_udp_def tb_udp_def_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_udp_def
+    ADD CONSTRAINT tb_udp_def_pk PRIMARY KEY (udp_id);
+
+
+--
+-- Name: tb_udp_val tb_udp_val_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_udp_val
+    ADD CONSTRAINT tb_udp_val_pk PRIMARY KEY (udp_id, dm_id, obj_owner, obj_nm, attr_nm);
+
+
+--
 -- Name: tb_user tb_user_pk; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -4919,6 +5029,13 @@ CREATE INDEX ix_term_resolve_user ON quality.tb_term_resolve_history USING btree
 
 
 --
+-- Name: ix_udp_val_obj; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_udp_val_obj ON quality.tb_udp_val USING btree (dm_id, obj_owner, obj_nm);
+
+
+--
 -- Name: ix_user_role_role; Type: INDEX; Schema: quality; Owner: -
 --
 
@@ -5056,6 +5173,13 @@ CREATE UNIQUE INDEX tb_terms_ux_1 ON quality.tb_terms USING btree (dict_id, term
 --
 
 CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (dict_id, terms_eng_abrv_nm);
+
+
+--
+-- Name: tb_udp_def_ux_1; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE UNIQUE INDEX tb_udp_def_ux_1 ON quality.tb_udp_def USING btree (target_tp, udp_nm);
 
 
 --
@@ -5448,6 +5572,14 @@ ALTER TABLE ONLY quality.tb_terms_words
 
 ALTER TABLE ONLY quality.tb_terms_words
     ADD CONSTRAINT tb_terms_words_fk_2 FOREIGN KEY (word_id, word_nm) REFERENCES quality.tb_word(word_id, word_nm) ON UPDATE CASCADE;
+
+
+--
+-- Name: tb_udp_val tb_udp_val_fk_def; Type: FK CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_udp_val
+    ADD CONSTRAINT tb_udp_val_fk_def FOREIGN KEY (udp_id) REFERENCES quality.tb_udp_def(udp_id) ON DELETE CASCADE;
 
 
 --

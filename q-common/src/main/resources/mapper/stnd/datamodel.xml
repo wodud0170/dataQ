@@ -258,6 +258,7 @@
 				,BIZ_AREA_ID         as bizAreaId
 				,SUBJ_AREA_ID        as subjAreaId
 				,(SELECT biz_area_nm FROM tb_biz_area WHERE biz_area_id = o.BIZ_AREA_ID) as bizAreaNm
+				,(SELECT subj_area_nm FROM tb_subj_area WHERE subj_area_id = o.SUBJ_AREA_ID) as subjAreaNm   <!-- 104번 WP8-38 -->
 			from TB_DATA_MODEL_OBJ o
 			where DM_ID = #{clctId} AND USE_YN = 'Y'
 			order by OBJ_NM
@@ -1047,7 +1048,7 @@
 			,OBJ_DESC  = #{objDesc, jdbcType=VARCHAR}
 			,TABLESPACE_NM = #{tablespaceNm, jdbcType=VARCHAR}
 			,BIZ_AREA_ID   = #{bizAreaId, jdbcType=VARCHAR}
-			,SUBJ_AREA_ID  = #{subjAreaId, jdbcType=VARCHAR}
+			<if test="!subjAreaKeep">,SUBJ_AREA_ID  = #{subjAreaId, jdbcType=VARCHAR}</if>
 		WHERE DM_ID = #{dataModelId}
 		  AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '')
 		  AND OBJ_NM = #{objNm}

@@ -613,6 +613,15 @@
                         <v-list-item-title>DDL 규칙</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 104번 WP8-31·75 — 사용자 정의 속성 (사용자 정의 속성 관리 권한) -->
+                    <v-list-item v-if="$can('UDP_ADMIN')" link id="nav_udpDef" href="#tab_udpDef" active-class="ndColor--text" title="사용자 정의 속성"
+                        v-on:click.stop=" addTabItem('사용자 정의 속성', 'udpDef'); ">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>사용자 정의 속성</v-list-item-title>
+                    </v-list-item>
+
                     <!-- 104번 WP2 — 시스템 계층 (시스템 관리 권한) -->
                     <v-list-item v-if="$can('SYS_ADMIN')" link id="nav_system" href="#tab_system" active-class="ndColor--text" title="시스템"
                         v-on:click.stop=" addTabItem('시스템', 'system'); ">
@@ -669,7 +678,7 @@ export default {
     computed: {
         // 104번 WP2 — 관리 그룹은 그 안의 항목이 하나라도 보이면 보인다
         showMmGroup() {
-            return ['USER_ADMIN', 'STD_APPROVE', 'DM_APPROVE', 'AREA_ADMIN', 'DICT_ADMIN', 'DS_ADMIN', 'SYS_ADMIN']
+            return ['USER_ADMIN', 'STD_APPROVE', 'DM_APPROVE', 'AREA_ADMIN', 'DICT_ADMIN', 'DS_ADMIN', 'SYS_ADMIN', 'UDP_ADMIN']
                 .some(c => this.$can(c));
         },
     },

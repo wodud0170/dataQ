@@ -229,6 +229,7 @@ export default {
                 case "system":
                 case "datasource":
                 case "ddlRule":
+                case "udpDef":
                 case "org":
                 case "aprvLine":
                     this._activateGroup("mmGroup");
@@ -415,7 +416,7 @@ export default {
                         this._activateGroup("navDqSub3");
                     }
 
-                } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'system' || tabName ==='datasource' || tabName === 'ddlRule' || tabName === 'org' || tabName === 'aprvLine') {
+                } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'system' || tabName ==='datasource' || tabName === 'ddlRule' || tabName === 'udpDef' || tabName === 'org' || tabName === 'aprvLine') {
                     this._activateGroup("mmGroup");
                 } else if (tabName === 'scurrent' || tabName === 'qcurrent') {
                     this._activateGroup("andGroup");
@@ -663,7 +664,7 @@ export default {
                 }, 500);
 
                 return;
-            } else if (tabitem === 'user' || tabitem === 'roles' || tabitem === 'approval' || tabitem === 'system' || tabitem === 'datasource' || tabitem === 'ddlRule' || tabitem === 'org' || tabitem === 'aprvLine') {
+            } else if (tabitem === 'user' || tabitem === 'roles' || tabitem === 'approval' || tabitem === 'system' || tabitem === 'datasource' || tabitem === 'ddlRule' || tabitem === 'udpDef' || tabitem === 'org' || tabitem === 'aprvLine') {
                 this.navMmGroup = true;
                 this.navSubGropClose();
 

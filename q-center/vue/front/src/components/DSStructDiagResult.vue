@@ -82,16 +82,25 @@
               <v-chip small :color="colFilter === 'MODIFIED' ? 'orange' : ''" :outlined="colFilter !== 'MODIFIED'" @click="colFilter = 'MODIFIED'">변경 ({{ countByType(changeList, 'MODIFIED') }})</v-chip>
               <v-chip small :color="colFilter === 'DELETED' ? 'red' : ''" :outlined="colFilter !== 'DELETED'" @click="colFilter = 'DELETED'">삭제 ({{ countByType(changeList, 'DELETED') }})</v-chip>
               <v-spacer />
-              <v-btn small outlined color="green darken-2" @click="downloadExcel"><v-icon small left>mdi-microsoft-excel</v-icon>엑셀 다운로드</v-btn>
+              <!-- 104번 WP8-63 — 고른 행을 모델에 반영 (반영한 행은 다시 고를 수 없다) -->
+              <v-btn id="structApply" small class="btn-auto" color="indigo" :dark="colSel.length > 0" :disabled="!colSel.length" @click="confirmApply">
+                <v-icon small left>mdi-database-sync</v-icon>모델에 반영 ({{ colSel.length }})
+              </v-btn>
+              <v-btn small outlined class="btn-auto" color="green darken-2" @click="downloadExcel"><v-icon small left>mdi-microsoft-excel</v-icon>엑셀 다운로드</v-btn>
             </div>
-            <v-data-table :headers="colHeaders" :items="filteredCol" :items-per-page="20" dense class="elevation-0">
+            <v-data-table id="structColTable" :headers="colHeaders" :items="filteredCol" :items-per-page="20" :footer-props="{ 'items-per-page-options': [10, 20, 50, -1] }" dense class="elevation-0"
+              show-select v-model="colSel" item-key="seq" selectable-key="_selectable">
               <template v-slot:item.changeType="{ item }">
                 <v-chip x-small :color="changeTypeColor(item.changeType)" text-color="white">{{ item.changeType }}</v-chip>
               </template>
               <template v-slot:item.prevType="{ item }">{{ item.prevDataType ? item.prevDataType + (item.prevDataLen ? '(' + item.prevDataLen + ')' : '') : '-' }}</template>
               <template v-slot:item.prevNullable="{ item }">{{ item.prevNullable || '-' }}</template>
-              <template v-slot:item.currType="{ item }">{{ item.currDataType ? item.currDataType + (item.currDataLen ? '(' + item.currDataLen + ')' : '') : '-' }}</template>
+              <template v-slot:item.currType="{ item }">{{ item.currDataType ? item.currDataType + (item.currDataLen ? '(' + item.currDataLen + (item.currDataDecimalLen ? ',' + item.currDataDecimalLen : '') + ')' : '') : '-' }}</template>
               <template v-slot:item.currNullable="{ item }">{{ item.currNullable || '-' }}</template>
+              <template v-slot:item.currAttrNmKr="{ item }">{{ item.currAttrNmKr || '-' }}</template>
+              <template v-slot:item.appliedDt="{ item }">
+                <v-chip v-if="item.appliedDt" x-small color="indigo" text-color="white" :title="item.appliedUserId + ' · ' + fmtDt(item.appliedDt)">반영됨</v-chip>
+              </template>
             </v-data-table>
           </v-sheet>
         </v-tab-item>
@@ -105,9 +114,9 @@
               <v-chip small :color="idxFilter === 'MODIFIED' ? 'orange' : ''" :outlined="idxFilter !== 'MODIFIED'" @click="idxFilter = 'MODIFIED'">변경 ({{ countByType(indexChangeList, 'MODIFIED') }})</v-chip>
               <v-chip small :color="idxFilter === 'DELETED' ? 'red' : ''" :outlined="idxFilter !== 'DELETED'" @click="idxFilter = 'DELETED'">삭제 ({{ countByType(indexChangeList, 'DELETED') }})</v-chip>
               <v-spacer />
-              <v-btn small outlined color="green darken-2" @click="downloadIndexExcel"><v-icon small left>mdi-microsoft-excel</v-icon>엑셀 다운로드</v-btn>
+              <v-btn small outlined class="btn-auto" color="green darken-2" @click="downloadIndexExcel"><v-icon small left>mdi-microsoft-excel</v-icon>엑셀 다운로드</v-btn>
             </div>
-            <v-data-table :headers="idxHeaders" :items="filteredIdx" :items-per-page="20" dense class="elevation-0">
+            <v-data-table :headers="idxHeaders" :items="filteredIdx" :items-per-page="20" :footer-props="{ 'items-per-page-options': [10, 20, 50, -1] }" dense class="elevation-0">
               <template v-slot:item.changeType="{ item }">
                 <v-chip x-small :color="changeTypeColor(item.changeType)" text-color="white">{{ item.changeType }}</v-chip>
               </template>
@@ -128,9 +137,9 @@
               <v-chip small :color="cstFilter === 'MODIFIED' ? 'orange' : ''" :outlined="cstFilter !== 'MODIFIED'" @click="cstFilter = 'MODIFIED'">변경 ({{ countByType(constraintChangeList, 'MODIFIED') }})</v-chip>
               <v-chip small :color="cstFilter === 'DELETED' ? 'red' : ''" :outlined="cstFilter !== 'DELETED'" @click="cstFilter = 'DELETED'">삭제 ({{ countByType(constraintChangeList, 'DELETED') }})</v-chip>
               <v-spacer />
-              <v-btn small outlined color="green darken-2" @click="downloadConstraintExcel"><v-icon small left>mdi-microsoft-excel</v-icon>엑셀 다운로드</v-btn>
+              <v-btn small outlined class="btn-auto" color="green darken-2" @click="downloadConstraintExcel"><v-icon small left>mdi-microsoft-excel</v-icon>엑셀 다운로드</v-btn>
             </div>
-            <v-data-table :headers="cstHeaders" :items="filteredCst" :items-per-page="20" dense class="elevation-0">
+            <v-data-table :headers="cstHeaders" :items="filteredCst" :items-per-page="20" :footer-props="{ 'items-per-page-options': [10, 20, 50, -1] }" dense class="elevation-0">
               <template v-slot:item.changeType="{ item }">
                 <v-chip x-small :color="changeTypeColor(item.changeType)" text-color="white">{{ item.changeType }}</v-chip>
               </template>
@@ -182,7 +191,10 @@ export default {
         { text: '이전 Nullable', value: 'prevNullable', width: '100px', class: 'prev-header' },
         { text: '현재 타입/길이', value: 'currType', width: '130px', sortable: false, class: 'curr-header' },
         { text: '현재 Nullable', value: 'currNullable', width: '100px', class: 'curr-header' },
+        { text: '현재 코멘트', value: 'currAttrNmKr', width: '140px', class: 'curr-header' },
+        { text: '모델 반영', value: 'appliedDt', width: '90px', align: 'center' },
       ],
+      colSel: [],
       // 인덱스
       indexChangeList: [], idxFilter: 'ALL',
       idxHeaders: [
@@ -296,7 +308,9 @@ export default {
             totalChanges: colChanges + idxChanges + cstChanges,
           };
           self.selectedDiagDt = h.diagDt || '';
-          self.changeList = data.details || [];
+          // 104번 WP8-63 — 반영한 행은 고를 수 없다
+          self.changeList = (data.details || []).map(function(d) { return Object.assign({}, d, { _selectable: !d.appliedDt }); });
+          self.colSel = [];
           self.indexChangeList = data.indexDetails || [];
           self.constraintChangeList = data.constraintDetails || [];
           self.hasResult = true;
@@ -309,6 +323,41 @@ export default {
     changeTypeColor(type) { return { ADDED: 'green', MODIFIED: 'orange', DELETED: 'red' }[type] || 'grey'; },
     cstTypeLabel(type) { return { P: 'PK', R: 'FK', U: 'UK', C: 'CHECK' }[type] || type || '-'; },
     showSnackbar(msg, color) { this.snackbarMsg = msg; this.snackbarColor = color || 'info'; this.snackbar = true; },
+    fmtDt(s) { return s && s.length >= 12 ? s.substr(0, 4) + '-' + s.substr(4, 2) + '-' + s.substr(6, 2) + ' ' + s.substr(8, 2) + ':' + s.substr(10, 2) : (s || ''); },
+    // ===== 104번 WP8-63 — 구조 진단 결과로 모델 현행화 =====
+    confirmApply() {
+      var self = this;
+      var n = this.colSel.length;
+      var html = '<div style="text-align:left;font-size:.9rem;">'
+        + '고른 ' + n + '건을 실 DB 기준으로 모델에 반영합니다.<br>'
+        + '· 추가 — 모델에 테이블이 없으면 테이블부터 추가, 컬럼은 실 DB 값(코멘트를 한글명으로)으로<br>'
+        + '· 변경 — 타입·길이·소수·NULL 을 실 DB 값으로<br>'
+        + '· 삭제 — 모델 컬럼 삭제 (테이블의 컬럼을 모두 지우게 되면 테이블째)<br><br>'
+        + (this.$can('DM_MANAGE')
+          ? '모델에 바로 반영되고 변경 이력이 남습니다.'
+          : '<b>모델 직접 반영 권한이 없어 승인 대기로 저장됩니다.</b> 데이터 모델 > 내 변경 신청에서 신청하세요.')
+        + '</div>';
+      this.$swal.fire({ title: '모델에 반영', html: html, icon: 'question', showCancelButton: true, confirmButtonText: '반영', cancelButtonText: '취소' })
+        .then(function(r) { if (r.isConfirmed) self.runApply(); });
+    },
+    runApply() {
+      var self = this;
+      var seqs = this.colSel.map(function(c) { return c.seq; });
+      axios.post(self.$APIURL.base + 'api/std/structDiag/apply', { diagId: self.selectedDiagId, seqs: seqs }).then(function(res) {
+        if (!(res.data && res.data.resultCode === 200)) {
+          self.$swal.fire({ title: '반영 실패', text: res.data && res.data.resultMessage, icon: 'error', confirmButtonText: '확인' });
+          return;
+        }
+        var c = JSON.parse(res.data.contents || '{}');
+        var errs = c.errors || [];
+        var html = '<div style="text-align:left;font-size:.9rem;">반영: <b>' + c.applied + '건</b>'
+          + (errs.length ? '<br><br><span style="color:#D32F2F">반영하지 못한 테이블 ' + errs.length + '개</span><br>'
+            + errs.map(function(e) { return '· ' + e.tableNm + ' — ' + e.message; }).join('<br>') : '')
+          + '</div>';
+        self.$swal.fire({ title: errs.length ? '일부 반영' : '반영 완료', html: html, icon: errs.length ? 'warning' : 'success', confirmButtonText: '확인' });
+        self.loadResult();
+      }).catch(function() { self.showSnackbar('반영 실패', 'error'); });
+    },
     downloadExcel() { this._downloadFile('downloadResult', '구조진단결과_컬럼_'); },
     downloadIndexExcel() { this._downloadFile('downloadIndexResult', '구조진단결과_인덱스_'); },
     downloadConstraintExcel() { this._downloadFile('downloadConstraintResult', '구조진단결과_제약조건_'); },

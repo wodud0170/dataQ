@@ -569,12 +569,21 @@ public class ExcelDownloadService {
         long listSize = dmObjVoLst.size();
 
         // 86번 #11 — 업로드 양식 (DataModelController.TABLE_HEADERS) 와 동일 순서·명칭. 다운로드 → 재업로드 가능.
-        List<String[]> headers = Arrays.asList(
+        List<String[]> headers = new ArrayList<>(Arrays.asList(
             new String[]{"소유자","20","LEFT"},
             new String[]{"테이블명(영문)","25","LEFT"},
             new String[]{"테이블명(한글)","30","LEFT"},
             new String[]{"설명","40","LEFT"}
-        );
+        ));
+        // 104번 WP8-31 — 사용 중인 사용자 정의 속성 열 (업로드 양식과 같은 이름이라 다시 올릴 수 있다)
+        Map<String, Object> udpP = new HashMap<>();
+        udpP.put("useOnly", "Y");
+        List<Map<String, Object>> udpDefs = sqlSessionTemplate.selectList("udp.selectDefs", udpP);
+        for (Map<String, Object> d : udpDefs) headers.add(new String[]{(String) d.get("udpNm"), "20", "LEFT"});
+        Map<String, String> udpVals = new HashMap<>();   // owner|obj|udpId → 값
+        for (Map<String, Object> v : sqlSessionTemplate.<Map<String, Object>>selectList("udp.selectModelVals", searchKey)) {
+            udpVals.put(v.get("objOwner") + "|" + v.get("objNm") + "|" + v.get("udpId"), (String) v.get("val"));
+        }
 
         // 데이터 리스트
         List<Map<String, Object>> list = new ArrayList<>();
@@ -585,6 +594,10 @@ public class ExcelDownloadService {
             tempMap.put("HEADER2", dataVo.getObjNm());
             tempMap.put("HEADER3", dataVo.getObjNmKr());
             tempMap.put("HEADER4", dataVo.getObjDesc());
+            int h = 5;
+            for (Map<String, Object> d : udpDefs) {
+                tempMap.put("HEADER" + (h++), udpVals.get((dataVo.getObjOwner() == null ? "" : dataVo.getObjOwner()) + "|" + dataVo.getObjNm() + "|" + d.get("udpId")));
+            }
             list.add(tempMap);
         }
         log.info(">> excel export size={}", list.size());

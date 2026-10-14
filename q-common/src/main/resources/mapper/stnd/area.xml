@@ -16,16 +16,30 @@
 		 ORDER BY sort_order, biz_area_nm
 	</select>
 
-	<select id="selectSubjAreas" resultType="java.util.Map">
-		SELECT subj_area_id   as "subjAreaId",
-		       subj_area_nm   as "subjAreaNm",
-		       subj_area_desc as "subjAreaDesc",
-		       parent_id      as "parentId",
-		       sort_order     as "sortOrder",
-		       use_yn         as "useYn"
-		  FROM tb_subj_area
-		 WHERE COALESCE(use_yn, 'Y') = 'Y'
-		 ORDER BY sort_order, subj_area_nm
+	<!-- 104번 WP8-38 — 트리 순서(같은 상위 안은 순서 → 이름)·단계·경로·하위 수·연결 테이블 수 -->
+	<select id="selectSubjAreas" resultType="java.util.LinkedHashMap">
+		WITH RECURSIVE T (ID, LVL, PATH, SORT_PATH) AS (
+			SELECT S.SUBJ_AREA_ID, 1, S.SUBJ_AREA_NM::text, lpad(COALESCE(S.SORT_ORDER, 0)::text, 6, '0') || S.SUBJ_AREA_NM
+			  FROM TB_SUBJ_AREA S
+			 WHERE COALESCE(S.USE_YN, 'Y') = 'Y'
+			   AND (S.PARENT_ID IS NULL OR NOT EXISTS (SELECT 1 FROM TB_SUBJ_AREA P WHERE P.SUBJ_AREA_ID = S.PARENT_ID AND COALESCE(P.USE_YN, 'Y') = 'Y'))
+			UNION ALL
+			SELECT C.SUBJ_AREA_ID, T.LVL + 1, T.PATH || ' > ' || C.SUBJ_AREA_NM, T.SORT_PATH || '/' || lpad(COALESCE(C.SORT_ORDER, 0)::text, 6, '0') || C.SUBJ_AREA_NM
+			  FROM TB_SUBJ_AREA C JOIN T ON C.PARENT_ID = T.ID
+			 WHERE COALESCE(C.USE_YN, 'Y') = 'Y' AND T.LVL &lt; 10
+		)
+		SELECT S.SUBJ_AREA_ID   as "subjAreaId",
+		       S.SUBJ_AREA_NM   as "subjAreaNm",
+		       S.SUBJ_AREA_DESC as "subjAreaDesc",
+		       S.PARENT_ID      as "parentId",
+		       S.SORT_ORDER     as "sortOrder",
+		       S.USE_YN         as "useYn",
+		       T.LVL            as "level",
+		       T.PATH           as "path",
+		       (SELECT COUNT(*) FROM TB_SUBJ_AREA C WHERE C.PARENT_ID = S.SUBJ_AREA_ID AND COALESCE(C.USE_YN, 'Y') = 'Y') as "childCnt",
+		       (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ O WHERE O.SUBJ_AREA_ID = S.SUBJ_AREA_ID AND COALESCE(O.USE_YN, 'Y') = 'Y') as "tableCnt"
+		  FROM T JOIN TB_SUBJ_AREA S ON S.SUBJ_AREA_ID = T.ID
+		 ORDER BY T.SORT_PATH
 	</select>
 
 	<insert id="insertBizArea" parameterType="java.util.Map">
@@ -69,5 +83,24 @@
 	</update>
 	<update id="deleteSubjArea" parameterType="String">
 		UPDATE tb_subj_area SET use_yn = 'N' WHERE subj_area_id = #{value}
+	</update>
+
+	<!-- 104번 WP8-38 — 주제영역에 연결된 테이블 (사용 중 모델) -->
+	<select id="selectSubjTables" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT M.DM_ID as "dmId", M.DM_NM as "dmNm", O.OBJ_OWNER as "objOwner", O.OBJ_NM as "objNm", O.OBJ_NM_KR as "objNmKr"
+		  FROM TB_DATA_MODEL_OBJ O
+		  JOIN TB_DATA_MODEL M ON M.DM_ID = O.DM_ID AND M.USE_YN = 'Y'
+		 WHERE O.SUBJ_AREA_ID = #{value} AND COALESCE(O.USE_YN, 'Y') = 'Y'
+		 ORDER BY M.DM_NM, O.OBJ_OWNER, O.OBJ_NM
+	</select>
+
+	<!-- 104번 WP8-38 — 테이블 하나의 주제영역 (연결·해제 이력용) -->
+	<select id="selectObjSubj" parameterType="java.util.Map" resultType="String">
+		SELECT SUBJ_AREA_ID FROM TB_DATA_MODEL_OBJ WHERE DM_ID = #{dmId} AND OBJ_OWNER = #{objOwner} AND OBJ_NM = #{objNm}
+	</select>
+
+	<update id="updateObjSubj" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ SET SUBJ_AREA_ID = #{subjAreaId, jdbcType=VARCHAR}
+		 WHERE DM_ID = #{dmId} AND OBJ_OWNER = #{objOwner} AND OBJ_NM = #{objNm}
 	</update>
 </mapper>

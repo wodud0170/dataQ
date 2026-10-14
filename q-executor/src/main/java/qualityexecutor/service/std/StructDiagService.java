@@ -157,6 +157,13 @@ public class StructDiagService implements Runnable {
                     attr.put("dataType", rs.getString("dataType"));
                     attr.put("dataLen", rs.getLong("dataLen"));
                     attr.put("nullableYn", rs.getString("nullableYn"));
+                    // 104번 WP8-63 — 모델에 반영할 때 쓰는 실 DB 값 (코멘트·소수·PK·기본값·순서)
+                    Object dec = rs.getObject("dataDecimalLen");
+                    attr.put("attrNmKr", rs.getString("attrNmKr"));
+                    attr.put("dataDecimalLen", dec == null ? null : ((Number) dec).intValue());
+                    attr.put("pkYn", "Y".equals(rs.getString("pkYn")) ? "Y" : "N");
+                    attr.put("defaultVal", rs.getString("defaultVal"));
+                    attr.put("attrOrder", rs.getInt("attrOrder"));
                     currAttrs.add(attr);
                 }
                 pstmt.close();
@@ -198,6 +205,7 @@ public class StructDiagService implements Runnable {
                     detail.put("currDataLen", curr.get("dataLen"));
                     detail.put("prevNullable", null);
                     detail.put("currNullable", curr.get("nullableYn"));
+                    putCurrExtra(detail, curr);
                     changes.add(detail);
                     addedColumns++;
                 }
@@ -244,6 +252,7 @@ public class StructDiagService implements Runnable {
                         detail.put("currDataLen", curr.get("dataLen"));
                         detail.put("prevNullable", prev.get("nullableYn"));
                         detail.put("currNullable", curr.get("nullableYn"));
+                        putCurrExtra(detail, curr);
                         changes.add(detail);
                         modifiedColumns++;
                     }
@@ -487,6 +496,15 @@ public class StructDiagService implements Runnable {
         param.put("diagId", diagId);
         param.put("status", status);
         sqlSessionTemplate.update("structdiag.updateStructDiagStatus", param);
+    }
+
+    /** 104번 WP8-63 — 추가·변경 행에 실 DB 컬럼 값을 남긴다 (결과 화면 [모델에 반영]이 쓴다) */
+    private void putCurrExtra(Map<String, Object> detail, Map<String, Object> curr) {
+        detail.put("currAttrNmKr", curr.get("attrNmKr"));
+        detail.put("currDataDecimalLen", curr.get("dataDecimalLen"));
+        detail.put("currPkYn", curr.get("pkYn"));
+        detail.put("currDefaultVal", curr.get("defaultVal"));
+        detail.put("currAttrOrd", curr.get("attrOrder"));
     }
 
     private Map<String, Map<String, Object>> toAttrMap(List<Map<String, Object>> attrs) {

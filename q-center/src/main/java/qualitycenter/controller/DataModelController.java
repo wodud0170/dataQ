@@ -182,6 +182,10 @@ public class DataModelController {
 	@Autowired
 	private DataStandardController stdController;
 
+	/** 104번 WP8-31 — 테이블 사용자 정의 속성 값 검사·저장 */
+	@Autowired
+	private qualitycenter.service.udp.UdpService udpService;
+
 	/**
 	 * 데이터모델 등록 API
 	 *
@@ -997,6 +1001,9 @@ public class DataModelController {
 			Integer dup = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDmId", dupParam);
 			if (dup != null && dup > 0) throw new IllegalStateException("이미 존재하는 테이블입니다: " + objVo.getObjNm());
 
+			// 104번 WP8-31 — 사용자 정의 속성: 필수·유형 검사 후 테이블과 같은 트랜잭션으로 저장
+			Map<String, String> udpVals = udpService.check(new HashMap<>(), objVo.getUdpVals());
+
 			if (objVo.getObjAttrCnt() == 0) objVo.setObjAttrCnt((short) 0);
 			// 88번 거버넌스 — 관리자=APPROVED 즉시, 사용자=DRAFT
 			String addObjAprvStatus = changeHistory.resolveAprvStatusForUserChange();
@@ -1008,6 +1015,7 @@ public class DataModelController {
 				objVo.setAprvDt(objVo.getReqDt());
 			}
 			session.insert("datamodel.insertDataModelObj", objVo);
+			udpService.save(session, objVo.getDataModelId(), objVo.getObjOwner(), objVo.getObjNm(), udpVals, changeHistory.safeUserId());
 			changeHistory.record(session, objVo.getDataModelId(), "ADD_OBJ", "TIER1",
 					objVo.getObjOwner(), objVo.getObjNm(), null, null, null,
 					null, toJsonSafe(objVo),
@@ -1663,6 +1671,16 @@ public class DataModelController {
 				newObjNm = en;
 			}
 
+			// 104번 WP8-31 — 사용자 정의 속성: 보냈을 때만 검사·저장 (안 보내면 그대로)
+			String finalObjNm = newObjNm != null ? newObjNm : origObjNm;
+			String origNmForUdp = origObjNm != null ? origObjNm : finalObjNm;
+			Map<String, String> udpVals = null;
+			if (body.containsKey("udpVals")) {
+				@SuppressWarnings("unchecked")
+				Map<String, Object> sentUdp = (Map<String, Object>) body.get("udpVals");
+				udpVals = udpService.check(udpService.objVals(dataModelId, origOwner, origNmForUdp), sentUdp);
+			}
+
 			if (rename) {
 				// 충돌 재확인 (프론트 preview 후 다른 세션이 같은 이름 만들 수 있음)
 				Map<String, Object> chk = new HashMap<>();
@@ -1718,6 +1736,7 @@ public class DataModelController {
 			objVo.setTablespaceNm((String) body.get("tablespaceNm"));
 			objVo.setBizAreaId((String) body.get("bizAreaId"));
 			objVo.setSubjAreaId((String) body.get("subjAreaId"));
+			objVo.setSubjAreaKeep(!body.containsKey("subjAreaId"));   // 104번 WP8-38 — 안 보내면 그대로 (예전엔 늘 지웠다)
 			// PK 는 (DM_ID, OBJ_OWNER, OBJ_NM). 0건이면 대상이 아예 없는 것 → 성공으로 오인 방지.
 			// 트랜잭션 안이므로 return 이 아니라 throw — catch 에서 rollback 후 동일 메시지로 500.
 			if (session == null) session = sqlSessionFactory.openSession();
@@ -1736,6 +1755,17 @@ public class DataModelController {
 				ownerUpd.put("newOwner",    objOwner);
 				session.update("datamodel.updateObjOwnerKey", ownerUpd);
 			}
+			// 104번 WP8-31 — 이름·소유자가 바뀌면 속성 값도 따라간다
+			if (rename || ownerChange) {
+				Map<String, Object> rv = new HashMap<>();
+				rv.put("dmId",      dataModelId);
+				rv.put("origOwner", origOwner);
+				rv.put("origObjNm", origNmForUdp);
+				rv.put("newOwner",  objOwner);
+				rv.put("newObjNm",  finalObjNm);
+				session.update("udp.renameObjVals", rv);
+			}
+			if (udpVals != null) udpService.save(session, dataModelId, objOwner, finalObjNm, udpVals, changeHistory.safeUserId());
 			// 여기까지 전부 성공해야 커밋. 이력 기록은 커밋 이후 별도 트랜잭션.
 			session.commit();
 
@@ -2575,6 +2605,7 @@ public class DataModelController {
 		session.delete("datamodel.deleteConstraintByObj",  param);
 		session.delete("datamodel.deleteInboundFkByObj",   param);
 		session.update("datamodel.clearFkParentRefByObj",  param);
+		session.delete("udp.deleteObjVals",                param);   // 104번 WP8-31
 	}
 
 	private void cascadeDeleteAttrRefs(SqlSession session, Map<String, Object> param) {
@@ -2611,6 +2642,8 @@ public class DataModelController {
 				throw new IllegalArgumentException("attrs 배열이 아닙니다.");
 			// 104번 WP7-25 — 표준 준수 필수 모델은 비표준 컬럼 추가·수정을 거부한다 (행에 예외 사유가 있으면 결재로)
 			boolean stndReq = "Y".equals(sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", dataModelId));
+			// 104번 WP8-63 — 구조 진단 반영은 실 DB 컬럼명을 그대로 쓴다 (PostgreSQL 소문자 등). 화면 입력은 지금처럼 대문자로
+			boolean keepNmCase = Boolean.TRUE.equals(body.get("keepNmCase"));
 
 			@SuppressWarnings("unchecked")
 			List<Map<String, Object>> rawList = (List<Map<String, Object>>) rawAttrs;
@@ -2674,7 +2707,7 @@ public class DataModelController {
 						// 87-3 — TMP_COL_N 자동 생성 시 같은 테이블 내 기존 TMP_COL_N 과 충돌 회피
 						String addAttrNm;
 						if (attrNmInput != null && !attrNmInput.trim().isEmpty()) {
-							addAttrNm = attrNmInput.trim().toUpperCase();
+							addAttrNm = keepNmCase ? attrNmInput.trim() : attrNmInput.trim().toUpperCase();
 						} else {
 							tmpColSuffix++;
 							addAttrNm = "TMP_COL_" + tmpColSuffix;
@@ -2763,7 +2796,7 @@ public class DataModelController {
 						String newAttrNm = str(row.get("attrNm"));
 						if (newAttrNm == null || newAttrNm.trim().isEmpty())
 							newAttrNm = origAttrNm;
-						newAttrNm = newAttrNm.trim().toUpperCase();
+						newAttrNm = keepNmCase ? newAttrNm.trim() : newAttrNm.trim().toUpperCase();
 
 						Map<String, Object> sel = new HashMap<>();
 						sel.put("dataModelId", dataModelId);
@@ -2919,7 +2952,7 @@ public class DataModelController {
 						String attrNm = str(row.get("attrNm"));
 						if (attrNm == null || attrNm.trim().isEmpty())
 							throw new IllegalArgumentException("attrNm 누락");
-						attrNm = attrNm.trim().toUpperCase();
+						attrNm = keepNmCase ? attrNm.trim() : attrNm.trim().toUpperCase();
 						Map<String, Object> p = new HashMap<>();
 						p.put("dataModelId", dataModelId);
 						p.put("objOwner",    objOwner);  // 86번 #11
@@ -3451,6 +3484,9 @@ public class DataModelController {
 						vo.setObjNm(enNm);
 						vo.setObjAttrCnt((short) 0);
 						session.insert("datamodel.insertDataModelObj", vo);
+						@SuppressWarnings("unchecked")
+						Map<String, String> udpVals = (Map<String, String>) r.get("udpVals");
+						udpService.save(session, dataModelId, vo.getObjOwner(), enNm, udpVals, changeHistory.safeUserId());   // 104번 WP8-31
 						r.put("objNm", enNm);
 					}
 					session.commit();
@@ -3637,6 +3673,12 @@ public class DataModelController {
 		// 86번 #9 — 양식 동적 생성 (TABLE_HEADERS / ATTR_HEADERS 변경 시 자동 반영)
 		boolean isAttrs = "attrs".equalsIgnoreCase(scope);
 		String[] headers = isAttrs ? ATTR_HEADERS : TABLE_HEADERS;
+		if (!isAttrs) {
+			// 104번 WP8-31 — 테이블 양식 끝에 사용 중인 사용자 정의 속성 열
+			List<String> hs = new ArrayList<>(java.util.Arrays.asList(TABLE_HEADERS));
+			for (Map<String, Object> d : udpService.activeDefs()) hs.add((String) d.get("udpNm"));
+			headers = hs.toArray(new String[0]);
+		}
 		String fileName = isAttrs ? "dataq_attrs_template.xlsx" : "dataq_tables_template.xlsx";
 
 		res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -3682,6 +3724,11 @@ public class DataModelController {
 			Row header = sh.getRow(0);
 			if (header == null) throw new IllegalArgumentException("시트가 비어있습니다.");
 			Map<String, Integer> hIdx = mapHeaders(header, TABLE_HEADERS);
+			// 104번 WP8-31 — 사용 중인 사용자 정의 속성 이름과 같은 헤더는 그 속성 값
+			List<Map<String, Object>> udpDefs = udpService.activeDefs();
+			String[] udpNms = new String[udpDefs.size()];
+			for (int i = 0; i < udpDefs.size(); i++) udpNms[i] = (String) udpDefs.get(i).get("udpNm");
+			Map<String, Integer> udpIdx = mapHeaders(header, udpNms);
 			for (String h : TABLE_HEADERS) {
 				// 소유자·테이블명(한글) 만 필수. 영문명/설명/업무영역/테이블스페이스는 옵션
 				if (h.equals("설명") || h.equals("테이블명(영문)")
@@ -3759,6 +3806,21 @@ public class DataModelController {
 						m.put("_action", "INSERT");
 						if (keyKr != null) seenKr.add(keyKr);
 						if (keyEn != null) seenEn.add(keyEn);
+					}
+				}
+				// 104번 WP8-31 — 등록할 행만 속성 값 검사 (필수 빠짐·유형 틀림 → 오류 행)
+				if ("INSERT".equals(m.get("_action"))) {
+					Map<String, Object> sentUdp = new HashMap<>();
+					for (Map<String, Object> d : udpDefs) {
+						Integer ci = udpIdx.get((String) d.get("udpNm"));
+						if (ci != null) sentUdp.put((String) d.get("udpId"), getStr(row, ci));
+					}
+					try {
+						m.put("udpVals", udpService.check(new HashMap<>(), sentUdp));
+					} catch (IllegalArgumentException udpErr) {
+						m.put("_action", "ERROR");
+						m.put("_msg", udpErr.getMessage());
+						errors.add(errRow(r + 1, udpErr.getMessage()));
 					}
 				}
 				rows.add(m);

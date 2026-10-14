@@ -315,6 +315,7 @@ public class DataModelApprovalController {
 					sqlSessionTemplate.delete("datamodel.deleteConstraintByObj",         dp);
 					sqlSessionTemplate.delete("datamodel.deleteInboundFkByObj",          dp);
 					sqlSessionTemplate.update("datamodel.clearFkParentRefByObj",         dp);
+					sqlSessionTemplate.delete("udp.deleteObjVals",                       dp);   // 104번 WP8-31
 					sqlSessionTemplate.delete("datamodel.deleteDataModelAttrsByObj",     dp);
 					sqlSessionTemplate.delete("datamodel.deleteDataModelObj",            dp);
 					log.info(">> DEL_OBJ 승인 — 물리 삭제 {}.{}", objOwner, objNm);

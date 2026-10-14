@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 104번 WP8-31·75 — 사용자 정의 속성 (테이블 관리 항목). 정의(TB_UDP_DEF) + 값(TB_UDP_VAL, 테이블은 ATTR_NM 빈 값) -->
+<mapper namespace="udp">
+
+	<sql id="defCols">
+		       D.UDP_ID       as "udpId",
+		       D.TARGET_TP    as "targetTp",
+		       D.UDP_NM       as "udpNm",
+		       D.DATA_TP      as "dataTp",
+		       array_to_string(D.SELECT_VALS, chr(10)) as "selectVals",   <!-- 줄바꿈으로 이은 선택값 -->
+		       D.REQUIRED_YN  as "requiredYn",
+		       D.SORT_ORDER   as "sortOrder",
+		       D.USE_YN       as "useYn",
+		       D.DFLT_SET_YN  as "dfltSetYn",
+		       D.UDP_DESC     as "udpDesc",
+		       (SELECT COUNT(*) FROM TB_UDP_VAL V WHERE V.UDP_ID = D.UDP_ID) as "valCnt"
+	</sql>
+
+	<!-- 정의 목록 — useOnly=Y 면 사용 중만 -->
+	<select id="selectDefs" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="defCols"/>
+		  FROM TB_UDP_DEF D
+		 WHERE D.TARGET_TP = 'OBJ'
+		<if test='useOnly == "Y"'> AND COALESCE(D.USE_YN, 'Y') = 'Y' </if>
+		 ORDER BY D.SORT_ORDER, D.UDP_NM
+	</select>
+
+	<select id="selectDef" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT <include refid="defCols"/> FROM TB_UDP_DEF D WHERE D.UDP_ID = #{value}
+	</select>
+
+	<select id="countDefNm" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_UDP_DEF WHERE TARGET_TP = 'OBJ' AND UDP_NM = #{udpNm} AND UDP_ID &lt;&gt; COALESCE(#{udpId, jdbcType=VARCHAR}, '')
+	</select>
+
+	<insert id="insertDef" parameterType="java.util.Map">
+		INSERT INTO TB_UDP_DEF (UDP_ID, TARGET_TP, UDP_NM, DATA_TP, SELECT_VALS, REQUIRED_YN, SORT_ORDER, USE_YN, DFLT_SET_YN, UDP_DESC, CRET_DT, CRET_USER_ID)
+		VALUES (#{udpId}, 'OBJ', #{udpNm}, #{dataTp},
+		        <choose><when test="selectVals != null and selectVals.size() > 0">ARRAY[<foreach collection="selectVals" item="v" separator=",">#{v}</foreach>]::text[]</when><otherwise>NULL</otherwise></choose>,
+		        #{requiredYn}, #{sortOrder}, 'Y', 'N', #{udpDesc, jdbcType=VARCHAR}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+	</insert>
+
+	<update id="updateDef" parameterType="java.util.Map">
+		UPDATE TB_UDP_DEF
+		   SET UDP_NM = #{udpNm},
+		       DATA_TP = #{dataTp},
+		       SELECT_VALS = <choose><when test="selectVals != null and selectVals.size() > 0">ARRAY[<foreach collection="selectVals" item="v" separator=",">#{v}</foreach>]::text[]</when><otherwise>NULL</otherwise></choose>,
+		       REQUIRED_YN = #{requiredYn},
+		       SORT_ORDER = #{sortOrder},
+		       USE_YN = #{useYn},
+		       UDP_DESC = #{udpDesc, jdbcType=VARCHAR},
+		       UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
+		       UPDT_USER_ID = #{userId}
+		 WHERE UDP_ID = #{udpId}
+	</update>
+
+	<delete id="deleteDef" parameterType="String">
+		DELETE FROM TB_UDP_DEF WHERE UDP_ID = #{value}
+	</delete>
+
+	<!-- 테이블 하나의 값 -->
+	<select id="selectObjVals" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT V.UDP_ID as "udpId", V.VAL as "val"
+		  FROM TB_UDP_VAL V
+		 WHERE V.DM_ID = #{dmId} AND V.OBJ_OWNER = #{objOwner} AND V.OBJ_NM = #{objNm} AND V.ATTR_NM = ''
+	</select>
+
+	<!-- 모델 테이블별 값 요약 (사용 중 정의만, 순서대로 "이름: 값 · …") -->
+	<select id="selectModelSummary" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT V.OBJ_OWNER as "objOwner", V.OBJ_NM as "objNm",
+		       string_agg(D.UDP_NM || ': ' || V.VAL, ' · ' ORDER BY D.SORT_ORDER, D.UDP_NM) as "summary"
+		  FROM TB_UDP_VAL V
+		  JOIN TB_UDP_DEF D ON D.UDP_ID = V.UDP_ID AND COALESCE(D.USE_YN, 'Y') = 'Y'
+		 WHERE V.DM_ID = #{value} AND V.ATTR_NM = '' AND V.VAL IS NOT NULL AND V.VAL &lt;&gt; ''
+		 GROUP BY V.OBJ_OWNER, V.OBJ_NM
+	</select>
+
+	<!-- 모델의 모든 값 (테이블 엑셀 다운로드) -->
+	<select id="selectModelVals" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT V.OBJ_OWNER as "objOwner", V.OBJ_NM as "objNm", V.UDP_ID as "udpId", V.VAL as "val"
+		  FROM TB_UDP_VAL V
+		 WHERE V.DM_ID = #{value} AND V.ATTR_NM = ''
+	</select>
+
+	<insert id="upsertVal" parameterType="java.util.Map">
+		INSERT INTO TB_UDP_VAL (UDP_ID, DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM, VAL, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{udpId}, #{dmId}, #{objOwner}, #{objNm}, '', #{val}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+		ON CONFLICT (UDP_ID, DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM) DO UPDATE
+		   SET VAL = EXCLUDED.VAL, UPDT_DT = EXCLUDED.UPDT_DT, UPDT_USER_ID = EXCLUDED.UPDT_USER_ID
+	</insert>
+
+	<delete id="deleteVal" parameterType="java.util.Map">
+		DELETE FROM TB_UDP_VAL WHERE UDP_ID = #{udpId} AND DM_ID = #{dmId} AND OBJ_OWNER = #{objOwner} AND OBJ_NM = #{objNm} AND ATTR_NM = ''
+	</delete>
+
+	<!-- 테이블을 지우면 값도 지운다 (param: dataModelId, objOwner, objNm) -->
+	<delete id="deleteObjVals" parameterType="java.util.Map">
+		DELETE FROM TB_UDP_VAL WHERE DM_ID = #{dataModelId} AND OBJ_OWNER = #{objOwner} AND OBJ_NM = #{objNm}
+	</delete>
+
+	<!-- 테이블 이름·소유자가 바뀌면 값도 따라간다 -->
+	<update id="renameObjVals" parameterType="java.util.Map">
+		UPDATE TB_UDP_VAL SET OBJ_OWNER = #{newOwner}, OBJ_NM = #{newObjNm}
+		 WHERE DM_ID = #{dmId} AND OBJ_OWNER = #{origOwner} AND OBJ_NM = #{origObjNm}
+	</update>
+
+</mapper>

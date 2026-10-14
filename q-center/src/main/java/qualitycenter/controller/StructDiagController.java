@@ -1,9 +1,15 @@
 package qualitycenter.controller;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -18,11 +24,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ndata.common.handler.WebClientHandler;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityConstant;
+import com.ndata.quality.model.std.StdDataModelAttrVo;
+import com.ndata.quality.model.std.StdDataModelObjVo;
 import com.ndata.quality.service.ExcelDownloadService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,6 +59,173 @@ public class StructDiagController {
 
 	@Autowired
 	private ExcelDownloadService excelDownloadService;
+
+	/** 104번 WP8-63 — 결과를 모델에 반영할 때 테이블 추가·컬럼 저장·테이블 삭제를 화면과 같은 경로로 */
+	@Autowired
+	private DataModelController dataModelController;
+
+	/**
+	 * 104번 WP8-63 — 구조 진단 결과(컬럼)를 모델에 반영 {diagId, seqs:[..]}.
+	 *
+	 * <p>테이블별로 묶어 컬럼 저장(saveAttrs)과 같은 경로로 반영한다 — 변경 이력·결재(관리자 바로, 사용자 승인 대기)를 그대로 거친다.
+	 * 추가: 모델에 테이블이 없으면 테이블부터 추가하고, 실 DB 값(코멘트 → 한글명·타입·길이·소수·NULL·PK·기본값)으로 컬럼 추가.
+	 * 변경: 모델 컬럼의 타입·길이·소수·NULL 만 실 DB 값으로. 삭제: 모델 컬럼 삭제 — 테이블의 컬럼을 모두 지우게 되면 테이블째 삭제.
+	 * 표준 준수 필수 모델의 비표준 컬럼은 사유 "구조 진단 현행화"로 표준 예외 신청이 된다.
+	 * 반영한 행은 APPLIED_DT 로 표시하고 다시 반영하지 않는다. 테이블 하나가 실패해도 나머지 테이블은 반영한다.</p>
+	 */
+	@PostMapping("/apply")
+	public Mono<Response> apply(@RequestBody Map<String, Object> body) {
+		Response res = new Response();
+		try {
+			String diagId = (String) body.get("diagId");
+			Set<Integer> seqs = new HashSet<>();
+			if (body.get("seqs") instanceof List) {
+				for (Object o : (List<?>) body.get("seqs")) seqs.add(Integer.valueOf(o.toString()));
+			}
+			if (diagId == null || seqs.isEmpty()) throw new IllegalArgumentException("반영할 행을 고르세요.");
+			Map<String, Object> history = sqlSessionTemplate.selectOne("structdiag.selectStructDiagHistoryById", diagId);
+			if (history == null) throw new IllegalArgumentException("구조 진단 결과를 찾을 수 없습니다.");
+			String dmId = (String) history.get("dataModelId");
+
+			Map<String, List<Map<String, Object>>> groups = new LinkedHashMap<>();   // owner|table → 행
+			for (Map<String, Object> d : sqlSessionTemplate.<Map<String, Object>>selectList("structdiag.selectStructDiagDetailList", diagId)) {
+				if (!seqs.contains(((Number) d.get("seq")).intValue()) || d.get("appliedDt") != null) continue;
+				groups.computeIfAbsent(d.get("owner") + "|" + d.get("tableNm"), k -> new ArrayList<>()).add(d);
+			}
+			if (groups.isEmpty()) throw new IllegalArgumentException("반영할 행이 없습니다 (이미 반영한 행은 다시 반영하지 않습니다).");
+
+			List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByDmId", dmId);
+			int applied = 0;
+			List<Map<String, Object>> errors = new ArrayList<>();
+			for (List<Map<String, Object>> rows : groups.values()) {
+				String owner = (String) rows.get(0).get("owner");
+				String tbl = (String) rows.get(0).get("tableNm");
+				try {
+					applyTable(dmId, owner == null ? "" : owner, tbl, rows, objs);
+					List<Object> done = new ArrayList<>();
+					for (Map<String, Object> r : rows) done.add(r.get("seq"));
+					Map<String, Object> mp = new HashMap<>();
+					mp.put("diagId", diagId);
+					mp.put("seqs", done);
+					mp.put("userId", sessionService.getUserId());
+					sqlSessionTemplate.update("structdiag.markStructDiagApplied", mp);
+					applied += rows.size();
+				} catch (Exception e) {
+					Map<String, Object> err = new HashMap<>();
+					err.put("tableNm", tbl);
+					err.put("message", e.getMessage());
+					errors.add(err);
+				}
+			}
+			Map<String, Object> data = new HashMap<>();
+			data.put("applied", applied);
+			data.put("errors", errors);
+			res.setResultInfo(RestResult.CODE_200);
+			res.setContents(new ObjectMapper().writeValueAsString(data));
+		} catch (Exception e) {
+			log.error(">> structDiag apply failed: {}", e.getMessage());
+			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return Mono.just(res);
+	}
+
+	/** 테이블 하나 반영 — 실패하면 던진다 (메시지는 화면에 그대로) */
+	private void applyTable(String dmId, String owner, String tbl, List<Map<String, Object>> rows, List<StdDataModelObjVo> objs) {
+		// 수집·진단 쪽 소유자는 대소문자가 다를 수 있다 (진단 비교도 대문자로 맞춘다)
+		StdDataModelObjVo obj = null;
+		for (StdDataModelObjVo o : objs) {
+			if (tbl.equals(o.getObjNm()) && (o.getObjOwner() == null ? "" : o.getObjOwner()).equalsIgnoreCase(owner)) { obj = o; break; }
+		}
+		List<Map<String, Object>> sorted = new ArrayList<>(rows);
+		sorted.sort(Comparator.comparingInt(r -> r.get("currAttrOrd") == null ? Integer.MAX_VALUE : ((Number) r.get("currAttrOrd")).intValue()));
+		int delCnt = 0;
+		for (Map<String, Object> r : sorted) if ("DELETED".equals(r.get("changeType"))) delCnt++;
+
+		String objOwner;
+		if (obj == null) {
+			if (delCnt > 0 || sorted.stream().anyMatch(r -> "MODIFIED".equals(r.get("changeType"))))
+				throw new IllegalStateException("모델에 테이블이 없습니다: " + tbl);
+			StdDataModelObjVo vo = new StdDataModelObjVo();
+			vo.setDataModelId(dmId);
+			vo.setObjOwner(owner);
+			vo.setObjNm(tbl);
+			check(dataModelController.addObj(vo).block());
+			objOwner = owner;
+		} else {
+			objOwner = obj.getObjOwner() == null ? "" : obj.getObjOwner();
+			if (delCnt == sorted.size()) {
+				Map<String, Object> cp = new HashMap<>();
+				cp.put("dataModelId", dmId);
+				cp.put("objOwner", objOwner);
+				cp.put("objNm", tbl);
+				Integer modelCnt = sqlSessionTemplate.selectOne("structdiag.countModelAttrsOfObj", cp);
+				if (modelCnt != null && delCnt >= modelCnt) {
+					// 실 DB 에서 테이블이 없어졌다 — 테이블째 삭제 (컬럼·인덱스·제약조건 함께)
+					Map<String, Object> item = new HashMap<>();
+					item.put("objOwner", objOwner);
+					item.put("objNm", tbl);
+					Map<String, Object> db = new HashMap<>();
+					db.put("dataModelId", dmId);
+					db.put("items", Collections.singletonList(item));
+					check(dataModelController.deleteObjs(db).block());
+					return;
+				}
+			}
+		}
+
+		List<Map<String, Object>> attrs = new ArrayList<>();
+		for (Map<String, Object> r : sorted) {
+			String ct = (String) r.get("changeType");
+			Map<String, Object> a = new HashMap<>();
+			a.put("stndExceptReason", "구조 진단 현행화");
+			if ("ADDED".equals(ct)) {
+				a.put("mode", "ADD");
+				a.put("attrNm", r.get("columnNm"));
+				a.put("attrNmKr", r.get("currAttrNmKr"));
+				a.put("dataType", r.get("currDataType"));
+				a.put("dataLen", r.get("currDataLen"));
+				a.put("dataDecimalLen", r.get("currDataDecimalLen"));
+				a.put("nullableYn", r.get("currNullable"));
+				a.put("pkYn", r.get("currPkYn"));
+				a.put("defaultVal", r.get("currDefaultVal"));
+			} else if ("MODIFIED".equals(ct)) {
+				Map<String, Object> sel = new HashMap<>();
+				sel.put("dataModelId", dmId);
+				sel.put("objOwner", objOwner);
+				sel.put("objNm", tbl);
+				sel.put("attrNm", r.get("columnNm"));
+				StdDataModelAttrVo ex = sqlSessionTemplate.selectOne("datamodel.selectDataModelAttrOne", sel);
+				if (ex == null) throw new IllegalStateException("모델에 컬럼이 없습니다: " + tbl + "." + r.get("columnNm"));
+				// 나머지(한글명·PK·FK·기본값)는 모델 값 그대로 — saveAttrs UPDATE 는 보낸 값으로 덮어쓴다
+				a.put("mode", "UPDATE");
+				a.put("origAttrNm", ex.getAttrNm());
+				a.put("attrNm", ex.getAttrNm());
+				a.put("attrNmKr", ex.getAttrNmKr());
+				a.put("pkYn", ex.getPkYn());
+				a.put("fkYn", ex.getFkYn());
+				a.put("defaultVal", ex.getDefaultVal());
+				a.put("nullableYn", r.get("currNullable"));
+				a.put("dataType", r.get("currDataType"));
+				a.put("dataLen", r.get("currDataLen"));
+				a.put("dataDecimalLen", r.get("currDataDecimalLen") != null ? r.get("currDataDecimalLen") : ex.getDataDecimalLen());
+			} else {
+				a.put("mode", "DELETE");
+				a.put("attrNm", r.get("columnNm"));
+			}
+			attrs.add(a);
+		}
+		Map<String, Object> sb = new HashMap<>();
+		sb.put("dataModelId", dmId);
+		sb.put("objOwner", objOwner);
+		sb.put("objNm", tbl);
+		sb.put("attrs", attrs);
+		sb.put("keepNmCase", Boolean.TRUE);
+		check(dataModelController.saveAttrs(sb).block());
+	}
+
+	private static void check(Response r) {
+		if (r.getResultCode() != RestResult.CODE_200.getCode()) throw new IllegalStateException(r.getResultMessage());
+	}
 
 	/**
 	 * 구조 진단 실행

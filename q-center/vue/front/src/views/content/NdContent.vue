@@ -407,6 +407,13 @@
                     <ddlRule :key="ddlRuleKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 104번 WP8-31·75 — 사용자 정의 속성 -->
+            <div v-if="this.activeContent === 'udpDef'" id="tab_udpDef" class="tab_contents"
+                :class="{ active: this.activeContent === 'udpDef' }">
+                <keep-alive>
+                    <udpDef :key="udpDefKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'scurrent'" id="tab_scurrent" class="tab_contents"
                 :class="{ active: this.activeContent === 'scurrent' }">
                 <keep-alive>
@@ -526,6 +533,7 @@ import DSQualStats        from "./../../components/DSQualStats.vue"
 import DSScheduleLog from "./../../components/DSScheduleLog.vue"
 import MMSystem from "./../../components/MMSystem.vue"
 import MMDdlRule from "./../../components/MMDdlRule.vue"
+import MMUdpDef from "./../../components/MMUdpDef.vue"
 import DSAprvBox from "./../../components/DSAprvBox.vue"
 import DSPrivColumn from "./../../components/DSPrivColumn.vue"
 import DSStdMap from "./../../components/DSStdMap.vue"
@@ -630,6 +638,7 @@ export default {
             qualStatsKey:        this.createUUID(),
             systemKey: this.createUUID(),
             ddlRuleKey: this.createUUID(),
+            udpDefKey: this.createUUID(),
             aprvBoxKey: this.createUUID(),
             aprvLineKey: this.createUUID(),
             orgKey: this.createUUID(),
@@ -702,6 +711,7 @@ export default {
         "qualStats":        DSQualStats,
         "system": MMSystem,
         "ddlRule": MMDdlRule,
+        "udpDef": MMUdpDef,
         "aprvBox": DSAprvBox,
         "aprvLine": MMAprvLine,
         "org": MMOrg,
@@ -878,6 +888,9 @@ export default {
                     break;
                 case "ddlRule":
                     this.ddlRuleKey = this.createUUID();
+                    break;
+                case "udpDef":
+                    this.udpDefKey = this.createUUID();
                     break;
                 case "aprvBox":
                     this.aprvBoxKey = this.createUUID();

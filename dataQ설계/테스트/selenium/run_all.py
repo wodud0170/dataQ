@@ -89,6 +89,7 @@ GROUPS = [
         "test_wp6_std_struct.py",    # 104 WP6 — 사전 운영 옵션·도메인 그룹 다단계·코드 유형·표준 매핑
         "test_wp7_std_control.py",   # 104 WP7 — 유사어·자동완성·표준 후보·표준 준수 강제·영향도·미사용 표준
         "test_wp5b_std_ref.py",      # 104 WP5(14·11) — 참조 사전·공통표준 가져오기·상위 사전 상속
+        "test_wp8_dm_mgmt.py",       # 104 WP8 — 사용자 정의 속성·주제영역·구조 진단 결과 현행화
         "test_crud_std_dict.py",
     ]),
     ("표준 사전 (단어/용어/도메인)", [

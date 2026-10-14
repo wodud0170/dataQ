@@ -3,71 +3,92 @@
     <!-- 조회 조건 -->
     <v-sheet class="filterWrapper px-4 pt-3 pb-2">
       <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '6px' }">
-        <span class="filterLabel">데이터모델명</span>
-        <v-autocomplete v-model="selectedModelId" :items="modelList"
-          item-text="dataModelNm" item-value="dataModelId"
-          @change="onModelChange" clearable dense outlined hide-details
-          class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
-        </v-autocomplete>
+        <!-- 104번 WP8 — 이름표와 입력을 묶음으로 줄바꿈 (이름표만 윗줄에 남지 않게) -->
+        <div class="fgrp">
+          <span class="filterLabel">데이터모델명</span>
+          <v-autocomplete v-model="selectedModelId" :items="modelList"
+            item-text="dataModelNm" item-value="dataModelId"
+            @change="onModelChange" clearable dense outlined hide-details
+            class="filterInput" :style="{ width: '200px' }" color="ndColor" placeholder="모델 선택">
+          </v-autocomplete>
+        </div>
         <!-- 86번 #11 — 소유자 (테이블명 앞) -->
-        <span class="filterLabel">소유자</span>
-        <v-select v-model="searchOwnerMode" :items="searchModeOptions" item-text="label" item-value="value"
-          dense outlined hide-details :style="{ width: '90px' }" />
-        <v-text-field v-model="searchOwner" clearable clear-icon="mdi-close-circle" color="ndColor"
-          single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }"
-          placeholder="소유자(스키마)" />
-        <span class="filterLabel">테이블 영문명 (물리)</span>
-        <v-select v-model="searchTableMode" :items="searchModeOptions" item-text="label" item-value="value"
-          dense outlined hide-details :style="{ width: '90px' }" />
-        <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
-          prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
-          single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
-        </v-text-field>
-        <span class="filterLabel">테이블 한글명 (논리)</span>
-        <v-select v-model="searchTableKrMode" :items="searchModeOptions" item-text="label" item-value="value"
-          dense outlined hide-details :style="{ width: '90px' }" />
-        <v-text-field v-model="searchTableKr" @click:clear="searchTableKr=''" clearable
-          prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
-          single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
-        </v-text-field>
+        <div class="fgrp">
+          <span class="filterLabel">소유자</span>
+          <v-select v-model="searchOwnerMode" :items="searchModeOptions" item-text="label" item-value="value"
+            dense outlined hide-details :style="{ width: '90px' }" />
+          <v-text-field v-model="searchOwner" clearable clear-icon="mdi-close-circle" color="ndColor"
+            single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }"
+            placeholder="소유자(스키마)" />
+        </div>
+        <div class="fgrp">
+          <span class="filterLabel">테이블 영문명 (물리)</span>
+          <v-select v-model="searchTableMode" :items="searchModeOptions" item-text="label" item-value="value"
+            dense outlined hide-details :style="{ width: '90px' }" />
+          <v-text-field v-model="searchTable" @click:clear="searchTable=''" clearable
+            prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
+            single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
+          </v-text-field>
+        </div>
+        <div class="fgrp">
+          <span class="filterLabel">테이블 한글명 (논리)</span>
+          <v-select v-model="searchTableKrMode" :items="searchModeOptions" item-text="label" item-value="value"
+            dense outlined hide-details :style="{ width: '90px' }" />
+          <v-text-field v-model="searchTableKr" @click:clear="searchTableKr=''" clearable
+            prepend-icon="" clear-icon="mdi-close-circle" type="text" color="ndColor"
+            single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }">
+          </v-text-field>
+        </div>
         <!-- 88번 §15 — 테이블스페이스(물리) / 업무영역(논리) 검색 -->
-        <span class="filterLabel">테이블스페이스</span>
-        <v-select v-model="searchTablespaceMode" :items="searchModeOptions" item-text="label" item-value="value"
-          dense outlined hide-details :style="{ width: '90px' }" />
-        <v-text-field v-model="searchTablespace" clearable clear-icon="mdi-close-circle" color="ndColor"
-          single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }" />
-        <span class="filterLabel">업무영역</span>
-        <v-select v-model="searchBizAreaId" :items="bizAreaOptions" item-text="bizAreaNm" item-value="bizAreaId"
-          clearable dense outlined hide-details class="filterInput" :style="{ width: '140px' }" placeholder="전체" />
-        <v-btn class="gradient" v-on:click="load" :style="{ padding: '0 12px' }">조회</v-btn>
-        <v-btn color="primary" :disabled="!selectedModelId" v-on:click="openAddObjDialog" :style="{ padding: '0 12px', marginLeft: '8px' }">테이블 추가</v-btn>
-        <!-- 86번 #11 — 엑셀 드롭다운 (업로드/양식/다운로드) -->
-        <v-menu offset-y>
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn class="gradient" v-bind="attrs" v-on="on" :disabled="!selectedModelId">
-              <v-icon small left>mdi-file-excel</v-icon>엑셀
-              <v-icon small right>mdi-menu-down</v-icon>
-            </v-btn>
-          </template>
-          <v-list dense>
-            <v-list-item id="btn-upload-tables" @click="triggerUploadTables">
-              <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
-              <v-list-item-title>엑셀 업로드</v-list-item-title>
-            </v-list-item>
-            <v-list-item id="btn-download-tables-template" @click="downloadTablesTemplate">
-              <v-list-item-icon><v-icon small>mdi-file-download-outline</v-icon></v-list-item-icon>
-              <v-list-item-title>양식 다운로드</v-list-item-title>
-            </v-list-item>
-            <v-list-item :disabled="dmTableAllItems.length === 0" @click="tableDataDownload">
-              <v-list-item-icon><v-icon small>mdi-download</v-icon></v-list-item-icon>
-              <v-list-item-title>데이터 다운로드</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
-        <v-btn class="gradient" v-on:click="submitModalShow = true" :style="{ marginLeft: '8px' }"
-          title="저장한 변경(DRAFT)을 관리자에게 신청">
-          <v-icon small left>mdi-send-clock-outline</v-icon>내 변경 신청
-        </v-btn>
+        <div class="fgrp">
+          <span class="filterLabel">테이블스페이스</span>
+          <v-select v-model="searchTablespaceMode" :items="searchModeOptions" item-text="label" item-value="value"
+            dense outlined hide-details :style="{ width: '90px' }" />
+          <v-text-field v-model="searchTablespace" clearable clear-icon="mdi-close-circle" color="ndColor"
+            single-line dense outlined hide-details class="filterInput" :style="{ width: '120px' }" />
+        </div>
+        <div class="fgrp">
+          <span class="filterLabel">업무영역</span>
+          <v-select v-model="searchBizAreaId" :items="bizAreaOptions" item-text="bizAreaNm" item-value="bizAreaId"
+            clearable dense outlined hide-details class="filterInput" :style="{ width: '140px' }" placeholder="전체" />
+        </div>
+        <!-- 104번 WP8-38 — 주제영역 (상위 영역을 고르면 하위 영역 테이블도) -->
+        <div class="fgrp">
+          <span class="filterLabel">주제영역</span>
+          <v-select id="searchSubjArea" v-model="searchSubjAreaId" :items="subjAreaOptions" item-text="path" item-value="subjAreaId"
+            clearable dense outlined hide-details class="filterInput" :style="{ width: '200px' }" placeholder="전체" />
+        </div>
+        <div class="fgrp">
+          <v-btn class="gradient btn-auto" v-on:click="load" :style="{ padding: '0 16px' }">조회</v-btn>
+          <v-btn class="btn-auto" color="primary" :disabled="!selectedModelId" v-on:click="openAddObjDialog" :style="{ padding: '0 14px' }">테이블 추가</v-btn>
+          <!-- 86번 #11 — 엑셀 드롭다운 (업로드/양식/다운로드) -->
+          <v-menu offset-y>
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn class="gradient btn-auto" v-bind="attrs" v-on="on" :disabled="!selectedModelId">
+                <v-icon small left>mdi-file-excel</v-icon>엑셀
+                <v-icon small right>mdi-menu-down</v-icon>
+              </v-btn>
+            </template>
+            <v-list dense>
+              <v-list-item id="btn-upload-tables" @click="triggerUploadTables">
+                <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
+                <v-list-item-title>엑셀 업로드</v-list-item-title>
+              </v-list-item>
+              <v-list-item id="btn-download-tables-template" @click="downloadTablesTemplate">
+                <v-list-item-icon><v-icon small>mdi-file-download-outline</v-icon></v-list-item-icon>
+                <v-list-item-title>양식 다운로드</v-list-item-title>
+              </v-list-item>
+              <v-list-item :disabled="dmTableAllItems.length === 0" @click="tableDataDownload">
+                <v-list-item-icon><v-icon small>mdi-download</v-icon></v-list-item-icon>
+                <v-list-item-title>데이터 다운로드</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+          <v-btn class="gradient btn-auto" v-on:click="submitModalShow = true"
+            title="저장한 변경(DRAFT)을 관리자에게 신청">
+            <v-icon small left>mdi-send-clock-outline</v-icon>내 변경 신청
+          </v-btn>
+        </div>
         <input ref="uploadTablesInput" type="file" accept=".xlsx" style="display:none" @change="onTableFileSelected" />
       </v-row>
     </v-sheet>
@@ -122,24 +143,38 @@
     </v-dialog>
 
     <!-- 테이블 추가/수정 다이얼로그 -->
-    <v-dialog v-model="objDialog" max-width="600" persistent>
+    <v-dialog v-model="objDialog" max-width="600" persistent scrollable>
       <v-card>
         <v-card-title>{{ objDialogMode === 'add' ? '테이블 추가' : '테이블 수정' }}</v-card-title>
-        <v-card-text>
+        <v-card-text class="pt-3">
           <v-text-field v-model="objForm.objNm" label="테이블 영문명 (물리, 예: TB_USER)"
             :hint="objDialogMode === 'edit' && objForm.objNm !== objForm.origObjNm
               ? '물리명 변경 시 하위 컬럼·인덱스·제약조건의 참조까지 함께 갱신됩니다 (확인 단계 표시)'
               : '영문/숫자/언더바'"
-            persistent-hint outlined dense />
+            persistent-hint outlined dense class="mb-3" />
           <v-text-field v-model="objForm.objNmKr" label="테이블 한글명 (논리)" outlined dense />
           <v-text-field v-model="objForm.objOwner" label="소유자 (스키마)" outlined dense />
           <v-text-field v-model="objForm.objDesc" label="테이블 설명" outlined dense />
           <!-- 88번 §15 — 테이블스페이스 (물리) + 업무영역 (논리) -->
           <v-text-field v-model="objForm.tablespaceNm" label="테이블스페이스 (선택, 물리)" outlined dense
-            class="hdr-physical-bg" persistent-hint hint="DDL 출력 시 TABLESPACE 절 자동 포함" />
+            class="hdr-physical-bg mb-3" persistent-hint hint="DDL 출력 시 TABLESPACE 절 자동 포함" />
           <v-select v-model="objForm.bizAreaId" :items="bizAreaOptions" item-text="bizAreaNm" item-value="bizAreaId"
             label="업무영역 (논리, 선택)" outlined dense clearable
             class="hdr-logical-bg" />
+          <!-- 104번 WP8-38 -->
+          <v-select id="objSubjArea" v-model="objForm.subjAreaId" :items="subjAreaOptions" item-text="path" item-value="subjAreaId"
+            label="주제영역 (선택)" outlined dense clearable />
+          <!-- 104번 WP8-31·75 — 사용자 정의 속성 (관리 > 사용자 정의 속성에서 정의) -->
+          <div v-if="udpDefs.length" class="udp-title">관리 항목</div>
+          <template v-for="d in udpDefs">
+            <v-select v-if="d.dataTp === 'SELECT'" :key="d.udpId" :id="'udp_' + d.udpId" v-model="objForm.udpVals[d.udpId]"
+              :items="(d.selectVals || '').split('\n')" :label="d.udpNm + (d.requiredYn === 'Y' ? ' *' : '')"
+              :hint="d.udpDesc" persistent-hint outlined dense clearable class="mb-3" />
+            <v-text-field v-else :key="d.udpId" :id="'udp_' + d.udpId" v-model="objForm.udpVals[d.udpId]"
+              :type="d.dataTp === 'NUMBER' ? 'number' : (d.dataTp === 'DATE' ? 'date' : 'text')"
+              :label="d.udpNm + (d.requiredYn === 'Y' ? ' *' : '')"
+              :hint="d.udpDesc" persistent-hint outlined dense class="mb-3" />
+          </template>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -162,11 +197,11 @@
 
     <!-- 일괄 삭제 버튼 (선택 시 표시) — 검색결과 전체 삭제 옵션 별도 -->
     <v-sheet class="px-4 pb-2" v-show="selectedModelId">
-      <v-btn small color="error" outlined :disabled="selectedRows.length === 0" @click="deleteSelected"
+      <v-btn small class="btn-auto" color="error" outlined :disabled="selectedRows.length === 0" @click="deleteSelected"
         :style="{ marginRight: '8px' }">
         <v-icon small left>mdi-delete-sweep</v-icon>선택 삭제 ({{ selectedRows.length }})
       </v-btn>
-      <v-btn small color="error" :disabled="dmTableItems.length === 0" @click="deleteAllVisible">
+      <v-btn small class="btn-auto" color="error" :disabled="dmTableItems.length === 0" @click="deleteAllVisible">
         <v-icon small left>mdi-delete-empty</v-icon>검색결과 전체 삭제 ({{ dmTableItems.length }})
       </v-btn>
       <span style="color:#888; font-size:.8rem; margin-left:12px;">선택 삭제 = 체크박스 / 전체 삭제 = 현재 검색·필터 조건의 모든 행</span>
@@ -185,6 +220,13 @@
         <v-chip v-if="govLabel(item)" x-small label class="ml-1" :color="govColor(item)" text-color="white">
           {{ govLabel(item) }}
         </v-chip>
+      </template>
+      <!-- 104번 WP8 — 주제영역은 마지막 이름만 (경로는 마우스를 올리면), 관리 항목은 한 줄에 하나 -->
+      <template #[`item.subjAreaPath`]="{ item }">
+        <span class="subj-path" :title="item.subjAreaPath">{{ item.subjAreaPath ? item.subjAreaPath.split(' > ').pop() : '' }}</span>
+      </template>
+      <template #[`item.udpSummary`]="{ item }">
+        <div v-for="(s, i) in (item.udpSummary ? item.udpSummary.split(' · ') : [])" :key="i" class="udp-summary" :title="s">{{ s }}</div>
       </template>
       <template #[`item.actions`]="{ item }">
         <v-btn icon small :disabled="!selectedModelId" @click="openEditObjDialog(item)" title="수정">
@@ -250,6 +292,7 @@ export default {
     searchTablespace: '',
     searchTablespaceMode: 'contains',
     searchBizAreaId: null,
+    searchSubjAreaId: null,
     searchModeOptions: [
       { value: 'contains', label: '포함' },
       { value: 'exact',    label: '완전 일치' },
@@ -262,20 +305,27 @@ export default {
     itemsPerPage: 10,
     tableViewLengthList: [10, 20, 30, 40, 50],
     dmTabledetaileHeaders: [
-      { text: '소유자', sortable: true, align: 'center', value: 'objOwner', width: '110px' },
-      { text: '업무영역 (논리)', sortable: true, align: 'center', value: 'bizAreaNm', width: '130px' },
+      { text: '소유자', sortable: true, align: 'center', value: 'objOwner', width: '100px' },
+      { text: '업무영역 (논리)', sortable: true, align: 'center', value: 'bizAreaNm', width: '110px' },
+      { text: '주제영역', sortable: true, align: 'center', value: 'subjAreaPath', width: '110px' },
       { text: '테이블 한글명 (논리)', sortable: true, align: 'center', value: 'objNmKr' },
       { text: '테이블 영문명 (물리)', sortable: true, align: 'center', value: 'objNm' },
-      { text: '컬럼개수', sortable: true, align: 'center', value: 'objAttrCnt' },
+      { text: '컬럼개수', sortable: true, align: 'center', value: 'objAttrCnt', width: '96px' },
       { text: '테이블스페이스 (물리)', sortable: true, align: 'center', value: 'tablespaceNm', width: '140px' },
+      { text: '관리 항목', sortable: false, align: 'start', value: 'udpSummary', width: '150px' },
       { text: '테이블 설명', sortable: false, align: 'center', value: 'objDesc' },
-      { text: '편집', align: 'center', sortable: false, value: 'actions', width: '100px' },
+      { text: '편집', align: 'center', sortable: false, value: 'actions', width: '90px' },
     ],
     objDialog: false,
     objDialogMode: 'add',
-    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null },
+    objForm: { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null, subjAreaId: null, udpVals: {} },
     // 88번 §15 — 업무영역 옵션
     bizAreaOptions: [],
+    // 104번 WP8-38 — 주제영역 옵션 (path = "상위 > 하위")
+    subjAreaOptions: [],
+    // 104번 WP8-31·75 — 사용 중인 사용자 정의 속성 정의, 테이블별 값 요약 (owner|objNm → "이름: 값 · …")
+    udpDefs: [],
+    udpSummaryMap: {},
     // 엑셀 업로드
     uploadDialog: false,
     uploadFile: null,
@@ -306,8 +356,19 @@ export default {
           && this._matchName(item.objNmKr,  this.searchTableKr, this.searchTableKrMode)
           && this._matchName(item.tablespaceNm, this.searchTablespace, this.searchTablespaceMode)
           && (!this.searchBizAreaId || item.bizAreaId === this.searchBizAreaId)
+          && this._inSubj(item.subjAreaId)
         )
-        .map(item => ({ ...item, _rowKey: (item.objOwner || '') + '' + item.objNm }));
+        .map(item => ({
+          ...item,
+          _rowKey: (item.objOwner || '') + '' + item.objNm,
+          subjAreaPath: this.subjPathMap[item.subjAreaId] || '',
+          udpSummary: this.udpSummaryMap[(item.objOwner || '') + '|' + item.objNm] || '',
+        }));
+    },
+    subjPathMap() {
+      const m = {};
+      this.subjAreaOptions.forEach(s => { m[s.subjAreaId] = s.path; });
+      return m;
     },
   },
   methods: {
@@ -325,6 +386,29 @@ export default {
     // 88번 §15 — 영역 옵션 로드
     loadAreaOptions() {
       axios.post(this.$APIURL.base + 'api/area/biz/list', {}).then(r => { this.bizAreaOptions = r.data || []; }).catch(() => {});
+      axios.post(this.$APIURL.base + 'api/area/subj/list', {}).then(r => { this.subjAreaOptions = r.data || []; }).catch(() => {});
+      axios.post(this.$APIURL.base + 'api/udp/defs', { useOnly: 'Y' }).then(r => { this.udpDefs = r.data || []; }).catch(() => {});
+    },
+    /** 104번 WP8-38 — 고른 주제영역이나 그 하위 영역에 연결된 테이블 */
+    _inSubj(subjAreaId) {
+      if (!this.searchSubjAreaId) return true;
+      const sel = this.subjPathMap[this.searchSubjAreaId];
+      const p = this.subjPathMap[subjAreaId];
+      return !!p && (p === sel || p.startsWith(sel + ' > '));
+    },
+    /** 104번 WP8-31·75 — 테이블별 관리 항목 요약 */
+    loadUdpSummary() {
+      axios.post(this.$APIURL.base + 'api/udp/summary', { dmId: this.selectedModelId }).then(r => {
+        const m = {};
+        (r.data || []).forEach(s => { m[(s.objOwner || '') + '|' + s.objNm] = s.summary; });
+        this.udpSummaryMap = m;
+      }).catch(() => {});
+    },
+    /** 창을 열 때 속성 칸을 모두 만들어 둔다 (v-model 반응성) */
+    _udpForm(vals) {
+      const f = {};
+      this.udpDefs.forEach(d => { f[d.udpId] = (vals && vals[d.udpId]) || ''; });
+      return f;
     },
     /** 86번 #11 — 검색 모드 매칭: contains/exact/start/end */
     _matchName(value, keyword, mode) {
@@ -379,6 +463,7 @@ export default {
       }).then((res) => {
         this.dmTableAllItems = res.data;
         this.loadTable = false;
+        this.loadUdpSummary();
       }).catch(() => {
         this.$swal.fire({ title: '테이블 정보 로드 실패', confirmButtonText: '확인', icon: 'error' });
         this.loadTable = false;
@@ -435,7 +520,7 @@ export default {
     },
     openAddObjDialog() {
       this.objDialogMode = 'add';
-      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null };
+      this.objForm = { objNm: '', objNmKr: '', objOwner: '', objDesc: '', origObjNm: '', tablespaceNm: '', bizAreaId: null, subjAreaId: null, udpVals: this._udpForm(null) };
       this.loadAreaOptions();
       this.objDialog = true;
     },
@@ -447,8 +532,14 @@ export default {
         origObjNm: item.objNm, origObjOwner: item.objOwner || '',
         tablespaceNm: item.tablespaceNm || '',
         bizAreaId: item.bizAreaId || null,
+        subjAreaId: item.subjAreaId || null,
+        udpVals: this._udpForm(null),
       };
       this.loadAreaOptions();
+      // 104번 WP8-31 — 저장된 속성 값
+      axios.post(this.$APIURL.base + 'api/udp/vals', { dmId: this.selectedModelId, objOwner: item.objOwner || '', objNm: item.objNm }).then(r => {
+        this.objForm.udpVals = this._udpForm(r.data || {});
+      }).catch(() => {});
       this.objDialog = true;
     },
     async submitObj() {
@@ -706,10 +797,24 @@ export default {
 .split_bottom_wrap { position: absolute; width: 100%; max-height: 60px; bottom: 0px; border-top: 1px solid #E8EAF6; background: #FAFBFF; }
 .pagination_wrap { position: relative; width: 100%; }
 #dmTable_table { height: calc(100vh - 64px - 48px - 68px - 44px - 60px); overflow-y: overlay; overflow-x: hidden; }
-.row-upload-error > td { background-color: #FFEBEE !important; }
-.row-upload-skip > td { background-color: #FFF8E1 !important; }
 .preview-grid { border: 1px solid #E0E0E0; }
-/* 88번 거버넌스 — 미승인(DRAFT/SUBMITTED) 노란 배경, 반려 빨간 배경 */
-.row-draft > td { background-color: #FFF8E1 !important; }
-.row-rejected > td { background-color: #FFEBEE !important; }
+/* 104번 WP8 */
+.udp-title { font-size: .85rem; font-weight: 600; color: #37474F; margin: 4px 0 8px; }
+.subj-path, .udp-summary { font-size: .78rem; color: #455A64; }
+.udp-summary { max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
+.fgrp { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+</style>
+<style>
+/* 표 안쪽 행·칸은 v-data-table(자식 컴포넌트)이 그려 scoped 가 닿지 않는다 — 표 id 로 범위를 좁혀 전역으로 둔다 */
+/* 88번 거버넌스 — 미승인(DRAFT/SUBMITTED) 노란 배경, 반려 빨간 배경 (scoped 라 그동안 안 먹었다) */
+#dmTable_table .row-draft > td { background-color: #FFF8E1 !important; }
+#dmTable_table .row-rejected > td { background-color: #FFEBEE !important; }
+.preview-grid .row-upload-error > td { background-color: #FFEBEE !important; }
+.preview-grid .row-upload-skip > td { background-color: #FFF8E1 !important; }
+/* 104번 WP8 — 열이 늘어도 머리글·값이 한 글자씩 줄바꿈되지 않게 낱말 단위로. 좁은 화면은 가로 스크롤 */
+#dmTable_table th, #dmTable_table td { word-break: keep-all; overflow-wrap: break-word; }
+#dmTable_table .subj-path { word-break: break-all; }
+/* 편집 열은 오른쪽에 붙여 가로 스크롤 때도 보이게 */
+#dmTable_table th:last-child { position: sticky !important; right: 0; z-index: 2; box-shadow: -3px 0 4px rgba(0, 0, 0, .06); }
+#dmTable_table td:last-child { position: sticky; right: 0; z-index: 1; background: #fff; white-space: nowrap; box-shadow: -3px 0 4px rgba(0, 0, 0, .06); }
 </style>

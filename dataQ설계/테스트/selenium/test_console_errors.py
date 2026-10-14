@@ -46,6 +46,7 @@ MENUS = [
     "nav_stdMap", "nav_std_dict",   # 104 WP6
     "nav_unusedStd",   # 104 WP7
     "nav_stdImport",   # 104 WP5(14·11)
+    "nav_udpDef",   # 104 WP8
 ]
 
 results = []

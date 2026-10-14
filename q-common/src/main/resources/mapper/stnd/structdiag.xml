@@ -42,6 +42,14 @@
 		<result property="currDataLen" column="CURR_DATA_LEN"/>
 		<result property="prevNullable" column="PREV_NULLABLE"/>
 		<result property="currNullable" column="CURR_NULLABLE"/>
+		<!-- 104번 WP8-63 — 실 DB 컬럼 값·반영 표시 -->
+		<result property="currAttrNmKr" column="CURR_ATTR_NM_KR"/>
+		<result property="currDataDecimalLen" column="CURR_DATA_DECIMAL_LEN"/>
+		<result property="currPkYn" column="CURR_PK_YN"/>
+		<result property="currDefaultVal" column="CURR_DEFAULT_VAL"/>
+		<result property="currAttrOrd" column="CURR_ATTR_ORD"/>
+		<result property="appliedDt" column="APPLIED_DT"/>
+		<result property="appliedUserId" column="APPLIED_USER_ID"/>
 	</resultMap>
 
 	<!-- 동일 데이터모델에 대해 READY/RUNNING 상태인 진단 수 조회 (중복 방지용) -->
@@ -94,13 +102,30 @@
 		INSERT INTO TB_STRUCT_DIAG_DETAIL (
 			DIAG_ID, SEQ, OWNER, TABLE_NM, COLUMN_NM, CHANGE_TYPE,
 			PREV_DATA_TYPE, CURR_DATA_TYPE, PREV_DATA_LEN, CURR_DATA_LEN,
-			PREV_NULLABLE, CURR_NULLABLE
+			PREV_NULLABLE, CURR_NULLABLE,
+			CURR_ATTR_NM_KR, CURR_DATA_DECIMAL_LEN, CURR_PK_YN, CURR_DEFAULT_VAL, CURR_ATTR_ORD
 		) VALUES (
 			#{diagId}, #{seq}, #{owner}, #{tableNm}, #{columnNm}, #{changeType},
 			#{prevDataType}, #{currDataType}, #{prevDataLen}, #{currDataLen},
-			#{prevNullable}, #{currNullable}
+			#{prevNullable}, #{currNullable},
+			#{currAttrNmKr, jdbcType=VARCHAR}, #{currDataDecimalLen, jdbcType=INTEGER}, #{currPkYn, jdbcType=CHAR},
+			#{currDefaultVal, jdbcType=VARCHAR}, #{currAttrOrd, jdbcType=INTEGER}
 		)
 	</insert>
+
+	<!-- 104번 WP8-63 — 모델 테이블의 컬럼 수 (삭제 반영이 테이블의 컬럼을 모두 지우는지 본다) -->
+	<select id="countModelAttrsOfObj" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dataModelId} AND OBJ_OWNER = #{objOwner} AND OBJ_NM = #{objNm} AND USE_YN = 'Y'
+	</select>
+
+	<!-- 104번 WP8-63 — 모델에 반영한 행 표시 (seqs) -->
+	<update id="markStructDiagApplied" parameterType="java.util.Map">
+		UPDATE TB_STRUCT_DIAG_DETAIL
+		   SET APPLIED_DT = to_char(now(), 'YYYYMMDDHH24MISS'), APPLIED_USER_ID = #{userId}
+		 WHERE DIAG_ID = #{diagId}
+		   AND SEQ IN <foreach collection="seqs" item="s" open="(" separator="," close=")">#{s}</foreach>
+	</update>
 
 	<!-- 진단 이력 목록 조회 -->
 	<select id="selectStructDiagHistoryList" resultMap="structDiagHistoryMap">
@@ -123,7 +148,8 @@
 	<select id="selectStructDiagDetailList" parameterType="String" resultMap="structDiagDetailMap">
 		SELECT DIAG_ID, SEQ, OWNER, TABLE_NM, COLUMN_NM, CHANGE_TYPE,
 			PREV_DATA_TYPE, CURR_DATA_TYPE, PREV_DATA_LEN, CURR_DATA_LEN,
-			PREV_NULLABLE, CURR_NULLABLE
+			PREV_NULLABLE, CURR_NULLABLE,
+			CURR_ATTR_NM_KR, CURR_DATA_DECIMAL_LEN, CURR_PK_YN, CURR_DEFAULT_VAL, CURR_ATTR_ORD, APPLIED_DT, APPLIED_USER_ID
 		FROM TB_STRUCT_DIAG_DETAIL
 		WHERE DIAG_ID = #{diagId}
 		ORDER BY TABLE_NM, SEQ

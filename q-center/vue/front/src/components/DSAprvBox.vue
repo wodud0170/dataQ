@@ -304,5 +304,5 @@ export default {
 .act-APPROVED { color: #2E7D32; font-weight: 600; }
 .act-REJECTED { color: #C62828; font-weight: 600; }
 .act-WAIT { color: #78909C; }
-::v-deep .row-selected { background: #E8EAF6 !important; }
+.v-data-table >>> .row-selected { background: #E8EAF6 !important; }
 </style>

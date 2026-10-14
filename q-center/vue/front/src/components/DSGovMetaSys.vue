@@ -181,5 +181,5 @@ export default {
 .gm-guide { font-size: .8rem; color: #546E7A; background: #ECEFF1; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; }
 .gm-sub { font-size: .9rem; font-weight: 600; color: #37474F; margin: 4px 0 8px; }
 .gm-note { font-size: .78rem; color: #78909C; }
-::v-deep .gm-sel { background: #E3F2FD; }
+.v-data-table >>> .gm-sel { background: #E3F2FD; }
 </style>
