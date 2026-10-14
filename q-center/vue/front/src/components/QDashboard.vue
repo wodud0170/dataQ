@@ -216,6 +216,44 @@
           </div>
         </v-sheet>
       </v-card>
+
+      <!-- ===== 5. DA 목표 달성도 (104번 WP9-66) — 목표를 정한 시스템·모델, 미달 먼저 ===== -->
+      <v-card id="dashDaAchv" class="itemsWrapper da-card">
+        <div class="d-flex align-center">
+          <h2><v-icon>mdi-bullseye-arrow</v-icon>&nbsp;&nbsp;DA 목표 달성도</h2>
+          <span v-if="achvList.length" class="da-card-sum ml-3">
+            목표 {{ achvList.length }}개 · 미달 <b :class="{ 'da-miss': achvMissCnt > 0 }">{{ achvMissCnt }}</b>개
+          </span>
+          <v-spacer />
+          <v-btn text small color="indigo" class="btn-auto" @click="addTabItem('시스템별 현황', 'daSystemStat')">시스템별 현황 &rarr;</v-btn>
+        </div>
+        <div v-if="!achvList.length" class="da-card-empty">
+          정한 목표가 없습니다. 데이터 모델 > 시스템별 현황에서 시스템·모델의 목표 준수율을 정하면 여기에 달성도가 보입니다.
+        </div>
+        <v-simple-table v-else dense class="da-card-table">
+          <thead>
+            <tr><th>대상</th><th style="width:30%">표준 준수율 (현재 / 목표)</th><th style="width:30%">구조 일치율 (현재 / 목표)</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="(a, i) in achvList.slice(0, 8)" :key="i">
+              <td class="da-card-path">
+                <v-chip x-small outlined class="mr-1">{{ a.targetTp === 'SYS' ? '시스템' : '모델' }}</v-chip>{{ a.path }}
+              </td>
+              <td><div class="da-card-cell">
+                <span class="da-card-v" :class="{ 'da-card-na': a.stndRate == null && !a.modelCnt }">{{ a.stndRate != null ? a.stndRate + '%' : a.modelCnt ? '미진단' : '모델 없음' }}</span>
+                <span class="da-card-g">/ {{ a.stndGoal == null ? '-' : a.stndGoal + '%' }}</span>
+                <span v-if="a.stndAchv" :class="'da-achv-' + a.stndAchv">{{ a.stndAchv === 'Y' ? '달성' : '미달' }}</span>
+              </div></td>
+              <td><div class="da-card-cell">
+                <span class="da-card-v" :class="{ 'da-card-na': a.structRate == null && !(a.modelCnt && a.structTargetCnt) }">{{ a.structRate != null ? a.structRate + '%' : !a.modelCnt ? '모델 없음' : a.structTargetCnt ? '미진단' : '대상 아님' }}</span>
+                <span class="da-card-g">/ {{ a.structGoal == null ? '-' : a.structGoal + '%' }}</span>
+                <span v-if="a.structAchv" :class="'da-achv-' + a.structAchv">{{ a.structAchv === 'Y' ? '달성' : '미달' }}</span>
+              </div></td>
+            </tr>
+          </tbody>
+        </v-simple-table>
+        <div v-if="achvList.length > 8" class="da-card-more">외 {{ achvList.length - 8 }}개 — 시스템별 현황에서 봅니다</div>
+      </v-card>
     </v-sheet>
   </v-main>
 </template>
@@ -442,19 +480,31 @@ export default {
     // 최근 변경 이력
     recentHistoryList: [],
     recentHistoryLoading: false,
+    // 104번 WP9-66 — DA 목표 달성도
+    achvList: [],
   }),
   watch: {
 
   },
   created() {
+    // 104번 WP9 화면 검수 — 다른 탭에서 창 크기가 바뀌면(서랍·대화상자 열기 포함) 숨은 대시보드 차트가 크기 0 으로
+    // 다시 그려져 콘솔에 NaN 에러가 32건씩 쌓였다. 보일 때만 다시 그린다
+    const visibleOnly = () => !this._inactive && !!this.$el && this.$el.offsetParent !== null;
+    [this.term_pie_chartOptions, this.word_pie_chartOptions, this.domain_pie_chartOptions, this.struct_pie_chartOptions, this.diagTrendOptions]
+      .forEach(o => { o.chart.redrawOnWindowResize = visibleOnly; });
     // 대시보드 메뉴 선택 시 호출
     this.getDashboardInfo();
     this.loadModelList();
     this.getRecentChangeHistory();
+    this.getAchievement();
   },
   mounted() {
   },
   computed: {
+    // 104번 WP9-66 — 미달(표준·구조 중 하나라도) 수
+    achvMissCnt() {
+      return this.achvList.filter(a => a.stndAchv === 'N' || a.structAchv === 'N').length;
+    },
     // 88번 — 구조 변경 요약 (added / modified / deleted 합산)
     structDiagSummary() {
       const h = this.structDiagHistory || {};
@@ -565,6 +615,10 @@ export default {
       if (!diagId) return;
       eventBus.pendingStructDiagId = diagId;
       this.addTabItem('진단 결과', 'structDiagResult');
+    },
+    // 104번 WP9-66
+    getAchievement() {
+      axios.post(this.$APIURL.base + 'api/daStat/achievement', {}).then(r => { this.achvList = Array.isArray(r.data) ? r.data : []; }).catch(() => { this.achvList = []; });
     },
     getDashboardInfo() {
       try {
@@ -804,6 +858,21 @@ export default {
   color: #3F51B5;
   font-size: 1.3rem;
 }
+
+/* 104번 WP9-66 — DA 목표 달성도: 2×2 아래 한 줄 전체, 높이는 내용만큼 */
+.da-card { width: calc(100% - 12px); height: auto !important; min-height: 120px; }
+.da-card-sum { font-size: .8rem; color: #546E7A; }
+.da-miss { color: #C62828; }
+.da-card-empty { font-size: .85rem; color: #90A4AE; padding: 16px 4px 4px; }
+.da-card-table { margin-top: 8px; border: 1px solid #ECEFF1; }
+.da-card-path { font-size: .82rem; word-break: keep-all; overflow-wrap: anywhere; }
+.da-card-cell { display: flex; align-items: baseline; gap: 6px; font-size: .82rem; white-space: nowrap; }
+.da-card-v { font-weight: 600; color: #263238; font-variant-numeric: tabular-nums; }
+.da-card-na { font-weight: 400; color: #90A4AE; }
+.da-card-g { color: #78909C; }
+.da-achv-Y { color: #2E7D32; font-weight: 600; }
+.da-achv-N { color: #C62828; font-weight: 600; }
+.da-card-more { font-size: .78rem; color: #78909C; margin-top: 4px; }
 
 .chartWrapper {
   display: flex;

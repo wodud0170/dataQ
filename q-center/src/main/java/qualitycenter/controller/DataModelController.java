@@ -1817,6 +1817,7 @@ public class DataModelController {
 			param.put("dataModelId", objVo.getDataModelId());
 			param.put("objOwner",    objVo.getObjOwner() == null ? "" : objVo.getObjOwner());  // 86번 #11
 			param.put("objNm",       objVo.getObjNm());
+			String delObjBefore = toJsonSafe(session.selectOne("datamodel.selectDataModelObjOne", param));   // 104번 WP9-55
 			// DEF-05 — 승인 대기 삭제는 감춰만 둔다. DEF-02 — 승인된 삭제는 참조까지 정리.
 			String delObjAprvStatus = changeHistory.resolveAprvStatusForUserChange();
 			if ("APPROVED".equals(delObjAprvStatus)) {
@@ -1830,7 +1831,7 @@ public class DataModelController {
 			}
 			changeHistory.record(session, objVo.getDataModelId(), "DEL_OBJ", "TIER1",
 					(String)param.get("objOwner"), objVo.getObjNm(), null, null, null,
-					null, null,
+					delObjBefore, null,
 					changeHistory.generateDdlSnippet(objVo.getDataModelId(), "DEL_OBJ", (String)param.get("objOwner"), objVo.getObjNm(), null, null, null),
 					delObjAprvStatus);
 			session.commit();
@@ -1884,6 +1885,7 @@ public class DataModelController {
 					param.put("dataModelId", dataModelId);
 					param.put("objOwner",    objOwner);
 					param.put("objNm",       objNm);
+					String delBefore = toJsonSafe(session.selectOne("datamodel.selectDataModelObjOne", param));   // 104번 WP9-55
 					String aprvStatus = changeHistory.resolveAprvStatusForUserChange();
 					if ("APPROVED".equals(aprvStatus)) {
 						cascadeDeleteObjRefs(session, param);   // DEF-02
@@ -1896,7 +1898,7 @@ public class DataModelController {
 					}
 					changeHistory.record(session, dataModelId, "DEL_OBJ", "TIER1",
 							objOwner, objNm, null, null, null,
-							null, null,
+							delBefore, null,
 							changeHistory.generateDdlSnippet(dataModelId, "DEL_OBJ", objOwner, objNm, null, null, null),
 							aprvStatus);
 					deleted++;
@@ -2530,6 +2532,8 @@ public class DataModelController {
 			param.put("objOwner",    attrVo.getObjOwner() == null ? "" : attrVo.getObjOwner());
 			param.put("objNm",       attrVo.getObjNm());
 			param.put("attrNm",      attrVo.getAttrNm());
+			// 104번 WP9-55 — 결재 화면에서 무엇이 지워지는지 값으로 보이게 지우기 전 행을 남긴다
+			String delAttrBefore = toJsonSafe(session.selectOne("datamodel.selectDataModelAttrOne", param));
 			// DEF-05 — 승인이 필요한 사용자면 물리 삭제하지 않는다. 반려 시 되돌려야 한다.
 			String delAttrStatus = changeHistory.resolveAprvStatusForUserChange();
 			int attrDeleted;
@@ -2554,7 +2558,7 @@ public class DataModelController {
 			// 이 경로로 지운 컬럼은 승인 화면에도 변경 이력에도 나타나지 않았다.
 			changeHistory.record(session, attrVo.getDataModelId(), "DEL_ATTR", "TIER1",
 					(String) param.get("objOwner"), attrVo.getObjNm(), attrVo.getAttrNm(), null, null,
-					null, null,
+					delAttrBefore, null,
 					changeHistory.generateDdlSnippet(attrVo.getDataModelId(), "DEL_ATTR", (String) param.get("objOwner"),
 							attrVo.getObjNm(), attrVo.getAttrNm(), null, null),
 					delAttrStatus);
@@ -2936,6 +2940,15 @@ public class DataModelController {
 						}
 						session.update("datamodel.updateDataModelAttr", vo);
 						updated++;
+						// 104번 WP9-55 — 이력의 '변경 후' 가 바꾸지 않은 항목까지 빈 값으로 남아
+						// 결재 화면 전후 비교에 "컬럼 순서 1 → 0" 같은 없는 변경이 보였다
+						vo.setAttrOrder(newOrd);
+						vo.setObjNmKr(existing.getObjNmKr());
+						vo.setAttrComment(existing.getAttrComment());
+						vo.setFkParentObjOwner(existing.getFkParentObjOwner());
+						vo.setFkParentObjNm(existing.getFkParentObjNm());
+						vo.setFkParentAttrNm(existing.getFkParentAttrNm());
+						vo.setDbmsDataType(existing.getDbmsDataType());
 						// 88번 거버넌스 — UPDATE 이력 (Tier 1: 영문명/타입/길이 변경 / Tier 2: 한글명만 변경)
 						// 104번 WP7-25 — 표준 예외 신청은 1단계·결재(DRAFT)
 						String updTier = (nmChanged || typeChanged || updExcept != null) ? "TIER1" : "TIER2";
@@ -2958,6 +2971,7 @@ public class DataModelController {
 						p.put("objOwner",    objOwner);  // 86번 #11
 						p.put("objNm",       objNm);
 						p.put("attrNm",      attrNm);
+						String delBefore = toJsonSafe(session.selectOne("datamodel.selectDataModelAttrOne", p));   // 104번 WP9-55
 						// DEF-05 — 승인 대기 삭제는 물리 삭제하지 않는다 (반려 시 복구 대상)
 						String delAprvStatus = changeHistory.resolveAprvStatusForUserChange();
 						if ("APPROVED".equals(delAprvStatus)) {
@@ -2970,7 +2984,7 @@ public class DataModelController {
 						deleted++;
 						changeHistory.record(session, dataModelId, "DEL_ATTR", "TIER1",
 								objOwner, objNm, attrNm, null, null,
-								null, null,
+								delBefore, null,
 								changeHistory.generateDdlSnippet(dataModelId, "DEL_ATTR", objOwner, objNm, attrNm, null, null),
 								delAprvStatus);
 					} else {

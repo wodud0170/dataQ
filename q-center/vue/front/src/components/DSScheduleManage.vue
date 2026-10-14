@@ -26,6 +26,11 @@
             color="green" class="mt-0 ml-2" :ripple="false" :disabled="!canManageSchedule"
             @change="toggleUseYn(item)"></v-switch>
         </template>
+        <!-- 104번 WP9-67 — 모델 없는 배치 유형 -->
+        <template v-slot:item.dataModelNm="{ item }">
+          <span v-if="item.dataModelNm">{{ item.dataModelNm }}</span>
+          <span v-else class="sch-all">{{ item.diagType === 'UNUSED_STD' ? '(기본 사전)' : '(사용 중 모델 전부)' }}</span>
+        </template>
         <template v-slot:item.diagType="{ item }">
           <v-chip x-small :color="diagTypeColor(item.diagType)" text-color="white">
             {{ diagTypeLabel(item.diagType) }}
@@ -91,9 +96,16 @@
                 item-text="label" item-value="value" dense outlined hide-details></v-select>
             </v-col>
             <v-col cols="6">
-              <v-autocomplete v-model="form.dataModelId" :items="dataModels" label="데이터모델 *"
-                item-text="dataModelNm" item-value="dataModelId" dense outlined hide-details
+              <v-autocomplete id="schDataModel" v-model="form.dataModelId" :items="dataModels"
+                :label="batchType ? '데이터모델 (선택)' : '데이터모델 *'"
+                item-text="dataModelNm" item-value="dataModelId" dense outlined hide-details clearable
                 placeholder="모델 검색"></v-autocomplete>
+            </v-col>
+            <!-- 104번 WP9-67 -->
+            <v-col v-if="batchType" cols="12" class="sch-batch-hint">
+              {{ form.diagType === 'COMPLIANCE_SNAPSHOT'
+                ? '모델을 비우면 사용 중인 모델 전부의 표준 준수율·구조 일치율을 기록합니다. 기록은 데이터 모델 > 시스템별 현황의 추이에 쓰입니다.'
+                : '모델을 고르면 그 모델의 표준사전, 비우면 기본 사전에서 쓰이지 않는 단어·용어·도메인(승인된 것)을 저장합니다. 표준 사전 > 미사용 표준의 "예약 실행 결과" 에서 봅니다.' }}
             </v-col>
             <v-col cols="12">
               <v-radio-group v-model="form.scheduleType" row dense hide-details class="mt-1">
@@ -173,6 +185,9 @@ export default {
         { label: '구조 변경 진단',        value: 'STRUCT' },
         { label: '전체 (표준화 + 구조)', value: 'BOTH' },
         { label: '범정부 메타 (검증)',   value: 'GOV_META' },
+        // 104번 WP9-67 — 모델을 비울 수 있다 (스냅샷은 사용 중 모델 전부, 미사용 표준은 기본 사전)
+        { label: '준수 현황 스냅샷',     value: 'COMPLIANCE_SNAPSHOT' },
+        { label: '미사용 표준',          value: 'UNUSED_STD' },
       ],
       cycleOptions: [
         { label: '매일',  value: 'DAILY' },
@@ -192,6 +207,8 @@ export default {
     };
   },
   computed: {
+    // 104번 WP9-67 — 모델을 비울 수 있는 유형
+    batchType() { return this.form.diagType === 'COMPLIANCE_SNAPSHOT' || this.form.diagType === 'UNUSED_STD'; },
     // 104번 WP2 — 스케줄 관리 권한(관리자 또는 SCHEDULE_ADMIN)이면 등록·수정·삭제·실행
     canManageSchedule() { return this.$can('SCHEDULE_ADMIN'); },
     filteredItems() {
@@ -275,7 +292,7 @@ export default {
     saveSchedule() {
       const f = this.form;
       if (!f.scheduleNm) { this.$swal.fire({ title: '스케줄명 필수', icon: 'warning' }); return; }
-      if (!f.dataModelId) { this.$swal.fire({ title: '데이터모델 선택 필요', icon: 'warning' }); return; }
+      if (!f.dataModelId && !this.batchType) { this.$swal.fire({ title: '데이터모델 선택 필요', icon: 'warning' }); return; }
       if (f.scheduleType === 'SIMPLE' && !/^[0-2]\d:[0-5]\d$/.test(f.repeatTime)) {
         this.$swal.fire({ title: '실행 시각 형식 오류 (HH:mm)', icon: 'warning' }); return;
       }
@@ -363,10 +380,10 @@ export default {
         });
     },
     diagTypeLabel(t) {
-      return { STANDARD: '표준화', STRUCT: '구조변경', BOTH: '전체', GOV_META: '범정부 메타' }[t] || t;
+      return { STANDARD: '표준화', STRUCT: '구조변경', BOTH: '전체', GOV_META: '범정부 메타', COMPLIANCE_SNAPSHOT: '준수 현황 스냅샷', UNUSED_STD: '미사용 표준' }[t] || t;
     },
     diagTypeColor(t) {
-      return { STANDARD: 'blue', STRUCT: 'deep-purple', BOTH: 'teal', GOV_META: 'brown' }[t] || 'grey';
+      return { STANDARD: 'blue', STRUCT: 'deep-purple', BOTH: 'teal', GOV_META: 'brown', COMPLIANCE_SNAPSHOT: 'indigo', UNUSED_STD: 'blue-grey' }[t] || 'grey';
     },
     formatSchedule(s) {
       if (s.scheduleType === 'CRON') return '[CRON] ' + (s.cronExpr || '');
@@ -409,3 +426,9 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+/* 104번 WP9-67 */
+.sch-batch-hint { font-size: .78rem; color: #546E7A; }
+.sch-all { font-size: .8rem; color: #78909C; }
+</style>

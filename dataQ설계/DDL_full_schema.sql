@@ -256,6 +256,46 @@ COMMENT ON COLUMN quality.tb_aprv_stats.req_item_nm IS '요청 항목명 (반려
 
 
 --
+-- Name: tb_batch_run; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_batch_run (
+    run_id character varying(40) NOT NULL,
+    run_tp character varying(30) NOT NULL,
+    status character varying(10) NOT NULL,
+    start_dt character varying(14),
+    end_dt character varying(14),
+    dm_id character varying(22),
+    dict_id character varying(22),
+    summary character varying(1000),
+    error_msg character varying(2000),
+    schedule_log_id character varying(40),
+    cret_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_batch_run; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_batch_run IS '배치 실행 기록 — 준수 현황 스냅샷·미사용 표준 (104번 WP9-67)';
+
+
+--
+-- Name: COLUMN tb_batch_run.run_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_batch_run.run_tp IS 'COMPLIANCE_SNAPSHOT·UNUSED_STD';
+
+
+--
+-- Name: COLUMN tb_batch_run.status; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_batch_run.status IS 'RUNNING·DONE·ERROR';
+
+
+--
 -- Name: tb_biz_area; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -443,6 +483,80 @@ CREATE TABLE quality.tb_code_integ (
 --
 
 COMMENT ON TABLE quality.tb_code_integ IS '통합 코드 구성 — 통합 코드 그룹 → 하위 코드 그룹 (104번 WP6-3)';
+
+
+--
+-- Name: tb_compliance_snapshot; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_compliance_snapshot (
+    run_id character varying(40) NOT NULL,
+    snap_dt character varying(14) NOT NULL,
+    dm_id character varying(22) NOT NULL,
+    dm_nm character varying(100),
+    sys_cd character varying(22),
+    dict_id character varying(22),
+    obj_cnt integer,
+    attr_cnt integer,
+    total_col_cnt integer,
+    issue_col_cnt integer,
+    stnd_rate numeric(5,1),
+    diag_end_dt character varying(14),
+    struct_total integer,
+    struct_diff integer,
+    struct_rate numeric(5,1),
+    struct_diag_dt character varying(14)
+);
+
+
+--
+-- Name: TABLE tb_compliance_snapshot; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_compliance_snapshot IS '준수 현황 스냅샷 — 그 시각 모델별 표준 준수율·구조 일치율 (104번 WP9-67, 추이는 62·66번이 쓴다)';
+
+
+--
+-- Name: COLUMN tb_compliance_snapshot.stnd_rate; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_compliance_snapshot.stnd_rate IS '최신 완료 표준 진단의 (전체 컬럼 - 이슈 컬럼) / 전체 컬럼 × 100. 진단 없으면 NULL';
+
+
+--
+-- Name: COLUMN tb_compliance_snapshot.struct_rate; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_compliance_snapshot.struct_rate IS '최신 완료 구조 진단의 (1 - 차이 / 전체) × 100. 진단 없으면 NULL';
+
+
+--
+-- Name: tb_da_target; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_da_target (
+    target_tp character varying(4) NOT NULL,
+    target_id character varying(22) NOT NULL,
+    stnd_rate_goal numeric(5,1),
+    struct_rate_goal numeric(5,1),
+    target_desc character varying(500),
+    updt_dt character varying(14),
+    updt_user_id character varying(50)
+);
+
+
+--
+-- Name: TABLE tb_da_target; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_da_target IS 'DA 목표 — 시스템·모델별 목표 표준 준수율·구조 일치율 (104번 WP9-66)';
+
+
+--
+-- Name: COLUMN tb_da_target.target_tp; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_da_target.target_tp IS 'SYS(시스템 — 하위 시스템·모델에 상속)·DM(모델)';
 
 
 --
@@ -1242,7 +1356,7 @@ CREATE TABLE quality.tb_diag_schedule (
     schedule_id character varying(40) NOT NULL,
     schedule_nm character varying(200) NOT NULL,
     diag_type character varying(20) NOT NULL,
-    data_model_id character varying(40) NOT NULL,
+    data_model_id character varying(40),
     schedule_type character varying(20) DEFAULT 'SIMPLE'::character varying,
     repeat_cycle character varying(20),
     repeat_time character varying(5),
@@ -1320,7 +1434,8 @@ CREATE TABLE quality.tb_diag_schedule_log (
     schedule_nm_snapshot character varying(200),
     error_msg character varying(2000),
     exec_duration_sec integer,
-    gov_meta_send_id character varying(40)
+    gov_meta_send_id character varying(40),
+    batch_run_id character varying(40)
 );
 
 
@@ -1357,6 +1472,13 @@ COMMENT ON COLUMN quality.tb_diag_schedule_log.error_msg IS '실패 원인 요�
 --
 
 COMMENT ON COLUMN quality.tb_diag_schedule_log.gov_meta_send_id IS '범정부 메타 생성 이력 (TB_GOV_META_SEND.SEND_ID, DIAG_TYPE=GOV_META, 104번 WP5-78)';
+
+
+--
+-- Name: COLUMN tb_diag_schedule_log.batch_run_id; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_diag_schedule_log.batch_run_id IS '준수 현황 스냅샷·미사용 표준 실행 (TB_BATCH_RUN, 104번 WP9-67)';
 
 
 --
@@ -2966,6 +3088,29 @@ COMMENT ON TABLE quality.tb_udp_val IS '사용자 정의 속성 값 — 테이�
 
 
 --
+-- Name: tb_unused_std_result; Type: TABLE; Schema: quality; Owner: -
+--
+
+CREATE TABLE quality.tb_unused_std_result (
+    run_id character varying(40) NOT NULL,
+    kind character varying(10) NOT NULL,
+    std_id character varying(40) NOT NULL,
+    std_nm character varying(200),
+    eng_abrv_nm character varying(200),
+    extra character varying(500),
+    aprv_yn character(1),
+    cret_dt character varying(10)
+);
+
+
+--
+-- Name: TABLE tb_unused_std_result; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON TABLE quality.tb_unused_std_result IS '미사용 표준 예약 실행 결과 — 실행 시각의 미사용 단어·용어·도메인 (104번 WP9-67)';
+
+
+--
 -- Name: tb_user; Type: TABLE; Schema: quality; Owner: -
 --
 
@@ -3376,6 +3521,14 @@ ALTER TABLE ONLY quality.tb_aprv_stats
 
 
 --
+-- Name: tb_batch_run tb_batch_run_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_batch_run
+    ADD CONSTRAINT tb_batch_run_pk PRIMARY KEY (run_id);
+
+
+--
 -- Name: tb_biz_area tb_biz_area_pkey; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -3405,6 +3558,22 @@ ALTER TABLE ONLY quality.tb_code_data
 
 ALTER TABLE ONLY quality.tb_code_integ
     ADD CONSTRAINT tb_code_integ_pk PRIMARY KEY (dict_id, code_grp, sub_code_grp);
+
+
+--
+-- Name: tb_compliance_snapshot tb_compliance_snapshot_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_compliance_snapshot
+    ADD CONSTRAINT tb_compliance_snapshot_pk PRIMARY KEY (run_id, dm_id);
+
+
+--
+-- Name: tb_da_target tb_da_target_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_da_target
+    ADD CONSTRAINT tb_da_target_pk PRIMARY KEY (target_tp, target_id);
 
 
 --
@@ -3672,6 +3841,14 @@ ALTER TABLE ONLY quality.tb_udp_val
 
 
 --
+-- Name: tb_unused_std_result tb_unused_std_result_pk; Type: CONSTRAINT; Schema: quality; Owner: -
+--
+
+ALTER TABLE ONLY quality.tb_unused_std_result
+    ADD CONSTRAINT tb_unused_std_result_pk PRIMARY KEY (run_id, kind, std_id);
+
+
+--
 -- Name: tb_user tb_user_pk; Type: CONSTRAINT; Schema: quality; Owner: -
 --
 
@@ -3749,6 +3926,20 @@ CREATE INDEX ix_aprv_doc_step_user ON quality.tb_aprv_doc_step USING btree (aprv
 --
 
 CREATE INDEX ix_aprv_doc_target ON quality.tb_aprv_doc USING btree (req_tp, target_id);
+
+
+--
+-- Name: ix_batch_run_tp; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_batch_run_tp ON quality.tb_batch_run USING btree (run_tp, start_dt);
+
+
+--
+-- Name: ix_comp_snap_dm; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX ix_comp_snap_dm ON quality.tb_compliance_snapshot USING btree (dm_id, snap_dt);
 
 
 --

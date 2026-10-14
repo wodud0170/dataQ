@@ -1264,6 +1264,16 @@
 
 	<!-- 컬럼 수정 -->
 	<!-- 단건 ATTR 조회 (UPDATE 시 기존 표준 메타 보존용) -->
+	<!-- 104번 WP9-55 — 테이블 삭제 이력의 변경 전 값 (결재 화면 전후 비교) -->
+	<select id="selectDataModelObjOne" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
+		SELECT O.OBJ_OWNER AS objOwner, O.OBJ_NM AS objNm, O.OBJ_NM_KR AS objNmKr, O.OBJ_DESC AS objDesc, O.OBJ_COMMENT AS objComment,
+		       O.OBJ_ATTR_CNT AS objAttrCnt, O.TABLESPACE_NM AS tablespaceNm, O.BIZ_AREA_ID AS bizAreaId, O.SUBJ_AREA_ID AS subjAreaId,
+		       (SELECT biz_area_nm FROM tb_biz_area WHERE biz_area_id = O.BIZ_AREA_ID) AS bizAreaNm,
+		       (SELECT subj_area_nm FROM tb_subj_area WHERE subj_area_id = O.SUBJ_AREA_ID) AS subjAreaNm
+		  FROM TB_DATA_MODEL_OBJ O
+		 WHERE O.DM_ID = #{dataModelId} AND O.OBJ_OWNER = #{objOwner} AND O.OBJ_NM = #{objNm}
+	</select>
+
 	<select id="selectDataModelAttrOne" parameterType="java.util.Map" resultMap="stdDataModelAttrMap">
 		SELECT * FROM TB_DATA_MODEL_ATTR
 		WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '') AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}

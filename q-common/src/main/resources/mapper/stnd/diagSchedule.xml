@@ -38,6 +38,7 @@
         <result property="diagJobId"          column="DIAG_JOB_ID"/>
         <result property="structDiagId"       column="STRUCT_DIAG_ID"/>
         <result property="govMetaSendId"      column="GOV_META_SEND_ID"/>
+        <result property="batchRunId"         column="BATCH_RUN_ID"/>
         <result property="errorMsg"           column="ERROR_MSG"/>
         <result property="execDurationSec"    column="EXEC_DURATION_SEC"/>
     </resultMap>
@@ -154,7 +155,7 @@
     <select id="selectLogList" parameterType="map" resultMap="diagScheduleLogMap">
         SELECT L.LOG_ID, L.SCHEDULE_ID, L.SCHEDULE_NM_SNAPSHOT,
                L.EXEC_DT, L.EXEC_END_DT, L.EXEC_STATUS, L.TRIGGER_TYPE,
-               L.DIAG_TYPE, L.DIAG_JOB_ID, L.STRUCT_DIAG_ID, L.GOV_META_SEND_ID,
+               L.DIAG_TYPE, L.DIAG_JOB_ID, L.STRUCT_DIAG_ID, L.GOV_META_SEND_ID, L.BATCH_RUN_ID,
                L.ERROR_MSG, L.EXEC_DURATION_SEC
           FROM TB_DIAG_SCHEDULE_LOG L
          <where>
@@ -178,7 +179,7 @@
     <select id="selectLogById" parameterType="String" resultMap="diagScheduleLogMap">
         SELECT LOG_ID, SCHEDULE_ID, SCHEDULE_NM_SNAPSHOT,
                EXEC_DT, EXEC_END_DT, EXEC_STATUS, TRIGGER_TYPE,
-               DIAG_TYPE, DIAG_JOB_ID, STRUCT_DIAG_ID, GOV_META_SEND_ID,
+               DIAG_TYPE, DIAG_JOB_ID, STRUCT_DIAG_ID, GOV_META_SEND_ID, BATCH_RUN_ID,
                ERROR_MSG, EXEC_DURATION_SEC
           FROM TB_DIAG_SCHEDULE_LOG
          WHERE LOG_ID = #{logId}
@@ -215,6 +216,13 @@
          WHERE LOG_ID = #{logId}
     </update>
 
+    <!-- 104번 WP9-67 — 예약 실행 COMPLIANCE_SNAPSHOT·UNUSED_STD: 배치 실행(TB_BATCH_RUN) 연결 -->
+    <update id="setLogBatchRunId" parameterType="map">
+        UPDATE TB_DIAG_SCHEDULE_LOG
+           SET BATCH_RUN_ID = #{batchRunId}
+         WHERE LOG_ID = #{logId}
+    </update>
+
     <update id="updateLogFinish" parameterType="map">
         UPDATE TB_DIAG_SCHEDULE_LOG
            SET EXEC_END_DT      = CURRENT_TIMESTAMP,
@@ -241,7 +249,7 @@
     <select id="selectRunningLogs" resultMap="diagScheduleLogMap">
         SELECT LOG_ID, SCHEDULE_ID, SCHEDULE_NM_SNAPSHOT,
                EXEC_DT, EXEC_END_DT, EXEC_STATUS, TRIGGER_TYPE,
-               DIAG_TYPE, DIAG_JOB_ID, STRUCT_DIAG_ID, GOV_META_SEND_ID,
+               DIAG_TYPE, DIAG_JOB_ID, STRUCT_DIAG_ID, GOV_META_SEND_ID, BATCH_RUN_ID,
                ERROR_MSG, EXEC_DURATION_SEC
           FROM TB_DIAG_SCHEDULE_LOG
          WHERE EXEC_STATUS = 'RUNNING'

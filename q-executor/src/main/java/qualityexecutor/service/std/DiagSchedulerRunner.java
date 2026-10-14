@@ -194,7 +194,7 @@ public class DiagSchedulerRunner {
     /** 기저 진단(DIAG_JOB / STRUCT_DIAG) 중 연결된 것들의 status 를 모아서 합성.
      *  BOTH 는 두 ID 모두 있을 수 있음 — 모두 DONE 이어야 DONE, 하나라도 ERROR/STOPPED 면 ERROR. */
     private CompositeStatus resolveCompositeStatus(DiagScheduleLogVo row) {
-        String stdStatus = null, structStatus = null, govStatus = null;
+        String stdStatus = null, structStatus = null, govStatus = null, batchStatus = null;
         if (row.getDiagJobId() != null && !row.getDiagJobId().isEmpty()) {
             stdStatus = sql.selectOne("diagSchedule.selectDiagJobStatus", row.getDiagJobId());
         }
@@ -205,32 +205,40 @@ public class DiagSchedulerRunner {
         if (row.getGovMetaSendId() != null && !row.getGovMetaSendId().isEmpty()) {
             govStatus = sql.selectOne("diagSchedule.selectGovMetaSendStatus", row.getGovMetaSendId());
         }
-        if (stdStatus == null && structStatus == null && govStatus == null) return null;
-        return new CompositeStatus(stdStatus, structStatus, govStatus);
+        // 104번 WP9-67 — 준수 현황 스냅샷·미사용 표준 (TB_BATCH_RUN.STATUS: RUNNING·DONE·ERROR)
+        if (row.getBatchRunId() != null && !row.getBatchRunId().isEmpty()) {
+            batchStatus = sql.selectOne("daStat.selectBatchRunStatus", row.getBatchRunId());
+        }
+        if (stdStatus == null && structStatus == null && govStatus == null && batchStatus == null) return null;
+        return new CompositeStatus(stdStatus, structStatus, govStatus, batchStatus);
     }
 
-    /** STANDARD / STRUCT / GOV_META 의 기저 상태를 합성해 LOG 최종 상태를 판단 */
+    /** STANDARD / STRUCT / GOV_META / 배치(스냅샷·미사용 표준) 의 기저 상태를 합성해 LOG 최종 상태를 판단 */
     private static final class CompositeStatus {
         final String std;
         final String strct;
         final String gov;
-        CompositeStatus(String std, String strct, String gov) { this.std = std; this.strct = strct; this.gov = gov; }
+        final String batch;
+        CompositeStatus(String std, String strct, String gov, String batch) { this.std = std; this.strct = strct; this.gov = gov; this.batch = batch; }
 
         boolean isPending() {
-            return isRunningLike(std) || isRunningLike(strct) || isRunningLike(gov);
+            return isRunningLike(std) || isRunningLike(strct) || isRunningLike(gov) || isRunningLike(batch);
         }
         boolean anyErrorOrStopped() {
-            return isBadLike(std) || isBadLike(strct) || isBadLike(gov);
+            return isBadLike(std) || isBadLike(strct) || isBadLike(gov) || isBadLike(batch);
         }
         boolean allDone() {
             // 연결된 쪽이 모두 DONE 이면 전체 DONE. null(미연결) 은 DONE 으로 간주되지 않고, 다른 쪽만 있으면 그 쪽만 판정.
             boolean stdOk   = (std == null)   || "DONE".equalsIgnoreCase(std);
             boolean structOk = (strct == null) || "DONE".equalsIgnoreCase(strct);
             boolean govOk   = (gov == null)   || "DONE".equalsIgnoreCase(gov);
-            // 셋 다 null 은 null 반환이라 여기 들어오지 않음.
-            return stdOk && structOk && govOk;
+            boolean batchOk = (batch == null) || "DONE".equalsIgnoreCase(batch);
+            // 넷 다 null 은 null 반환이라 여기 들어오지 않음.
+            return stdOk && structOk && govOk && batchOk;
         }
         String errorReason() {
+            if ("ERROR".equalsIgnoreCase(batch))
+                return "[BATCH] 배치 실행이 ERROR 로 끝났습니다 — 실행 이력의 배치 결과에서 확인하세요";
             if ("ERROR".equalsIgnoreCase(gov))
                 return "[GOV_META] 범정부 메타 검증에서 오류가 나왔습니다 — 범정부 메타 > 생성·전송 이력에서 확인하세요";
             if ("ERROR".equalsIgnoreCase(std) || "ERROR".equalsIgnoreCase(strct))

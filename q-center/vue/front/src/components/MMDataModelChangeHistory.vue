@@ -18,8 +18,8 @@
         <v-btn small color="primary" outlined v-on:click="load">조회</v-btn>
       </v-row>
 
-      <v-data-table :headers="headers" :items="items" item-key="changeSeq"
-        :items-per-page="30" dense fixed-header :height="600">
+      <v-data-table id="dmHistTable" :headers="headers" :items="items" item-key="changeSeq"
+        :items-per-page="30" :footer-props="{ 'items-per-page-options': [30, 50, 100, -1] }" dense fixed-header :height="600">
         <template #item.changeType="{ item }">
           <v-chip x-small outlined :title="item.changeType">{{ changeTypeLabel(item.changeType) }}</v-chip>
         </template>
@@ -33,33 +33,41 @@
           <v-chip x-small :color="statusColor(item.aprvStatus)" dark>{{ item.aprvStatus }}</v-chip>
         </template>
         <template #item.changeDt="{ item }">
-          {{ formatDt(item.changeDt) }}
+          <span class="nowrap">{{ formatDt(item.changeDt) }}</span>
         </template>
         <template #item.actions="{ item }">
-          <v-btn x-small text v-on:click="showDetail(item)">
+          <div class="nowrap">
+          <v-btn x-small text class="btn-auto act-btn" title="상세" v-on:click="showDetail(item)">
             <v-icon x-small>mdi-information-outline</v-icon>
           </v-btn>
-          <v-btn v-if="item.ddlSnippet" x-small text v-on:click="copyDdl(item)">
+          <v-btn v-if="item.ddlSnippet" x-small text class="btn-auto act-btn" v-on:click="copyDdl(item)">
             <v-icon x-small>mdi-content-copy</v-icon>DDL
           </v-btn>
           <v-btn v-if="canExecDdl && item.aprvStatus==='APPROVED' && item.ddlSnippet && !item.ddlExecDt"
-            x-small text color="success" v-on:click="execDdl(item)">
+            x-small text class="btn-auto act-btn" color="success" v-on:click="execDdl(item)">
             <v-icon x-small>mdi-database-arrow-up</v-icon>DB 반영
           </v-btn>
           <v-chip v-if="item.ddlExecDt" x-small outlined :color="item.ddlExecResult==='SUCCESS' ? 'success' : 'error'"
             :title="item.ddlExecMessage">
             {{ item.ddlExecResult }}
           </v-chip>
+          </div>
         </template>
       </v-data-table>
     </v-sheet>
 
     <!-- 상세 모달 -->
-    <v-dialog v-model="detailDialog" max-width="900">
+    <v-dialog v-model="detailDialog" max-width="900" scrollable>
       <v-card>
         <v-card-title>변경 이력 상세 — #{{ detail.changeSeq }}</v-card-title>
-        <v-card-text>
-          <div class="d-flex" style="gap:16px;">
+        <v-card-text class="pt-2">
+          <!-- 104번 WP9-55 — 항목별 전후 비교 (원문 JSON 은 접어 둔다) -->
+          <div class="diff-title">변경 전후</div>
+          <ChangeDiffTable id="dmHistDiff" :before="detail.beforeJson" :after="detail.afterJson" kind="DM" />
+          <div class="mt-2">
+            <a id="dmHistRawToggle" class="raw-link" v-on:click="showRaw = !showRaw">원문 JSON {{ showRaw ? '접기' : '보기' }}</a>
+          </div>
+          <div v-if="showRaw" class="d-flex mt-2" style="gap:16px;">
             <div style="flex:1;">
               <div class="diff-title">변경 전 (BEFORE)</div>
               <pre class="diff-box">{{ formatJson(detail.beforeJson) }}</pre>
@@ -92,9 +100,11 @@
 <script>
 import axios from 'axios';
 import { dmChangeTypeLabel } from './dmChangeType';
+import ChangeDiffTable from './ChangeDiffTable.vue';
 
 export default {
   name: 'MMDataModelChangeHistory',
+  components: { ChangeDiffTable },
   props: ['isMobile'],
   computed: {
     // 104번 WP2 — DB 반영 권한(관리자 또는 DDL_EXEC, 시스템 단위). 건마다 시스템 범위는 서버가 다시 본다
@@ -122,12 +132,13 @@ export default {
       { text: 'Tier', value: 'changeTier', width: '80px' },
       { text: '대상', value: 'path' },
       { text: '신청자', value: 'changeUserId', width: '120px' },
-      { text: '신청 시각', value: 'changeDt', width: '140px' },
+      { text: '신청 시각', value: 'changeDt', width: '150px' },
       { text: '상태', value: 'aprvStatus', width: '100px' },
-      { text: '', value: 'actions', width: '120px', sortable: false },
+      { text: '', value: 'actions', width: '200px', sortable: false },
     ],
     detailDialog: false,
     detail: {},
+    showRaw: false,   // 104번 WP9-55 — 원문 JSON 펼침
   }),
   mounted() { this.load(); },
   activated() { this.load(); },
@@ -163,6 +174,7 @@ export default {
     },
     showDetail(item) {
       this.detail = item;
+      this.showRaw = false;
       this.detailDialog = true;
     },
     copyDdl(item) {
@@ -212,6 +224,9 @@ export default {
 .tier-tier1_5 { color: #FB8C00; font-weight: 600; }
 .tier-tier2 { color: #2E7D32; }
 .diff-title { font-size: .85rem; font-weight: 600; color: #1A237E; margin-bottom: 4px; }
+.raw-link { font-size: .78rem; cursor: pointer; text-decoration: underline; }
+.nowrap { white-space: nowrap; }
+.act-btn.v-btn { height: 26px !important; padding: 0 6px !important; }
 .diff-box { background: #F5F5F5; padding: 8px; border-radius: 4px; font-size: .78rem; max-height: 300px; overflow: auto; }
 .ddl-box { background: #263238; color: #B0BEC5; padding: 8px; border-radius: 4px; font-size: .8rem; font-family: monospace; max-height: 200px; overflow: auto; }
 </style>

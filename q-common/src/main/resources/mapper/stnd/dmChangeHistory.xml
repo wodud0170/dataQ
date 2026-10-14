@@ -89,20 +89,22 @@
 
 	<!-- 신청 묶음 단위 — 관리자 승인 화면용 -->
 	<select id="selectSubmissions" parameterType="java.util.Map" resultType="java.util.Map">
-		SELECT SUBMISSION_ID                 as "submissionId",
-		       MAX(CHANGE_USER_ID)           as "changeUserId",
-		       MIN(CHANGE_DT)                as "firstDt",
-		       MAX(CHANGE_DT)                as "lastDt",
+		SELECT H.SUBMISSION_ID               as "submissionId",
+		       MAX(H.CHANGE_USER_ID)         as "changeUserId",
+		       MIN(H.CHANGE_DT)              as "firstDt",
+		       MAX(H.CHANGE_DT)              as "lastDt",
 		       COUNT(*)                      as "itemCnt",
-		       MIN(APRV_STATUS)              as "oldestStatus",
-		       MAX(DM_ID)                    as "dmId"
-		  FROM TB_DATA_MODEL_CHANGE_HISTORY
-		 WHERE SUBMISSION_ID IS NOT NULL
-		   AND APRV_STATUS = 'SUBMITTED'
+		       MIN(H.APRV_STATUS)            as "oldestStatus",
+		       MAX(H.DM_ID)                  as "dmId",
+		       MAX(M.DM_NM)                  as "dmNm"
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY H
+		  LEFT JOIN TB_DATA_MODEL M ON M.DM_ID = H.DM_ID
+		 WHERE H.SUBMISSION_ID IS NOT NULL
+		   AND H.APRV_STATUS = 'SUBMITTED'
 		<if test="changeUserId != null and changeUserId != ''">
-		   AND CHANGE_USER_ID = #{changeUserId}
+		   AND H.CHANGE_USER_ID = #{changeUserId}
 		</if>
-		 GROUP BY SUBMISSION_ID
+		 GROUP BY H.SUBMISSION_ID
 		 ORDER BY "firstDt" DESC
 		 LIMIT 200
 	</select>

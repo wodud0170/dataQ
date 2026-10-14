@@ -40,6 +40,11 @@ public class UnusedStdController {
 		Map<String, Object> p = dictService.dictParam(body.get("dictId") == null ? null : body.get("dictId").toString());
 		p.put("keyword", body.get("keyword") == null ? null : body.get("keyword").toString().trim());
 		p.put("aprvOnly", "N".equals(body.get("aprvOnly")) ? "N" : "Y");
+		// 104번 WP9-67 — 예약 실행이 저장한 결과 (엑셀)
+		if (body.get("runId") != null && !body.get("runId").toString().isEmpty()) {
+			p.put("runId", body.get("runId").toString());
+			p.put("kind", body.get("kind") == null ? "TERM" : body.get("kind").toString());
+		}
 		return p;
 	}
 

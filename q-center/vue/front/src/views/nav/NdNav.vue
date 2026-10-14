@@ -192,6 +192,16 @@
                         <v-list-item-title>데이터 모델 현황</v-list-item-title>
                     </v-list-item>
 
+                    <!-- 104번 WP9-62·66 — 시스템 단위 차이 분석·DA 목표 달성도 -->
+                    <v-list-item link id="nav_daSystemStat" href="#tab_daSystemStat"
+                        active-class="ndColor--text" title="시스템별 현황"
+                        v-on:click.stop="addTabItem('시스템별 현황', 'daSystemStat');">
+                        <v-list-item-icon>
+                            <v-icon></v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-title>시스템별 현황</v-list-item-title>
+                    </v-list-item>
+
                     <!-- 85번 — 모델링 도구 임포트 (ERwin native XML / XMI 2.1) -->
                     <v-list-item link id="nav_erwinImport" href="#tab_erwinImport"
                         active-class="ndColor--text" title="모델링 도구 임포트"
@@ -748,6 +758,10 @@ export default {
         eventBus.$on('openColumnView', () => {
             this.addTabItem('컬럼', 'datamodelStatusColumn');
         });
+        // 104번 WP9-62 — 시스템별 현황의 모델 이름 → 테이블 (모델은 eventBus.pendingTableView)
+        eventBus.$on('openTableView', () => {
+            this.addTabItem('테이블', 'datamodelStatusTable');
+        });
         // 104번 WP7-27 — 미사용 표준의 이름 → 단어·용어·도메인 화면 검색 (검색어는 eventBus.pendingSearch)
         eventBus.$on('openStdSearch', (title, tab) => {
             this.addTabItem(title, tab);
@@ -757,6 +771,7 @@ export default {
         eventBus.$off('openDiagResult');
         eventBus.$off('openStructDiagResult');
         eventBus.$off('openColumnView');
+        eventBus.$off('openTableView');
         eventBus.$off('openGovMetaItems');
     }
 }

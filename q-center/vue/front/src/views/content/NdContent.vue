@@ -164,6 +164,13 @@
                     <privColumn :key="privColumnKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 104번 WP9-62·66 — 시스템별 현황 -->
+            <div v-if="this.activeContent === 'daSystemStat'" id="tab_daSystemStat" class="tab_contents"
+                :class="{ active: this.activeContent === 'daSystemStat' }">
+                <keep-alive>
+                    <daSystemStat :key="daSystemStatKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'govMetaConf'" id="tab_govMetaConf" class="tab_contents"
                 :class="{ active: this.activeContent === 'govMetaConf' }">
                 <keep-alive>
@@ -536,6 +543,7 @@ import MMDdlRule from "./../../components/MMDdlRule.vue"
 import MMUdpDef from "./../../components/MMUdpDef.vue"
 import DSAprvBox from "./../../components/DSAprvBox.vue"
 import DSPrivColumn from "./../../components/DSPrivColumn.vue"
+import DSDaSystemStat from "./../../components/DSDaSystemStat.vue"
 import DSStdMap from "./../../components/DSStdMap.vue"
 import DSUnusedStd from "./../../components/DSUnusedStd.vue"
 import DSStdImport from "./../../components/DSStdImport.vue"
@@ -599,6 +607,7 @@ export default {
             erwinImportKey: this.createUUID(),
             datamodelVisualizationKey: this.createUUID(),
             privColumnKey: this.createUUID(),
+            daSystemStatKey: this.createUUID(),
             stdMapKey: this.createUUID(),
             unusedStdKey: this.createUUID(),
             stdImportKey: this.createUUID(),
@@ -677,6 +686,7 @@ export default {
         "erwinImport": DSErwinImport,
         "datamodelVisualization": DSDatamodelVisualization,
         "privColumn": DSPrivColumn,
+        "daSystemStat": DSDaSystemStat,
         "stdMap": DSStdMap,
         "unusedStd": DSUnusedStd,
         "stdImport": DSStdImport,
@@ -792,6 +802,9 @@ export default {
                     break;
                 case "privColumn":
                     this.privColumnKey = this.createUUID();
+                    break;
+                case "daSystemStat":
+                    this.daSystemStatKey = this.createUUID();
                     break;
                 case "govMetaConf":
                     this.govMetaConfKey = this.createUUID();

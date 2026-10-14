@@ -24,7 +24,7 @@
             v-on:click="selectSubmission(s)">
             <div style="font-size:.82rem; font-weight:600; color:#283593;">{{ s.changeUserId }}</div>
             <div style="font-size:.72rem; color:#546E7A;">{{ formatDt(s.firstDt) }}</div>
-            <div style="font-size:.78rem;">변경 {{ s.itemCnt }}건 · 모델 {{ s.dmId }}</div>
+            <div style="font-size:.78rem;" :title="s.dmId">변경 {{ s.itemCnt }}건 · 모델 {{ s.dmNm || s.dmId }}</div>
             <!-- 104번 WP1 — 결재선이 걸린 신청 -->
             <div v-if="s.aprvDoc" style="font-size:.72rem; color:#1565C0;">
               결재 {{ s.aprvDoc.curStepNo }}/{{ s.aprvDoc.stepCnt }} · 현재 결재자 {{ s.aprvDoc.curAprvrNms }}
@@ -53,8 +53,14 @@
                 <v-icon small left>mdi-close</v-icon>선택 반려
               </v-btn>
             </div>
-            <v-data-table :headers="headers" :items="items" item-key="changeSeq" show-select
-              v-model="checkedItems" :items-per-page="50" hide-default-footer dense>
+            <!-- 104번 WP9-55 — 행을 펼치면 변경 전후 비교 -->
+            <v-data-table id="dmAprvItems" :headers="headers" :items="items" item-key="changeSeq" show-select show-expand
+              :expanded.sync="expanded" v-model="checkedItems" :items-per-page="50" hide-default-footer dense>
+              <template #expanded-item="{ headers: hs, item }">
+                <td :colspan="hs.length" class="diff-cell">
+                  <ChangeDiffTable :before="item.beforeJson" :after="item.afterJson" kind="DM" />
+                </td>
+              </template>
               <template #item.changeType="{ item }">
                 <v-chip x-small outlined :title="item.changeType">{{ changeTypeLabel(item.changeType) }}</v-chip>
               </template>
@@ -69,6 +75,7 @@
                 <v-chip v-if="item.stndExceptReason" x-small color="deep-orange" text-color="white" class="ml-1 stnd-except-chip"
                   :title="'표준 예외 사유: ' + item.stndExceptReason">표준 예외 — {{ item.stndExceptReason }}</v-chip>
               </template>
+              <template #item.changeDt="{ item }"><span class="nowrap">{{ formatDt(item.changeDt) }}</span></template>
               <template #item.aprvStatus="{ item }">
                 <v-chip x-small :color="statusColor(item.aprvStatus)" dark>{{ item.aprvStatus }}</v-chip>
               </template>
@@ -83,23 +90,27 @@
 <script>
 import axios from 'axios';
 import { dmChangeTypeLabel } from './dmChangeType';
+import ChangeDiffTable from './ChangeDiffTable.vue';
 
 export default {
   name: 'MMDataModelApproval',
+  components: { ChangeDiffTable },
   props: ['isMobile'],
   data: () => ({
     submissions: [],
     selectedSubmissionId: null,
     selectedDoc: null,   // 104번 WP1 — 선택 신청의 진행 중 결재 문서
     items: [],
+    expanded: [],
     checkedItems: [],
     selectAll: false,
     headers: [
       { text: '유형', value: 'changeType', width: '130px' },
       { text: 'Tier', value: 'changeTier', width: '80px' },
       { text: '대상', value: 'path' },
-      { text: '신청 시각', value: 'changeDt', width: '140px' },
+      { text: '신청 시각', value: 'changeDt', width: '150px' },
       { text: '상태', value: 'aprvStatus', width: '100px' },
+      { text: '전후', value: 'data-table-expand', width: '64px', sortable: false, align: 'center' },
     ],
   }),
   mounted() { this.loadSubmissions(); },
@@ -117,6 +128,7 @@ export default {
       this.selectedSubmissionId = s.submissionId;
       this.selectedDoc = s.aprvDoc || null;
       this.checkedItems = [];
+      this.expanded = [];
       axios.post(this.$APIURL.base + 'api/dmApproval/submissionItems', {
         submissionId: s.submissionId,
       }).then(res => {
@@ -210,4 +222,8 @@ export default {
 .tier-tier1 { color: #C62828; font-weight: 600; }
 .tier-tier1_5 { color: #FB8C00; font-weight: 600; }
 .tier-tier2 { color: #2E7D32; }
+/* 104번 WP9-55 */
+.diff-cell { background: #FAFBFF; padding: 8px 16px 12px !important; }
+#dmAprvItems >>> th { white-space: nowrap; }
+.nowrap { white-space: nowrap; }
 </style>

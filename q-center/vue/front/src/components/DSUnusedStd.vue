@@ -5,7 +5,7 @@
       <v-row no-gutters align="center" class="mb-3" style="gap:8px;">
         <h2><v-icon>mdi-archive-search-outline</v-icon>&nbsp;&nbsp;미사용 표준</h2>
         <v-spacer />
-        <DictSelector v-model="dictId" @change="load" />
+        <DictSelector v-model="dictId" @change="onDict" />
       </v-row>
 
       <div class="us-guide">
@@ -19,16 +19,24 @@
           <v-btn small value="TERM">용어</v-btn>
           <v-btn small value="DOMAIN">도메인</v-btn>
         </v-btn-toggle>
+        <!-- 104번 WP9-67 — 지금 찾기 또는 예약 실행(스케줄 "미사용 표준")이 저장한 결과 -->
+        <v-select id="unusedRun" v-model="runId" :items="runOptions" item-text="text" item-value="value"
+          label="기준" dense outlined hide-details style="max-width:260px;" @change="load">
+          <template #selection="{ item }">{{ item.short }}</template>
+        </v-select>
         <v-text-field id="unusedKeyword" v-model="keyword" label="이름·영문약어" dense outlined hide-details clearable
           style="max-width:240px;" v-on:keyup.enter="load" />
-        <v-checkbox v-model="aprvOnly" true-value="Y" false-value="N" label="승인만" dense hide-details class="ma-0 pa-0" @change="load" />
-        <v-btn id="unusedSearch" small outlined color="primary" v-on:click="load">조회</v-btn>
+        <v-checkbox v-model="aprvOnly" true-value="Y" false-value="N" label="승인만" dense hide-details class="ma-0 pa-0"
+          :disabled="!!runId" @change="load" />
+        <v-btn id="unusedSearch" small outlined color="primary" class="btn-auto" v-on:click="load">조회</v-btn>
         <v-spacer />
-        <span class="us-count">총 {{ items.length }}건{{ items.length >= 5000 ? ' (5,000건까지)' : '' }}</span>
-        <v-btn id="unusedExcel" small outlined color="deep-purple" :disabled="!items.length" v-on:click="download">
+        <span class="us-count">총 {{ items.length }}건{{ !runId && items.length >= 5000 ? ' (5,000건까지)' : '' }}</span>
+        <v-btn id="unusedExcel" small outlined color="deep-purple" class="btn-auto" :disabled="!items.length" v-on:click="download">
           <v-icon small left>mdi-file-excel</v-icon>엑셀
         </v-btn>
       </v-row>
+      <div v-if="runId" class="us-run-note">예약 실행 결과를 보는 중입니다 ({{ selRun ? fmtDt(selRun.startDt) + ' 실행 — ' + (selRun.summary || '') : '' }}).
+        실행할 때의 승인된 미사용 표준입니다. 지금 상태는 기준을 "지금"으로 바꾸세요.</div>
 
       <v-data-table id="unusedTable" :headers="headers" :items="items" item-key="id" dense :items-per-page="30" :loading="loading">
         <template #item.nm="{ item }">
@@ -58,8 +66,20 @@ export default {
     aprvOnly: 'Y',
     items: [],
     loading: false,
+    // 104번 WP9-67 — 예약 실행 결과
+    runId: null,
+    runs: [],
   }),
   computed: {
+    runOptions() {
+      // short — 고른 값 칸(좁다)에 보일 글. 요약은 목록과 아래 안내에서 본다
+      return [{ text: '지금 (실시간으로 찾기)', short: '지금 (실시간으로 찾기)', value: null }].concat(this.runs.map(r => ({
+        text: '예약 실행 ' + this.fmtDt(r.startDt) + ' — ' + (r.summary || ''), short: '예약 실행 ' + this.fmtDt(r.startDt), value: r.runId, summary: r.summary,
+      })));
+    },
+    selRun() {
+      return this.runs.find(r => r.runId === this.runId) || null;
+    },
     headers() {
       const nm = { WORD: '단어명', TERM: '용어명', DOMAIN: '도메인명' }[this.kind];
       const extra = { WORD: '구분', TERM: '도메인', DOMAIN: '데이터타입' }[this.kind];
@@ -71,10 +91,30 @@ export default {
   },
   methods: {
     params() {
-      return { dictId: this.dictId, kind: this.kind, keyword: this.keyword || null, aprvOnly: this.aprvOnly };
+      return { dictId: this.dictId, kind: this.kind, keyword: this.keyword || null, aprvOnly: this.aprvOnly, runId: this.runId || null };
+    },
+    onDict() {
+      this.runId = null;
+      this.runs = [];
+      if (this.dictId) {
+        axios.post(this.$APIURL.base + 'api/batchRun/list', { runTp: 'UNUSED_STD', dictId: this.dictId, doneOnly: 'Y' })
+          .then(r => { this.runs = r.data || []; }).catch(() => {});
+      }
+      this.load();
+    },
+    fmtDt(s) {
+      return s && s.length >= 12 ? s.substr(0, 4) + '-' + s.substr(4, 2) + '-' + s.substr(6, 2) + ' ' + s.substr(8, 2) + ':' + s.substr(10, 2) : (s || '');
     },
     load() {
       this.loading = true;
+      if (this.runId) {
+        // 104번 WP9-67 — 저장된 결과
+        axios.post(this.$APIURL.base + 'api/batchRun/unusedItems', { runId: this.runId, kind: this.kind, keyword: this.keyword || null })
+          .then(res => { this.items = (res.data && res.data.items) || []; })
+          .catch(() => { this.items = []; })
+          .finally(() => { this.loading = false; });
+        return;
+      }
       axios.post(this.$APIURL.base + 'api/std/unused/list', this.params())
         .then(res => { this.items = (res.data && res.data.items) || []; })
         .catch(() => { this.items = []; })
@@ -110,4 +150,5 @@ export default {
 <style scoped>
 .us-guide { font-size: .8rem; color: #546E7A; background: #ECEFF1; border-radius: 4px; padding: 6px 10px; margin-bottom: 10px; }
 .us-count { font-size: .85rem; color: #546E7A; }
+.us-run-note { font-size: .78rem; color: #3949AB; background: #E8EAF6; border-radius: 4px; padding: 4px 10px; margin-bottom: 8px; }
 </style>

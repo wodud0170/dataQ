@@ -189,6 +189,7 @@ export default {
                 case "datamodelStatusColumn":
                 case "erwinImport":
                 case "privColumn":
+                case "daSystemStat":
                     this._activateGroup("dsGroup");
                     break;
                 case "boardNotice":
@@ -402,7 +403,7 @@ export default {
                     this._activateGroup("diagGroup");
                 } else if (tabName === 'structDiag' || tabName === 'structDiagResult') {
                     this._activateGroup("structDiagGroup");
-                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'erwinImport' || tabName === 'privColumn') {
+                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'erwinImport' || tabName === 'privColumn' || tabName === 'daSystemStat') {
                     this._activateGroup("dmGroup");
 
                 } else if (tabName === 'dqi' || tabName === 'ctq' || tabName === 'dqbr' || tabName === 'target' || tabName === 'qv' || tabName === 'rvi' || tabName === 'dqqvrt') {
@@ -628,7 +629,7 @@ export default {
             } else if (tabitem === 'structDiag' || tabitem === 'structDiagResult') {
                 this.navStructDiagGroup = true;
                 return;
-            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'erwinImport' || tabitem === 'privColumn') {
+            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'erwinImport' || tabitem === 'privColumn' || tabitem === 'daSystemStat') {
                 this.navDmGroup = true;
                 return;
             } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification' || tabitem === 'changeHistory' || tabitem === 'stdMap' || tabitem === 'unusedStd' || tabitem === 'stdImport') {

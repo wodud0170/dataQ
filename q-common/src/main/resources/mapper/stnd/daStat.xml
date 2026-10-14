@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- 104번 WP9 — 통계·배치. 모델별 준수 지표(62·66), 준수 현황 스냅샷·미사용 표준 배치 실행(67), DA 목표(66) -->
+<mapper namespace="daStat">
+
+	<!-- 모델별 지표 원값 — 최신 완료 표준 진단(전체·이슈 컬럼 수)과 최신 완료 구조 진단(전체·차이 수). 진단이 없으면 NULL.
+	     준수율 계산은 CLAUDE.md 의 통일 계산식(이슈 컬럼수 = DISTINCT 소유자.테이블.컬럼)과 같다 -->
+	<select id="selectModelMetrics" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT A.DM_ID AS "dmId", A.DM_NM AS "dmNm", A.DM_SYS_CD AS "sysCd",
+		       A.DICT_ID AS "dictId", COALESCE(A.MODEL_TYPE, 'PHYSICAL') AS "modelType",
+		       <!-- 구조 진단 대상 — 구조 진단 화면과 같은 기준(데이터소스가 연결된 모델) -->
+		       CASE WHEN A.DM_DS_ID IS NOT NULL AND EXISTS (SELECT 1 FROM ndata.TB_DATA_SOURCE WHERE DS_ID = A.DM_DS_ID) THEN 'Y' ELSE 'N' END AS "structTargetYn",
+		       (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ  WHERE DM_ID = A.DM_ID AND USE_YN = 'Y' AND COALESCE(APRV_STATUS, 'APPROVED') = 'APPROVED') AS "objCnt",
+		       (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR WHERE DM_ID = A.DM_ID AND USE_YN = 'Y' AND COALESCE(APRV_STATUS, 'APPROVED') = 'APPROVED') AS "attrCnt",
+		       D.TOTAL_CNT AS "totalColCnt", D.ISSUE_COL_CNT AS "issueColCnt", D.END_DT AS "diagEndDt",
+		       SD.STRUCT_TOTAL AS "structTotal", SD.STRUCT_DIFF AS "structDiff",
+		       SD.ADDED_COLUMNS AS "addedColumns", SD.MODIFIED_COLUMNS AS "modifiedColumns", SD.DELETED_COLUMNS AS "deletedColumns",
+		       SD.ADDED_TABLES AS "addedTables", SD.DELETED_TABLES AS "deletedTables",
+		       to_char(SD.DIAG_DT, 'YYYYMMDDHH24MISS') AS "structDiagDt"
+		  FROM TB_DATA_MODEL A
+		  LEFT JOIN (
+		        SELECT J.DM_ID, J.TOTAL_CNT, J.END_DT, COALESCE(IC.ISSUE_COL_CNT, 0) AS ISSUE_COL_CNT
+		          FROM TB_DIAG_JOB J
+		          LEFT JOIN (SELECT DIAG_JOB_ID, COUNT(DISTINCT COALESCE(OBJ_OWNER, '') || '.' || OBJ_NM || '.' || ATTR_NM) AS ISSUE_COL_CNT
+		                       FROM TB_DIAG_RESULT GROUP BY DIAG_JOB_ID) IC ON IC.DIAG_JOB_ID = J.DIAG_JOB_ID
+		         WHERE J.STATUS = 'DONE'
+		           AND J.END_DT = (SELECT MAX(END_DT) FROM TB_DIAG_JOB WHERE DM_ID = J.DM_ID AND STATUS = 'DONE')
+		       ) D ON D.DM_ID = A.DM_ID
+		  LEFT JOIN (
+		        SELECT H.DATA_MODEL_ID, H.DIAG_DT,
+		               (H.TOTAL_TABLES + H.TOTAL_COLUMNS) AS STRUCT_TOTAL,
+		               (H.ADDED_TABLES + H.DELETED_TABLES + H.ADDED_COLUMNS + H.DELETED_COLUMNS + H.MODIFIED_COLUMNS) AS STRUCT_DIFF,
+		               H.ADDED_COLUMNS, H.MODIFIED_COLUMNS, H.DELETED_COLUMNS, H.ADDED_TABLES, H.DELETED_TABLES
+		          FROM TB_STRUCT_DIAG_HISTORY H
+		         WHERE H.STATUS = 'DONE'
+		           AND H.DIAG_DT = (SELECT MAX(DIAG_DT) FROM TB_STRUCT_DIAG_HISTORY WHERE DATA_MODEL_ID = H.DATA_MODEL_ID AND STATUS = 'DONE')
+		       ) SD ON SD.DATA_MODEL_ID = A.DM_ID
+		 WHERE A.USE_YN = 'Y'
+		<if test="dmId != null and dmId != ''"> AND A.DM_ID = #{dmId} </if>
+		 ORDER BY A.DM_NM
+	</select>
+
+	<!-- 시스템 트리 (상위 코드·종류·이름 — 경로·단계는 서비스가 만든다) -->
+	<select id="selectSystems" resultType="java.util.LinkedHashMap">
+		SELECT SYS_CD AS "sysCd", P_SYS_CD AS "pSysCd", SYS_NM AS "sysNm", SYS_TP AS "sysTp"
+		  FROM TB_SYS_INFO
+		 ORDER BY SYS_NM
+	</select>
+
+	<select id="selectModelDictId" parameterType="String" resultType="String">
+		SELECT DICT_ID FROM TB_DATA_MODEL WHERE DM_ID = #{value}
+	</select>
+
+	<select id="selectDefaultDictId" resultType="String">
+		SELECT DICT_ID FROM TB_STD_DICT WHERE DEFAULT_YN = 'Y' ORDER BY DICT_ID LIMIT 1
+	</select>
+
+	<!-- ===== 배치 실행 (67) ===== -->
+	<insert id="insertBatchRun" parameterType="java.util.Map">
+		INSERT INTO TB_BATCH_RUN (RUN_ID, RUN_TP, STATUS, START_DT, DM_ID, DICT_ID, SCHEDULE_LOG_ID, CRET_USER_ID)
+		VALUES (#{runId}, #{runTp}, 'RUNNING', to_char(now(), 'YYYYMMDDHH24MISS'), #{dmId, jdbcType=VARCHAR}, #{dictId, jdbcType=VARCHAR},
+		        #{scheduleLogId, jdbcType=VARCHAR}, #{userId})
+	</insert>
+
+	<update id="finishBatchRun" parameterType="java.util.Map">
+		UPDATE TB_BATCH_RUN
+		   SET STATUS = #{status}, END_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
+		       SUMMARY = #{summary, jdbcType=VARCHAR}, ERROR_MSG = #{errorMsg, jdbcType=VARCHAR}
+		 WHERE RUN_ID = #{runId}
+	</update>
+
+	<select id="selectBatchRunStatus" parameterType="String" resultType="String">
+		SELECT STATUS FROM TB_BATCH_RUN WHERE RUN_ID = #{value}
+	</select>
+
+	<select id="selectBatchRun" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT R.RUN_ID AS "runId", R.RUN_TP AS "runTp", R.STATUS AS "status", R.START_DT AS "startDt", R.END_DT AS "endDt",
+		       R.DM_ID AS "dmId", (SELECT DM_NM FROM TB_DATA_MODEL WHERE DM_ID = R.DM_ID) AS "dmNm",
+		       R.DICT_ID AS "dictId", (SELECT DICT_NM FROM TB_STD_DICT WHERE DICT_ID = R.DICT_ID) AS "dictNm",
+		       R.SUMMARY AS "summary", R.ERROR_MSG AS "errorMsg", R.CRET_USER_ID AS "cretUserId"
+		  FROM TB_BATCH_RUN R
+		 WHERE R.RUN_ID = #{value}
+	</select>
+
+	<!-- 실행 목록 — runTp, dictId(미사용 표준) 로 거름. 최근 50건 -->
+	<select id="selectBatchRuns" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT R.RUN_ID AS "runId", R.RUN_TP AS "runTp", R.STATUS AS "status", R.START_DT AS "startDt", R.END_DT AS "endDt",
+		       R.DICT_ID AS "dictId", R.SUMMARY AS "summary", R.CRET_USER_ID AS "cretUserId"
+		  FROM TB_BATCH_RUN R
+		 WHERE R.RUN_TP = #{runTp}
+		<if test="dictId != null and dictId != ''"> AND R.DICT_ID = #{dictId} </if>
+		<if test='doneOnly == "Y"'> AND R.STATUS = 'DONE' </if>
+		 ORDER BY R.START_DT DESC
+		 LIMIT 50
+	</select>
+
+	<insert id="insertSnapshot" parameterType="java.util.Map">
+		INSERT INTO TB_COMPLIANCE_SNAPSHOT (RUN_ID, SNAP_DT, DM_ID, DM_NM, SYS_CD, DICT_ID, OBJ_CNT, ATTR_CNT,
+		       TOTAL_COL_CNT, ISSUE_COL_CNT, STND_RATE, DIAG_END_DT, STRUCT_TOTAL, STRUCT_DIFF, STRUCT_RATE, STRUCT_DIAG_DT)
+		VALUES (#{runId}, #{snapDt}, #{dmId}, #{dmNm, jdbcType=VARCHAR}, #{sysCd, jdbcType=VARCHAR}, #{dictId, jdbcType=VARCHAR},
+		        #{objCnt, jdbcType=INTEGER}, #{attrCnt, jdbcType=INTEGER},
+		        #{totalColCnt, jdbcType=INTEGER}, #{issueColCnt, jdbcType=INTEGER}, #{stndRate, jdbcType=NUMERIC}, #{diagEndDt, jdbcType=VARCHAR},
+		        #{structTotal, jdbcType=INTEGER}, #{structDiff, jdbcType=INTEGER}, #{structRate, jdbcType=NUMERIC}, #{structDiagDt, jdbcType=VARCHAR})
+	</insert>
+
+	<!-- 여러 건을 한 번에 — {runId, kind, rows} (건마다 INSERT 하면 용어 1만여 건에 3분 넘게 걸렸다) -->
+	<insert id="insertUnusedResults" parameterType="java.util.Map">
+		INSERT INTO TB_UNUSED_STD_RESULT (RUN_ID, KIND, STD_ID, STD_NM, ENG_ABRV_NM, EXTRA, APRV_YN, CRET_DT)
+		VALUES
+		<foreach collection="rows" item="r" separator=",">
+		(#{runId}, #{kind}, #{r.id}, #{r.nm, jdbcType=VARCHAR}, #{r.engAbrvNm, jdbcType=VARCHAR}, #{r.extra, jdbcType=VARCHAR},
+		 #{r.aprvYn, jdbcType=CHAR}, #{r.cretDt, jdbcType=VARCHAR})
+		</foreach>
+	</insert>
+
+	<!-- 저장된 미사용 표준 — 화면 목록과 같은 키(id·nm·engAbrvNm·extra·aprvYn·cretDt) -->
+	<select id="selectUnusedResults" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT STD_ID AS "id", STD_NM AS "nm", ENG_ABRV_NM AS "engAbrvNm", EXTRA AS "extra", APRV_YN AS "aprvYn", CRET_DT AS "cretDt"
+		  FROM TB_UNUSED_STD_RESULT
+		 WHERE RUN_ID = #{runId} AND KIND = #{kind}
+		<if test="keyword != null and keyword != ''"> AND (STD_NM ILIKE '%' || #{keyword} || '%' OR ENG_ABRV_NM ILIKE '%' || #{keyword} || '%') </if>
+		 ORDER BY STD_NM
+	</select>
+
+	<!-- 스냅샷 (추이) — 모델 목록의 스냅샷을 실행 순서대로 -->
+	<select id="selectSnapshots" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT S.RUN_ID AS "runId", S.SNAP_DT AS "snapDt", S.DM_ID AS "dmId", S.TOTAL_COL_CNT AS "totalColCnt", S.ISSUE_COL_CNT AS "issueColCnt",
+		       S.STRUCT_TOTAL AS "structTotal", S.STRUCT_DIFF AS "structDiff"
+		  FROM TB_COMPLIANCE_SNAPSHOT S
+		 WHERE S.DM_ID IN <foreach collection="dmIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+		 ORDER BY S.SNAP_DT, S.RUN_ID
+	</select>
+
+	<!-- ===== DA 목표 (66) ===== -->
+	<select id="selectTargets" resultType="java.util.LinkedHashMap">
+		SELECT TARGET_TP AS "targetTp", TARGET_ID AS "targetId", STND_RATE_GOAL AS "stndRateGoal", STRUCT_RATE_GOAL AS "structRateGoal",
+		       TARGET_DESC AS "targetDesc", UPDT_DT AS "updtDt", UPDT_USER_ID AS "updtUserId"
+		  FROM TB_DA_TARGET
+	</select>
+
+	<select id="countTargetObject" parameterType="java.util.Map" resultType="int">
+		<choose>
+			<when test='targetTp == "SYS"'>SELECT COUNT(*) FROM TB_SYS_INFO WHERE SYS_CD = #{targetId}</when>
+			<otherwise>SELECT COUNT(*) FROM TB_DATA_MODEL WHERE DM_ID = #{targetId} AND USE_YN = 'Y'</otherwise>
+		</choose>
+	</select>
+
+	<insert id="upsertTarget" parameterType="java.util.Map">
+		INSERT INTO TB_DA_TARGET (TARGET_TP, TARGET_ID, STND_RATE_GOAL, STRUCT_RATE_GOAL, TARGET_DESC, UPDT_DT, UPDT_USER_ID)
+		VALUES (#{targetTp}, #{targetId}, #{stndRateGoal, jdbcType=NUMERIC}, #{structRateGoal, jdbcType=NUMERIC}, #{targetDesc, jdbcType=VARCHAR},
+		        to_char(now(), 'YYYYMMDDHH24MISS'), #{userId})
+		ON CONFLICT (TARGET_TP, TARGET_ID) DO UPDATE
+		   SET STND_RATE_GOAL = EXCLUDED.STND_RATE_GOAL, STRUCT_RATE_GOAL = EXCLUDED.STRUCT_RATE_GOAL, TARGET_DESC = EXCLUDED.TARGET_DESC,
+		       UPDT_DT = EXCLUDED.UPDT_DT, UPDT_USER_ID = EXCLUDED.UPDT_USER_ID
+	</insert>
+
+	<delete id="deleteTarget" parameterType="java.util.Map">
+		DELETE FROM TB_DA_TARGET WHERE TARGET_TP = #{targetTp} AND TARGET_ID = #{targetId}
+	</delete>
+
+</mapper>

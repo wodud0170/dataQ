@@ -47,6 +47,7 @@ MENUS = [
     "nav_unusedStd",   # 104 WP7
     "nav_stdImport",   # 104 WP5(14·11)
     "nav_udpDef",   # 104 WP8
+    "nav_daSystemStat",   # 104 WP9
 ]
 
 results = []

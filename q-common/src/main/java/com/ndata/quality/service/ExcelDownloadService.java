@@ -89,9 +89,10 @@ public class ExcelDownloadService {
         IOUtils.copy(stream, response.getOutputStream());
     }
 
-    /** 104번 WP7-27 — 미사용 표준 목록 (단어·용어·도메인 중 하나, 화면과 같은 필터) */
+    /** 104번 WP7-27 — 미사용 표준 목록 (단어·용어·도메인 중 하나, 화면과 같은 필터). WP9-67 — filter 에 runId 가 있으면 예약 실행이 저장한 결과 */
     public void getUnusedStdExcel(String kind, Map<String, Object> filter, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        String sqlId = "WORD".equals(kind) ? "unusedStd.selectUnusedWords" : "DOMAIN".equals(kind) ? "unusedStd.selectUnusedDomains" : "unusedStd.selectUnusedTerms";
+        String sqlId = filter.get("runId") != null ? "daStat.selectUnusedResults"
+                : "WORD".equals(kind) ? "unusedStd.selectUnusedWords" : "DOMAIN".equals(kind) ? "unusedStd.selectUnusedDomains" : "unusedStd.selectUnusedTerms";
         String kindNm = "WORD".equals(kind) ? "단어" : "DOMAIN".equals(kind) ? "도메인" : "용어";
         List<Map<String, Object>> rows = sqlSessionTemplate.selectList(sqlId, filter);
         List<String[]> headers = Arrays.asList(
@@ -120,6 +121,57 @@ public class ExcelDownloadService {
         Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
         ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
         IOUtils.copy(stream, response.getOutputStream());
+    }
+
+    // 104번 WP9-62·66 — 시스템별 현황 (시스템 트리 순서, 하위 포함 집계)
+    public void getDaSystemsExcel(List<Map<String, Object>> rows, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        List<String[]> headers = Arrays.asList(
+            new String[]{"시스템","40","LEFT"},
+            new String[]{"모델 수","8","RIGHT"},
+            new String[]{"테이블 수","10","RIGHT"},
+            new String[]{"컬럼 수","10","RIGHT"},
+            new String[]{"표준 준수율(%)","12","RIGHT"},
+            new String[]{"표준 준수율 목표(%)","14","RIGHT"},
+            new String[]{"표준 달성","10","CENTER"},
+            new String[]{"구조 일치율(%)","12","RIGHT"},
+            new String[]{"구조 일치율 목표(%)","14","RIGHT"},
+            new String[]{"구조 달성","10","CENTER"},
+            new String[]{"추가 컬럼","10","RIGHT"},
+            new String[]{"변경 컬럼","10","RIGHT"},
+            new String[]{"삭제 컬럼","10","RIGHT"},
+            new String[]{"표준 진단 안 한 모델","16","RIGHT"},
+            new String[]{"구조 진단 안 한 모델","16","RIGHT"},
+            new String[]{"목표 출처","14","LEFT"}
+        );
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("HEADER1", r.get("path"));
+            m.put("HEADER2", r.get("modelCnt"));
+            m.put("HEADER3", r.get("objCnt"));
+            m.put("HEADER4", r.get("attrCnt"));
+            m.put("HEADER5", r.get("stndRate"));
+            m.put("HEADER6", r.get("stndGoal"));
+            m.put("HEADER7", achvNm(r.get("stndAchv")));
+            m.put("HEADER8", r.get("structRate"));
+            m.put("HEADER9", r.get("structGoal"));
+            m.put("HEADER10", achvNm(r.get("structAchv")));
+            m.put("HEADER11", r.get("addedColumns"));
+            m.put("HEADER12", r.get("modifiedColumns"));
+            m.put("HEADER13", r.get("deletedColumns"));
+            m.put("HEADER14", r.get("undiagStndCnt"));
+            m.put("HEADER15", r.get("undiagStructCnt"));
+            m.put("HEADER16", r.get("goalSrc"));
+            list.add(m);
+        }
+        String fileName = "시스템별현황_" + StringUtils.getTimeString(System.currentTimeMillis(), "yyyyMMddHHmmss");
+        Map<String, Object> excelMap = setExcelMap(headers, list, fileName);
+        ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
+        IOUtils.copy(stream, response.getOutputStream());
+    }
+
+    private static String achvNm(Object a) {
+        return "Y".equals(a) ? "달성" : "N".equals(a) ? "미달" : "";
     }
 
     private static String privSrcNm(String src) {

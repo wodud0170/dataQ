@@ -115,6 +115,21 @@
           <div style="font-size:.75rem; color:#546E7A;">연결된 구조변경 진단 ID</div>
           <code style="font-size:.7rem;">{{ detail.structDiagId }}</code>
         </v-card>
+        <!-- 104번 WP9-67 — 준수 현황 스냅샷·미사용 표준 결과 -->
+        <v-card v-if="detail.batchRunId" id="schLogBatch" outlined class="pa-3 mt-3">
+          <div style="font-size:.75rem; color:#546E7A;">배치 결과</div>
+          <template v-if="batchRun">
+            <div style="font-size:.85rem;">
+              <v-chip x-small :color="statusColor(batchRun.status)" text-color="white" class="mr-1">{{ batchRun.status }}</v-chip>
+              {{ batchRun.summary || '' }}
+            </div>
+            <div style="font-size:.75rem; color:#78909C;" class="mt-1">
+              {{ batchRun.runTp === 'UNUSED_STD' ? '사전: ' + (batchRun.dictNm || batchRun.dictId || '-') + ' — 표준 사전 > 미사용 표준의 "예약 실행 결과" 에서 목록을 봅니다'
+                : '모델: ' + (batchRun.dmNm || '사용 중 모델 전부') + ' — 데이터 모델 > 시스템별 현황의 추이에 쓰입니다' }}
+            </div>
+          </template>
+          <code v-else style="font-size:.7rem;">{{ detail.batchRunId }}</code>
+        </v-card>
         <v-card v-if="detail.govMetaSendId" outlined class="pa-3 mt-3">
           <div style="font-size:.75rem; color:#546E7A;">연결된 범정부 메타 생성 이력 ([범정부 메타 > 생성·전송] 이력에서 검증 결과를 봅니다)</div>
           <code style="font-size:.7rem;">{{ detail.govMetaSendId }}</code>
@@ -154,6 +169,7 @@ export default {
       ],
       drawerOpen: false,
       detail: null,
+      batchRun: null,   // 104번 WP9-67 — 선택한 실행의 배치 결과
     };
   },
   mounted() {
@@ -183,12 +199,17 @@ export default {
     openDetail(row) {
       this.detail = row;
       this.drawerOpen = true;
+      // 104번 WP9-67 — 배치 결과 (상태·요약)
+      this.batchRun = null;
+      if (row.batchRunId) {
+        axios.post(this.$APIURL.base + "api/batchRun/get", { runId: row.batchRunId }).then(r => { this.batchRun = r.data || null; }).catch(() => {});
+      }
     },
     diagTypeLabel(t) {
-      return { STANDARD: '표준화', STRUCT: '구조변경', BOTH: '전체', GOV_META: '범정부 메타' }[t] || t || '-';
+      return { STANDARD: '표준화', STRUCT: '구조변경', BOTH: '전체', GOV_META: '범정부 메타', COMPLIANCE_SNAPSHOT: '준수 현황 스냅샷', UNUSED_STD: '미사용 표준' }[t] || t || '-';
     },
     diagTypeColor(t) {
-      return { STANDARD: 'blue', STRUCT: 'deep-purple', BOTH: 'teal', GOV_META: 'brown' }[t] || 'grey';
+      return { STANDARD: 'blue', STRUCT: 'deep-purple', BOTH: 'teal', GOV_META: 'brown', COMPLIANCE_SNAPSHOT: 'indigo', UNUSED_STD: 'blue-grey' }[t] || 'grey';
     },
     statusColor(s) {
       return { DONE: 'green', ERROR: 'red', SKIPPED: 'grey', RUNNING: 'blue' }[s] || 'grey';

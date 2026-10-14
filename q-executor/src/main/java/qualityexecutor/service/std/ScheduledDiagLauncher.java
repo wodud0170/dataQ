@@ -44,6 +44,9 @@ public class ScheduledDiagLauncher {
     @Autowired
     private GovMetaService govMetaService;
 
+    @Autowired
+    private BatchRunService batchRunService;
+
     /**
      * 스케줄 1건 실행. 이미 LOG_ID 가 있으면(runNow) 그 로그를 사용, 없으면 새로 생성.
      *
@@ -89,6 +92,15 @@ public class ScheduledDiagLauncher {
                 p.put("logId",         logId);
                 p.put("govMetaSendId", sendId);
                 sql.update("diagSchedule.setLogGovMetaSendId", p);
+            }
+            // 104번 WP9-67 — 준수 현황 스냅샷·미사용 표준 (모델이 비어 있을 수 있다)
+            if ("COMPLIANCE_SNAPSHOT".equals(diagType) || "UNUSED_STD".equals(diagType)) {
+                String runId = batchRunService.start(diagType, sc.getDataModelId(),
+                        sc.getCretUserId() != null ? sc.getCretUserId() : "SCHEDULER", logId);
+                Map<String, Object> p = new HashMap<>();
+                p.put("logId",      logId);
+                p.put("batchRunId", runId);
+                sql.update("diagSchedule.setLogBatchRunId", p);
             }
 
             return logId;

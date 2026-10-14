@@ -13,7 +13,14 @@
 	</sql>
 
 	<!-- 단어 — 어떤 용어의 구성 단어도 아니고, 어떤 컬럼명 토큰('_' 로 나눈 것)에도 없는 단어 -->
+	<!-- 104번 WP9 — 쓰인 토큰·컬럼명을 먼저 모으고 NOT IN(해시)으로 뺀다. NOT EXISTS 는 행마다 컬럼 전체를 훑는 중첩 루프로 계획되어
+	     용어 1만여 건에 100초 넘게 걸렸다 -->
 	<select id="selectUnusedWords" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		WITH USED AS MATERIALIZED (
+		SELECT DISTINCT UNNEST(string_to_array(UPPER(TRIM(A.ATTR_NM)), '_')) AS TOK
+		<include refid="colJoin"/>
+		   AND <include refid="modelDict"/> = #{dictId}
+		)
 		SELECT W.WORD_ID AS "id", W.WORD_NM AS "nm", W.WORD_ENG_ABRV_NM AS "engAbrvNm",
 		       CASE WHEN W.WORD_CLSF_YN = 'Y' THEN '형식단어' ELSE '' END AS "extra",
 		       W.APRV_YN AS "aprvYn",
@@ -23,15 +30,18 @@
 		<if test='aprvOnly == "Y"'> AND W.APRV_YN = 'Y' </if>
 		<if test="keyword != null and keyword != ''"> AND (W.WORD_NM ILIKE '%' || #{keyword} || '%' OR W.WORD_ENG_ABRV_NM ILIKE '%' || #{keyword} || '%') </if>
 		   AND NOT EXISTS (SELECT 1 FROM TB_TERMS_WORDS TW WHERE TW.WORD_ID = W.WORD_ID)
-		   AND NOT EXISTS (SELECT 1 <include refid="colJoin"/>
-		                      AND <include refid="modelDict"/> = W.DICT_ID
-		                      AND W.WORD_ENG_ABRV_NM = ANY(string_to_array(UPPER(TRIM(A.ATTR_NM)), '_')))
+		   AND (W.WORD_ENG_ABRV_NM IS NULL OR W.WORD_ENG_ABRV_NM NOT IN (SELECT U.TOK FROM USED U))
 		 ORDER BY W.WORD_NM
-		 LIMIT 5000
+		<if test='noLimit != "Y"'> LIMIT 5000 </if>
 	</select>
 
 	<!-- 용어(코드 포함) — 어떤 컬럼에도 쓰이지 않는 용어 (컬럼명 = 용어 영문약어명인 컬럼이 없음) -->
 	<select id="selectUnusedTerms" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		WITH USED AS MATERIALIZED (
+		SELECT DISTINCT TRIM(A.ATTR_NM) AS NM
+		<include refid="colJoin"/>
+		   AND <include refid="modelDict"/> = #{dictId}
+		)
 		SELECT T.TERMS_ID AS "id", T.TERMS_NM AS "nm", T.TERMS_ENG_ABRV_NM AS "engAbrvNm",
 		       COALESCE(T.DOMAIN_NM, '') || CASE WHEN T.CODE_GRP IS NOT NULL THEN ' (코드 ' || T.CODE_GRP || ')' ELSE '' END AS "extra",
 		       T.APRV_YN AS "aprvYn",
@@ -40,11 +50,9 @@
 		 WHERE T.DICT_ID = #{dictId}
 		<if test='aprvOnly == "Y"'> AND T.APRV_YN = 'Y' </if>
 		<if test="keyword != null and keyword != ''"> AND (T.TERMS_NM ILIKE '%' || #{keyword} || '%' OR T.TERMS_ENG_ABRV_NM ILIKE '%' || #{keyword} || '%') </if>
-		   AND NOT EXISTS (SELECT 1 <include refid="colJoin"/>
-		                      AND <include refid="modelDict"/> = T.DICT_ID
-		                      AND TRIM(A.ATTR_NM) = T.TERMS_ENG_ABRV_NM)
+		   AND (T.TERMS_ENG_ABRV_NM IS NULL OR T.TERMS_ENG_ABRV_NM NOT IN (SELECT U.NM FROM USED U))
 		 ORDER BY T.TERMS_NM
-		 LIMIT 5000
+		<if test='noLimit != "Y"'> LIMIT 5000 </if>
 	</select>
 
 	<!-- 도메인 — 어떤 용어도 쓰지 않는 도메인 -->
@@ -59,7 +67,7 @@
 		<if test="keyword != null and keyword != ''"> AND D.DOMAIN_NM ILIKE '%' || #{keyword} || '%' </if>
 		   AND NOT EXISTS (SELECT 1 FROM TB_TERMS T WHERE T.DICT_ID = D.DICT_ID AND T.DOMAIN_NM = D.DOMAIN_NM)
 		 ORDER BY D.DOMAIN_NM
-		 LIMIT 5000
+		<if test='noLimit != "Y"'> LIMIT 5000 </if>
 	</select>
 
 </mapper>

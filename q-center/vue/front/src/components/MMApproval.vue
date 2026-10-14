@@ -200,6 +200,24 @@
         </v-simple-table>
       </div>
 
+      <!-- 104번 WP9-55 — 이 항목의 변경 이력 (등록·수정·결재자 수정 후 승인) — 행을 펼치면 전후 비교 -->
+      <v-divider class="my-3" v-if="changeHistory.length > 0"></v-divider>
+      <div v-if="changeHistory.length > 0" id="aprvChangeHistory">
+        <div class="text-caption font-weight-bold mb-1">변경 이력</div>
+        <v-data-table :headers="changeHeaders" :items="changeHistory" item-key="changeId" show-expand single-expand
+          :expanded.sync="changeExpanded" dense hide-default-footer :items-per-page="-1" class="chg-table">
+          <template #item.changeType="{ item }">
+            <v-chip x-small outlined>{{ changeTypeNm(item.changeType) }}</v-chip>
+          </template>
+          <template #item.changeDt="{ item }"><span class="nowrap">{{ item.changeDt }}</span></template>
+          <template #expanded-item="{ headers: hs, item }">
+            <td :colspan="hs.length" class="chg-diff-cell">
+              <ChangeDiffTable :before="item.prevValue" :after="item.currValue" kind="STD" />
+            </td>
+          </template>
+        </v-data-table>
+      </div>
+
       <!-- 단어 반려 시 연관 용어 경고 -->
       <v-alert v-if="relatedTermsWarning.length > 0" type="warning" dense outlined class="mt-3">
         이 단어를 반려하면 다음 미승인 용어도 함께 삭제됩니다:
@@ -230,10 +248,11 @@ import axios from "axios";
 import { eventBus } from '../eventBus';
 import DatePicker from 'vue2-datepicker';
 import 'vue2-datepicker/index.css';
+import ChangeDiffTable from './ChangeDiffTable.vue';
 
 export default {
   name: 'MMApproval',
-  components: { DatePicker },
+  components: { DatePicker, ChangeDiffTable },
   props: ['isMobile', 'approvalStatus'],
   data: () => ({
     approvalAllItems: [],
@@ -258,6 +277,16 @@ export default {
     batchRejectReason: '',
     // 승인 이력
     approvalHistory: [],
+    // 104번 WP9-55 — 이 항목의 변경 이력 (전후 비교)
+    changeHistory: [],
+    changeExpanded: [],
+    changeHeaders: [
+      { text: "유형", value: "changeType", width: "90px" },
+      { text: "변경일시", value: "changeDt", width: "180px" },
+      { text: "변경자", value: "changeUserId", width: "110px" },
+      { text: "요약", value: "summary" },
+      { text: "전후", value: "data-table-expand", width: "64px", sortable: false },
+    ],
     approvalHeaders: [
       { text: '항목명', align: 'center', sortable: false, value: 'reqItemNm' },
       { text: '영문명', align: 'center', sortable: false, value: 'reqItemEngNm' },
@@ -356,6 +385,17 @@ export default {
           .then(res => { this.approvalHistory = res.data || []; })
           .catch(() => {});
       }
+      // 104번 WP9-55 — 이 항목의 변경 이력 (변경 이력 대상 유형: 용어는 TERM)
+      this.changeHistory = [];
+      this.changeExpanded = [];
+      if (item.reqItemId) {
+        axios.post(this.$APIURL.base + "api/std/getChangeHistoryByTarget", { targetType: reqTpRaw === 'TERMS' ? 'TERM' : reqTpRaw, targetId: item.reqItemId })
+          .then(res => { this.changeHistory = res.data || []; })
+          .catch(() => {});
+      }
+    },
+    changeTypeNm(t) {
+      return { INSERT: '등록', UPDATE: '수정', DELETE: '삭제', BULK_INSERT: '일괄등록' }[t] || t;
     },
     getTermDetail(nm, dictId) {
       axios.get(this.$APIURL.base + "api/std/getTermsInfoByNm", { params: { termsNm: nm, dictId: dictId } })
@@ -539,6 +579,11 @@ export default {
 </script>
 
 <style scoped>
+/* 104번 WP9-55 */
+.chg-table { border: 1px solid #E0E0E0; }
+.chg-diff-cell { background: #FAFBFF; padding: 8px 16px 12px !important; }
+.chg-table >>> th { white-space: nowrap; }
+.nowrap { white-space: nowrap; }
 .splitTopWrapper {
   display: flex;
   justify-content: space-between;

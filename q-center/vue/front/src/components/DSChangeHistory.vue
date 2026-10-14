@@ -148,6 +148,7 @@
 
 <script>
 import axios from "axios";
+import { parseVoString, fieldLabel } from "./changeDiff";
 
 export default {
     name: "DSChangeHistory",
@@ -236,48 +237,12 @@ export default {
         }
     },
     methods: {
-        // 86번 #34 — VO toString 파싱 ("ClassName(field1=val1, field2=val2)")
+        // 86번 #34 — VO toString 파싱. 104번 WP9-55 — 다른 전후 비교 화면과 같은 코드(changeDiff.js)를 쓴다
         _parseVoString(s) {
-            if (!s || typeof s !== 'string') return [];
-            // ClassName( ... ) 형식 추출 — `s` flag 대신 [\s\S] 로 줄바꿈 포함 매칭 (구 babel 호환)
-            const m = s.match(/^[A-Za-z0-9_]+\(([\s\S]*)\)$/);
-            const inner = m ? m[1] : s;
-            // field=value 분리 — 단순 ", " split (값에 comma 가 들어가면 부정확하지만 대부분 안전)
-            const out = [];
-            // 토큰화: lookahead 로 '단어=' 직전 ', ' 만 split
-            const tokens = inner.split(/, (?=[A-Za-z_][A-Za-z0-9_]*=)/);
-            for (const t of tokens) {
-                const eq = t.indexOf('=');
-                if (eq < 0) continue;
-                const key = t.substring(0, eq).trim();
-                const val = t.substring(eq + 1).trim();
-                // null / 빈배열 정리
-                let display = val;
-                if (display === 'null') display = '';
-                if (display === '[]') display = '';
-                // 시스템 필드 + 미사용/안전장치 컬럼 제외
-                // 86번 #37 — partOfSpeech / reqSysCd / reqSysNm / useYn 등은 사실상 안쓰는 컬럼이라 노출 안 함
-                if (['id','aprvUserId','aprvStatUpdtDt','updtUserId','cretUserId','cretDt','updtDt',
-                     'partOfSpeech','reqSysCd','reqSysNm','useYn'].includes(key)) continue;
-                out.push({ key: key, value: display });
-            }
-            return out;
+            return parseVoString(s);
         },
         getFieldLabel(key) {
-            const map = {
-                wordNm: '단어명', wordEngAbrvNm: '영문약어', wordEngNm: '영문명', wordDesc: '단어설명',
-                wordClsfYn: '형식단어', domainClsfNm: '도메인분류', commStndYn: '공통표준',
-                magntdOrd: '제정차수', allophSynmLst: '이음동의어', forbdnWordLst: '금칙어',
-                aprvYn: '승인상태', useYn: '사용여부', reqSysCd: '요청시스템',
-                termsNm: '용어명', termsEngAbrvNm: '영문약어', termsDesc: '용어설명',
-                domainNm: '도메인명', codeGrp: '코드그룹', chrgOrg: '담당기관',
-                domainGrpNm: '도메인그룹', dataType: '데이터타입', dataLen: '데이터길이',
-                dataDecimalLen: '소수점길이', dataUnit: '단위', storFmt: '저장형식',
-                exprFmtLst: '표현형식', allowValLst: '허용값',
-                codeNm: '코드명', codeEngNm: '코드영문명', codeDesc: '코드설명',
-                codeDataNm: '코드값명', codeDataNmEng: '코드값영문명', codeDataDesc: '코드값설명',
-            };
-            return map[key] || key;
+            return fieldLabel(key, 'STD');
         },
         search() {
             this.loading = true;

@@ -303,12 +303,17 @@ public class DiagScheduleController {
         if (vo.getScheduleNm() == null || vo.getScheduleNm().trim().isEmpty())
             throw new IllegalArgumentException("스케줄명 필수");
         if (vo.getDiagType() == null) throw new IllegalArgumentException("진단 유형 필수");
-        if (!"STANDARD".equals(vo.getDiagType()) && !"STRUCT".equals(vo.getDiagType())
-                && !"BOTH".equals(vo.getDiagType()) && !"GOV_META".equals(vo.getDiagType()))
-            throw new IllegalArgumentException("진단 유형은 STANDARD/STRUCT/BOTH/GOV_META");
-        if (vo.getDataModelId() == null) throw new IllegalArgumentException("데이터모델 필수");
+        if (!java.util.Arrays.asList("STANDARD", "STRUCT", "BOTH", "GOV_META", "COMPLIANCE_SNAPSHOT", "UNUSED_STD").contains(vo.getDiagType()))
+            throw new IllegalArgumentException("진단 유형은 STANDARD/STRUCT/BOTH/GOV_META/COMPLIANCE_SNAPSHOT/UNUSED_STD");
+        // 104번 WP9-67 — 준수 현황 스냅샷·미사용 표준은 모델을 비울 수 있다 (스냅샷은 사용 중 모델 전부, 미사용 표준은 기본 사전)
+        boolean batch = "COMPLIANCE_SNAPSHOT".equals(vo.getDiagType()) || "UNUSED_STD".equals(vo.getDiagType());
+        if (vo.getDataModelId() != null && vo.getDataModelId().trim().isEmpty()) vo.setDataModelId(null);
+        if (!batch && vo.getDataModelId() == null) throw new IllegalArgumentException("데이터모델 필수");
 
-        if ("GOV_META".equals(vo.getDiagType())) {
+        if (batch) {
+            if (vo.getDataModelId() != null && sqlSessionTemplate.selectOne("datamodel.selectDataModelById", vo.getDataModelId()) == null)
+                throw new IllegalArgumentException("데이터 모델을 찾을 수 없습니다.");
+        } else if ("GOV_META".equals(vo.getDiagType())) {
             // 104번 WP5-78 — 범정부 메타는 표준사전 대신 기관 설정과 모델 데이터소스(= DB)가 있어야 한다
             if (sqlSessionTemplate.selectOne("govMeta.selectConf") == null)
                 throw new IllegalArgumentException("범정부 메타 기관 설정이 없습니다. [범정부 메타 > 설정] 에서 먼저 저장해 주세요.");
