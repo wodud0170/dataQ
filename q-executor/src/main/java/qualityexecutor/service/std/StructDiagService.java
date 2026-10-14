@@ -348,6 +348,10 @@ public class StructDiagService implements Runnable {
                 String constraintQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetConstraints");
                 List<Map<String, Object>> currConstraintRows = new ArrayList<>();
                 if (constraintQuery != null) {
+                    // 104번 WP4 보완 — 수집과 같은 방식으로 FK 참조 칸을 채운다 (Cubrid)
+                    java.sql.Connection fkConn = dbHandler.getConnection(true);
+                    FkRefFiller fkRefs = new FkRefFiller(fkConn);
+                    try {
                     for (String schema : schemas) {
                         NamedParamStatement cpstmt = dbHandler.namedParamStatement(constraintQuery);
                         cpstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
@@ -364,9 +368,13 @@ public class StructDiagService implements Runnable {
                             row.put("refColumnNm", crs.getString("refColumnNm"));
                             row.put("deleteRule", crs.getString("deleteRule"));
                             row.put("status", crs.getString("status"));
+                            fkRefs.fill(schema, row);
                             currConstraintRows.add(row);
                         }
                         cpstmt.close(); crs.close();
+                    }
+                    } finally {
+                        dbHandler.freeConnection(fkConn);
                     }
                 }
                 Map<String, Map<String, Object>> prevCstMap = toConstraintMap(prevConstraints);

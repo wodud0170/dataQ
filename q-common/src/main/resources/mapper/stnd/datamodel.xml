@@ -1835,7 +1835,8 @@
 				'SELECT DISTINCT OWNER_NAME AS schemaNm FROM DB_CLASS WHERE is_system_class = ''NO'' AND CLASS_TYPE = ''CLASS'' ORDER BY OWNER_NAME'
 			</when>
 			<when test="_parameter == 'SQLServer'">
-				'SELECT name AS schemaNm FROM sys.schemas ORDER BY name'
+				<!-- 104번 WP4 보완 — sys·guest·db_owner 같은 시스템 스키마는 빼고 사용자 테이블이 있는 스키마만 -->
+				'SELECT s.name AS schemaNm FROM sys.schemas s WHERE EXISTS (SELECT 1 FROM sys.tables t WHERE t.schema_id = s.schema_id AND t.is_ms_shipped = 0) ORDER BY s.name'
 			</when>
 			<when test="_parameter == 'PostgreSQL'">
 				<!-- 기본 information_schema 조회는 테이블이 하나도 없는 빈 스키마까지 보여준다.

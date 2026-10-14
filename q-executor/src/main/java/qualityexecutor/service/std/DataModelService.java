@@ -307,6 +307,10 @@ public class DataModelService implements Runnable {
 				if (constraintQuery != null) {
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 중...");
 					java.util.List<String> collectedConstraintKeys = new java.util.ArrayList<>();
+					// 104번 WP4 보완 — 쿼리가 FK 참조 칸을 비워 두는 DBMS(Cubrid)는 JDBC 메타데이터로 채운다
+					java.sql.Connection fkConn = dbHandler.getConnection(true);
+					FkRefFiller fkRefs = new FkRefFiller(fkConn);
+					try {
 					for (String schemaNm : schemas) {
 						NamedParamStatement pstmt = dbHandler.namedParamStatement(constraintQuery);
 						pstmt.setString("owner", StringUtils.upperCase(schemaNm));
@@ -326,12 +330,16 @@ public class DataModelService implements Runnable {
 							param.put("deleteRule", rs.getString("deleteRule"));
 							param.put("status", rs.getString("status"));
 							try { param.put("searchCondition", rs.getString("searchCondition")); } catch (Exception ignore) {}
+							fkRefs.fill(schemaNm, param);
 							session.insert("datamodel.insertDataModelConstraint", param);
 							collectedConstraintKeys.add(schemaNm + "|" + rs.getString("tableNm") + "|" + rs.getString("constraintNm") + "|" + rs.getInt("columnPos"));
 							totalConstraintCnt++;
 						}
 						pstmt.close();
 						rs.close();
+					}
+					} finally {
+						dbHandler.freeConnection(fkConn);
 					}
 					// 86번 #11 — soft-delete 제거 (수집은 MERGE 전용)
 					session.commit();
