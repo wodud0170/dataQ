@@ -232,7 +232,7 @@ footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-si
   <ol class="verdicts">
     <li><strong>두 제품은 출발점이 다릅니다.</strong><span>SMETA 는 표준과 테이블을 메타에 등록하고 결재로 통제하며, 메타와 실제 DB 의 차이를 점검합니다. 우리는 DB 에서 수집한 모델을 표준사전으로 진단하고 고치는 흐름으로 만들고 있습니다. 기능 폭은 SMETA 가 넓습니다.</span></li>
     <li><strong>표준사전의 뼈대는 SMETA 기준선만큼 코드에 있습니다.</strong><span>단어·용어·도메인·금칙어·엑셀 일괄등록은 있고, 여러 벌의 사전은 구조만 있고 여러 경로가 기본 사전에 고정돼 있습니다. 비어 있는 곳은 코드 유형(계층·파생·통합), 도메인 그룹 다단계, 공통표준 골라 넣기, 개인정보·암호화 표시입니다.</span></li>
-    <li><strong>따라잡기 중 공공 사업에서 먼저 걸릴 것은 네 가지입니다.</strong><span>다단계 결재선, 역할별 권한, 범정부 데이터 플랫폼 연계, Tibero 수집. 넷 다 공공기관 사업에서 요구가 잦은 항목입니다.</span></li>
+    <li><strong>따라잡기 중 공공 사업에서 먼저 걸릴 것은 네 가지입니다.</strong><span>다단계 결재선, 역할별 권한, 범정부 데이터 플랫폼 연계, Tibero 수집. 넷 다 공공기관 사업에서 요구가 잦은 항목입니다. 단 Tibero 는 10-16 에 지원하지 않기로 정했습니다(104번 §3.3).</span></li>
     <li><strong>코드에 있지만 완성되지 않은 것이 일곱 가지입니다.</strong><span>DB 직접 반영(신규 테이블은 건너뛰고 Oracle 에서 실패), DBMS 를 가리지 않는 변경 DDL, 고른 사전이 반영되지 않는 여러 경로, 엑셀 일괄등록에서만 읽는 사전별 표준화 관례, 메뉴에 연결되지 않은 시스템 계층 화면, 화면 없는 주제영역, 결재 화면에 없는 변경 전후 비교.</span></li>
     <li><strong>차별 후보 7개는 검증할 가설입니다.</strong><span>한글 컬럼명 일괄 표준화, 진단 결과에서 만드는 조치 스크립트, 변경 등급별 결재 등. 대부분 SMETA 교육자료에 <em>나오지 않았다</em>는 것이지 SMETA 에 없다는 확인이 아니고, 우리 쪽도 실사용 검증 전입니다. 데모와 실제 기관 데이터로 확인하기 전에는 영업 자료에 쓰지 않습니다.</span></li>
   </ol>
@@ -548,7 +548,7 @@ footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-si
       <tr><td class="lv lv-1">1단계</td><td>다단계 결재선·조직·결재 알림</td><td>공공기관 사업에서 요구가 잦음. 지금은 관리자 한 명 승인이고 알림이 없음</td><td class="rows">50·51·56·57·71</td></tr>
       <tr><td class="lv lv-1">1단계</td><td>역할별 권한과 시스템 계층</td><td>역할 화면은 비어 있고 시스템 트리는 메뉴에 연결 안 됨. 결재·DDL 권한의 전제</td><td class="rows">49·72·73</td></tr>
       <tr><td class="lv lv-1">1단계</td><td>DBMS 별 DDL 과 DB 반영 완성</td><td>지금 문법으로는 신규 테이블과 Oracle 에서 [DB 반영] 이 동작하지 않음</td><td class="rows">9·44·46·47·48</td></tr>
-      <tr><td class="lv lv-1">1단계</td><td>Tibero·SQL Server 수집</td><td>접속은 되는데 수집 쿼리가 없음. 공공은 Tibero 비중이 큼</td><td class="rows">28·29</td></tr>
+      <tr><td class="lv lv-1">1단계</td><td>SQL Server 수집, MariaDB·Cubrid 보강</td><td>접속은 되는데 수집 쿼리가 없음. Tibero 는 10-16 에 지원하지 않기로 정함</td><td class="rows">28·29</td></tr>
       <tr><td class="lv lv-1">1단계</td><td>범정부 데이터 플랫폼 연계, 개인정보·암호화 표시</td><td>공공기관 메타 업무에서 빠질 수 없음. 공개 여부·개인정보는 연계 항목에도 들어감</td><td class="rows">16·78</td></tr>
       <tr><td class="lv lv-2">2단계</td><td>공공데이터 공통표준 골라 넣기</td><td>공공 사업 초기에 가장 먼저 하는 일. 지금은 엑셀로만 가능</td><td class="rows">14</td></tr>
       <tr><td class="lv lv-2">2단계</td><td>코드 유형, 도메인 그룹 다단계, 표준 운영 옵션</td><td>기관 코드 체계(계층·통합 코드)와 운영 관례를 그대로 담지 못함</td><td class="rows">3·4·13</td></tr>
