@@ -8,6 +8,7 @@
   R4. 표준 담당 해제 → 일반 사용자 UI: [관리] 그룹 미표시
 """
 import base64, json, subprocess, sys, time, traceback
+from dbcmd import PSQL
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -38,7 +39,7 @@ def login_api(user, pwd="123"):
 
 
 def clear_roles(user):
-    subprocess.run(["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres", "-c",
+    subprocess.run(PSQL + ["-c",
                     f"DELETE FROM quality.tb_user_role WHERE user_id='{user}'"],
                    capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
 

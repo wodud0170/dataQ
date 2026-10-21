@@ -14,6 +14,7 @@ api/dm/saveAttrs 와 api/dmApproval/* 을 직접 호출 (Selenium 으로 그리�
 7. Tier 1.5 swapAttrOrd (admin only) — 권한 거부 검증
 """
 import os, sys, time, base64, subprocess, traceback
+from dbcmd import PSQL
 import requests
 
 BASE_URL = "http://localhost:28091"
@@ -28,7 +29,7 @@ def record(name, ok, msg=""):
 
 def db_exec(sql):
     return subprocess.run(
-        ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres", "-t", "-c", sql],
+        PSQL + ["-t", "-c", sql],
         check=True, capture_output=True, text=True, timeout=10
     ).stdout.strip()
 

@@ -25,6 +25,7 @@
   P21. progress.pct 계산 정확도 (done/total*100 round)
 """
 import base64
+from dbcmd import PSQL
 import json
 import subprocess
 import sys
@@ -65,7 +66,7 @@ def ui_step(name, fn):
 
 
 def docker_psql(sql):
-    cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+    cmd = PSQL + [
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     return r.stdout.strip()

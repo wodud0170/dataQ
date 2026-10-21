@@ -11,6 +11,7 @@
 saveAttrs 분기 + UI 인테그레이션이 함께 동작해야 해서 1차 smoke 범위 외.
 """
 import os
+from dbcmd import PSQL
 import sys
 import time
 import traceback
@@ -256,7 +257,7 @@ def test_visibility_filter():
     """
     try:
         subprocess.run(
-            ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres", "-c", sql],
+            PSQL + ["-c", sql],
             check=True, capture_output=True, text=True, timeout=10
         )
     except Exception as e:
@@ -297,7 +298,7 @@ def test_visibility_filter():
     # cleanup
     try:
         subprocess.run(
-            ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+            PSQL + [
              "-c", "DELETE FROM quality.tb_data_model_attr WHERE attr_nm='TC4_DRAFT_COL' AND requester_user_id='test_user_xyz';"],
             check=True, capture_output=True, text=True, timeout=10
         )

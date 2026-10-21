@@ -8,6 +8,7 @@
 시험 결재선·단어·문서·알림은 끝에서 지운다.
 """
 import base64, subprocess, sys, time, traceback
+from dbcmd import PSQL
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -32,7 +33,7 @@ def step(name, fn):
 
 
 def psql(sql):
-    r = subprocess.run(["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres", "-At", "-c", sql],
+    r = subprocess.run(PSQL + ["-At", "-c", sql],
                        capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     return (r.stdout or "").strip()
 

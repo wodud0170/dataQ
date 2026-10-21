@@ -19,6 +19,7 @@
 검증 도구: dataq-db psql 직접 SQL (서버 매퍼 호출 X — 매퍼 로직 자체 검증).
 """
 import subprocess
+from dbcmd import PSQL
 import sys
 import time
 import traceback
@@ -39,7 +40,7 @@ def step(name, fn):
 
 def docker_psql(sql):
     """dataq-db SQL 실행 (단건). -t -A 로 헤더 없는 결과만."""
-    cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+    cmd = PSQL + [
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     return r.stdout.strip()

@@ -5,6 +5,7 @@
 실패하면 어느 결함이 남았는지 번호로 나온다.
 """
 import base64
+from dbcmd import PSQL
 import subprocess
 import sys
 
@@ -19,7 +20,7 @@ results = []
 
 def psql(sql):
     out = subprocess.run(
-        ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+        PSQL + [
          "-tAc", "SET search_path TO quality; " + sql],
         capture_output=True, text=True, timeout=30, encoding="utf-8")
     return (out.stdout or "").strip()

@@ -19,6 +19,7 @@
   P15. UI — 분류 탭 클릭 → 분류별 막대 노출
 """
 import base64
+from dbcmd import PSQL
 import subprocess
 import sys
 import time
@@ -57,7 +58,7 @@ def ui_step(name, fn):
 
 
 def docker_psql(sql):
-    cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+    cmd = PSQL + [
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     return r.stdout.strip()

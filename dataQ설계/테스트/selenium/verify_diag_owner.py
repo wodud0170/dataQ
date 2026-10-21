@@ -11,6 +11,7 @@
   실제 저장된 이슈 건수와 정확히 일치하는지 본다. 팬아웃이 있으면 합이 더 크다.
 """
 import base64
+from dbcmd import PSQL
 import subprocess
 import sys
 import time
@@ -31,7 +32,7 @@ def unwrap(resp):
 
 def psql(sql):
     out = subprocess.run(
-        ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+        PSQL + [
          "-tAc", "SET search_path TO quality; " + sql],
         capture_output=True, text=True, timeout=30, encoding="utf-8")
     return (out.stdout or "").strip()

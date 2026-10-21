@@ -9,6 +9,7 @@ Cubrid `cubrid-test`(33000, DB wp4utf 소유자 WP4CUB). 비밀번호는 환경 
          [수집] → [수집 진행] → "수집이 완료되었습니다." → 테이블 3·컬럼 12·인덱스·제약조건(FK 참조 대상 포함)
 """
 import base64, os, subprocess, sys, time, traceback
+from dbcmd import PSQL
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -46,7 +47,7 @@ def step(name, fn):
 
 
 def psql(sql):
-    r = subprocess.run(["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres", "-At", "-c", sql],
+    r = subprocess.run(PSQL + ["-At", "-c", sql],
                        capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     return (r.stdout or "").strip()
 

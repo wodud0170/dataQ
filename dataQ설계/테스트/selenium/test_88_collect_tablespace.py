@@ -13,6 +13,7 @@ dm-collect.xml 의 OracleGetObjs 에 추가한 S1.TABLESPACE_NAME 수집이
 실행: python test_88_collect_tablespace.py
 """
 import sys
+from dbcmd import PSQL
 import time
 import base64
 import subprocess
@@ -58,7 +59,7 @@ def login(uid):
 
 def db_exec(sql, schema="quality"):
     return subprocess.run(
-        ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+        PSQL + [
          "-t", "-c", f"SET search_path TO {schema}; " + sql],
         check=True, capture_output=True, text=True, timeout=15
     ).stdout.strip()

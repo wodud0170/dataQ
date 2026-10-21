@@ -8,6 +8,7 @@
   - 통계 메뉴 / 시계열 결과까지 따라감
 """
 import base64, json, subprocess, sys, time, traceback, uuid
+from dbcmd import PSQL
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -44,7 +45,7 @@ def login(s):
 def db(sql):
     """docker exec dataq-db psql 으로 직접 query — 단일 결과"""
     out = subprocess.check_output(
-        ["docker", "exec", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+        PSQL + [
          "-A", "-t", "-F", "|", "-c", sql],
         stderr=subprocess.STDOUT
     ).decode("utf-8", errors="ignore").strip().splitlines()

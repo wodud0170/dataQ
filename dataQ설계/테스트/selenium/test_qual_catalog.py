@@ -22,6 +22,7 @@
 매퍼 & Controller 동시 검증.
 """
 import base64
+from dbcmd import PSQL
 import json
 import subprocess
 import sys
@@ -51,7 +52,7 @@ def step(name, fn):
 
 
 def docker_psql(sql):
-    cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+    cmd = PSQL + [
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     return r.stdout.strip()
@@ -271,7 +272,7 @@ def main():
         with open(r"C:\Users\장재영\Desktop\dataQ\dataQ설계\sync\qual_rule_catalog_seed_2026-05-07.sql",
                   encoding="utf-8") as f:
             sql_text = f.read()
-        cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres"]
+        cmd = PSQL
         r = subprocess.run(cmd, input=sql_text, capture_output=True, text=True, encoding="utf-8")
         # 결과 시드 43건 유지 (DELETE-INSERT 멱등)
         cnt = int(docker_psql(

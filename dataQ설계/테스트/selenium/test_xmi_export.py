@@ -16,6 +16,7 @@
   P12. UI — 모델 선택 후 추출 버튼 활성
 """
 import base64
+from dbcmd import PSQL
 import io
 import os
 import subprocess
@@ -42,7 +43,7 @@ def step(name, fn):
 
 
 def docker_psql(sql):
-    cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+    cmd = PSQL + [
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     return r.stdout.strip()

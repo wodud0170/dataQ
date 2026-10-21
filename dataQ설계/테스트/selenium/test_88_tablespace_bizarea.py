@@ -19,6 +19,7 @@ API + DB 직접 검증 방식 (test_88_governance_e2e.py 패턴).
 실행: python test_88_tablespace_bizarea.py
 """
 import sys
+from dbcmd import PSQL
 import json
 import base64
 import subprocess
@@ -52,7 +53,7 @@ def login(uid):
 def db_exec(sql):
     """docker dataq-db 에서 psql 직접 실행 (quality 스키마)"""
     return subprocess.run(
-        ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+        PSQL + [
          "-t", "-c", "SET search_path TO quality; " + sql],
         check=True, capture_output=True, text=True, timeout=15
     ).stdout.strip()

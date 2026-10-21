@@ -9,6 +9,7 @@
 시험 시스템·데이터소스·모델·도메인·용어·이력은 끝에서 지운다.
 """
 import base64, subprocess, sys, time, traceback
+from dbcmd import PSQL
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -38,7 +39,7 @@ def step(name, fn):
 
 
 def psql(sql):
-    r = subprocess.run(["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres", "-At", "-c", sql],
+    r = subprocess.run(PSQL + ["-At", "-c", sql],
                        capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     if r.returncode != 0 or "ERROR" in (r.stderr or ""):
         print("  [psql] " + (r.stderr or "").strip()[:200])

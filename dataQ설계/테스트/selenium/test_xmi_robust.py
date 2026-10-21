@@ -9,6 +9,7 @@
   → 총 12 phase
 """
 import base64
+from dbcmd import PSQL
 import os
 import subprocess
 import sys
@@ -36,7 +37,7 @@ def step(name, fn):
 
 
 def docker_psql(sql):
-    cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+    cmd = PSQL + [
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     return r.stdout.strip()

@@ -18,6 +18,7 @@
 매퍼 검증 = SQL 직접 실행. 실제 DiagService 호출 X (시간 + 환경 영향 최소화).
 """
 import base64, json, sys, time, traceback, subprocess
+from dbcmd import PSQL
 import requests
 
 BASE = "http://localhost:28091"
@@ -46,7 +47,7 @@ def login():
 
 def docker_psql(sql, db="dataq-db"):
     """dataq-db 직접 SQL 실행"""
-    cmd = ["docker", "exec", "-i", db, "psql", "-U", "admin", "-d", "postgres", "-t", "-A", "-c", "SET search_path TO quality;" + sql]
+    cmd = PSQL + ["-t", "-A", "-c", "SET search_path TO quality;" + sql]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     return r.stdout.strip()
 

@@ -9,6 +9,7 @@
       뒤 컬럼 추가는 포함 처리, 실제 테이블 생성 확인. 임시 스키마·계정·데이터는 끝에서 지운다
 """
 import base64, secrets, subprocess, sys, time, traceback
+from dbcmd import PSQL
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -33,7 +34,7 @@ def step(name, fn):
 
 
 def psql(sql):
-    r = subprocess.run(["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres", "-At", "-c", sql],
+    r = subprocess.run(PSQL + ["-At", "-c", sql],
                        capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     return (r.stdout or "").strip()
 

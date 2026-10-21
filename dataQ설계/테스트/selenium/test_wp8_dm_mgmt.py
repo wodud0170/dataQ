@@ -10,6 +10,7 @@
       (진단 결과는 논리 모델에 SQL 로 만든다 — 반영은 실 DB 에 접속하지 않는다)
 """
 import base64, json, subprocess, sys, time, traceback
+from dbcmd import PSQL
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -35,7 +36,7 @@ def step(name, fn):
 
 
 def psql(sql):
-    r = subprocess.run(["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres", "-At", "-c", sql],
+    r = subprocess.run(PSQL + ["-At", "-c", sql],
                        capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         print("  [psql] " + (r.stderr or "").strip()[:200])

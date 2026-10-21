@@ -17,6 +17,7 @@
   P13. UI — 메뉴 진입 → 트리 렌더 → 도메인 클릭 → 우측 룰 그리드 표시
 """
 import base64
+from dbcmd import PSQL
 import subprocess
 import sys
 import time
@@ -55,7 +56,7 @@ def ui_step(name, fn):
 
 
 def docker_psql(sql):
-    cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+    cmd = PSQL + [
            "-t", "-A", "-c", "SET search_path TO quality;" + sql]
     r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
     return r.stdout.strip()

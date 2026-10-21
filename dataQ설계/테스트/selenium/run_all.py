@@ -7,6 +7,7 @@
 실행: python run_all.py [--filter pattern]  (filter 로 부분 실행 가능)
 """
 import os, subprocess, sys, time, glob, re
+from dbcmd import PSQL
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PYTHON = sys.executable
@@ -48,7 +49,7 @@ def cleanup_db(verbose=False):
     """
     for stmt in CLEANUP_STATEMENTS:
         try:
-            cmd = ["docker", "exec", "-i", "dataq-db", "psql", "-U", "admin", "-d", "postgres",
+            cmd = PSQL + [
                    "-v", "ON_ERROR_STOP=1",
                    "-c", "SET search_path TO quality; " + stmt]
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=20,
