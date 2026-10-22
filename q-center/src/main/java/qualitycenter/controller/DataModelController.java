@@ -62,6 +62,7 @@ import qualitycenter.service.auth.SessionService;
 import qualitycenter.service.ddl.DdlDialects;
 import qualitycenter.service.ddl.DdlGenerator;
 import qualitycenter.service.ddl.DdlRuleService;
+import qualitycenter.service.ddl.DdlSafety;
 import qualitycenter.service.ws.WebSocketService;
 import qualitycenter.util.ErwinXmlParser;
 import qualitycenter.util.ErwinXmlParser.ErwinParseResult;
@@ -199,6 +200,13 @@ public class DataModelController {
 		log.info(">> createDataModel : {}", dataVo);
 
 		Response result = new Response();
+		// 109번 #2 — 시스템·데이터소스 지정은 모델 직접 반영 권한(DM_MANAGE). DB 반영 권한(DDL_EXEC)이 시스템 단위라
+		// 모델의 시스템·데이터소스를 아무나 바꾸면 그 권한 범위를 넘어 다른 시스템 DB 에 실행할 수 있었다
+		if ((!isBlankStr(dataVo.getDataModelSysCd()) || !isBlankStr(dataVo.getDataModelDsId()))
+				&& !sessionService.hasPerm(com.ndata.quality.common.PermCode.DM_MANAGE)) {
+			result.setResultInfo(403, "모델의 시스템·데이터 소스를 지정하려면 모델 직접 반영 권한이 필요합니다.");
+			return Mono.just(result);
+		}
 
 		try {
 			sqlSessionTemplate.insert("datamodel.insertDataModel", dataVo);
@@ -209,6 +217,14 @@ public class DataModelController {
 		}
 
 		return Mono.just(result);
+	}
+
+	private static boolean isBlankStr(String s) {
+		return s == null || s.trim().isEmpty();
+	}
+
+	private static String blankToNull(Object o) {
+		return o == null || o.toString().trim().isEmpty() ? null : o.toString().trim();
 	}
 
 	/**
@@ -225,6 +241,18 @@ public class DataModelController {
 		Response result = new Response();
 
 		try {
+			// 109번 #2 — 시스템·데이터소스를 바꾸는 것은 모델 직접 반영 권한(DM_MANAGE)
+			Map<String, Object> cur = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataVo.getDataModelId());
+			if (cur == null) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "수정할 데이터 모델이 없습니다: " + dataVo.getDataModelId());
+				return Mono.just(result);
+			}
+			boolean sysDsChanged = !Objects.equals(blankToNull(cur.get("dataModelSysCd")), blankToNull(dataVo.getDataModelSysCd()))
+					|| !Objects.equals(blankToNull(cur.get("dataModelDsId")), blankToNull(dataVo.getDataModelDsId()));
+			if (sysDsChanged && !sessionService.hasPerm(com.ndata.quality.common.PermCode.DM_MANAGE)) {
+				result.setResultInfo(403, "모델의 시스템·데이터 소스를 바꾸려면 모델 직접 반영 권한이 필요합니다.");
+				return Mono.just(result);
+			}
 			sqlSessionTemplate.update("datamodel.updateDataModel", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -717,6 +745,14 @@ public class DataModelController {
 			return result;
 		}
 
+		// 109번 #3 — 테이블·컬럼 이름과 데이터 타입은 [DB 반영] DDL 에 들어간다
+		String bad = importCheck(tables, columns);
+		if (bad != null) {
+			result.put("success", false);
+			result.put("message", bad);
+			return result;
+		}
+
 		String clctId = StringUtils.getUUID();
 		String userId = sessionService.getUserId();
 		String now = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
@@ -828,6 +864,14 @@ public class DataModelController {
 		if (dataModelId == null || tables == null || columns == null) {
 			result.put("success", false);
 			result.put("message", "필수 파라미터(dataModelId, tables, columns)가 누락되었습니다.");
+			return result;
+		}
+
+		// 109번 #3 — 테이블·컬럼 이름과 데이터 타입은 [DB 반영] DDL 에 들어간다
+		String bad = importCheck(tables, columns);
+		if (bad != null) {
+			result.put("success", false);
+			result.put("message", bad);
 			return result;
 		}
 
@@ -992,6 +1036,12 @@ public class DataModelController {
 
 			// 86번 #11 — OBJ_OWNER 정규화 (PK 일부, NULL 비허용)
 			if (objVo.getObjOwner() == null) objVo.setObjOwner("");
+			// 109번 #3 — 소유자·테이블스페이스는 [DB 반영] DDL 에 들어간다
+			DdlSafety.identOpt("소유자", objVo.getObjOwner());
+			if (objVo.getTablespaceNm() != null) {
+				objVo.setTablespaceNm(objVo.getTablespaceNm().trim());
+				DdlSafety.identOpt("테이블스페이스", objVo.getTablespaceNm());
+			}
 
 			// 물리명 중복 체크 — (DM_ID, OBJ_OWNER, OBJ_NM) 조합 기준
 			Map<String, Object> dupParam = new HashMap<>();
@@ -1135,6 +1185,11 @@ public class DataModelController {
 				candidate = pkName + "_" + (suffix++);
 			}
 			pkName = candidate;
+			// 109번 #3 — 이름은 [DB 반영] DDL 에 들어간다
+			DdlSafety.identOpt("소유자", objOwner);
+			DdlSafety.ident("테이블", tableNm);
+			DdlSafety.ident("PK", pkName);
+			for (String col : columns) DdlSafety.ident("PK 컬럼", col);
 
 			String idxName = pkName; // 인덱스 이름은 PK 이름과 동일 (관례)
 			// WP0 — 관리자=APPROVED 즉시, 일반 사용자=DRAFT
@@ -1242,6 +1297,16 @@ public class DataModelController {
 				candidate = fkName + "_" + (suffix++);
 			}
 			fkName = candidate;
+			// 109번 #3 — 이름은 [DB 반영] DDL 에 들어간다
+			DdlSafety.identOpt("소유자", objOwner);
+			DdlSafety.ident("테이블", tableNm);
+			DdlSafety.identOpt("참조 소유자", refOwner);
+			DdlSafety.ident("참조 테이블", refTableNm);
+			DdlSafety.ident("FK", fkName);
+			for (Map<String, String> m : mappings) {
+				DdlSafety.ident("FK 컬럼", m.get("ownAttrNm"));
+				DdlSafety.ident("참조 컬럼", m.get("refAttrNm"));
+			}
 
 			// WP0 — 관리자=APPROVED 즉시, 일반 사용자=DRAFT
 			String aprvStatus = changeHistory.resolveAprvStatusForUserChange();
@@ -1670,6 +1735,16 @@ public class DataModelController {
 				}
 				newObjNm = en;
 			}
+			// 109번 #3 — 바꾼 소유자·테이블스페이스는 [DB 반영] DDL 에 들어간다
+			if (ownerChange) DdlSafety.identOpt("소유자", objOwner);
+			Map<String, Object> curKey = new HashMap<>();
+			curKey.put("dmId", dataModelId);
+			curKey.put("objOwner", origOwner);
+			curKey.put("objNm", origObjNm != null ? origObjNm : newObjNm);
+			StdDataModelObjVo curObj = sqlSessionTemplate.selectOne("ddlRule.selectObj", curKey);
+			String newTs = blankToNull(body.get("tablespaceNm"));
+			if (newTs != null && (curObj == null || !newTs.equals(blankToNull(curObj.getTablespaceNm()))))
+				DdlSafety.ident("테이블스페이스", newTs);
 
 			// 104번 WP8-31 — 사용자 정의 속성: 보냈을 때만 검사·저장 (안 보내면 그대로)
 			String finalObjNm = newObjNm != null ? newObjNm : origObjNm;
@@ -2446,6 +2521,7 @@ public class DataModelController {
 				attrVo.setTermsStndYn("N");
 				attrVo.setDomainStndYn("N");
 			}
+			checkAttrInput(attrVo, null);   // 109번 #3
 
 			Map<String, Object> dupParam = new HashMap<>();
 			dupParam.put("dataModelId", attrVo.getDataModelId());
@@ -2491,6 +2567,14 @@ public class DataModelController {
 	public Mono<Response> updateAttr(@RequestBody StdDataModelAttrVo attrVo) {
 		Response result = new Response();
 		try {
+			// 109번 #3 — 바뀐 타입·길이·기본값 검사
+			Map<String, Object> sel = new HashMap<>();
+			sel.put("dataModelId", attrVo.getDataModelId());
+			sel.put("objOwner",    attrVo.getObjOwner());
+			sel.put("objNm",       attrVo.getObjNm());
+			sel.put("attrNm",      attrVo.getAttrNm());
+			StdDataModelAttrVo existing = sqlSessionTemplate.selectOne("datamodel.selectDataModelAttrOne", sel);
+			if (existing != null) checkAttrInput(attrVo, existing);
 			// 저장 시 표준 재평가 — 단어/용어/도메인 매칭이 끊긴 경우 자동 강등 (Y → N).
 			// 사용자 시나리오: 이전에 표준이었던 컬럼의 데이터 타입/길이를 변경해 도메인 불일치가 발생한 경우.
 			try {
@@ -2762,6 +2846,7 @@ public class DataModelController {
 						vo.setNullableYn("Y".equalsIgnoreCase(vo.getPkYn()) ? "N"
 								: (nullableYn == null || nullableYn.isEmpty() ? "Y" : nullableYn));
 						vo.setDefaultVal(str(row.get("defaultVal")));
+						checkAttrInput(vo, null);   // 109번 #3
 						// ADD 시 표준 재평가 — 영문명이 표준 용어와 매칭되고 도메인이 일치하면 Y/Y, 아니면 N/N
 						String addExcept = null;
 						try {
@@ -2843,6 +2928,14 @@ public class DataModelController {
 						String  newType  = (dataTypeIn != null && !dataTypeIn.trim().isEmpty()) ? dataTypeIn.trim() : existing.getDataType();
 						long    newLen   = dataLenIn != null ? dataLenIn.longValue() : existing.getDataLen();
 						short   newDec   = decLenIn  != null ? decLenIn.shortValue() : existing.getDataDecimalLen();
+						// 109번 #3 — 바뀐 이름·타입·길이·기본값 검사
+						StdDataModelAttrVo chk = new StdDataModelAttrVo();
+						chk.setAttrNm(newAttrNm);
+						chk.setDataType(newType);
+						chk.setDataLen(newLen);
+						chk.setDataDecimalLen(newDec);
+						chk.setDefaultVal(str(row.get("defaultVal")));
+						checkAttrInput(chk, existing);
 
 						short newOrd;
 						if (attrOrdIn != null && attrOrdIn > 0) {
@@ -3042,6 +3135,43 @@ public class DataModelController {
 	/** 화면이 이 문구로 시작하는 오류를 받으면 표준 예외 신청을 띄운다 */
 	private static final String STND_REQ_MSG = "표준 준수 필수 모델입니다. 비표준 컬럼: ";
 
+	/**
+	 * 109번 #3 — 컬럼 입력 검사 (이름·데이터 타입·길이·소수점·기본값은 [DB 반영] DDL 에 들어간다). 규칙은 DdlSafety.
+	 * before 가 있으면(수정) 바뀐 항목만 본다 — 수집한 모델에 이미 있는 값 때문에 다른 항목 수정까지 막히지 않게.
+	 * 그런 값은 DDL 을 만들 때 다시 검사해 거부한다.
+	 */
+	private static void checkAttrInput(StdDataModelAttrVo a, StdDataModelAttrVo before) {
+		if (before == null || !Objects.equals(before.getAttrNm(), a.getAttrNm())) DdlSafety.ident("컬럼", a.getAttrNm());
+		if (before == null || !Objects.equals(before.getDataType(), a.getDataType())) DdlSafety.dataType(a.getDataType());
+		if (before == null || before.getDataLen() != a.getDataLen() || before.getDataDecimalLen() != a.getDataDecimalLen())
+			DdlSafety.length(a.getDataLen(), a.getDataDecimalLen());
+		if (before == null || !Objects.equals(blankToNull(before.getDefaultVal()), blankToNull(a.getDefaultVal())))
+			DdlSafety.defaultValue(a.getDefaultVal(), null);
+	}
+
+	/**
+	 * 109번 #3 — ERwin·XMI 가져오기의 테이블·컬럼 이름과 데이터 타입 검사. 걸린 항목이 있으면 앞 5건을 담은 메시지, 없으면 null.
+	 */
+	private static String importCheck(List<Map<String, Object>> tables, List<Map<String, Object>> columns) {
+		List<String> bad = new ArrayList<>();
+		for (Map<String, Object> t : tables) {
+			try { DdlSafety.ident("테이블", str(t.get("objNm"))); }
+			catch (DdlSafety.Invalid e) { bad.add(e.getMessage()); }
+		}
+		for (Map<String, Object> c : columns) {
+			try {
+				DdlSafety.ident("테이블", str(c.get("objNm")));
+				DdlSafety.ident("컬럼", str(c.get("attrNm")));
+				DdlSafety.dataType(str(c.get("dataType")));
+			} catch (DdlSafety.Invalid e) {
+				bad.add(str(c.get("objNm")) + "." + str(c.get("attrNm")) + ": " + e.getMessage());
+			}
+		}
+		if (bad.isEmpty()) return null;
+		return "가져올 수 없는 이름·타입이 " + bad.size() + "건 있습니다 — " + String.join(" / ", bad.subList(0, Math.min(5, bad.size())))
+				+ (bad.size() > 5 ? " 외 " + (bad.size() - 5) + "건" : "");
+	}
+
 	private static String str(Object o) {
 		return o == null ? null : o.toString();
 	}
@@ -3155,6 +3285,9 @@ public class DataModelController {
 		String newAttrNm = (String) resolved.get("termsEngAbrvNm");
 		if (newAttrNm == null || newAttrNm.trim().isEmpty())
 			throw new IllegalStateException("용어 영문약어명 누락");
+		// 109번 #3 — 컬럼 이름·타입은 DDL 에 들어간다
+		DdlSafety.ident("컬럼", newAttrNm);
+		DdlSafety.dataType((String) resolved.get("dataType"));
 
 		if (!newAttrNm.equals(attr.getAttrNm())) {
 			Map<String, Object> dupParam = new HashMap<>();
@@ -3792,11 +3925,24 @@ public class DataModelController {
 				m.put("bizAreaNm", bizAreaNm);
 				m.put("bizAreaId", bizAreaId);
 				m.put("tablespaceNm", tablespace);
+				// 109번 #3 — 소유자·영문명·테이블스페이스는 [DB 반영] DDL 에 들어간다
+				String nameErr = null;
+				try {
+					DdlSafety.identOpt("소유자", owner);
+					DdlSafety.identOpt("테이블", enNm);
+					DdlSafety.identOpt("테이블스페이스", tablespace);
+				} catch (DdlSafety.Invalid e) {
+					nameErr = e.getMessage();
+				}
 				// 소유자 필수 + 영문/한글 중 하나는 필수 (둘 중 하나만 있어도 등록 가능)
 				if (isBlank(owner) || (isBlank(krNm) && isBlank(enNm))) {
 					m.put("_action", "ERROR");
 					m.put("_msg", "소유자 필수 + 테이블명(영문/한글) 중 하나는 필수");
 					errors.add(errRow(r + 1, "소유자 필수 + 테이블명(영문/한글) 중 하나는 필수"));
+				} else if (nameErr != null) {
+					m.put("_action", "ERROR");
+					m.put("_msg", nameErr);
+					errors.add(errRow(r + 1, nameErr));
 				} else {
 					String keyKr = isBlank(krNm) ? null : (owner + "|" + krNm);
 					String keyEn = isBlank(enNm) ? null : (owner + "|" + enNm);
@@ -3984,6 +4130,22 @@ public class DataModelController {
 					m.put("_action", "ERROR");
 					m.put("_msg", "FK=Y 인데 참조 테이블/컬럼 누락");
 					errors.add(errRow(r + 1, "FK 참조 정보 누락"));
+					rows.add(m);
+					continue;
+				}
+				// 109번 #3 — 소유자·컬럼 영문명·데이터 타입·길이·기본값은 [DB 반영] DDL 에 들어간다
+				try {
+					DdlSafety.identOpt("소유자", owner);
+					DdlSafety.identOpt("컬럼", colEn);
+					DdlSafety.dataType(dataType);
+					Integer lenIn = parseIntSafe(dataLenStr);
+					Integer decIn = parseIntSafe(dataDecStr);
+					DdlSafety.length(lenIn == null ? 0 : lenIn, decIn == null ? 0 : decIn);
+					DdlSafety.defaultValue(defaultVal, null);
+				} catch (DdlSafety.Invalid e) {
+					m.put("_action", "ERROR");
+					m.put("_msg", e.getMessage());
+					errors.add(errRow(r + 1, e.getMessage()));
 					rows.add(m);
 					continue;
 				}

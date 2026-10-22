@@ -16,17 +16,17 @@ public class SqlServerDialect extends AbstractDialect {
 	public String commentOnTable(String owner, String table, String comment) {
 		return "EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'" + escapeStringLiteral(comment)
 				+ "', @level0type = N'SCHEMA', @level0name = N'" + schema(owner)
-				+ "', @level1type = N'TABLE', @level1name = N'" + table + "'";
+				+ "', @level1type = N'TABLE', @level1name = N'" + id("테이블", table) + "'";
 	}
 
 	@Override
 	public String commentOnColumn(String owner, String table, String column, String comment) {
-		return commentOnTable(owner, table, comment) + ", @level2type = N'COLUMN', @level2name = N'" + column + "'";
+		return commentOnTable(owner, table, comment) + ", @level2type = N'COLUMN', @level2name = N'" + id("컬럼", column) + "'";
 	}
 
 	@Override
 	public String renameTable(String owner, String table, String newTable) {
-		return "EXEC sp_rename '" + qualify(owner, table) + "', '" + newTable + "'";
+		return "EXEC sp_rename '" + qualify(owner, table) + "', '" + id("테이블", newTable) + "'";
 	}
 
 	@Override
@@ -42,23 +42,23 @@ public class SqlServerDialect extends AbstractDialect {
 	/** ALTER COLUMN 은 NULL 여부를 빼면 NULL 허용으로 바뀌므로 함께 적는다 */
 	@Override
 	public String modifyColumn(String owner, String table, StdDataModelAttrVo a) {
-		return "ALTER TABLE " + qualify(owner, table) + " ALTER COLUMN " + a.getAttrNm() + " "
+		return "ALTER TABLE " + qualify(owner, table) + " ALTER COLUMN " + id("컬럼", a.getAttrNm()) + " "
 				+ columnType(a.getDataType(), a.getDataLen(), a.getDataDecimalLen())
 				+ ("N".equalsIgnoreCase(a.getNullableYn()) ? " NOT NULL" : " NULL");
 	}
 
 	@Override
 	public String renameColumn(String owner, String table, String column, String newColumn, StdDataModelAttrVo a) {
-		return "EXEC sp_rename '" + qualify(owner, table) + "." + column + "', '" + newColumn + "', 'COLUMN'";
+		return "EXEC sp_rename '" + qualify(owner, table) + "." + id("컬럼", column) + "', '" + id("컬럼", newColumn) + "', 'COLUMN'";
 	}
 
 	/** SQL Server 는 DROP CONSTRAINT … CASCADE 가 없다 — 참조하는 FK 가 있으면 DB 가 거부한다 */
 	@Override
 	public String dropPrimaryKey(String owner, String table, String name, boolean cascade) {
-		return "ALTER TABLE " + qualify(owner, table) + " DROP CONSTRAINT " + name;
+		return "ALTER TABLE " + qualify(owner, table) + " DROP CONSTRAINT " + id("제약조건", name);
 	}
 
 	private String schema(String owner) {
-		return (owner == null || owner.isEmpty()) ? "dbo" : owner;
+		return (owner == null || owner.isEmpty()) ? "dbo" : id("소유자", owner);
 	}
 }

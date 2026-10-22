@@ -228,9 +228,11 @@
                 <v-subheader>데이터 소스</v-subheader>
               </v-col>
               <v-col cols="8">
+                <!-- 109번 #2 — 데이터 소스 지정은 모델 직접 반영 권한 -->
                 <v-select dense clearable color="ndColor" v-model="add_dataSource" :items="dataSourceList" item-text="dsn"
                   name="add_dataSource" item-value="id" ref="add_dataSource" :placeholder="'선택 (논리모델이면 비워두기)'"
-                  no-data-text="데이터 소스가 없습니다."
+                  no-data-text="데이터 소스가 없습니다." :disabled="!canSetDs"
+                  :hint="canSetDs ? '' : '데이터 소스 지정은 모델 직접 반영 권한이 필요합니다'" :persistent-hint="!canSetDs"
                   :menu-props="{ top: false, offsetY: true }" v-on:click="getDataSourceList()"></v-select>
               </v-col>
             </v-row>
@@ -293,9 +295,11 @@
                 <v-subheader>데이터 소스</v-subheader>
               </v-col>
               <v-col cols="8">
+                <!-- 109번 #2 — 데이터 소스 변경은 모델 직접 반영 권한 -->
                 <v-select dense clearable color="ndColor" v-model="update_dataSource" :items="dataSourceList"
                   item-text="dsn" name="update_dataSource" item-value="id" ref="update_dataSource" :placeholder="'선택 (논리모델이면 비워두기)'"
-                  no-data-text="데이터 소스가 없습니다."
+                  no-data-text="데이터 소스가 없습니다." :disabled="!canSetDs"
+                  :hint="canSetDs ? '' : '데이터 소스 변경은 모델 직접 반영 권한이 필요합니다'" :persistent-hint="!canSetDs"
                   :menu-props="{ top: false, offsetY: true }" v-on:click="getDataSourceList()"></v-select>
               </v-col>
             </v-row>
@@ -374,6 +378,8 @@ export default {
   },
   props: ['isMobile'],
   computed: {
+    // 109번 #2 — 모델의 시스템·데이터 소스 지정·변경은 모델 직접 반영 권한(DM_MANAGE). 서버도 다시 막는다
+    canSetDs() { return this.$can('DM_MANAGE'); },
     hasDataSource() {
       return this.selectedItem.length > 0 && !!this.selectedItem[0].dataModelDsId;
     },

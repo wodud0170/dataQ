@@ -13,7 +13,7 @@ public class PostgresDialect extends AbstractDialect {
 
 	@Override
 	public String changeOwner(String owner, String table, String newOwner) {
-		return "ALTER TABLE " + qualify(owner, table) + " SET SCHEMA " + newOwner;
+		return "ALTER TABLE " + qualify(owner, table) + " SET SCHEMA " + id("소유자", newOwner);
 	}
 
 	@Override
@@ -23,7 +23,7 @@ public class PostgresDialect extends AbstractDialect {
 
 	@Override
 	public String modifyColumn(String owner, String table, StdDataModelAttrVo a) {
-		return "ALTER TABLE " + qualify(owner, table) + " ALTER COLUMN " + a.getAttrNm() + " TYPE "
+		return "ALTER TABLE " + qualify(owner, table) + " ALTER COLUMN " + id("컬럼", a.getAttrNm()) + " TYPE "
 				+ columnType(a.getDataType(), a.getDataLen(), a.getDataDecimalLen());
 	}
 }

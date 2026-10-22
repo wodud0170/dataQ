@@ -25,7 +25,7 @@ public class OracleDialect extends AbstractDialect {
 	/** 타입만 바꾼다. NULL 여부를 같이 적으면 이미 그 상태일 때 ORA-01442·01451 이 난다 */
 	@Override
 	public String modifyColumn(String owner, String table, StdDataModelAttrVo a) {
-		return "ALTER TABLE " + qualify(owner, table) + " MODIFY (" + a.getAttrNm() + " "
+		return "ALTER TABLE " + qualify(owner, table) + " MODIFY (" + id("컬럼", a.getAttrNm()) + " "
 				+ columnType(a.getDataType(), a.getDataLen(), a.getDataDecimalLen()) + ")";
 	}
 }

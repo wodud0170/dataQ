@@ -183,37 +183,53 @@ export default {
       });
     },
     // 104번 WP3 — 실행 대상은 모델의 데이터소스로 고정 (서버가 정한다). 테이블 추가는 승인된 컬럼으로 CREATE TABLE 을 만든다
+    // 109번 #3 — 확인창은 서버가 실제로 실행할 문장(ddlPreview)을 보여 준다. 검사에 걸리면 이유만 보이고 실행 버튼이 없다
     execDdl(item) {
       const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const target = item.dsNm
-        ? `${esc(item.dsNm)} (${esc(item.dsDbmsTp)})`
-        : '<span style="color:#C62828;">모델에 데이터소스가 없습니다 — 반영할 수 없습니다</span>';
-      const ddlNote = item.changeType === 'ADD_OBJ'
-        ? '<div style="color:#546E7A;">테이블 추가는 실행 때 이 테이블의 승인된 컬럼·제약조건으로 CREATE TABLE 을 만듭니다.</div>' : '';
-      this.$swal.fire({
-        title: 'DB 직접 반영',
-        html: `<div style="text-align:left;font-size:.85rem;"><b>대상 데이터소스:</b> ${target}<br><br><b>실행될 DDL</b>${item.ddlDbmsTp ? ' (' + esc(item.ddlDbmsTp) + ')' : ''}:`
-          + `<pre style="background:#263238;color:#B0BEC5;padding:6px;border-radius:4px;font-size:.78rem;white-space:pre-wrap;">${esc(item.ddlSnippet)}</pre>${ddlNote}</div>`,
-        showCancelButton: true,
-        confirmButtonText: '실행', cancelButtonText: '취소',
-      }).then(r => {
-        if (!r.isConfirmed) return;
-        axios.post(this.$APIURL.base + 'api/dmApproval/execDdl', {
-          changeSeqList: [item.changeSeq],
-        }).then(res => {
-          if (res.data.resultCode !== 200) {
-            this.$swal.fire({ title: 'DB 반영 실패', text: res.data.resultMessage || '', icon: 'error' });
-            return;
-          }
-          const c = res.data && res.data.contents ? JSON.parse(res.data.contents) : {};
-          this.$swal.fire({
-            title: `DB 반영: 성공 ${c.success || 0} / 실패 ${c.failed || 0} / 권한 없음 ${c.noPriv || 0} / 건너뜀 ${c.skipped || 0}`,
-            html: (c.messages || []).map(m => `<div style="text-align:left;font-size:.8rem;">${esc(m)}</div>`).join(''),
-            icon: (c.success || 0) > 0 && !(c.failed || c.noPriv || c.skipped) ? 'success' : 'info',
-          });
-          this.load();
-        }).catch(e => this.$swal.fire({ title: 'DB 반영 실패', text: (e.response && e.response.data && e.response.data.resultMessage) || '', icon: 'error' }));
-      });
+      axios.post(this.$APIURL.base + 'api/dmApproval/ddlPreview', { changeSeq: item.changeSeq }).then(pres => {
+        if (pres.data.resultCode !== 200) {
+          this.$swal.fire({ title: 'DB 반영 확인 실패', text: pres.data.resultMessage || '', icon: 'error' });
+          return;
+        }
+        const pv = JSON.parse(pres.data.contents || '{}');
+        const target = pv.dsNm
+          ? `${esc(pv.dsNm)} (${esc(pv.dbmsTp)})`
+          : '<span style="color:#C62828;">모델에 데이터소스가 없습니다 — 반영할 수 없습니다</span>';
+        const stmts = pv.statements || [];
+        const ddlText = stmts.length ? stmts.join(';\n') + ';' : '';
+        const note = pv.status === 'RUN' ? ''
+          : `<div style="color:${pv.status === 'DENY' ? '#C62828' : '#E65100'};margin-top:6px;">${pv.status === 'DENY' ? '실행할 수 없습니다' : '건너뜀으로 기록됩니다'} — ${esc(pv.message)}</div>`;
+        this.$swal.fire({
+          title: 'DB 직접 반영',
+          html: `<div style="text-align:left;font-size:.85rem;"><b>대상 데이터소스:</b> ${target}<br><br>`
+            + (ddlText ? `<b>실행될 DDL</b> (${stmts.length}문장, 한 문장씩 실행):`
+              + `<pre id="ddlPreviewText" style="background:#263238;color:#B0BEC5;padding:6px;border-radius:4px;font-size:.78rem;white-space:pre-wrap;max-height:320px;overflow:auto;">${esc(ddlText)}</pre>` : '')
+            + `${note}</div>`,
+          showCancelButton: pv.status !== 'DENY',
+          showConfirmButton: true,
+          confirmButtonText: pv.status === 'DENY' ? '닫기' : '실행', cancelButtonText: '취소',
+        }).then(r => {
+          if (!r.isConfirmed || pv.status === 'DENY') return;
+          this.runDdl(item, esc);
+        });
+      }).catch(e => this.$swal.fire({ title: 'DB 반영 확인 실패', text: (e.response && e.response.data && e.response.data.resultMessage) || '', icon: 'error' }));
+    },
+    runDdl(item, esc) {
+      axios.post(this.$APIURL.base + 'api/dmApproval/execDdl', {
+        changeSeqList: [item.changeSeq],
+      }).then(res => {
+        if (res.data.resultCode !== 200) {
+          this.$swal.fire({ title: 'DB 반영 실패', text: res.data.resultMessage || '', icon: 'error' });
+          return;
+        }
+        const c = res.data && res.data.contents ? JSON.parse(res.data.contents) : {};
+        this.$swal.fire({
+          title: `DB 반영: 성공 ${c.success || 0} / 실패 ${c.failed || 0} / 권한 없음 ${c.noPriv || 0} / 건너뜀 ${c.skipped || 0}`,
+          html: (c.messages || []).map(m => `<div style="text-align:left;font-size:.8rem;">${esc(m)}</div>`).join(''),
+          icon: (c.success || 0) > 0 && !(c.failed || c.noPriv || c.skipped) ? 'success' : 'info',
+        });
+        this.load();
+      }).catch(e => this.$swal.fire({ title: 'DB 반영 실패', text: (e.response && e.response.data && e.response.data.resultMessage) || '', icon: 'error' }));
     },
   },
 };

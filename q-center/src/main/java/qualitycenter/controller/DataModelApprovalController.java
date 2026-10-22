@@ -24,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
 import qualitycenter.service.ddl.DdlDialects;
 import qualitycenter.service.ddl.DdlGenerator;
+import qualitycenter.service.ddl.DdlSafety;
 import qualitycenter.service.ddl.SqlDialect;
 import qualitycenter.service.governance.ChangeHistoryService;
 import reactor.core.publisher.Mono;
@@ -546,12 +547,117 @@ public class DataModelApprovalController {
 	}
 
 	/**
+	 * 109번 — [DB 반영] 한 건의 실행 판정. 확인창(ddlPreview)과 실행(execDdl)이 같은 판정을 쓴다.
+	 * deny 면 실행하지 않고 실패로 센다(이력에 남기지 않는다), skip 이면 건너뜀(SKIPPED)으로 이력에 남긴다, 그 밖은 stmts 를 실행한다.
+	 */
+	private static class DdlPlan {
+		Map<String, Object> mds;   // 모델 데이터소스 {dsId, dsn, dbmsTp}
+		String deny;
+		String skip;
+		List<String> stmts;
+		boolean create;            // 테이블 추가 — 같은 테이블의 뒤 변경을 '포함' 으로 기록
+	}
+
+	private DdlPlan plan(Object seq) {
+		DdlPlan p = new DdlPlan();
+		Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+		if (hist == null) { p.deny = "이력이 없습니다"; return p; }
+		String sysCd = sqlSessionTemplate.selectOne("role.selectSysCdByChangeSeq", seq);
+		if (!sessionService.hasPerm(PermCode.DDL_EXEC, sysCd)) {
+			p.deny = "이 모델의 시스템(" + (sysCd == null ? "지정 안 됨" : sysCd) + ")에 대한 DB 반영 권한이 없습니다";
+			return p;
+		}
+		if (!"APPROVED".equals(hist.get("aprv_status"))) { p.deny = "승인되지 않은 변경입니다"; return p; }
+		if ("SUCCESS".equals(hist.get("ddl_exec_result"))) { p.deny = "이미 반영된 변경입니다"; return p; }
+
+		String dmId = (String) hist.get("dm_id");
+		String changeType = (String) hist.get("change_type");
+		String owner = hist.get("obj_owner") == null ? "" : (String) hist.get("obj_owner");
+		String objNm = (String) hist.get("obj_nm");
+		p.mds = ddlDialects.modelDs(dmId);
+		if (p.mds == null) { p.skip = "모델에 데이터소스가 없어 DB 에 반영할 수 없습니다"; return p; }
+		// 109번 #2 — 시스템 범위로 받은 DB 반영 권한은 모델의 데이터소스가 그 시스템(하위 시스템 포함)의 데이터소스일 때만 통한다.
+		// 모델의 시스템만 바꿔 다른 시스템의 DB 에 실행하는 길을 막는다. 관리자·모든 시스템 권한은 원래 어느 DB 에나 실행할 수 있다.
+		if (sysCd != null && !sessionService.hasPerm(PermCode.DDL_EXEC, null)) {
+			Map<String, Object> q = new HashMap<>();
+			q.put("sysCd", sysCd);
+			q.put("dsId", p.mds.get("dsId"));
+			int n = sqlSessionTemplate.selectOne("ddlRule.countDsInSysTree", q);
+			if (n == 0) {
+				p.deny = "모델의 데이터소스(" + p.mds.get("dsn") + ")가 모델의 시스템(" + sysCd + ")에 등록된 데이터소스가 아닙니다"
+						+ " — 관리 > 시스템에서 데이터소스를 지정하거나 모델의 데이터소스를 확인하세요";
+				return p;
+			}
+		}
+		String dbms = (String) p.mds.get("dbmsTp");
+		if (hist.get("ddl_dbms_tp") != null && !String.valueOf(hist.get("ddl_dbms_tp")).equalsIgnoreCase(dbms)) {
+			p.skip = "DDL 은 " + hist.get("ddl_dbms_tp") + " 용인데 모델 데이터소스는 " + dbms + " 입니다";
+			return p;
+		}
+		SqlDialect d = ddlDialects.forDbms(dbms);
+		try {
+			if ("ADD_OBJ".equals(changeType)) {
+				if (d == null) { p.skip = dbms + " 용 DDL 규칙이 없습니다"; return p; }
+				p.stmts = ddlGenerator.createTableDdl(dmId, owner, objNm, d);
+				if (p.stmts == null) { p.skip = "모델에 테이블이 없습니다: " + objNm; return p; }
+				p.create = true;
+			} else {
+				String ddl = (String) hist.get("ddl_snippet");
+				if (ddl == null || ddl.trim().isEmpty()) { p.skip = "실행할 DDL 이 없습니다"; return p; }
+				if (hasCommentLine(ddl)) { p.skip = "DDL 을 만들 수 없는 변경입니다 — " + ddl.trim(); return p; }
+				if (d == null) { p.skip = dbms + " 용 DDL 규칙이 없습니다"; return p; }
+				// 109번 #3 — 저장된 조각을 그대로 실행하지 않는다. 이력의 값으로 지금의 규칙·검사를 거쳐 다시 만든다
+				p.stmts = changeHistory.regenerate(hist, d);
+				if (p.stmts.isEmpty()) { p.skip = "실행할 DDL 이 없습니다"; return p; }
+			}
+			for (String s : p.stmts) DdlSafety.checkStatement(s, d.backslashEscapes());
+		} catch (DdlSafety.Invalid | IllegalStateException e) {
+			p.stmts = null;
+			p.create = false;
+			p.deny = "DDL 검증 실패 — " + e.getMessage();
+		}
+		return p;
+	}
+
+	/**
+	 * 109번 #3 — [DB 반영] 확인창. 실제로 실행할 문장(테이블 추가는 승인된 컬럼·제약조건으로 만든 CREATE TABLE)과
+	 * 대상 데이터소스, 실행하지 않는 이유를 돌려준다. execDdl 과 같은 판정이다.
+	 * 응답 contents = {changeSeq, dsNm, dbmsTp, status: RUN|SKIP|DENY, message, statements}
+	 */
+	@PostMapping("/ddlPreview")
+	public Mono<Response> ddlPreview(@RequestBody Map<String, Object> body) {
+		Response res = new Response();
+		try {
+			if (!sessionService.hasPerm(PermCode.DDL_EXEC)) throw new IllegalStateException("권한이 없습니다 (DB 반영 권한 필요)");
+			Object seq = body.get("changeSeq");
+			if (seq == null) throw new IllegalArgumentException("changeSeq 필수");
+			DdlPlan p = plan(seq);
+			Map<String, Object> out = new java.util.LinkedHashMap<>();
+			out.put("changeSeq", seq);
+			out.put("dsNm", p.mds == null ? null : p.mds.get("dsn"));
+			out.put("dbmsTp", p.mds == null ? null : p.mds.get("dbmsTp"));
+			out.put("status", p.deny != null ? "DENY" : p.skip != null ? "SKIP" : "RUN");
+			out.put("message", p.deny != null ? p.deny : p.skip);
+			out.put("statements", p.stmts == null ? new ArrayList<String>() : p.stmts);
+			res.setResultInfo(RestResult.CODE_200);
+			res.setContents(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(out));
+		} catch (Exception e) {
+			log.error(">> ddlPreview failed: {}", e.getMessage(), e);
+			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+		}
+		return Mono.just(res);
+	}
+
+	/**
 	 * 88번 §8 — 변경 이력의 DDL 을 실제 DB 에 실행.
 	 * 104번 WP2 — DB 반영 권한(DDL_EXEC)은 시스템 단위다. 건마다 그 변경의 모델이 속한 시스템
 	 * (TB_DATA_MODEL.DM_SYS_CD)에 대한 권한을 본다. 시스템이 없는 모델은 모든 시스템으로 받은 권한만 통한다.
+	 * 109번 #2 — 시스템 범위 권한이면 모델의 데이터소스가 그 시스템(하위 포함)의 데이터소스여야 한다.
 	 * 104번 WP3 — 실행 대상은 모델의 데이터소스로 고정한다. 조각의 DBMS 가 데이터소스 DBMS 와 다르면 실행하지 않는다.
-	 * 테이블 추가는 그 테이블의 승인된 컬럼·제약조건으로 CREATE TABLE 을 만들어 실행하고(실행한 문장으로 조각을 바꾼다),
-	 * 같은 테이블의 그 뒤 승인된 미반영 변경은 CREATE TABLE 에 포함된 것으로 기록한다. 조각은 문장 단위로 나눠 차례로 실행한다.
+	 * 테이블 추가는 그 테이블의 승인된 컬럼·제약조건으로 CREATE TABLE 을 만들어 실행하고,
+	 * 같은 테이블의 그 뒤 승인된 미반영 변경은 CREATE TABLE 에 포함된 것으로 기록한다.
+	 * 109번 #3 — 다른 변경도 이력의 값으로 문장을 다시 만들어(검사 포함) 실행한다. 문장은 한 번에 하나씩 실행하고,
+	 * 실행한 문장으로 이력의 조각을 바꾼다. 검사에 걸리면 실행하지 않는다.
 	 * 응답 contents = {success, failed, noPriv, skipped, messages}
 	 */
 	@PostMapping("/execDdl")
@@ -568,52 +674,25 @@ public class DataModelApprovalController {
 			String adminId = changeHistory.safeUserId();
 			String now = LocalDateTime.now().format(DT_FMT);
 			for (Object seq : seqList) {
-				Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
-				if (hist == null) { failed++; messages.add(seq + ": 이력이 없습니다"); continue; }
-				String sysCd = sqlSessionTemplate.selectOne("role.selectSysCdByChangeSeq", seq);
-				if (!sessionService.hasPerm(PermCode.DDL_EXEC, sysCd)) {
-					failed++;
-					messages.add(seq + ": 이 모델의 시스템(" + (sysCd == null ? "지정 안 됨" : sysCd) + ")에 대한 DB 반영 권한이 없습니다");
-					continue;
-				}
-				if (!"APPROVED".equals(hist.get("aprv_status"))) { failed++; messages.add(seq + ": 승인되지 않은 변경입니다"); continue; }
-				if ("SUCCESS".equals(hist.get("ddl_exec_result"))) { failed++; messages.add(seq + ": 이미 반영된 변경입니다"); continue; }
-
-				String dmId = (String) hist.get("dm_id");
-				String changeType = (String) hist.get("change_type");
-				String owner = hist.get("obj_owner") == null ? "" : (String) hist.get("obj_owner");
-				String objNm = (String) hist.get("obj_nm");
-				Map<String, Object> mds = ddlDialects.modelDs(dmId);
-				String skip = null;
-				List<String> stmts = null;
-				String createSnippet = null;
-				if (mds == null) {
-					skip = "모델에 데이터소스가 없어 DB 에 반영할 수 없습니다";
-				} else if (hist.get("ddl_dbms_tp") != null && !String.valueOf(hist.get("ddl_dbms_tp")).equalsIgnoreCase((String) mds.get("dbmsTp"))) {
-					skip = "DDL 은 " + hist.get("ddl_dbms_tp") + " 용인데 모델 데이터소스는 " + mds.get("dbmsTp") + " 입니다";
-				} else if ("ADD_OBJ".equals(changeType)) {
-					SqlDialect d = ddlDialects.forDbms((String) mds.get("dbmsTp"));
-					stmts = d == null ? null : ddlGenerator.createTableDdl(dmId, owner, objNm, d);
-					if (d == null) skip = mds.get("dbmsTp") + " 용 DDL 규칙이 없습니다";
-					else if (stmts == null) skip = "모델에 테이블이 없습니다: " + objNm;
-					else createSnippet = String.join(";\n", stmts) + ";";
-				} else {
-					String ddl = (String) hist.get("ddl_snippet");
-					if (ddl == null || ddl.trim().isEmpty()) skip = "실행할 DDL 이 없습니다";
-					else if (hasCommentLine(ddl)) skip = "DDL 을 만들 수 없는 변경입니다 — " + ddl.trim();
-					else stmts = splitStatements(ddl);
-				}
-				if (skip != null) {
+				DdlPlan p = plan(seq);
+				if (p.deny != null) { failed++; messages.add(seq + ": " + p.deny); continue; }
+				if (p.skip != null) {
 					skipped++;
-					messages.add(seq + ": SKIPPED — " + skip);
+					messages.add(seq + ": SKIPPED — " + p.skip);
 					Map<String, Object> u = new HashMap<>();
 					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
-					u.put("ddlExecResult", "SKIPPED"); u.put("ddlExecMessage", skip);
+					u.put("ddlExecResult", "SKIPPED"); u.put("ddlExecMessage", p.skip);
 					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
 					continue;
 				}
+				Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+				String dmId = (String) hist.get("dm_id");
+				String owner = hist.get("obj_owner") == null ? "" : (String) hist.get("obj_owner");
+				String objNm = (String) hist.get("obj_nm");
+				List<String> stmts = p.stmts;
+				String ranSnippet = String.join(";\n", stmts) + ";";
 
-				com.ndata.model.DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", mds.get("dsId"));
+				com.ndata.model.DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", p.mds.get("dsId"));
 				com.ndata.datasource.dbms.handler.DBHandler h = null;
 				int done = 0;
 				try {
@@ -626,9 +705,9 @@ public class DataModelApprovalController {
 					Map<String, Object> u = new HashMap<>();
 					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
 					u.put("ddlExecResult", "SUCCESS"); u.put("ddlExecMessage", "OK (" + ds.getDsn() + ", " + stmts.size() + "문장)");
-					u.put("ddlSnippet", createSnippet);
+					u.put("ddlSnippet", ranSnippet);
 					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
-					if (createSnippet != null) {
+					if (p.create) {
 						Map<String, Object> inc = new HashMap<>();
 						inc.put("dmId", dmId); inc.put("objOwner", owner); inc.put("objNm", objNm); inc.put("changeSeq", seq);
 						inc.put("ddlExecDt", now); inc.put("ddlExecUserId", adminId);
@@ -662,24 +741,6 @@ public class DataModelApprovalController {
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(res);
-	}
-
-	/** 조각을 ';' 로 나눈다. 작은따옴표 안(주석 문자열)의 ';' 는 나누지 않는다. 빈 문장은 버린다 */
-	static List<String> splitStatements(String ddl) {
-		List<String> out = new ArrayList<>();
-		StringBuilder cur = new StringBuilder();
-		boolean inQuote = false;
-		for (char c : ddl.toCharArray()) {
-			if (c == '\'') inQuote = !inQuote;
-			if (c == ';' && !inQuote) {
-				if (cur.toString().trim().length() > 0) out.add(cur.toString().trim());
-				cur.setLength(0);
-			} else {
-				cur.append(c);
-			}
-		}
-		if (cur.toString().trim().length() > 0) out.add(cur.toString().trim());
-		return out;
 	}
 
 	/** '--' 로 시작하는 줄이 있으면 DDL 을 만들 수 없는 변경(규칙 없는 DBMS, 소유자 이동 불가 등) */

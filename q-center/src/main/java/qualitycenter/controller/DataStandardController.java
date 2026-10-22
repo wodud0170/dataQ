@@ -2109,14 +2109,30 @@ public class DataStandardController {
 		// 단계 승인이면 단계만 넘기고, 마지막 단계 승인·반려일 때 아래 기존 처리를 그대로 한다.
 		boolean stdApprover = sessionService.hasPerm(PermCode.STD_APPROVE);
 		List<String> stepMsgs = new ArrayList<>();
+		// 109번 #21 — 건별 실패를 모아 둔다. 예전에는 앞 건의 403·500 을 뒤 건의 200 이 덮어써 실패가 성공으로 보였다
+		List<String[]> fails = new ArrayList<>();   // {항목명, 메시지}
+		int failCode = 0;
+		int doneCnt = 0;
 
 		for (StdApproveStatVo dataVo : dataVos) {
 			dataVo.setId(StringUtils.getUUID());
 			dataVo.setAprvUserId(sessionService.getUserId());
+			String itemNm = dataVo.getReqItemNm() != null ? dataVo.getReqItemNm() : dataVo.getReqItemId();
+
+			// 109번 #1 — 승인값은 2(승인)·3(반려)만 받는다. 그 밖의 값(빠지면 0)이면 결재 엔진에는 반려로, 업무 처리에는 승인으로
+			// 갈려 결재 단계를 건너뛰고 항목이 승인됐다. 아래에서는 엔진 호출과 업무 분기에 같은 approve 값을 쓴다.
+			short stat = dataVo.getAprvStat();
+			if (stat != NDQualityApproveStat.APPROVED.getValue() && stat != NDQualityApproveStat.REJECTED.getValue()) {
+				fails.add(new String[] { itemNm, "승인값(aprvStat)은 2(승인) 또는 3(반려)이어야 합니다: " + stat });
+				if (failCode == 0) failCode = 400;
+				continue;
+			}
+			boolean approve = stat == NDQualityApproveStat.APPROVED.getValue();
 
 			Map<String, Object> aprvDoc = aprvService.openDoc(dataVo.getReqTp(), dataVo.getReqItemId());
 			if (aprvDoc == null && !stdApprover) {
-				result.setResultInfo(403, "승인·반려 권한이 없습니다 (표준 승인 권한 필요).");
+				fails.add(new String[] { itemNm, "승인·반려 권한이 없습니다 (표준 승인 권한 필요)." });
+				if (failCode == 0) failCode = 403;
 				continue;
 			}
 
@@ -2124,7 +2140,6 @@ public class DataStandardController {
 
 			try {
 				NDQualityStdObjectType objType = NDQualityStdObjectType.valueOf(dataVo.getReqTp());
-				boolean approve = dataVo.getAprvStat() == NDQualityApproveStat.APPROVED.getValue();
 				boolean lastStep = aprvDoc == null
 						|| ((Number) aprvDoc.get("curStepNo")).intValue() == ((Number) aprvDoc.get("stepCnt")).intValue();
 
@@ -2167,12 +2182,12 @@ public class DataStandardController {
 					websocketService.sendUserNotis(step.notis);
 					if (!step.done) {
 						stepMsgs.add(dataVo.getReqItemNm() + ": " + step.message);
-						result.setResultInfo(RestResult.CODE_200);
+						doneCnt++;
 						continue;
 					}
 				}
 
-				if (dataVo.getAprvStat() == NDQualityApproveStat.REJECTED.getValue()) {
+				if (!approve) {
 					// === 반려: 물리 삭제 ===
 					session.insert("approve.insertStdAprvStat", dataVo);
 
@@ -2218,7 +2233,7 @@ public class DataStandardController {
 							break;
 					}
 					session.commit();
-					result.setResultInfo(RestResult.CODE_200);
+					doneCnt++;
 
 				} else {
 					// === 승인 ===
@@ -2238,7 +2253,7 @@ public class DataStandardController {
 							break;
 					}
 					session.commit();
-					result.setResultInfo(RestResult.CODE_200);
+					doneCnt++;
 
 					// 승인 완료 시 변경 이력 저장
 					String targetType = objType == NDQualityStdObjectType.TERMS ? "TERM"
@@ -2273,14 +2288,16 @@ public class DataStandardController {
 			} catch (Exception e) {
 				session.rollback();
 				log.error("update standard approve stat : {}", e.getMessage());
-				result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+				fails.add(new String[] { itemNm, e.getMessage() });
+				if (failCode == 0) failCode = RestResult.CODE_500.getCode();
 			} finally {
 				session.close();
 			}
 		}
 
-		// 단어 반려 시 연관 미승인 용어 경고 정보를 응답에 포함
-		if (!warnings.isEmpty() && result.getResultCode() == 200) {
+		// 안내 문구 — 결재 단계만 넘긴 항목(104번 WP1), 단어 반려 시 연관 미승인 용어
+		List<String> notes = new ArrayList<>(stepMsgs);
+		if (!warnings.isEmpty()) {
 			StringBuilder warnMsg = new StringBuilder();
 			for (Map<String, Object> w : warnings) {
 				@SuppressWarnings("unchecked")
@@ -2292,13 +2309,19 @@ public class DataStandardController {
 				warnMsg.append("단어 '").append(w.get("wordNm")).append("' 반려 시 연관 미승인 용어: ")
 						.append(String.join(", ", termNames)).append(". ");
 			}
-			result.setResultInfo(RestResult.CODE_200.getCode(), warnMsg.toString());
+			notes.add(warnMsg.toString());
 		}
-		// 104번 WP1 — 결재 단계만 넘긴 항목 안내
-		if (!stepMsgs.isEmpty() && result.getResultCode() == 200) {
-			String prev = result.getResultMessage();
-			result.setResultInfo(RestResult.CODE_200.getCode(),
-					String.join(" / ", stepMsgs) + (prev == null || prev.isEmpty() || "OK".equalsIgnoreCase(prev) ? "" : " / " + prev));
+
+		// 109번 #21 — 한 건이라도 실패하면 응답은 실패 코드(첫 실패의 코드). 여러 건이면 건별로 "항목: 사유" 와 처리·실패 건수
+		if (!fails.isEmpty()) {
+			List<String> parts = new ArrayList<>();
+			for (String[] f : fails) parts.add(dataVos.size() > 1 ? f[0] + ": " + f[1] : f[1]);
+			String head = dataVos.size() > 1 ? "처리 " + doneCnt + "건, 실패 " + fails.size() + "건 — " : "";
+			result.setResultInfo(failCode, head + String.join(" / ", parts) + (notes.isEmpty() ? "" : " / " + String.join(" / ", notes)));
+		} else if (!notes.isEmpty()) {
+			result.setResultInfo(RestResult.CODE_200.getCode(), String.join(" / ", notes));
+		} else {
+			result.setResultInfo(RestResult.CODE_200);
 		}
 
 		return Mono.just(result);

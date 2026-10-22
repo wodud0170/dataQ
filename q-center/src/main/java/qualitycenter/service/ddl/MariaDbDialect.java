@@ -18,6 +18,24 @@ public class MariaDbDialect extends AbstractDialect {
 	@Override
 	public boolean inlineComments() { return true; }
 
+	/** 109번 #3 — MariaDB 는 # 이 줄 주석 시작이다 */
+	@Override
+	public String id(String what, String name) {
+		DdlSafety.ident(what, name);
+		if (name.indexOf('#') >= 0) throw new DdlSafety.Invalid(what + " 이름에 # 은 MariaDB 에서 쓸 수 없습니다: " + name);
+		return name;
+	}
+
+	/** 109번 #3 — 문자열 안 역슬래시가 다음 글자를 감싸므로 역슬래시도 두 번 쓴다 (아니면 닫는 따옴표가 감싸진다) */
+	@Override
+	public boolean backslashEscapes() { return true; }
+
+	@Override
+	public String escapeStringLiteral(String v) {
+		if (v == null) return "";
+		return v.replace("\\", "\\\\").replace("'", "''");
+	}
+
 	@Override
 	public String commentOnTable(String owner, String table, String comment) {
 		return "ALTER TABLE " + qualify(owner, table) + inlineTableComment(comment);
@@ -39,6 +57,11 @@ public class MariaDbDialect extends AbstractDialect {
 	}
 
 	@Override
+	public String dropForeignKey(String owner, String table, String name) {
+		return "ALTER TABLE " + qualify(owner, table) + " DROP FOREIGN KEY " + id("제약조건", name);
+	}
+
+	@Override
 	public String addColumn(String owner, String table, StdDataModelAttrVo a) {
 		return "ALTER TABLE " + qualify(owner, table) + " ADD COLUMN " + fullDef(a);
 	}
@@ -50,17 +73,12 @@ public class MariaDbDialect extends AbstractDialect {
 
 	@Override
 	public String renameColumn(String owner, String table, String column, String newColumn, StdDataModelAttrVo a) {
-		return "ALTER TABLE " + qualify(owner, table) + " CHANGE COLUMN " + column + " " + fullDef(a);
+		return "ALTER TABLE " + qualify(owner, table) + " CHANGE COLUMN " + id("컬럼", column) + " " + fullDef(a);
 	}
 
 	@Override
 	public String dropPrimaryKey(String owner, String table, String name, boolean cascade) {
 		return "ALTER TABLE " + qualify(owner, table) + " DROP PRIMARY KEY";
-	}
-
-	@Override
-	public String dropForeignKey(String owner, String table, String name) {
-		return "ALTER TABLE " + qualify(owner, table) + " DROP FOREIGN KEY " + name;
 	}
 
 	/** 정의 + 주석 (주석이 없으면 한글명) */

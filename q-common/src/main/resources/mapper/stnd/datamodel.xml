@@ -547,7 +547,7 @@
 
 	<!-- 데이터모델 정보 조회 (구조진단용) -->
 	<select id="selectDataModelById" parameterType="String" resultType="java.util.HashMap">
-		SELECT DM_ID AS "dataModelId", DM_NM AS "dataModelNm", DM_DS_ID AS "dataModelDsId"
+		SELECT DM_ID AS "dataModelId", DM_NM AS "dataModelNm", DM_DS_ID AS "dataModelDsId", DM_SYS_CD AS "dataModelSysCd"
 		FROM TB_DATA_MODEL
 		WHERE DM_ID = #{dataModelId}
 	</select>

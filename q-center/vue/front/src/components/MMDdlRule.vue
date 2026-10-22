@@ -9,7 +9,7 @@
       <v-icon small color="#3F51B5" class="mr-2">mdi-information-outline</v-icon>
       <span style="font-size:.8rem; color:#546E7A;">
         데이터 모델의 DDL 내려받기, 변경 이력의 DDL, DB 반영이 이 규칙을 씁니다.
-        타입은 모델 데이터소스의 DBMS 행을 찾고, 행이 없으면 타입 이름(길이,소수점) 그대로 나갑니다.
+        타입은 모델 데이터소스의 DBMS 행을 찾고, 행이 없는 타입은 DDL 을 만들지 않습니다(DB 반영 거부, 내려받기는 그 테이블을 주석으로).
       </span>
     </v-sheet>
 
@@ -187,7 +187,7 @@ export default {
       const s = this.selected;
       this.$swal.fire({
         title: s.dbmsTp + ' 의 ' + s.dataType + ' 매핑을 삭제할까요?',
-        text: '삭제하면 이 타입은 이름(길이,소수점) 그대로 DDL 에 나갑니다.',
+        text: '삭제하면 이 DBMS 에서 이 타입을 쓰는 컬럼은 DDL 을 만들 수 없습니다.',
         icon: 'warning', showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소',
       }).then(r => {
         if (!r.isConfirmed) return;

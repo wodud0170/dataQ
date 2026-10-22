@@ -70,6 +70,22 @@
 		 WHERE M.DM_ID = #{dmId}
 	</select>
 
+	<!-- 109번 #2 — 데이터소스가 그 시스템이나 하위 시스템의 데이터소스 목록(SYS_DS_LST)에 있으면 1 이상 -->
+	<select id="countDsInSysTree" parameterType="java.util.Map" resultType="int">
+		WITH RECURSIVE T (SYS_CD, DEPTH) AS (
+			SELECT SYS_CD, 0 FROM TB_SYS_INFO WHERE SYS_CD = #{sysCd}
+			UNION ALL
+			SELECT C.SYS_CD, T.DEPTH + 1
+			  FROM TB_SYS_INFO C
+			  JOIN T ON C.P_SYS_CD = T.SYS_CD
+			 WHERE T.DEPTH &lt; 20
+		)
+		SELECT COUNT(*)
+		  FROM TB_SYS_INFO S
+		  JOIN T ON T.SYS_CD = S.SYS_CD
+		 WHERE CAST(#{dsId} AS VARCHAR) = ANY (S.SYS_DS_LST)
+	</select>
+
 	<!-- 신규 테이블 생성용 — 테이블 1개 -->
 	<select id="selectObj" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
 		SELECT O.DM_ID         as dataModelId

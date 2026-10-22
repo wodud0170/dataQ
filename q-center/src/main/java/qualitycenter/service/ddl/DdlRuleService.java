@@ -47,18 +47,22 @@ public class DdlRuleService {
 	}
 
 	/**
-	 * 데이터 타입·길이·소수점 → DBMS 의 물리 타입. 매핑 행이 없으면 이름(길이,소수점) 그대로.
-	 * 타입이 비어 있으면 VARCHAR 로 본다.
+	 * 데이터 타입·길이·소수점 → DBMS 의 물리 타입. 타입이 비어 있으면 VARCHAR 로 본다.
+	 * 109번 #3 — 매핑 행이 있는 타입만 받는다(허용 목록). 예전에는 행이 없으면 입력한 타입 이름을 그대로 DDL 에 넣었다.
+	 * 길이·소수점은 0 이상, 만든 물리 타입도 {@link DdlSafety#physType} 으로 다시 본다.
 	 */
 	public String physType(String dbmsTp, String dataType, Long dataLen, Short dataDecimalLen) {
 		load();
 		String t = (dataType == null || dataType.trim().isEmpty()) ? "VARCHAR" : dataType.trim().toUpperCase();
 		long len = dataLen == null ? 0L : dataLen;
 		int dec = dataDecimalLen == null ? 0 : dataDecimalLen;
+		DdlSafety.length(len, dec);
 		Map<String, Object> row = typeMap.getOrDefault(dbmsTp, new HashMap<>()).get(t);
-		if (row == null) return render(t + "[({len}[,{dec}])]", len, dec);
+		if (row == null)
+			throw new DdlSafety.Invalid("DDL 규칙에 없는 데이터 타입입니다: " + DdlSafety.show(t) + " (" + dbmsTp
+					+ ") — 관리 > DDL 규칙에서 매핑을 추가하거나 컬럼 타입을 고치세요");
 		if (len <= 0 && row.get("dfltDataLen") != null) len = ((Number) row.get("dfltDataLen")).longValue();
-		return render(String.valueOf(row.get("physDataType")), len, dec);
+		return DdlSafety.physType(render(String.valueOf(row.get("physDataType")), len, dec));
 	}
 
 	/** 틀 → 타입. [...] 는 안쪽부터 보고, 안의 {len}·{dec} 값이 0 보다 클 때만 남긴다 */
@@ -104,8 +108,11 @@ public class DdlRuleService {
 		String phys = physDataType == null ? "" : physDataType.trim();
 		if (phys.isEmpty()) throw new IllegalArgumentException("물리 타입은 필수입니다.");
 		if (phys.length() > 100) throw new IllegalArgumentException("물리 타입이 너무 깁니다 (최대 100자).");
+		DdlSafety.physTemplate(phys);   // 109번 #3 — 틀이 DDL 에 그대로 들어간다
 		checkTemplate(phys, dfltDataLen);
 		if (dfltDataLen != null && dfltDataLen <= 0) throw new IllegalArgumentException("기본 길이는 1 이상이어야 합니다.");
+		DdlSafety.physType(render(phys, 10, 2));
+		DdlSafety.physType(render(phys, dfltDataLen == null ? 0 : dfltDataLen, 0));
 		Map<String, Object> p = new HashMap<>();
 		p.put("dataType", t);
 		p.put("dbmsTp", dbmsTp);

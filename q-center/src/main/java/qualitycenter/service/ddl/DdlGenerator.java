@@ -56,8 +56,13 @@ public class DdlGenerator {
 
 		for (StdDataModelObjVo obj : objs) {
 			// 내려받기 파일은 소유자 접두어 없이 만든다 (받은 쪽 스키마에서 실행)
-			for (String stmt : createTableStatements(null, obj, attrByObj.get(obj.getObjNm()), consByObj.get(obj.getObjNm()), dialect)) {
-				sb.append(stmt).append(";\n");
+			// 109번 #3 — 이름·타입·기본값 검사에 걸린 테이블은 문장 대신 이유를 주석으로 남긴다
+			try {
+				for (String stmt : createTableStatements(null, obj, attrByObj.get(obj.getObjNm()), consByObj.get(obj.getObjNm()), dialect)) {
+					sb.append(stmt).append(";\n");
+				}
+			} catch (DdlSafety.Invalid e) {
+				sb.append("-- ").append(DdlSafety.show(obj.getObjNm())).append(": DDL 을 만들 수 없습니다 — ").append(DdlSafety.oneLine(e.getMessage())).append("\n");
 			}
 			sb.append("\n");
 		}
@@ -109,7 +114,10 @@ public class DdlGenerator {
 		return m;
 	}
 
-	/** CREATE TABLE 1문장 + 주석 문장들 (끝 ';' 없음). owner 가 비면 접두어 없음 */
+	/**
+	 * CREATE TABLE 1문장 + 주석 문장들 (끝 ';' 없음). owner 가 비면 접두어 없음.
+	 * 109번 #3 — 이름·타입·기본값·테이블스페이스·삭제 규칙은 dialect·{@link DdlSafety} 로 검사한다 (걸리면 DdlSafety.Invalid).
+	 */
 	private List<String> createTableStatements(String owner, StdDataModelObjVo obj, List<StdDataModelAttrVo> objAttrs,
 			List<Map<String, Object>> objCons, SqlDialect dialect) {
 		String tbl = obj.getObjNm();
@@ -121,10 +129,11 @@ public class DdlGenerator {
 		if (objAttrs != null) {
 			for (StdDataModelAttrVo a : objAttrs) {
 				StringBuilder line = new StringBuilder();
-				line.append("    ").append(pad(a.getAttrNm(), 30)).append(" ");
+				line.append("    ").append(pad(dialect.id("컬럼", a.getAttrNm()), 30)).append(" ");
 				line.append(pad(dialect.columnType(a.getDataType(), a.getDataLen(), a.getDataDecimalLen()), 16));
-				if (a.getDefaultVal() != null && !a.getDefaultVal().trim().isEmpty()) {
-					line.append(" DEFAULT ").append(a.getDefaultVal().trim());
+				String dflt = dialect.defaultExpr(a.getDefaultVal());
+				if (dflt != null) {
+					line.append(" DEFAULT ").append(dflt);
 				}
 				if (!"Y".equalsIgnoreCase(a.getNullableYn())) {
 					line.append(" NOT NULL");
@@ -138,9 +147,9 @@ public class DdlGenerator {
 			}
 		}
 
-		String pkLine = buildPkLine(tbl, objCons, pkAttrsFromFlag);
+		String pkLine = buildPkLine(dialect, tbl, objCons, pkAttrsFromFlag);
 		List<String> fkLines = buildFkLines(dialect, owner, objCons);
-		List<String> ukLines = buildUkLines(objCons);
+		List<String> ukLines = buildUkLines(dialect, objCons);
 
 		List<String> allLines = new ArrayList<>(colLines);
 		if (pkLine != null) allLines.add(pkLine);
@@ -155,7 +164,7 @@ public class DdlGenerator {
 		sb.append(")");
 		// 88번 §15 — TABLESPACE 절 (NULL 이면 생략)
 		if (obj.getTablespaceNm() != null && !obj.getTablespaceNm().trim().isEmpty()) {
-			sb.append(" TABLESPACE ").append(obj.getTablespaceNm().trim());
+			sb.append(" TABLESPACE ").append(dialect.id("테이블스페이스", obj.getTablespaceNm().trim()));
 		}
 		String tblComment = firstNonEmpty(obj.getObjComment(), obj.getObjNmKr(), obj.getObjDesc());
 		if (dialect.inlineComments() && tblComment != null) sb.append(dialect.inlineTableComment(tblComment));
@@ -174,7 +183,7 @@ public class DdlGenerator {
 		return out;
 	}
 
-	private String buildPkLine(String tbl, List<Map<String, Object>> cons, List<StdDataModelAttrVo> pkAttrsFromFlag) {
+	private String buildPkLine(SqlDialect dialect, String tbl, List<Map<String, Object>> cons, List<StdDataModelAttrVo> pkAttrsFromFlag) {
 		// 1) TB_DATA_MODEL_CONSTRAINT 의 P 타입 우선 사용
 		if (cons != null) {
 			Map<String, List<Map<String, Object>>> byName = new LinkedHashMap<>();
@@ -188,19 +197,19 @@ public class DdlGenerator {
 				Map.Entry<String, List<Map<String, Object>>> first = byName.entrySet().iterator().next();
 				List<String> cols = new ArrayList<>();
 				for (Map<String, Object> c : first.getValue()) cols.add(String.valueOf(c.get("columnNm")));
-				return "    CONSTRAINT " + first.getKey() + " PRIMARY KEY (" + String.join(", ", cols) + ")";
+				return "    CONSTRAINT " + dialect.id("제약조건", first.getKey()) + " PRIMARY KEY (" + String.join(", ", dialect.ids("PK 컬럼", cols)) + ")";
 			}
 		}
 		// 2) 제약 없고 컬럼 PK_YN='Y' 있으면 PK 이름 규칙(DDL 규칙)으로 생성
 		if (!pkAttrsFromFlag.isEmpty()) {
 			List<String> cols = new ArrayList<>();
 			for (StdDataModelAttrVo a : pkAttrsFromFlag) cols.add(a.getAttrNm());
-			return "    CONSTRAINT " + rules.pkName(tbl) + " PRIMARY KEY (" + String.join(", ", cols) + ")";
+			return "    CONSTRAINT " + dialect.id("제약조건", rules.pkName(tbl)) + " PRIMARY KEY (" + String.join(", ", dialect.ids("PK 컬럼", cols)) + ")";
 		}
 		return null;
 	}
 
-	private List<String> buildUkLines(List<Map<String, Object>> cons) {
+	private List<String> buildUkLines(SqlDialect dialect, List<Map<String, Object>> cons) {
 		List<String> out = new ArrayList<>();
 		if (cons == null) return out;
 		Map<String, List<Map<String, Object>>> byName = new LinkedHashMap<>();
@@ -213,7 +222,7 @@ public class DdlGenerator {
 		for (Map.Entry<String, List<Map<String, Object>>> e : byName.entrySet()) {
 			List<String> cols = new ArrayList<>();
 			for (Map<String, Object> c : e.getValue()) cols.add(String.valueOf(c.get("columnNm")));
-			out.add("    CONSTRAINT " + e.getKey() + " UNIQUE (" + String.join(", ", cols) + ")");
+			out.add("    CONSTRAINT " + dialect.id("제약조건", e.getKey()) + " UNIQUE (" + String.join(", ", dialect.ids("UK 컬럼", cols)) + ")");
 		}
 		return out;
 	}
@@ -241,16 +250,16 @@ public class DdlGenerator {
 				if (refTbl == null) refTbl = String.valueOf(c.get("refTableNm"));
 				if (refOwner == null && c.get("refOwner") != null) refOwner = String.valueOf(c.get("refOwner"));
 			}
-			String line = "    CONSTRAINT " + e.getKey()
-					+ " FOREIGN KEY (" + String.join(", ", cols) + ")"
-					+ " REFERENCES " + ((owner == null || owner.isEmpty()) ? refTbl
+			String line = "    CONSTRAINT " + dialect.id("제약조건", e.getKey())
+					+ " FOREIGN KEY (" + String.join(", ", dialect.ids("FK 컬럼", cols)) + ")"
+					+ " REFERENCES " + ((owner == null || owner.isEmpty()) ? dialect.id("참조 테이블", refTbl)
 							: dialect.qualify(refOwner != null && !refOwner.isEmpty() ? refOwner : owner, refTbl))
-					+ " (" + String.join(", ", refCols) + ")";
+					+ " (" + String.join(", ", dialect.ids("참조 컬럼", refCols)) + ")";
 			Map<String, Object> first = rows.get(0);
 			Object delRule = first.get("deleteRule");
 			if (delRule != null && !String.valueOf(delRule).trim().isEmpty()
-					&& !"NO ACTION".equalsIgnoreCase(String.valueOf(delRule))) {
-				line += " ON DELETE " + delRule;
+					&& !"NO ACTION".equalsIgnoreCase(String.valueOf(delRule).trim())) {
+				line += " ON DELETE " + DdlSafety.deleteRule(String.valueOf(delRule));
 			}
 			out.add(line);
 		}
