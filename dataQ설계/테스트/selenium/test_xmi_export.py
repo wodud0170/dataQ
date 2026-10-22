@@ -16,6 +16,7 @@
   P12. UI — 모델 선택 후 추출 버튼 활성
 """
 import base64
+from edgeopt import headless
 from dbcmd import PSQL
 import io
 import os
@@ -211,7 +212,7 @@ def main():
         from selenium.webdriver.support import expected_conditions as EC
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
-        drv = webdriver.Edge(options=opts)
+        drv = webdriver.Edge(options=headless(opts))
         drv.set_window_size(1500, 1000)
         try:
             drv.get(BASE)

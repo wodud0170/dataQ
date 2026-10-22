@@ -11,6 +11,7 @@
   Z. 정리
 """
 import base64
+from edgeopt import headless
 import sys
 import time
 import traceback
@@ -202,7 +203,7 @@ def main():
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
         opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-        d = webdriver.Edge(options=opts)
+        d = webdriver.Edge(options=headless(opts))
         d.set_window_size(1600, 1000)
         try:
             d.get(BASE + "/signin")

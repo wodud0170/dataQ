@@ -9,6 +9,7 @@
 시험 시스템·데이터소스·모델·도메인·용어·이력은 끝에서 지운다.
 """
 import base64, subprocess, sys, time, traceback
+from edgeopt import headless
 from dbcmd import PSQL
 import requests
 from selenium import webdriver
@@ -81,7 +82,7 @@ def main():
     setup()
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1600, 900)
 
     def js(script, *args):

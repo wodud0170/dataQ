@@ -19,6 +19,7 @@
   get_log 는 호출 시 버퍼를 비운다(drain). 화면별로 귀속시키려면
   각 화면 진입 직후에 호출해야 한다. 앞 화면의 지연 렌더가 뒤 화면으로 딸려올 수 있다.
 """
+from edgeopt import headless
 
 # 제품 결함이 아닌 잡음. 추가할 때는 반드시 사유를 같이 적을 것.
 DEFAULT_ALLOW = (
@@ -76,4 +77,5 @@ def make_options(webdriver):
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.set_capability("goog:loggingPrefs", {"browser": "ALL"})
+    headless(opts)
     return opts

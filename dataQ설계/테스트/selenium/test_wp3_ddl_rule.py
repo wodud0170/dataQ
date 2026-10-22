@@ -9,6 +9,7 @@
       뒤 컬럼 추가는 포함 처리, 실제 테이블 생성 확인. 임시 스키마·계정·데이터는 끝에서 지운다
 """
 import base64, secrets, subprocess, sys, time, traceback
+from edgeopt import headless
 from dbcmd import PSQL
 import requests
 from selenium import webdriver
@@ -64,7 +65,7 @@ def main():
 
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1600, 900)
 
     def _ui_login(user):

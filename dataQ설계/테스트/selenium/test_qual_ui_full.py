@@ -8,6 +8,7 @@
 이전 셀레니움이 API 만 검증해서 UI baseURL 버그를 못 잡았다는 사용자 지적 반영.
 """
 import os, sys, time, traceback, base64
+from edgeopt import headless
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -447,7 +448,7 @@ def main():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
 
     try:

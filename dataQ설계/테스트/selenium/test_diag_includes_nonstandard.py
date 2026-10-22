@@ -27,6 +27,7 @@
   C. 우리 임시 컬럼 (TMP_COL_*) 의 진단 결과가 존재
 """
 import os
+from edgeopt import headless
 import sys
 import time
 import traceback
@@ -53,7 +54,7 @@ def make_driver():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
     return d
 

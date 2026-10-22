@@ -10,6 +10,7 @@
       (진단 결과는 논리 모델에 SQL 로 만든다 — 반영은 실 DB 에 접속하지 않는다)
 """
 import base64, json, subprocess, sys, time, traceback
+from edgeopt import headless
 from dbcmd import PSQL
 import requests
 from selenium import webdriver
@@ -105,7 +106,7 @@ def main():
     setup()
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1600, 900)
 
     def js(script, *args):
@@ -260,7 +261,7 @@ def main():
 
         def _g5():
             # 권한 없는 사용자(역할 없음): 사용자 정의 속성·영역 관리 메뉴가 없고, 테이블 창에는 관리 항목 칸이 있다
-            d2 = webdriver.Edge(options=options)
+            d2 = webdriver.Edge(options=headless(options))
             d2.set_window_size(1600, 900)
             try:
                 d2.get(BASE)

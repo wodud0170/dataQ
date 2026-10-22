@@ -6,6 +6,7 @@
                         자율 배치로 2D 로 펼친 뒤 맞춤.
 """
 import os
+from edgeopt import headless
 import sys
 import time
 

@@ -8,6 +8,7 @@
 실행: python capture_manual_shots.py [--user jyjang]   (기본 space=관리자)
 """
 import os
+from edgeopt import headless
 import sys
 import time
 

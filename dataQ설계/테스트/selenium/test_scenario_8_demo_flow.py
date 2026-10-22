@@ -21,6 +21,7 @@
 10분 → 6~8분 단축 (selenium 속도). DB 변경은 가짜 진단 데이터 1건 INSERT 하여 화면 검증 안정화.
 """
 import base64
+from edgeopt import headless
 from dbcmd import PSQL
 import os
 import subprocess
@@ -221,7 +222,7 @@ def main():
 
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
-    drv = webdriver.Edge(options=opts)
+    drv = webdriver.Edge(options=headless(opts))
     drv.set_window_size(1500, 1000)
 
     try:

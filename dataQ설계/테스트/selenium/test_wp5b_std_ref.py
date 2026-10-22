@@ -9,6 +9,7 @@
 시험 데이터는 끝에서 지운다.
 """
 import base64, json, subprocess, sys, time, traceback
+from edgeopt import headless
 from dbcmd import PSQL
 import requests
 from selenium import webdriver
@@ -92,7 +93,7 @@ def main():
     setup()
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1600, 900)
 
     def js(script, *args):

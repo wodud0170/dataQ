@@ -7,6 +7,7 @@ STOMP WebSocket 로그인/로그아웃 테스트
   4. 메인 페이지에 머무르는지 확인 (로그인 화면으로 튕기면 실패)
 """
 import time
+from edgeopt import headless
 import sys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -19,7 +20,7 @@ BASE_URL = "http://localhost:28091"
 def create_driver():
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1280, 900)
     return driver
 

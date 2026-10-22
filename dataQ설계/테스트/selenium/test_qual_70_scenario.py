@@ -13,6 +13,7 @@
   G6. UI 메뉴 진입 — 컬럼 규칙 매핑 + 진단 통계
 """
 import base64, json, sys, time, traceback
+from edgeopt import headless
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -171,7 +172,7 @@ def main():
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
         opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-        d = webdriver.Edge(options=opts)
+        d = webdriver.Edge(options=headless(opts))
         d.set_window_size(1600, 1000)
         try:
             d.get(BASE + "/signin")

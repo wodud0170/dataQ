@@ -9,6 +9,7 @@
   4. 단어 사전 탭으로 이동, 검색조건에 "단어등록TEST" 세팅 + 데이터 조회 확인
 """
 import time
+from edgeopt import headless
 import sys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -22,7 +23,7 @@ BASE_URL = "http://localhost:28091"
 def create_driver():
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1400, 900)
     return driver
 

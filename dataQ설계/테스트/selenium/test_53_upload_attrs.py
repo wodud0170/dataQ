@@ -15,6 +15,7 @@
     — 이 테스트는 같은 테이블의 PK 컬럼을 refObjNmKr 로 지정.
 """
 import os
+from edgeopt import headless
 import sys
 import time
 import traceback
@@ -55,7 +56,7 @@ def make_driver():
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
     prefs = {"download.default_directory": TMP_DIR}
     opts.add_experimental_option("prefs", prefs)
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
     return d
 

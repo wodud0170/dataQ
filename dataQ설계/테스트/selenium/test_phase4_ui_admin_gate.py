@@ -7,6 +7,7 @@ Phase 4 커버리지 — UI 권한 게이트 (비관리자 jyjang)
   3. 혹시 렌더되더라도 nav_scheduleManage / nav_scheduleLog 아이템이 노출되지 않아야 함
 """
 import os
+from edgeopt import headless
 import sys
 import time
 import traceback
@@ -59,7 +60,7 @@ def main():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
     try:
         if not step("1. 일반 사용자 jyjang 로그인", lambda: login(d, "jyjang", "123")): return

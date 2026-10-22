@@ -16,6 +16,7 @@
   - FAILED   : 거의 모든 단어 미매칭
 """
 import base64, json, sys, time, traceback
+from edgeopt import headless
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -261,7 +262,7 @@ def t7_ui_flow():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
 
     INPUT = "회원명\n주문번호\n상품가격\n회원이름\n블라블라"

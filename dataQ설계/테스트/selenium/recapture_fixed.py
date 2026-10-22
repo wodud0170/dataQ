@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """수정 확인용 재촬영 — 대시보드(숫자 잘림) / 진단 결과(소유자 구분)."""
 import os
+from edgeopt import headless
 import sys
 import time
 

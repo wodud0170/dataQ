@@ -19,6 +19,7 @@
   P13. UI — 파일 업로드 input 존재 + accept 속성
 """
 import base64
+from edgeopt import headless
 import os
 import sys
 import time
@@ -164,7 +165,7 @@ def main():
         from selenium.webdriver.support import expected_conditions as EC
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
-        drv = webdriver.Edge(options=opts)
+        drv = webdriver.Edge(options=headless(opts))
         drv.set_window_size(1500, 1000)
         try:
             drv.get(BASE)
@@ -206,7 +207,7 @@ def main():
         from selenium.webdriver.support import expected_conditions as EC
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
-        drv = webdriver.Edge(options=opts)
+        drv = webdriver.Edge(options=headless(opts))
         drv.set_window_size(1500, 1000)
         try:
             drv.get(BASE)
@@ -244,7 +245,7 @@ def main():
         from selenium.webdriver.support import expected_conditions as EC
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
-        drv = webdriver.Edge(options=opts)
+        drv = webdriver.Edge(options=headless(opts))
         drv.set_window_size(1500, 1000)
         try:
             drv.get(BASE)

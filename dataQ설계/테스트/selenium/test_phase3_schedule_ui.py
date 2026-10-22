@@ -12,6 +12,7 @@ Phase 3 — 진단 스케줄러 UI 스모크 테스트 (65번 문서 §10 작업
   8. 정리 (스케줄 삭제)
 """
 import os
+from edgeopt import headless
 import sys
 import time
 import traceback
@@ -99,7 +100,7 @@ def main():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
 
     try:

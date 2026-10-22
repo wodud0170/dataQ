@@ -17,6 +17,7 @@
   - commit 후 그리드 새로고침 + API 조회 결과 일치
 """
 import io
+from edgeopt import headless
 import os
 import sys
 import time
@@ -54,7 +55,7 @@ def make_driver():
     # 다운로드 경로 설정
     prefs = {"download.default_directory": TMP_DIR}
     opts.add_experimental_option("prefs", prefs)
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
     return d
 

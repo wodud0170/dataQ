@@ -9,6 +9,7 @@ Cubrid `cubrid-test`(33000, DB wp4utf 소유자 WP4CUB). 비밀번호는 환경 
          [수집] → [수집 진행] → "수집이 완료되었습니다." → 테이블 3·컬럼 12·인덱스·제약조건(FK 참조 대상 포함)
 """
 import base64, os, subprocess, sys, time, traceback
+from edgeopt import headless
 from dbcmd import PSQL
 import requests
 from selenium import webdriver
@@ -82,7 +83,7 @@ def main():
     setup()
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1600, 900)
 
     def js(script, *args):

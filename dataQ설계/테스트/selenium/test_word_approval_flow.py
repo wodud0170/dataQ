@@ -12,6 +12,7 @@
   - execute_script로 Vue 메서드 직접 호출 금지 (스크롤/가시성 보조만 허용)
 """
 import time
+from edgeopt import headless
 import sys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -36,7 +37,7 @@ TEST_WORD_DESC = "Selenium 자동화 테스트용 단어"
 def create_driver():
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1400, 1080)
     return driver
 

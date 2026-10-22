@@ -14,6 +14,7 @@
 없으면 실패 경로로 동작하는지 검증 (둘 다 PASS 판정).
 """
 import os
+from edgeopt import headless
 import sys
 import time
 import traceback
@@ -41,7 +42,7 @@ def make_driver():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
     return d
 

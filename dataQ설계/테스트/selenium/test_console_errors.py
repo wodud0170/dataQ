@@ -12,6 +12,7 @@
 첫 이탈 화면을 바꿔 재현해야 진짜 출처가 드러난다.
 """
 import os
+from edgeopt import headless
 import sys
 import time
 

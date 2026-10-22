@@ -15,6 +15,7 @@
   - 등록까지 가는 풀 시나리오는 단어 데이터 의존이 커서 1차 단계는 UX 동작만 검증
 """
 import os
+from edgeopt import headless
 import sys
 import time
 import random
@@ -68,7 +69,7 @@ def step(name, fn):
 def create_driver():
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    drv = webdriver.Edge(options=options)
+    drv = webdriver.Edge(options=headless(options))
     drv.set_window_size(1500, 1000)
     return drv
 

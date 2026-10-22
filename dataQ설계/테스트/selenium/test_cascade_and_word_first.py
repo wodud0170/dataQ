@@ -11,6 +11,7 @@
   STEP 6. 정리: 승인된 단어B + 용어B 삭제
 """
 import time
+from edgeopt import headless
 import sys
 import random
 from selenium import webdriver
@@ -42,7 +43,7 @@ results = []
 def create_driver():
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1400, 1080)
     return driver
 

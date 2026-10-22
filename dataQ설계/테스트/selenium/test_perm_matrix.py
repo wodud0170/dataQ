@@ -7,6 +7,7 @@
   P3. UI — 일반 사용자: [관리] 메뉴 미표시
 """
 import base64, sys, time, traceback
+from edgeopt import headless
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -50,7 +51,7 @@ def main():
 
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1600, 900)
 
     def _ui_login(user):

@@ -7,6 +7,7 @@ DSDatamodelStatusColumn 화면 변경 검증:
 전제: 서버 28091 기동, TARGET_MODEL 에 비표준 컬럼이 다수 존재 (TERMS_STND_YN='N')
 """
 import os, sys, time, traceback
+from edgeopt import headless
 from datetime import datetime
 
 from selenium import webdriver
@@ -86,7 +87,7 @@ def main():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
     try:
         if not step("1. 로그인", lambda: login(d)): return

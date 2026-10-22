@@ -19,6 +19,7 @@
   P15. UI — 분류 탭 클릭 → 분류별 막대 노출
 """
 import base64
+from edgeopt import headless
 from dbcmd import PSQL
 import subprocess
 import sys
@@ -289,7 +290,7 @@ def main():
         from selenium.webdriver.support import expected_conditions as EC
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
-        drv = webdriver.Edge(options=opts)
+        drv = webdriver.Edge(options=headless(opts))
         drv.set_window_size(1500, 1000)
         try:
             drv.get(BASE)

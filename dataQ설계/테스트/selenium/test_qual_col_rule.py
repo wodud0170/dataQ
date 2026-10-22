@@ -20,6 +20,7 @@
   P16. UI — 메뉴 진입 + 모델 선택 + 그리드 렌더 + drawer 동작
 """
 import base64
+from edgeopt import headless
 from dbcmd import PSQL
 import subprocess
 import sys
@@ -303,7 +304,7 @@ def main():
         from selenium.webdriver.support import expected_conditions as EC
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
-        drv = webdriver.Edge(options=opts)
+        drv = webdriver.Edge(options=headless(opts))
         drv.set_window_size(1500, 1000)
         try:
             drv.get(BASE)

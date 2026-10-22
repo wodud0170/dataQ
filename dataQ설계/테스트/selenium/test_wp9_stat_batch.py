@@ -14,6 +14,7 @@
   I8. 권한 없는 사용자 — 시스템별 현황에 [목표] 열·버튼이 없다
 """
 import base64, json, re, subprocess, sys, time, traceback
+from edgeopt import headless
 from dbcmd import PSQL
 import requests
 from selenium import webdriver
@@ -159,7 +160,7 @@ VM = ("const vm = (tab, name) => { const e = [...document.querySelectorAll('#' +
 
 
 def login_driver(options, user):
-    d = webdriver.Edge(options=options)
+    d = webdriver.Edge(options=headless(options))
     d.set_window_size(1600, 900)
     d.get(BASE)
     time.sleep(2)

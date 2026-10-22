@@ -8,6 +8,7 @@
   - 통계 메뉴 / 시계열 결과까지 따라감
 """
 import base64, json, subprocess, sys, time, traceback, uuid
+from edgeopt import headless
 from dbcmd import PSQL
 import requests
 from selenium import webdriver
@@ -104,7 +105,7 @@ def make_driver():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
     return d
 

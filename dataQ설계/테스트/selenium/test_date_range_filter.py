@@ -7,6 +7,7 @@
   V2. 프론트 UI — 용어/단어/코드 화면에 등록일자 (from/to) input 존재
 """
 import base64, sys, time, traceback
+from edgeopt import headless
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -79,7 +80,7 @@ def main():
     # V2. UI — 셀레니움으로 각 화면의 등록일자 input 존재 확인
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1600, 900)
 
     try:

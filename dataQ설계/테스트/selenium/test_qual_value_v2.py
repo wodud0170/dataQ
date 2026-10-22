@@ -11,6 +11,7 @@
   H7. UI: [상세] 버튼 → drawer 팝업 → 직전값 표시
 """
 import base64, json, sys, time, traceback
+from edgeopt import headless
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -126,7 +127,7 @@ def ui_phase():
     opts = webdriver.EdgeOptions()
     opts.add_argument("--log-level=3")
     opts.add_experimental_option("excludeSwitches", ["enable-logging"])
-    d = webdriver.Edge(options=opts)
+    d = webdriver.Edge(options=headless(opts))
     d.set_window_size(1600, 1000)
 
     def _login():

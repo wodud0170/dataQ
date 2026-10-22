@@ -8,6 +8,7 @@
   R4. 표준 담당 해제 → 일반 사용자 UI: [관리] 그룹 미표시
 """
 import base64, json, subprocess, sys, time, traceback
+from edgeopt import headless
 from dbcmd import PSQL
 import requests
 from selenium import webdriver
@@ -60,7 +61,7 @@ def main():
 
     options = webdriver.EdgeOptions()
     options.add_argument("--log-level=3")
-    driver = webdriver.Edge(options=options)
+    driver = webdriver.Edge(options=headless(options))
     driver.set_window_size(1600, 900)
 
     def _ui_login(user):

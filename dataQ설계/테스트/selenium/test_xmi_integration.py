@@ -28,6 +28,7 @@
   P15. import 후 USE_YN='Y' 자동 (soft 삭제 행 복구)
 """
 import base64
+from edgeopt import headless
 from dbcmd import PSQL
 import os
 import subprocess
@@ -291,7 +292,7 @@ def main():
         from selenium.webdriver.support import expected_conditions as EC
         opts = webdriver.EdgeOptions()
         opts.add_argument("--log-level=3")
-        drv = webdriver.Edge(options=opts)
+        drv = webdriver.Edge(options=headless(opts))
         drv.set_window_size(1500, 1000)
         try:
             drv.get(BASE)
