@@ -78,6 +78,8 @@ public class RoleController {
 					(String) body.get("roleDesc"), (List<String>) body.get("perms"));
 			res.setResultInfo(RestResult.CODE_200);
 			res.setContents(roleId);
+		} catch (SecurityException e) {   // 109번 #12
+			res.setResultInfo(403, e.getMessage());
 		} catch (IllegalArgumentException e) {
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		} catch (Exception e) {
@@ -119,6 +121,8 @@ public class RoleController {
 		try {
 			roleService.assign((String) body.get("userId"), (String) body.get("roleId"), (String) body.get("sysCd"));
 			res.setResultInfo(RestResult.CODE_200);
+		} catch (SecurityException e) {   // 109번 #12
+			res.setResultInfo(403, e.getMessage());
 		} catch (IllegalArgumentException e) {
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}

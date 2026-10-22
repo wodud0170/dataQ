@@ -26,9 +26,9 @@
       <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
       <v-sheet class="pr-4 pl-4"
         v-bind:style="[isMobile ? { width: '100%', display: 'flex', justifyContent: 'space-between' } : {}]">
-        <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
-        <v-btn class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
-        <v-btn class="gradient" v-on:click="domainClassificationRemoveItem()" title="삭제">삭제</v-btn>
+        <v-btn v-if="canManage" class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
+        <v-btn v-if="canManage" class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
+        <v-btn v-if="canManage" class="gradient" v-on:click="domainClassificationRemoveItem()" title="삭제">삭제</v-btn>
         <!-- 86번 #11 — 엑셀 드롭다운 (업로드/양식/다운로드) -->
         <v-menu offset-y>
           <template v-slot:activator="{ on, attrs }">
@@ -38,7 +38,7 @@
             </v-btn>
           </template>
           <v-list dense>
-            <v-list-item @click="domainClsfExcelFileUpload()">
+            <v-list-item v-if="canManage" @click="domainClsfExcelFileUpload()">
               <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
               <v-list-item-title>엑셀 업로드</v-list-item-title>
             </v-list-item>
@@ -279,6 +279,10 @@ export default {
     excelFile: null,
     _uploadTimer: null,
   }),
+  computed: {
+    // 109번 #13 — 등록·수정·삭제·엑셀 업로드는 표준 직접 관리 권한 (서버도 막는다)
+    canManage() { return this.$can('STD_MANAGE'); },
+  },
   watch: {
     addDomainClassificationModalShow(val) {
       val || this.hideModal('add')
@@ -625,8 +629,8 @@ export default {
     bindDetail(item) {
       // 도메인 분류명 클릭 시 보여지는 하단 리스트
       this.selectedItem = [item];
-      // 수정 모달 열기
-      this.showModal('update');
+      // 수정 모달 열기 (109번 #13 — 표준 직접 관리 권한이 있을 때만)
+      if (this.canManage) this.showModal('update');
     },
     resetDetail() {
       this.selectedItem = [];

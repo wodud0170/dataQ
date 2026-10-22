@@ -241,87 +241,92 @@ public class AprvService {
 	/**
 	 * 현재 단계 결재. 반려는 어느 단계든 문서를 끝내고(done=true, approved=false), 승인은 단계가 다 차면(합의 Y 는 전원,
 	 * N 은 한 명) 다음 단계로, 마지막 단계면 문서를 끝낸다(done=true, approved=true).
+	 *
+	 * <p>109번 #4 — 호출한 쪽의 세션 s 에서 돌고 커밋하지 않는다. 호출한 쪽이 단계 진행과 그 뒤 항목 처리(최종 승인·반려)를
+	 * 한 번에 커밋하거나 되돌린다. 알림(TB_NOTIFICATION)도 같은 트랜잭션이라, 화면 전달은 커밋한 뒤에 한다.
+	 * 109번 #10 — 문서 행을 잠그고(FOR UPDATE) 시작해 같은 문서의 결재가 차례로 돌고, 단계의 승인 수는 갱신한 뒤 DB 에서 다시 센다
+	 * (합의 결재자 둘이 동시에 승인하면 서로 상대를 대기로 보고 단계가 멈췄다).</p>
 	 */
-	public Result act(String docId, String userId, boolean approve, String comment) {
+	public Result act(SqlSession s, String docId, String userId, boolean approve, String comment) {
 		if (!approve && (comment == null || comment.trim().isEmpty())) throw new IllegalArgumentException("반려 사유는 필수입니다.");
-		try (SqlSession s = sqlSessionFactory.openSession()) {
-			Map<String, Object> doc = s.selectOne("aprv.selectDoc", docId);
-			if (doc == null || !"PROGRESS".equals(doc.get("docStat"))) throw new IllegalArgumentException("진행 중인 결재 문서가 아닙니다.");
-			int cur = ((Number) doc.get("curStepNo")).intValue();
-			int stepCnt = ((Number) doc.get("stepCnt")).intValue();
-			boolean admin = permService.isAdmin(userId);
-			List<Map<String, Object>> curRows = new ArrayList<>();
-			for (Map<String, Object> r : s.<Map<String, Object>>selectList("aprv.selectDocSteps", docId)) {
-				if (((Number) r.get("stepNo")).intValue() == cur) curRows.add(r);
-			}
-			Map<String, Object> mine = null;
-			for (Map<String, Object> r : curRows) {
-				if (userId.equals(r.get("aprvrUserId")) && "WAIT".equals(r.get("actStat"))) mine = r;
-			}
-			if (mine == null && !admin) throw new IllegalArgumentException("이 결재의 현재 단계 결재자가 아닙니다.");
-
-			String now = now();
-			String actStat = approve ? "APPROVED" : "REJECTED";
-			// 결재자 본인이면 자기 몫만, 관리자 대결이면 그 단계 대기 결재자 전원 몫
-			for (Map<String, Object> r : curRows) {
-				if (!"WAIT".equals(r.get("actStat"))) continue;
-				if (mine != null && r != mine) continue;
-				Map<String, Object> u = new HashMap<>();
-				u.put("docId", docId);
-				u.put("stepNo", cur);
-				u.put("aprvrUserId", r.get("aprvrUserId"));
-				u.put("actStat", actStat);
-				u.put("actCmnt", comment);
-				u.put("actUserId", userId);
-				u.put("now", now);
-				s.update("aprv.updateStepAct", u);
-				r.put("actStat", actStat);
-			}
-
-			String reqTp = (String) doc.get("reqTp");
-			String targetNm = (String) doc.get("targetNm");
-			String reqUserId = (String) doc.get("reqUserId");
-			String actorNm = s.selectOne("aprv.selectUserNm", userId);
-			String stepNm = curRows.isEmpty() ? null : (String) curRows.get(0).get("stepNm");
-			String stepLabel = cur + "/" + stepCnt + " 단계" + (stepNm == null ? "" : " (" + stepNm + ")");
-			List<Noti> notis = new ArrayList<>();
-
-			if (!approve) {
-				updateDoc(s, docId, "REJECTED", cur, now);
-				notis.add(noti(s, reqUserId, "APRV_REJECT", "반려: " + reqTpNm(reqTp) + " " + targetNm,
-						stepLabel + " " + actorNm + " — " + comment, docId, now));
-				s.commit();
-				return new Result(docId, true, false, stepLabel + " 반려", notis);
-			}
-
-			boolean agree = !curRows.isEmpty() && "Y".equals(curRows.get(0).get("agreeYn"));
-			long approvedCnt = curRows.stream().filter(r -> "APPROVED".equals(r.get("actStat"))).count();
-			boolean stepDone = agree ? approvedCnt == curRows.size() : approvedCnt > 0;
-			if (!stepDone) {
-				s.commit();
-				return new Result(docId, false, true, stepLabel + " 합의 진행 (" + approvedCnt + "/" + curRows.size() + ")", notis);
-			}
-			if (cur >= stepCnt) {
-				updateDoc(s, docId, "APPROVED", cur, now);
-				notis.add(noti(s, reqUserId, "APRV_DONE", "최종 승인: " + reqTpNm(reqTp) + " " + targetNm,
-						stepLabel + " " + actorNm + " 승인으로 결재가 끝났습니다", docId, now));
-				s.commit();
-				return new Result(docId, true, true, stepLabel + " 승인 — 최종 승인", notis);
-			}
-			updateDoc(s, docId, "PROGRESS", cur + 1, null);
-			String reqUserNm = s.selectOne("aprv.selectUserNm", reqUserId);
-			String nextNm = null;
-			for (Map<String, Object> r : s.<Map<String, Object>>selectList("aprv.selectDocSteps", docId)) {
-				if (((Number) r.get("stepNo")).intValue() != cur + 1) continue;
-				nextNm = (String) r.get("stepNm");
-				notis.add(noti(s, (String) r.get("aprvrUserId"), "APRV_REQ", "결재 요청: " + reqTpNm(reqTp) + " " + targetNm,
-						reqUserNm + " 님의 요청 — " + (cur + 1) + "/" + stepCnt + " 단계" + (nextNm == null ? "" : " (" + nextNm + ")"), docId, now));
-			}
-			notis.add(noti(s, reqUserId, "APRV_STEP", "단계 승인: " + reqTpNm(reqTp) + " " + targetNm,
-					stepLabel + " " + actorNm + " 승인 — 다음 " + (cur + 1) + "/" + stepCnt + " 단계", docId, now));
-			s.commit();
-			return new Result(docId, false, true, stepLabel + " 승인 — 다음 " + (cur + 1) + "/" + stepCnt + " 단계로", notis);
+		s.selectOne("aprv.lockDoc", docId);
+		Map<String, Object> doc = s.selectOne("aprv.selectDoc", docId);
+		if (doc == null || !"PROGRESS".equals(doc.get("docStat"))) throw new IllegalArgumentException("진행 중인 결재 문서가 아닙니다.");
+		int cur = ((Number) doc.get("curStepNo")).intValue();
+		int stepCnt = ((Number) doc.get("stepCnt")).intValue();
+		boolean admin = permService.isAdmin(userId);
+		List<Map<String, Object>> curRows = stepRows(s, docId, cur);
+		Map<String, Object> mine = null;
+		for (Map<String, Object> r : curRows) {
+			if (userId.equals(r.get("aprvrUserId")) && "WAIT".equals(r.get("actStat"))) mine = r;
 		}
+		if (mine == null && !admin) throw new IllegalArgumentException("이 결재의 현재 단계 결재자가 아닙니다.");
+
+		String now = now();
+		String actStat = approve ? "APPROVED" : "REJECTED";
+		// 결재자 본인이면 자기 몫만, 관리자 대결이면 그 단계 대기 결재자 전원 몫
+		for (Map<String, Object> r : curRows) {
+			if (!"WAIT".equals(r.get("actStat"))) continue;
+			if (mine != null && r != mine) continue;
+			Map<String, Object> u = new HashMap<>();
+			u.put("docId", docId);
+			u.put("stepNo", cur);
+			u.put("aprvrUserId", r.get("aprvrUserId"));
+			u.put("actStat", actStat);
+			u.put("actCmnt", comment);
+			u.put("actUserId", userId);
+			u.put("now", now);
+			s.update("aprv.updateStepAct", u);
+		}
+
+		String reqTp = (String) doc.get("reqTp");
+		String targetNm = (String) doc.get("targetNm");
+		String reqUserId = (String) doc.get("reqUserId");
+		String actorNm = s.selectOne("aprv.selectUserNm", userId);
+		String stepNm = curRows.isEmpty() ? null : (String) curRows.get(0).get("stepNm");
+		String stepLabel = cur + "/" + stepCnt + " 단계" + (stepNm == null ? "" : " (" + stepNm + ")");
+		List<Noti> notis = new ArrayList<>();
+
+		if (!approve) {
+			updateDoc(s, docId, "REJECTED", cur, now);
+			notis.add(noti(s, reqUserId, "APRV_REJECT", "반려: " + reqTpNm(reqTp) + " " + targetNm,
+					stepLabel + " " + actorNm + " — " + comment, docId, now));
+			return new Result(docId, true, false, stepLabel + " 반려", notis);
+		}
+
+		boolean agree = !curRows.isEmpty() && "Y".equals(curRows.get(0).get("agreeYn"));
+		List<Map<String, Object>> after = stepRows(s, docId, cur);
+		long approvedCnt = after.stream().filter(r -> "APPROVED".equals(r.get("actStat"))).count();
+		boolean stepDone = agree ? approvedCnt == after.size() : approvedCnt > 0;
+		if (!stepDone) {
+			return new Result(docId, false, true, stepLabel + " 합의 진행 (" + approvedCnt + "/" + after.size() + ")", notis);
+		}
+		if (cur >= stepCnt) {
+			updateDoc(s, docId, "APPROVED", cur, now);
+			notis.add(noti(s, reqUserId, "APRV_DONE", "최종 승인: " + reqTpNm(reqTp) + " " + targetNm,
+					stepLabel + " " + actorNm + " 승인으로 결재가 끝났습니다", docId, now));
+			return new Result(docId, true, true, stepLabel + " 승인 — 최종 승인", notis);
+		}
+		updateDoc(s, docId, "PROGRESS", cur + 1, null);
+		String reqUserNm = s.selectOne("aprv.selectUserNm", reqUserId);
+		String nextNm = null;
+		for (Map<String, Object> r : stepRows(s, docId, cur + 1)) {
+			nextNm = (String) r.get("stepNm");
+			notis.add(noti(s, (String) r.get("aprvrUserId"), "APRV_REQ", "결재 요청: " + reqTpNm(reqTp) + " " + targetNm,
+					reqUserNm + " 님의 요청 — " + (cur + 1) + "/" + stepCnt + " 단계" + (nextNm == null ? "" : " (" + nextNm + ")"), docId, now));
+		}
+		notis.add(noti(s, reqUserId, "APRV_STEP", "단계 승인: " + reqTpNm(reqTp) + " " + targetNm,
+				stepLabel + " " + actorNm + " 승인 — 다음 " + (cur + 1) + "/" + stepCnt + " 단계", docId, now));
+		return new Result(docId, false, true, stepLabel + " 승인 — 다음 " + (cur + 1) + "/" + stepCnt + " 단계로", notis);
+	}
+
+	/** 문서의 한 단계 결재자 행 */
+	private static List<Map<String, Object>> stepRows(SqlSession s, String docId, int stepNo) {
+		List<Map<String, Object>> out = new ArrayList<>();
+		for (Map<String, Object> r : s.<Map<String, Object>>selectList("aprv.selectDocSteps", docId)) {
+			if (((Number) r.get("stepNo")).intValue() == stepNo) out.add(r);
+		}
+		return out;
 	}
 
 	private void updateDoc(SqlSession s, String docId, String docStat, int curStepNo, String endDt) {

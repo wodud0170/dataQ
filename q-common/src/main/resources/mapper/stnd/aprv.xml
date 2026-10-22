@@ -105,6 +105,11 @@
 		SELECT <include refid="docCols"/> FROM TB_APRV_DOC D WHERE D.DOC_ID = #{docId}
 	</select>
 
+	<!-- 109번 #10 — 결재(act) 시작 때 문서 행을 잠근다. 같은 문서의 결재는 앞 트랜잭션이 끝날 때까지 기다린다 -->
+	<select id="lockDoc" parameterType="String" resultType="String">
+		SELECT DOC_ID FROM TB_APRV_DOC WHERE DOC_ID = #{docId} FOR UPDATE
+	</select>
+
 	<!-- 대상의 진행 중 문서 (한 대상에 진행 중 문서는 하나) -->
 	<select id="selectOpenDoc" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
 		SELECT <include refid="docCols"/>

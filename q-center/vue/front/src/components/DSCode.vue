@@ -164,7 +164,8 @@
                 <!-- <v-btn class="gradient" v-on:click="showModal('codeValAdd')" title="등록">등록</v-btn>
                 <v-btn class="gradient" v-on:click="excelCodeValFileUpload()" title="일괄 등록">일괄 등록</v-btn>
                 <v-btn class="gradient" v-on:click="codeValListDownload()" title="다운로드">다운로드</v-btn> -->
-                <v-btn class="gradient" v-on:click="codeValRemoveItem()" title="삭제">삭제</v-btn>
+                <!-- 109번 #13 — 코드값 쓰기는 표준 직접 관리 권한 -->
+                <v-btn v-if="canManage" class="gradient" v-on:click="codeValRemoveItem()" title="삭제">삭제</v-btn>
                 <input type="file" @change="readCodeValExcelFile" ref="file" id="inputCodeValUpload"
                   :style="{ display: 'none' }" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
               </v-sheet>
@@ -845,10 +846,11 @@
                 </v-sheet>
                 <!-- 등록 / 일괄 등록 / 삭제 버튼 -->
                 <v-sheet v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 12px' }]">
-                  <v-btn class="gradient" v-on:click="showModal('codeValAdd')" title="등록">등록</v-btn>
-                  <v-btn class="gradient" v-on:click="excelCodeValFileUpload()" title="일괄 등록">일괄 등록</v-btn>
+                  <!-- 109번 #13 — 코드값 쓰기는 표준 직접 관리 권한 -->
+                  <v-btn v-if="canManage" class="gradient" v-on:click="showModal('codeValAdd')" title="등록">등록</v-btn>
+                  <v-btn v-if="canManage" class="gradient" v-on:click="excelCodeValFileUpload()" title="일괄 등록">일괄 등록</v-btn>
                   <v-btn class="gradient" v-on:click="codeValListDownload()" title="다운로드">다운로드</v-btn>
-                  <v-btn class="gradient" v-on:click="codeDataRemoveItem()" title="삭제">삭제</v-btn>
+                  <v-btn v-if="canManage" class="gradient" v-on:click="codeDataRemoveItem()" title="삭제">삭제</v-btn>
                   <input type="file" @change="readCodeValExcelFile" ref="file" id="inputCodeValUpload"
                     :style="{ display: 'none' }"
                     accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
@@ -1985,14 +1987,14 @@ export default {
       this.selectedCodeValItem = [item];
       // remove item에 단독으로 넣어주기
       this.removeCodeValItems = [item];
-      this.showModal('codeValUpdate');
+      if (this.canManage) this.showModal('codeValUpdate');   // 109번 #13
     },
     selectedCodeData(item) {
       // 코드값 리스트에서 선택한 아이템
       this.selectedCodeDataItem = [item];
       // remove item에 단독으로 넣어주기
       this.removeCodeDataItems = [item];
-      this.showModal('codeValUpdate');
+      if (this.canManage) this.showModal('codeValUpdate');   // 109번 #13
     },
     showModal(value) {
       // 모달 보여주기

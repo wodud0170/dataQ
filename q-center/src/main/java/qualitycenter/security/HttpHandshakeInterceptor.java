@@ -10,7 +10,6 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
@@ -31,15 +30,17 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
 			Map<String, Object> attributes) throws Exception {
 
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        WebAuthenticationDetails details = (WebAuthenticationDetails) auth.getDetails();
 
-        if (auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
-	        UserDetails principal = (UserDetails) auth.getPrincipal();
-	        log.info("[principal] Authenticated User={}, IP Address={}", principal.getUsername(), details.getRemoteAddress());
-        } else {
-        	log.error("Websocket handshake refused because of not authenticated request from {}", details.getRemoteAddress());
-        }
-        
+		// 로그인하지 않은 연결도 받는다 — q-executor 가 이 연결로 진행·완료 메시지를 보낸다(104번 §3.3 허용 경로).
+		// 109번 #6 은 사용자를 정하는 곳(CONNECT — 로그인 세션만)과 구독 목적지 제한(SUBSCRIBE)으로 막는다(WebSocketConfiguration).
+		// 로그인하지 않은 연결은 사용자가 없어 /user/ 구독이 자기 세션 목적지로만 풀린다
+		if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof UserDetails) {
+			UserDetails principal = (UserDetails) auth.getPrincipal();
+			log.info("[principal] Authenticated User={}, IP Address={}", principal.getUsername(), request.getRemoteAddress());
+		} else {
+			log.info("Websocket handshake without login from {}", request.getRemoteAddress());
+		}
+
 		if (request instanceof ServletServerHttpRequest) {
 			ServletServerHttpRequest servletRequest = (ServletServerHttpRequest) request;
 			HttpSession session = servletRequest.getServletRequest().getSession();

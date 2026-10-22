@@ -70,6 +70,17 @@ public class RoleService {
 				permSet.add(p);
 			}
 		}
+		// 109번 #12 — 관리자가 아니면 자기에게 없는 권한을 역할에 새로 넣지 못한다.
+		// USER_ADMIN 이 자기가 받은 역할에 권한을 더해 스스로 모든 권한(DDL_EXEC '*' 포함)을 가질 수 있었다
+		if (!sessionService.isAdmin()) {
+			List<String> had = (roleId == null || roleId.isEmpty()) ? new ArrayList<>()
+					: sqlSessionTemplate.selectList("role.selectRolePerms", roleId);
+			for (String code : permSet) {
+				if (!had.contains(code) && !sessionService.hasPerm(PermCode.valueOf(code))) {
+					throw new SecurityException("자기에게 없는 권한은 역할에 넣을 수 없습니다 (관리자만): " + code);
+				}
+			}
+		}
 		Map<String, Object> dup = new HashMap<>();
 		dup.put("roleNm", roleNm);
 		dup.put("roleId", (roleId == null || roleId.isEmpty()) ? null : roleId);
@@ -133,6 +144,10 @@ public class RoleService {
 			throw new IllegalArgumentException("없는 역할입니다: " + roleId);
 		}
 		if (sessionService.getUserDetail(userId) == null) throw new IllegalArgumentException("없는 사용자입니다: " + userId);
+		// 109번 #12 — 관리자가 아니면 자기 자신에게 역할을 주지 못한다
+		if (!sessionService.isAdmin() && userId.equals(sessionService.getUserId())) {
+			throw new SecurityException("자기 자신에게는 역할을 지정할 수 없습니다 (관리자만).");
+		}
 		String scope = (sysCd == null || sysCd.trim().isEmpty()) ? PermService.ALL_SYSTEMS : sysCd.trim();
 		Map<String, Object> p = new HashMap<>();
 		p.put("userId", userId);

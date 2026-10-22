@@ -363,6 +363,14 @@
 			 WHERE G.DOMAIN_GRP_ID = #{id}
   </select>
 
+  <!-- 109번 #13 — 분류를 지우기 전에 — 그 분류의 도메인 수 (TB_DOMAIN 의 분류 FK 가 ON DELETE CASCADE) -->
+  <select id="selectDomainClsfUse" parameterType="String" resultType="java.util.LinkedHashMap">
+			SELECT C.DOMAIN_CLSF_NM as "domainClsfNm",
+			       (SELECT COUNT(*) FROM TB_DOMAIN D WHERE D.DICT_ID = C.DICT_ID AND D.DOMAIN_CLSF_NM = C.DOMAIN_CLSF_NM) as "domainCnt"
+			  FROM TB_DOMAIN_CLSF C
+			 WHERE C.DOMAIN_CLSF_ID = #{id}
+  </select>
+
   <select id="selectDomainGroupChildren" parameterType="String" resultType="com.ndata.quality.model.std.StdDomainGroupVo">
 			SELECT DOMAIN_GRP_ID as id, DOMAIN_GRP_NM FROM TB_DOMAIN_GRP WHERE PARENT_GRP_ID = #{id}
   </select>

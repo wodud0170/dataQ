@@ -321,8 +321,10 @@
                 <v-subheader>표준 준수 필수</v-subheader>
               </v-col>
               <v-col cols="8">
-                <v-switch id="updateStndReqYn" v-model="update_stndReqYn" true-value="Y" false-value="N" dense hide-details class="mt-2"
-                  label="비표준 컬럼 추가·수정 저장을 막음 (예외는 결재)"></v-switch>
+                <!-- 109번 #9 — 켜고 끄기는 모델 직접 반영 권한 -->
+                <v-switch id="updateStndReqYn" v-model="update_stndReqYn" true-value="Y" false-value="N" dense class="mt-2"
+                  label="비표준 컬럼 추가·수정 저장을 막음 (예외는 결재)" :disabled="!canSetStndReq" :hide-details="canSetStndReq"
+                  :hint="canSetStndReq ? '' : '표준 준수 필수 설정 변경은 모델 직접 반영 권한이 필요합니다'" :persistent-hint="!canSetStndReq"></v-switch>
               </v-col>
             </v-row>
             <!-- 버전 (선택, 미입력 시 '1.0') -->
@@ -380,6 +382,8 @@ export default {
   computed: {
     // 109번 #2 — 모델의 시스템·데이터 소스 지정·변경은 모델 직접 반영 권한(DM_MANAGE). 서버도 다시 막는다
     canSetDs() { return this.$can('DM_MANAGE'); },
+    // 109번 #9 — 모델 수정에서 표준 준수 필수 켜고 끄기도 모델 직접 반영 권한. 서버도 다시 막는다
+    canSetStndReq() { return this.$can('DM_MANAGE'); },
     hasDataSource() {
       return this.selectedItem.length > 0 && !!this.selectedItem[0].dataModelDsId;
     },

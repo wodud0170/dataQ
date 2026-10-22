@@ -139,6 +139,17 @@ public class DataStandardController {
 		}
 	}
 
+	/**
+	 * 109번 #13 — 도메인 그룹·도메인 분류·코드값(항목값) 쓰기는 표준 직접 관리 권한(STD_MANAGE). 이 셋은 승인 흐름이 없어
+	 * 일반 사용자의 등록·수정·삭제가 바로 반영됐다. 권한이 있으면 null
+	 */
+	private Response noStdManage() {
+		if (sessionService.hasPerm(PermCode.STD_MANAGE)) return null;
+		Response r = new Response();
+		r.setResultInfo(403, "권한이 없습니다 (표준 직접 관리 권한 필요).");
+		return r;
+	}
+
 	private static <T> List<String> ids(List<T> vos, java.util.function.Function<T, String> f) {
 		List<String> out = new ArrayList<>();
 		if (vos != null) for (T v : vos) out.add(f.apply(v));
@@ -1204,6 +1215,8 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/createCodeData", method = RequestMethod.POST)
 	public Mono<Response> createCodeData(@RequestBody StdCodeDataVo dataVo) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return Mono.just(np);
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlocked(dataVo.getDictId());
 		if (rb0 != null) return Mono.just(rb0);
@@ -1243,6 +1256,8 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/updateCodeData", method = RequestMethod.POST)
 	public Mono<Response> updateCodeData(@RequestBody StdCodeDataVo dataVo) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return Mono.just(np);
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlockedOf("TB_CODE_DATA", "CODE_ID", java.util.Collections.singletonList(dataVo.getId()));
 		if (rb0 != null) return Mono.just(rb0);
@@ -1285,6 +1300,8 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteCodeDatas", method = RequestMethod.POST)
 	public Mono<Response> deleteCodeDatas(@RequestBody List<StdCodeDataVo> dataVos) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return Mono.just(np);
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlockedOf("TB_CODE_DATA", "CODE_ID", ids(dataVos, StdCodeDataVo::getId));
 		if (rb0 != null) return Mono.just(rb0);
@@ -1339,6 +1356,8 @@ public class DataStandardController {
 			@RequestParam(value = "dictId", required = false) String dictId) {
 
 		log.info(">> started uploadCodeDataList file : {}", excelFile.getOriginalFilename());
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return Mono.just(np);
 
 		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadCodeDataList", dictId);
 
@@ -1429,7 +1448,7 @@ public class DataStandardController {
 	}
 
 	/** 86번 #29 — 단어 입력 공통 검증 (createWord / updateWord 재사용) */
-	private void validateWordInput(StdWordVo vo) throws Exception {
+	void validateWordInput(StdWordVo vo) throws Exception {   // 109번 #11 — 결재자 수정 후 승인(AprvController)도 쓴다
 		String wnm = vo.getWordNm();
 		if (wnm == null || wnm.trim().isEmpty()) {
 			throw new Exception("단어 한글명은 필수입니다.");
@@ -1669,6 +1688,8 @@ public class DataStandardController {
 	@RequestMapping(value = "/createDomainGroup", method = RequestMethod.POST)
 	@ResponseBody
 	public Response createDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return np;
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlocked(dataVo.getDictId());
 		if (rb0 != null) return rb0;
@@ -1746,6 +1767,8 @@ public class DataStandardController {
 	@RequestMapping(value = "/updateDomainGroup", method = RequestMethod.POST)
 	@ResponseBody
 	public Response updateDomainGroup(@RequestBody StdDomainGroupVo dataVo) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return np;
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlockedOf("TB_DOMAIN_GRP", "DOMAIN_GRP_ID", java.util.Collections.singletonList(dataVo.getId()));
 		if (rb0 != null) return rb0;
@@ -1793,6 +1816,8 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteDomainGroups", method = RequestMethod.POST)
 	public Mono<Response> deleteDomainGroups(@RequestBody List<StdDomainGroupVo> dataVos) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return Mono.just(np);
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlockedOf("TB_DOMAIN_GRP", "DOMAIN_GRP_ID", ids(dataVos, StdDomainGroupVo::getId));
 		if (rb0 != null) return Mono.just(rb0);
@@ -1845,6 +1870,8 @@ public class DataStandardController {
 	@RequestMapping(value = "/createDomainClassification", method = RequestMethod.POST)
 	@ResponseBody
 	public Response createDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return np;
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlocked(dataVo.getDictId());
 		if (rb0 != null) return rb0;
@@ -1889,6 +1916,8 @@ public class DataStandardController {
 	@RequestMapping(value = "/updateDomainClassification", method = RequestMethod.POST)
 	@ResponseBody
 	public Response updateDomainClassification(@RequestBody StdDomainClassificationVo dataVo) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return np;
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlockedOf("TB_DOMAIN_CLSF", "DOMAIN_CLSF_ID", java.util.Collections.singletonList(dataVo.getId()));
 		if (rb0 != null) return rb0;
@@ -1920,11 +1949,23 @@ public class DataStandardController {
 	 */
 	@RequestMapping(value = "/deleteDomainClassifications", method = RequestMethod.POST)
 	public Mono<Response> deleteDomainClassifications(@RequestBody List<StdDomainClassificationVo> dataVos) {
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return Mono.just(np);
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlockedOf("TB_DOMAIN_CLSF", "DOMAIN_CLSF_ID", ids(dataVos, StdDomainClassificationVo::getId));
 		if (rb0 != null) return Mono.just(rb0);
 		Response result = new Response();
 		try {
+			// 109번 #13 — 도메인이 있는 분류는 지우지 않는다 (그룹 삭제와 같다). FK(tb_domain_fk_2)가 ON DELETE CASCADE 라
+			// 분류를 지우면 그 분류의 도메인(승인된 것 포함)이 이력 없이 함께 지워졌다
+			for (StdDomainClassificationVo v : dataVos) {
+				Map<String, Object> use = sqlSessionTemplate.selectOne("domain.selectDomainClsfUse", v.getId());
+				if (use != null && ((Number) use.get("domainCnt")).longValue() > 0) {
+					result.setResultInfo(RestResult.CODE_500.getCode(), "도메인 분류 '" + use.get("domainClsfNm") + "' 에 도메인 "
+							+ use.get("domainCnt") + "개가 있어 지울 수 없습니다.");
+					return Mono.just(result);
+				}
+			}
 			sqlSessionTemplate.delete("domain.deleteDomainClassifications", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -2011,6 +2052,8 @@ public class DataStandardController {
 	public Mono<Response> uploadDomainGroups(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile,
 			@RequestParam(value = "dictId", required = false) String dictId) {
 		log.info(">> started uploadDomainGroups file : {}", excelFile.getOriginalFilename());
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return Mono.just(np);
 		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadDomainGroups", dictId);
 		log.info(">> finished uploadDomainGroups file : {}", excelFile.getOriginalFilename());
 		return mResponse;
@@ -2037,6 +2080,8 @@ public class DataStandardController {
 	public Mono<Response> uploadDomainClsfs(HttpServletRequest request, @RequestParam("file") MultipartFile excelFile,
 			@RequestParam(value = "dictId", required = false) String dictId) {
 		log.info(">> started uploadDomainClsfs file : {}", excelFile.getOriginalFilename());
+		Response np = noStdManage();   // 109번 #13
+		if (np != null) return Mono.just(np);
 		Mono<Response> mResponse = forwardUploadToExecutor(request, excelFile, "/api/std/uploadDomainClsfs", dictId);
 		log.info(">> finished uploadDomainClsfs file : {}", excelFile.getOriginalFilename());
 		return mResponse;
@@ -2099,7 +2144,15 @@ public class DataStandardController {
 	@RequestMapping(value = "/putStdAprvStat", method = RequestMethod.POST)
 	public Mono<Response> putStdAprvStat(@RequestBody List<StdApproveStatVo> dataVos) {
 		log.info(">> putStdAprvStat : {}", dataVos);
+		return Mono.just(aprvItems(dataVos, null));
+	}
 
+	/**
+	 * 표준 승인·반려 — 항목마다 한 트랜잭션.
+	 * 109번 #4 — 결재 문서의 단계 진행(AprvService.act)도 항목 처리와 같은 세션·트랜잭션이다. 항목 처리가 실패하면 단계 진행도 되돌린다.
+	 * beforeAct 가 있으면(결재자 수정 후 승인 — AprvController.editAndApprove) 그 항목 수정을 같은 트랜잭션에서 먼저 한다.
+	 */
+	Response aprvItems(List<StdApproveStatVo> dataVos, java.util.function.Consumer<SqlSession> beforeAct) {
 		Response result = new Response();
 		List<Map<String, Object>> warnings = new ArrayList<>();
 
@@ -2129,6 +2182,15 @@ public class DataStandardController {
 			}
 			boolean approve = stat == NDQualityApproveStat.APPROVED.getValue();
 
+			// 109번 #8 — 승인 대기 항목만, 요청 유형이 항목의 실제 유형과 같을 때만, 참조 사전 항목은 안 된다.
+			// 예전에는 승인된 항목도 "반려"로 물리 삭제됐고, 용어를 코드로 보내면 용어 결재선을 건너뛰었다
+			String targetErr = aprvTargetError(dataVo);
+			if (targetErr != null) {
+				fails.add(new String[] { itemNm, targetErr });
+				if (failCode == 0) failCode = 400;
+				continue;
+			}
+
 			Map<String, Object> aprvDoc = aprvService.openDoc(dataVo.getReqTp(), dataVo.getReqItemId());
 			if (aprvDoc == null && !stdApprover) {
 				fails.add(new String[] { itemNm, "승인·반려 권한이 없습니다 (표준 승인 권한 필요)." });
@@ -2137,11 +2199,11 @@ public class DataStandardController {
 			}
 
 			SqlSession session = sqlSessionFactory.openSession();
+			List<AprvService.Noti> notis = new ArrayList<>();
 
 			try {
 				NDQualityStdObjectType objType = NDQualityStdObjectType.valueOf(dataVo.getReqTp());
-				boolean lastStep = aprvDoc == null
-						|| ((Number) aprvDoc.get("curStepNo")).intValue() == ((Number) aprvDoc.get("stepCnt")).intValue();
+				if (beforeAct != null) beforeAct.accept(session);
 
 				// 단어 반려 가드 — 결재 문서 단계를 넘기기 전에 먼저 본다 (반려는 어느 단계든 바로 끝나므로)
 				if (objType == NDQualityStdObjectType.WORD && !approve) {
@@ -2159,11 +2221,23 @@ public class DataStandardController {
 					}
 				}
 
-				// 용어 승인 시: 구성 단어 미승인 여부 체크 (결재 문서가 있으면 마지막 단계에서만)
+				if (aprvDoc != null) {
+					AprvService.Result step = aprvService.act(session, (String) aprvDoc.get("docId"), sessionService.getUserId(),
+							approve, dataVo.getAprvStatUpdtRsn());
+					notis.addAll(step.notis);
+					if (!step.done) {
+						session.commit();
+						websocketService.sendUserNotis(notis);
+						stepMsgs.add(dataVo.getReqItemNm() + ": " + step.message);
+						doneCnt++;
+						continue;
+					}
+				}
+
+				// 용어 승인 시: 구성 단어 미승인 여부 체크 (결재 문서가 있으면 마지막 단계 승인에서만 — 걸리면 위 단계 진행도 되돌린다)
 				// DEF-13 — 코드도 TB_TERMS 에 저장되는 용어라 같은 가드를 태워야 한다.
 				// TERMS 만 검사하면 코드로 등록한 용어는 미승인 단어로 이뤄져도 승인됐다.
-				if ((objType == NDQualityStdObjectType.TERMS || objType == NDQualityStdObjectType.CODE)
-						&& approve && lastStep) {
+				if ((objType == NDQualityStdObjectType.TERMS || objType == NDQualityStdObjectType.CODE) && approve) {
 					List<Map<String, Object>> unapprovedWords = session.selectList(
 							"approve.selectUnapprovedWordsByTermsId", dataVo.getReqItemId());
 					if (unapprovedWords != null && !unapprovedWords.isEmpty()) {
@@ -2173,17 +2247,6 @@ public class DataStandardController {
 						}
 						throw new Exception("다음 단어가 아직 승인되지 않았습니다: " + String.join(", ", wordNames)
 								+ ". 해당 단어를 먼저 승인해주세요.");
-					}
-				}
-
-				if (aprvDoc != null) {
-					AprvService.Result step = aprvService.act((String) aprvDoc.get("docId"), sessionService.getUserId(),
-							approve, dataVo.getAprvStatUpdtRsn());
-					websocketService.sendUserNotis(step.notis);
-					if (!step.done) {
-						stepMsgs.add(dataVo.getReqItemNm() + ": " + step.message);
-						doneCnt++;
-						continue;
 					}
 				}
 
@@ -2222,17 +2285,18 @@ public class DataStandardController {
 								warnings.add(warning);
 							}
 							// 단어 삭제
-							session.delete("approve.deleteWordByReject", dataVo);
+							onePending(session.delete("approve.deleteWordByReject", dataVo));
 							break;
 						case TERMS:
 						case CODE:
-							session.delete("approve.deleteTermsByReject", dataVo);
+							onePending(session.delete("approve.deleteTermsByReject", dataVo));
 							break;
 						case DOMAIN:
-							session.delete("approve.deleteDomainByReject", dataVo);
+							onePending(session.delete("approve.deleteDomainByReject", dataVo));
 							break;
 					}
 					session.commit();
+					websocketService.sendUserNotis(notis);
 					doneCnt++;
 
 				} else {
@@ -2240,19 +2304,20 @@ public class DataStandardController {
 					session.insert("approve.insertStdAprvStat", dataVo);
 					switch (objType) {
 						case TERMS:
-							session.update("approve.updateTermsAprvStat", dataVo);
+							onePending(session.update("approve.updateTermsAprvStat", dataVo));
 							break;
 						case WORD:
-							session.update("approve.updateWordAprvStat", dataVo);
+							onePending(session.update("approve.updateWordAprvStat", dataVo));
 							break;
 						case DOMAIN:
-							session.update("approve.updateDomainAprvStat", dataVo);
+							onePending(session.update("approve.updateDomainAprvStat", dataVo));
 							break;
 						case CODE:
-							session.update("approve.updateTermsAprvStat", dataVo);
+							onePending(session.update("approve.updateTermsAprvStat", dataVo));
 							break;
 					}
 					session.commit();
+					websocketService.sendUserNotis(notis);
 					doneCnt++;
 
 					// 승인 완료 시 변경 이력 저장
@@ -2324,7 +2389,32 @@ public class DataStandardController {
 			result.setResultInfo(RestResult.CODE_200);
 		}
 
-		return Mono.just(result);
+		return result;
+	}
+
+	/**
+	 * 109번 #8 — 승인·반려 대상 검사. 대상이 있고, 승인 대기(APRV_YN='N')이고, 요청 유형이 항목의 실제 유형과 같고(용어·코드는
+	 * 같은 TB_TERMS 라 CODE_GRP 로 가른다 — 승인 목록과 같은 기준), 참조 사전 항목이 아니어야 한다. 문제가 없으면 null
+	 */
+	private String aprvTargetError(StdApproveStatVo vo) {
+		if (!Arrays.asList("WORD", "TERMS", "CODE", "DOMAIN").contains(vo.getReqTp()))
+			return "요청 유형(reqTp)은 WORD·TERMS·CODE·DOMAIN 중 하나여야 합니다: " + vo.getReqTp();
+		Map<String, Object> t = sqlSessionTemplate.selectOne("approve.selectAprvTarget", vo);
+		if (t == null) return "승인·반려할 항목이 없습니다: " + vo.getReqItemId();
+		if (!vo.getReqTp().equals(t.get("reqTp")))
+			return "요청 유형(" + vo.getReqTp() + ")이 항목의 유형(" + t.get("reqTp") + ")과 다릅니다.";
+		if (!"N".equals(t.get("aprvYn"))) return "승인 대기 항목이 아닙니다 (승인된 항목은 승인·반려할 수 없습니다).";
+		try {
+			dictService.checkWritable((String) t.get("dictId"));
+		} catch (IllegalArgumentException e) {
+			return e.getMessage();
+		}
+		return null;
+	}
+
+	/** 109번 #8 — 승인·반려 문장은 승인 대기 행 하나만 바꾼다. 0건이면 그 사이 다른 처리가 있었던 것 */
+	private static void onePending(int n) {
+		if (n != 1) throw new IllegalStateException("승인 대기 항목이 아닙니다 (다른 사용자가 먼저 처리했을 수 있습니다).");
 	}
 
 

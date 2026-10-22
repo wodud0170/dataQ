@@ -10,6 +10,8 @@ import java.util.UUID;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,6 +53,7 @@ public class DataModelApprovalController {
 	@Autowired private DdlGenerator ddlGenerator;
 	@Autowired private com.ndata.quality.service.AprvService aprvService;
 	@Autowired private qualitycenter.service.ws.WebSocketService websocketService;
+	@Autowired private PlatformTransactionManager txManager;
 
 	private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -180,6 +183,8 @@ public class DataModelApprovalController {
 	 * 승인·반려. 결재 문서가 없는 건은 모델 승인 권한(관리자 또는 DM_APPROVE)으로 지금처럼 선택 건만 처리한다.
 	 * 104번 WP1 — 건이 속한 신청에 진행 중 결재 문서가 있으면 그 문서의 현재 결재자(관리자 대결 포함)가 단계를 진행하고,
 	 * 최종 승인·반려일 때만 <b>그 신청의 SUBMITTED 건 전체</b>에 기존 처리를 한다 (결재 문서가 있으면 일부만 골라 처리하지 않는다).
+	 * 109번 #4 — 요청 전체(결재 단계 진행·건 처리)를 한 트랜잭션으로 한다. 한 건이라도 실패하면 모두 되돌리고, 알림은 커밋한 뒤에 보낸다.
+	 * 앞 건의 반려가 뒤 건을 함께 반려(cascade)했으면 뒤 건은 건너뛴다 — 건마다 지금 상태를 다시 읽는다.
 	 * 응답 contents = {approved|rejected: 처리 건수, steps: [단계만 진행한 신청의 안내]}
 	 */
 	@SuppressWarnings("unchecked")
@@ -193,34 +198,48 @@ public class DataModelApprovalController {
 			String userId = changeHistory.safeUserId();
 			boolean dmApprover = sessionService.hasPerm(PermCode.DM_APPROVE);
 			Object comment = body.get("aprvComment");
-
-			// 신청별로 나눈다 — 결재 문서가 있는 신청은 문서 단위로 한 번만 처리
-			List<Object> plain = new ArrayList<>();
-			Map<String, Map<String, Object>> docBySub = new java.util.LinkedHashMap<>();
-			for (Object seq : seqList) {
-				Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
-				String sub = h == null ? null : (String) h.get("submission_id");
-				Map<String, Object> d = sub == null ? null : aprvService.openDoc("DM_CHANGE", sub);
-				if (d != null) docBySub.put(sub, d);
-				else plain.add(seq);
-			}
-			if (!plain.isEmpty() && !dmApprover) throw new IllegalStateException("권한이 없습니다 (모델 승인 권한 필요)");
-
-			int n = 0;
-			for (Object seq : plain) n += applyApprovalStatus(seq, status, userId, now, comment);
+			List<com.ndata.quality.service.AprvService.Noti> notis = new ArrayList<>();
 			List<String> steps = new ArrayList<>();
-			for (Map.Entry<String, Map<String, Object>> e : docBySub.entrySet()) {
-				com.ndata.quality.service.AprvService.Result r = aprvService.act((String) e.getValue().get("docId"), userId, approve, comment == null ? null : String.valueOf(comment));
-				websocketService.sendUserNotis(r.notis);
-				if (!r.done) {
-					steps.add(e.getValue().get("targetNm") + ": " + r.message);
-					continue;
+
+			int n = new TransactionTemplate(txManager).execute(tx -> {
+				// 신청별로 나눈다 — 결재 문서가 있는 신청은 문서 단위로 한 번만 처리
+				List<Object> plain = new ArrayList<>();
+				java.util.Set<String> pendingAtStart = new java.util.HashSet<>();
+				Map<String, Map<String, Object>> docBySub = new java.util.LinkedHashMap<>();
+				for (Object seq : seqList) {
+					Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+					if (h != null && isPending(h)) pendingAtStart.add(String.valueOf(seq));
+					String sub = h == null ? null : (String) h.get("submission_id");
+					Map<String, Object> d = sub == null ? null : aprvService.openDoc("DM_CHANGE", sub);
+					if (d != null) docBySub.put(sub, d);
+					else plain.add(seq);
 				}
-				for (com.ndata.quality.model.std.StdDataModelChangeHistoryVo i : sqlSessionTemplate.<com.ndata.quality.model.std.StdDataModelChangeHistoryVo>selectList(
-						"dmChangeHistory.selectBySubmissionId", e.getKey())) {
-					if ("SUBMITTED".equals(i.getAprvStatus())) n += applyApprovalStatus(i.getChangeSeq(), status, userId, now, comment);
+				if (!plain.isEmpty() && !dmApprover) throw new IllegalStateException("권한이 없습니다 (모델 승인 권한 필요)");
+
+				int cnt = 0;
+				for (Object seq : plain) {
+					// 요청 때 대기였는데 지금 아니면 이 요청의 앞 건 반려에 함께 반려된 것. 요청 때부터 처리된 건은 아래에서 거부(DEF-09)
+					if (pendingAtStart.contains(String.valueOf(seq))
+							&& !isPending(sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq))) continue;
+					cnt += applyApprovalStatus(seq, status, userId, now, comment);
 				}
-			}
+				for (Map.Entry<String, Map<String, Object>> e : docBySub.entrySet()) {
+					com.ndata.quality.service.AprvService.Result r = aprvService.act(sqlSessionTemplate, (String) e.getValue().get("docId"),
+							userId, approve, comment == null ? null : String.valueOf(comment));
+					notis.addAll(r.notis);
+					if (!r.done) {
+						steps.add(e.getValue().get("targetNm") + ": " + r.message);
+						continue;
+					}
+					for (com.ndata.quality.model.std.StdDataModelChangeHistoryVo i : sqlSessionTemplate.<com.ndata.quality.model.std.StdDataModelChangeHistoryVo>selectList(
+							"dmChangeHistory.selectBySubmissionId", e.getKey())) {
+						Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", i.getChangeSeq());
+						if ("SUBMITTED".equals(h.get("aprv_status"))) cnt += applyApprovalStatus(i.getChangeSeq(), status, userId, now, comment);
+					}
+				}
+				return cnt;
+			});
+			websocketService.sendUserNotis(notis);
 			Map<String, Object> out = new java.util.LinkedHashMap<>();
 			out.put(approve ? "approved" : "rejected", n);
 			out.put("steps", steps);
@@ -231,6 +250,10 @@ public class DataModelApprovalController {
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(res);
+	}
+
+	private static boolean isPending(Map<String, Object> hist) {
+		return hist != null && ("DRAFT".equals(hist.get("aprv_status")) || "SUBMITTED".equals(hist.get("aprv_status")));
 	}
 
 	/**
@@ -274,7 +297,8 @@ public class DataModelApprovalController {
 			// DEF-04 — 수정 반려 시 변경 전 값으로 되돌린다.
 			// 그동안 모델 row 는 이미 바뀐 채였고 반려는 상태만 REJECTED 로 만들어,
 			// 반려된 값이 그대로 살아 있었다.
-			if ("REJECTED".equals(status) && changeType != null && changeType.startsWith("MODIFY_")) {
+			// 테이블 수정(MODIFY_OBJ)은 아래 테이블 반려 전파가 지금(바뀐) 이름으로 돈 뒤에 되돌린다 (109번 #14)
+			if ("REJECTED".equals(status) && "MODIFY_ATTR".equals(changeType)) {
 				restoreFromBeforeJson(hist, changeType, dmId, objOwner, objNm, attrNm);
 			}
 
@@ -355,6 +379,9 @@ public class DataModelApprovalController {
 						cascadeRejectFrom(dmId, (String) k.get("objOwner"), (String) k.get("objNm"),
 						                  (String) k.get("attrNm"), adminId, now,
 						                  "상위 반려에 의한 cascade");
+					}
+					if ("MODIFY_OBJ".equals(changeType)) {
+						restoreFromBeforeJson(hist, changeType, dmId, objOwner, objNm, attrNm);
 					}
 				}
 			}
@@ -476,10 +503,48 @@ public class DataModelApprovalController {
 				int r = sqlSessionTemplate.update("datamodel.restoreAttrFromBefore", before);
 				log.info(">> MODIFY_ATTR 반려 — {}건 원복 {}.{}.{}", r, objOwner, objNm, attrNm);
 			} else if ("MODIFY_OBJ".equals(changeType)) {
+				// 109번 #14 — 이름·소유자 변경 때(updateObj) 함께 바꾼 컬럼·인덱스·제약조건·참조 제약조건·FK 부모·사용자 정의 속성 값도
+				// 변경 전 이름으로 되돌린다. 예전에는 테이블 행만 되돌려 나머지가 새 이름에 고아로 남았다.
+				// updateObj 는 이름을 (변경 전 소유자로) 먼저 바꾸고 소유자를 바꾸므로(FK 부모는 소유자를 안 바꾼다), 거꾸로 소유자 → 이름 순서
+				String curOwner = objOwner == null ? "" : objOwner;
+				String oldOwner = before.get("objOwner") == null ? curOwner : (String) before.get("objOwner");
+				String oldNm    = before.get("objNm") == null ? objNm : (String) before.get("objNm");
+				if (!oldOwner.equals(curOwner)) {
+					Map<String, Object> own = new HashMap<>();
+					own.put("dataModelId", dmId);
+					own.put("objNm",       objNm);
+					own.put("objOwner",    curOwner);   // 지금 소유자 — WHERE
+					own.put("newOwner",    oldOwner);   // 변경 전 소유자 — SET
+					sqlSessionTemplate.update("datamodel.cascadeAttrOwner",          own);
+					sqlSessionTemplate.update("datamodel.cascadeIndexOwner",         own);
+					sqlSessionTemplate.update("datamodel.cascadeConstraintOwner",    own);
+					sqlSessionTemplate.update("datamodel.cascadeConstraintRefOwner", own);
+				}
+				if (!oldNm.equals(objNm)) {
+					Map<String, Object> rn = new HashMap<>();
+					rn.put("dataModelId", dmId);
+					rn.put("origObjNm",   objNm);
+					rn.put("newObjNm",    oldNm);
+					rn.put("objOwner",    oldOwner);
+					sqlSessionTemplate.update("datamodel.renameObjAttrCascade",          rn);
+					sqlSessionTemplate.update("datamodel.renameObjIndexCascade",         rn);
+					sqlSessionTemplate.update("datamodel.renameObjConstraintCascade",    rn);
+					sqlSessionTemplate.update("datamodel.renameObjConstraintRefCascade", rn);
+					sqlSessionTemplate.update("datamodel.renameObjFkParentCascade",      rn);
+				}
+				if (!oldNm.equals(objNm) || !oldOwner.equals(curOwner)) {
+					Map<String, Object> rv = new HashMap<>();
+					rv.put("dmId",      dmId);
+					rv.put("origOwner", curOwner);
+					rv.put("origObjNm", objNm);
+					rv.put("newOwner",  oldOwner);
+					rv.put("newObjNm",  oldNm);
+					sqlSessionTemplate.update("udp.renameObjVals", rv);
+				}
 				before.put("currObjOwner", objOwner);
 				before.put("currObjNm",    objNm);
 				int r = sqlSessionTemplate.update("datamodel.restoreObjFromBefore", before);
-				log.info(">> MODIFY_OBJ 반려 — {}건 원복 {}.{}", r, objOwner, objNm);
+				log.info(">> MODIFY_OBJ 반려 — {}건 원복 {}.{} → {}.{}", r, objOwner, objNm, oldOwner, oldNm);
 			}
 		} catch (Exception e) {
 			log.error(">> {} 반려 원복 실패 ({}.{}.{}): {}",
@@ -598,6 +663,17 @@ public class DataModelApprovalController {
 		try {
 			if ("ADD_OBJ".equals(changeType)) {
 				if (d == null) { p.skip = dbms + " 용 DDL 규칙이 없습니다"; return p; }
+				// 109번 #5 — 컬럼·테이블 수정, PK·FK 변경은 신청 때 모델 행을 바로 바꾼다. 그 승인 대기 건이 있으면
+				// CREATE TABLE 에 승인 안 된 값이 들어가므로 반영하지 않는다
+				Map<String, Object> k = new HashMap<>();
+				k.put("dmId", dmId);
+				k.put("objOwner", owner);
+				k.put("objNm", objNm);
+				int pend = sqlSessionTemplate.selectOne("ddlRule.countPendingEditsOfObj", k);
+				if (pend > 0) {
+					p.deny = "이 테이블에 승인 대기 중인 수정이 " + pend + "건 있습니다 — 승인·반려한 뒤 반영하세요";
+					return p;
+				}
 				p.stmts = ddlGenerator.createTableDdl(dmId, owner, objNm, d);
 				if (p.stmts == null) { p.skip = "모델에 테이블이 없습니다: " + objNm; return p; }
 				p.create = true;

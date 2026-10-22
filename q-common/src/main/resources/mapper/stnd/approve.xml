@@ -220,13 +220,29 @@
            )
   </insert>
 
-  <!-- 승인 전용 (반려는 물리 삭제로 처리) -->
+  <!-- 109번 #8 — 승인·반려 대상의 실제 유형·승인 여부·사전. 용어·코드는 같은 TB_TERMS 라 CODE_GRP 로 가른다(위 승인 목록과 같은 기준) -->
+  <select id="selectAprvTarget" parameterType="com.ndata.quality.model.std.StdApproveStatVo" resultType="java.util.HashMap">
+    <choose>
+      <when test="reqTp == 'WORD'">
+        SELECT 'WORD' as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId" FROM TB_WORD WHERE WORD_ID = #{reqItemId}
+      </when>
+      <when test="reqTp == 'DOMAIN'">
+        SELECT 'DOMAIN' as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId" FROM TB_DOMAIN WHERE DOMAIN_ID = #{reqItemId}
+      </when>
+      <otherwise>
+        SELECT CASE WHEN CODE_GRP IS NULL THEN 'TERMS' ELSE 'CODE' END as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId"
+          FROM TB_TERMS WHERE TERMS_ID = #{reqItemId}
+      </otherwise>
+    </choose>
+  </select>
+
+  <!-- 승인 전용 (반려는 물리 삭제로 처리). 109번 #8 — 승인 대기(APRV_YN='N') 행만 -->
   <update id="updateTermsAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
             UPDATE TB_TERMS
             SET APRV_YN = 'Y'
               ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
               ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-            WHERE TERMS_ID = #{reqItemId}
+            WHERE TERMS_ID = #{reqItemId} AND APRV_YN = 'N'
   </update>
 
   <update id="updateWordAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
@@ -234,7 +250,7 @@
             SET APRV_YN = 'Y'
               ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
               ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-            WHERE WORD_ID = #{reqItemId}
+            WHERE WORD_ID = #{reqItemId} AND APRV_YN = 'N'
   </update>
 
   <update id="updateDomainAprvStat" parameterType="com.ndata.quality.model.std.StdApproveStatVo">
@@ -242,20 +258,20 @@
             SET APRV_YN = 'Y'
               ,APRV_USER_ID = #{aprvUserId, jdbcType=VARCHAR}
               ,APRV_STAT_UPDT_DT = to_char(now(), 'YYYYMMDDHH24MISS')
-            WHERE DOMAIN_ID = #{reqItemId}
+            WHERE DOMAIN_ID = #{reqItemId} AND APRV_YN = 'N'
   </update>
 
-  <!-- 반려: 엔티티 물리 삭제 -->
+  <!-- 반려: 엔티티 물리 삭제. 109번 #8 — 승인 대기(APRV_YN='N') 행만 (승인된 항목이 반려로 지워졌다) -->
   <delete id="deleteWordByReject" parameterType="String">
-    DELETE FROM TB_WORD WHERE WORD_ID = #{reqItemId}
+    DELETE FROM TB_WORD WHERE WORD_ID = #{reqItemId} AND APRV_YN = 'N'
   </delete>
 
   <delete id="deleteTermsByReject" parameterType="String">
-    DELETE FROM TB_TERMS WHERE TERMS_ID = #{reqItemId}
+    DELETE FROM TB_TERMS WHERE TERMS_ID = #{reqItemId} AND APRV_YN = 'N'
   </delete>
 
   <delete id="deleteDomainByReject" parameterType="String">
-    DELETE FROM TB_DOMAIN WHERE DOMAIN_ID = #{reqItemId}
+    DELETE FROM TB_DOMAIN WHERE DOMAIN_ID = #{reqItemId} AND APRV_YN = 'N'
   </delete>
 
   <!-- 단어 반려 cascade: 해당 단어를 포함하는 미승인 용어 일괄 삭제 (TB_TERMS_WORDS는 FK CASCADE 자동 정리) -->

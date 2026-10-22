@@ -253,6 +253,13 @@ public class DataModelController {
 				result.setResultInfo(403, "모델의 시스템·데이터 소스를 바꾸려면 모델 직접 반영 권한이 필요합니다.");
 				return Mono.just(result);
 			}
+			// 109번 #9 — 표준 준수 필수(WP7-25) 켜고 끄기도 모델 직접 반영 권한 (시스템 단위 일괄 설정 setStndReqBySys 와 같다)
+			String curStndReq = sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", dataVo.getDataModelId());
+			if (dataVo.getStndReqYn() != null && !dataVo.getStndReqYn().equals(curStndReq)
+					&& !sessionService.hasPerm(com.ndata.quality.common.PermCode.DM_MANAGE)) {
+				result.setResultInfo(403, "표준 준수 필수 설정을 바꾸려면 모델 직접 반영 권한이 필요합니다.");
+				return Mono.just(result);
+			}
 			sqlSessionTemplate.update("datamodel.updateDataModel", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -747,6 +754,7 @@ public class DataModelController {
 
 		// 109번 #3 — 테이블·컬럼 이름과 데이터 타입은 [DB 반영] DDL 에 들어간다
 		String bad = importCheck(tables, columns);
+		if (bad == null) bad = importStndReqCheck(dataModelId, columns);   // 109번 #9
 		if (bad != null) {
 			result.put("success", false);
 			result.put("message", bad);
@@ -869,6 +877,7 @@ public class DataModelController {
 
 		// 109번 #3 — 테이블·컬럼 이름과 데이터 타입은 [DB 반영] DDL 에 들어간다
 		String bad = importCheck(tables, columns);
+		if (bad == null) bad = importStndReqCheck(dataModelId, columns);   // 109번 #9
 		if (bad != null) {
 			result.put("success", false);
 			result.put("message", bad);
@@ -2494,6 +2503,9 @@ public class DataModelController {
 			}
 
 			boolean isStandard = !"N".equals(attrVo.getTermsStndYn());
+			// 109번 #9 — 표준 준수 필수 모델에는 비표준(termsStndYn=N, 표준 검사 생략)으로 추가하지 못한다. 이 API 에는 예외 신청 경로가 없다
+			if (!isStandard && "Y".equals(sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", attrVo.getDataModelId())))
+				throw new IllegalStateException(STND_REQ_MSG + attrVo.getObjNm() + "." + attrVo.getAttrNm() + " — 비표준 컬럼으로 추가할 수 없습니다");
 			// 표준 컬럼: 물리명/타입 필수 + 표준 검증
 			// 비표준 컬럼: 물리명 자동 생성(TMP_COL_{순번}) + 타입 기본값(VARCHAR(255))
 			Map<String, Object> ordParam = new HashMap<>();
@@ -2561,11 +2573,17 @@ public class DataModelController {
 	}
 
 	/**
-	 * 컬럼(ATTR) 수정
+	 * 컬럼(ATTR) 수정 — 변경 이력·승인 없이 모델에 바로 쓴다(화면은 saveAttrs 를 쓴다).
+	 * 109번 #5 — 그래서 모델 직접 반영 권한(DM_MANAGE)만, 승인 상태(aprvStatus 등)는 요청값을 받지 않는다.
 	 */
 	@RequestMapping(value = "/updateAttr", method = RequestMethod.POST)
 	public Mono<Response> updateAttr(@RequestBody StdDataModelAttrVo attrVo) {
 		Response result = new Response();
+		if (!sessionService.hasPerm(com.ndata.quality.common.PermCode.DM_MANAGE)) {
+			result.setResultInfo(403, "권한이 없습니다 (모델 직접 반영 권한 필요)");
+			return Mono.just(result);
+		}
+		attrVo.setAprvStatus(null);
 		try {
 			// 109번 #3 — 바뀐 타입·길이·기본값 검사
 			Map<String, Object> sel = new HashMap<>();
@@ -2577,10 +2595,13 @@ public class DataModelController {
 			if (existing != null) checkAttrInput(attrVo, existing);
 			// 저장 시 표준 재평가 — 단어/용어/도메인 매칭이 끊긴 경우 자동 강등 (Y → N).
 			// 사용자 시나리오: 이전에 표준이었던 컬럼의 데이터 타입/길이를 변경해 도메인 불일치가 발생한 경우.
+			// 109번 #9 — 표준 준수 필수 모델이면 강등하지 않고 거부한다 (이 API 에는 예외 신청 경로가 없다)
+			boolean stndReq = "Y".equals(sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", attrVo.getDataModelId()));
 			try {
 				validateAttrStandards(attrVo);
 				applyStandardFlags(attrVo);
 			} catch (Exception stdErr) {
+				stndReqCheck(stndReq, new HashMap<>(), attrVo.getObjNm(), attrVo.getAttrNm(), stdErr);
 				attrVo.setTermsStndYn("N");
 				attrVo.setDomainStndYn("N");
 				log.info(">> updateAttr standard re-check downgraded: {}", stdErr.getMessage());
@@ -3169,6 +3190,31 @@ public class DataModelController {
 		}
 		if (bad.isEmpty()) return null;
 		return "가져올 수 없는 이름·타입이 " + bad.size() + "건 있습니다 — " + String.join(" / ", bad.subList(0, Math.min(5, bad.size())))
+				+ (bad.size() > 5 ? " 외 " + (bad.size() - 5) + "건" : "");
+	}
+
+	/**
+	 * 109번 #9 — 표준 준수 필수 모델이면 ERwin·XMI 로 가져올 컬럼이 모두 표준이어야 한다 (가져오기에는 예외 신청 경로가 없다).
+	 * 엑셀 업로드(uploadAttrs)와 같은 검사. 걸린 컬럼이 있으면 앞 5건을 담은 메시지, 없으면 null
+	 */
+	private String importStndReqCheck(String dataModelId, List<Map<String, Object>> columns) {
+		if (!"Y".equals(sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", dataModelId))) return null;
+		List<String> bad = new ArrayList<>();
+		for (Map<String, Object> c : columns) {
+			StdDataModelAttrVo v = new StdDataModelAttrVo();
+			v.setDataModelId(dataModelId);
+			v.setAttrNm(str(c.get("attrNm")));
+			v.setAttrNmKr(str(c.get("attrNmKr")));
+			v.setDataType(str(c.get("dataType")));
+			v.setDataLen(c.get("dataLen") instanceof Number ? ((Number) c.get("dataLen")).longValue() : 0L);
+			try {
+				validateAttrStandards(v);
+			} catch (Exception e) {
+				bad.add(str(c.get("objNm")) + "." + str(c.get("attrNm")) + " — " + e.getMessage());
+			}
+		}
+		if (bad.isEmpty()) return null;
+		return STND_REQ_MSG + bad.size() + "건 — " + String.join(" / ", bad.subList(0, Math.min(5, bad.size())))
 				+ (bad.size() > 5 ? " 외 " + (bad.size() - 5) + "건" : "");
 	}
 

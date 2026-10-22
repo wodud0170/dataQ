@@ -26,6 +26,7 @@ import com.ndata.common.message.RestResult;
 import com.ndata.quality.common.PermCode;
 import com.ndata.quality.model.std.StdApproveStatVo;
 import com.ndata.quality.model.std.StdDataModelChangeHistoryVo;
+import com.ndata.quality.model.std.StdWordVo;
 import com.ndata.quality.service.AprvService;
 
 import qualitycenter.service.auth.SessionService;
@@ -42,6 +43,7 @@ import reactor.core.publisher.Mono;
 public class AprvController {
 
 	private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+	private static final List<String> BOXES = java.util.Arrays.asList("TURN", "MINE", "DONE", "ALL");
 
 	@Autowired private AprvService aprvService;
 	@Autowired private SessionService sessionService;
@@ -70,6 +72,8 @@ public class AprvController {
 	public Mono<Response> box(@RequestParam("box") String box, @RequestParam(value = "reqTp", required = false) String reqTp)
 			throws JsonProcessingException {
 		String userId = sessionService.getUserId();
+		// 109번 #7 — 그 밖의 값은 매퍼에서 "진행 중 전체" 로 떨어져 관리자 검사를 건너뛰었다
+		if (!BOXES.contains(box)) return Mono.just(fail(400, "결재함은 TURN·MINE·DONE·ALL 중 하나입니다: " + box));
 		if ("ALL".equals(box) && !sessionService.isAdmin()) return Mono.just(fail(403, "권한이 없습니다 (관리자만)"));
 		Map<String, Object> p = new HashMap<>();
 		p.put("box", box);
@@ -155,25 +159,32 @@ public class AprvController {
 			b.put("aprvComment", comment);
 			return approve ? dataModelApprovalController.approve(b) : dataModelApprovalController.reject(b);
 		}
+		return dataStandardController.putStdAprvStat(stdAprvItem(doc, approve, comment));
+	}
+
+	/** 표준사전 결재 문서의 대상 항목을 표준 승인(putStdAprvStat)에 넘길 한 건으로 */
+	private List<StdApproveStatVo> stdAprvItem(Map<String, Object> doc, boolean approve, String comment) {
 		Map<String, Object> key = new HashMap<>();
-		key.put("reqTp", reqTp);
+		key.put("reqTp", doc.get("reqTp"));
 		key.put("targetId", doc.get("targetId"));
 		Map<String, Object> target = sqlSessionTemplate.selectOne("aprv.selectStdTarget", key);
 		StdApproveStatVo vo = new StdApproveStatVo();
-		vo.setReqTp(reqTp);
+		vo.setReqTp((String) doc.get("reqTp"));
 		vo.setReqItemId((String) doc.get("targetId"));
 		vo.setReqItemNm(target == null ? (String) doc.get("targetNm") : (String) target.get("nm"));
 		vo.setAprvStat((short) (approve ? 2 : 3));
 		vo.setAprvStatUpdtRsn(comment);
 		List<StdApproveStatVo> list = new ArrayList<>();
 		list.add(vo);
-		return dataStandardController.putStdAprvStat(list);
+		return list;
 	}
 
 	/**
 	 * 결재자 수정 후 승인 — 표준사전 항목. {docId, engNm, engAbrvNm, desc, comment}.
 	 * 현재 단계 결재자(관리자 대결 포함)가 승인 대기 항목의 설명(단어는 영문명·영문약어도)을 고치고 바로 승인한다.
 	 * 변경 이력에 "결재자 수정"(APPROVER_EDIT)으로 남긴다.
+	 * 109번 #4 — 수정·변경 이력과 결재 단계 진행·승인을 한 트랜잭션으로 한다 (승인이 실패하면 수정도 되돌린다).
+	 * 109번 #11 — 단어는 등록과 같은 검사(형식·길이·사전 운영 옵션)를 하고, 그 단어를 쓰는 승인 대기 용어가 있으면 영문약어를 못 바꾼다.
 	 */
 	@PostMapping("/editAndApprove")
 	public Mono<Response> editAndApprove(@RequestBody Map<String, Object> body) {
@@ -201,9 +212,31 @@ public class AprvController {
 		String stmt;
 		if ("WORD".equals(reqTp)) {
 			String engNm = body.get("engNm") == null ? "" : ((String) body.get("engNm")).trim();
-			String abrv = body.get("engAbrvNm") == null ? "" : ((String) body.get("engAbrvNm")).trim().toUpperCase();
+			String abrv = body.get("engAbrvNm") == null ? "" : ((String) body.get("engAbrvNm")).trim();
 			if (engNm.isEmpty() || abrv.isEmpty()) return Mono.just(fail(500, "영문명과 영문약어는 필수입니다."));
-			if (!abrv.matches("^[A-Z0-9]+$")) return Mono.just(fail(500, "단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다."));
+			// 109번 #11 — 등록·수정과 같은 검사 (영문명·영문약어 형식·길이, 사전 운영 옵션: 표준 대문자·영문명 중복)
+			StdWordVo w = new StdWordVo();
+			w.setId((String) doc.get("targetId"));
+			w.setDictId((String) before.get("dictId"));
+			w.setWordNm((String) before.get("nm"));
+			w.setWordEngNm(engNm);
+			w.setWordEngAbrvNm(abrv);
+			try {
+				dataStandardController.validateWordInput(w);
+			} catch (Exception e) {
+				return Mono.just(fail(500, e.getMessage()));
+			}
+			abrv = w.getWordEngAbrvNm();
+			// 109번 #11 — 용어의 영문약어는 구성 단어의 약어로 만든다. 그 단어를 쓰는 승인 대기 용어가 있으면 약어를 바꾸면 어긋난다
+			if (!abrv.equals(before.get("engAbrvNm"))) {
+				List<Map<String, Object>> terms = sqlSessionTemplate.selectList("approve.selectUnapprovedTermsByWordId", doc.get("targetId"));
+				if (!terms.isEmpty()) {
+					List<String> nms = new ArrayList<>();
+					for (Map<String, Object> t : terms) nms.add((String) t.get("termsNm"));
+					return Mono.just(fail(500, "이 단어를 쓰는 승인 대기 용어가 있어 영문약어를 바꿀 수 없습니다: " + String.join(", ", nms)
+							+ " (영문약어는 그대로 두고 승인하거나, 용어를 먼저 처리하세요)"));
+				}
+			}
 			p.put("engNm", engNm);
 			p.put("engAbrvNm", abrv);
 			p.put("dictId", before.get("dictId"));
@@ -215,8 +248,8 @@ public class AprvController {
 		} else {
 			stmt = "aprv.updateTermsDescByApprover";
 		}
-		try (SqlSession s = sqlSessionFactory.openSession()) {
-			s.update(stmt, p);
+		Response r = dataStandardController.aprvItems(stdAprvItem(doc, true, (String) body.get("comment")), s -> {
+			if (s.update(stmt, p) == 0) throw new IllegalStateException("승인 대기 항목이 아닙니다.");
 			Map<String, Object> h = new HashMap<>();
 			h.put("changeId", com.ndata.module.StringUtils.getUUID());
 			h.put("changeType", "UPDATE");
@@ -230,13 +263,8 @@ public class AprvController {
 			h.put("changeUserId", userId);
 			h.put("changeSource", "APPROVER_EDIT");
 			s.insert("changehistory.insertChangeHistory", h);
-			s.commit();
-		}
-		Map<String, Object> a = new HashMap<>();
-		a.put("docId", docId);
-		a.put("approve", true);
-		a.put("comment", body.get("comment"));
-		return act(a);
+		});
+		return Mono.just(r);
 	}
 
 	// ===== 결재선 설정 (관리 > 결재선, USER_ADMIN) =====

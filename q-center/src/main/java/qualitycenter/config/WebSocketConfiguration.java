@@ -3,7 +3,6 @@ package qualitycenter.config;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import com.ndata.common.NDConstant;
 import com.ndata.quality.common.NDQualityConstant;
 import com.ndata.messaging.common.StompBrokerProperties;
 
@@ -14,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -48,7 +48,6 @@ import java.util.List;
 public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer/*, WebSocketConfigurer*/ {
 
     private final String STOMP_HEADER_USE_SOCKET_SESSION = "useSocketSession";
-    private final String STOMP_HEADER_SOCKET_USER_NAME = "socketUsername";
 
     private final StompBrokerProperties stompBrokerProperties;
     private final WebSocketHandlerImpl websocketHandler;
@@ -127,28 +126,24 @@ public class WebSocketConfiguration implements WebSocketMessageBrokerConfigurer/
                         // destinations with simpMessagingTemplate
 
                         // socket accessor에 userName과 sessionId를 세팅한다.
+                        // 109번 #6 — 사용자는 로그인 세션(핸드셰이크의 principal)에서만 정한다. 예전에는 dev 모드에서 principal 이 없으면
+                        // CONNECT 헤더(socketUsername)의 사용자명을 믿어 남의 알림을 받을 수 있었다. 로그인 없는 연결(q-executor 등)은 사용자 없이 둔다
                     	Principal user = accessor.getUser();
                     	String socketSessionId = accessor.getSessionId();
-                    	String socketUsername = null;
-                    	
                         if (user != null) {
-                        	socketUsername =  user.getName();
+                        	String socketUsername =  user.getName();
                             log.info("[principal] User={}, SessionId={}", socketUsername, socketSessionId);
                             SocketDestinationPrincipal customUser = new SocketDestinationPrincipal(socketUsername, socketSessionId);
                             accessor.setUser(customUser);
-                        } else if (NDConstant.SVC_MODE_DEV.equals(stompBrokerProperties.getMode())) { // 서비스 모드가 "dev" 일 때는 front html 로부터의 연결 허용
-                        	List<String> socketHeader = accessor.getNativeHeader(STOMP_HEADER_SOCKET_USER_NAME);
-                        	if (socketHeader != null && socketHeader.size() > 0) {
-                        		socketUsername = socketHeader.get(0);
-                        	} else {
-                        		socketUsername = NDConstant.USER_ADMIN;
-                        	}
-                        	log.info("[header] User={}, SessionId={}", socketUsername, socketSessionId);
-	                        SocketDestinationPrincipal customUser = new SocketDestinationPrincipal(socketUsername, socketSessionId);
-	                        accessor.setUser(customUser);
                         }
                     }
                 } else if (accessor != null && StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+                    // 109번 #6 — 구독은 공용 목적지(/topic/)와 사용자 목적지(/user/ — 서버가 그 연결의 사용자·세션 목적지로 바꾼다)만.
+                    // 브로커 목적지(/exchange/...message.user-user{아이디} 등)를 바로 구독하면 남의 알림을 받을 수 있었다
+                    String dest = accessor.getDestination();
+                    if (dest == null || !(dest.startsWith("/topic/") || dest.startsWith("/user/"))) {
+                        throw new MessagingException("구독할 수 없는 목적지입니다: " + dest);
+                    }
                     // Configure some RabbitMQ Stomp specific stuff
                     // delete when the last downstream consumers for a queue goes away
                     accessor.setNativeHeader("auto-delete", "true");

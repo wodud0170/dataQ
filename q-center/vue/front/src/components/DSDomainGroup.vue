@@ -10,9 +10,10 @@
           single-line dense outlined hide-details class="filterInput" :style="{ width: '200px' }">
         </v-text-field>
         <v-spacer></v-spacer>
-        <v-btn class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
-        <v-btn class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
-        <v-btn class="gradient" v-on:click="domainGroupRemoveItem()" title="삭제">삭제</v-btn>
+        <!-- 109번 #13 — 등록·수정·삭제·엑셀 업로드는 표준 직접 관리 권한 (서버도 막는다) -->
+        <v-btn v-if="canManage" class="gradient" v-on:click="showModal('add')" title="등록">등록</v-btn>
+        <v-btn v-if="canManage" class="gradient" v-on:click="showModal('update')" title="수정">수정</v-btn>
+        <v-btn v-if="canManage" class="gradient" v-on:click="domainGroupRemoveItem()" title="삭제">삭제</v-btn>
         <!-- 86번 #11 — 엑셀 드롭다운 (업로드/양식/다운로드) -->
         <v-menu offset-y>
           <template v-slot:activator="{ on, attrs }">
@@ -22,7 +23,7 @@
             </v-btn>
           </template>
           <v-list dense>
-            <v-list-item @click="domainGroupExcelFileUpload()">
+            <v-list-item v-if="canManage" @click="domainGroupExcelFileUpload()">
               <v-list-item-icon><v-icon small>mdi-upload</v-icon></v-list-item-icon>
               <v-list-item-title>엑셀 업로드</v-list-item-title>
             </v-list-item>
@@ -318,6 +319,7 @@ export default {
     _uploadTimer: null,
   }),
   computed: {
+    canManage() { return this.$can('STD_MANAGE'); },
     domainGroupItems() {
       if (!this.searchGrpNm) return this.domainGroupAllItems;
       return this.domainGroupAllItems.filter(item =>
@@ -676,8 +678,8 @@ export default {
       this.selectedItem = [item];
       // remove item에 단독으로 넣어주기
       // this.removeItems = [item];
-      // 수정 모달 열기
-      this.showModal('update');
+      // 수정 모달 열기 (109번 #13 — 표준 직접 관리 권한이 있을 때만)
+      if (this.canManage) this.showModal('update');
     },
     resetDetail() {
       this.selectedItem = [];
