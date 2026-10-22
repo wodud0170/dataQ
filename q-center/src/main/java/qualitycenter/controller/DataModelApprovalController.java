@@ -620,8 +620,14 @@ public class DataModelApprovalController {
 		String deny;
 		String skip;
 		List<String> stmts;
+		int done;                  // 109번 #17 — 앞 실행(중간 실패)에서 이미 반영된 앞 문장 수. 이번에는 stmts[done..] 만 실행
 		boolean create;            // 테이블 추가 — 같은 테이블의 뒤 변경을 '포함' 으로 기록
 	}
+
+	private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
+	/** 109번 #17 — 같은 변경을 두 요청이 동시에 실행하지 못하게 (실행 중인 change_seq) */
+	private final java.util.Set<String> ddlRunning = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
 	private DdlPlan plan(Object seq) {
 		DdlPlan p = new DdlPlan();
@@ -691,6 +697,25 @@ public class DataModelApprovalController {
 			p.stmts = null;
 			p.create = false;
 			p.deny = "DDL 검증 실패 — " + e.getMessage();
+			return p;
+		}
+		// 109번 #17 — 앞 실행이 중간에 실패했으면 그때 실행된 문장이 지금 만든 문장의 앞부분과 같을 때만 그 뒤부터 이어서 실행한다
+		Object doneJson = hist.get("ddl_exec_done");
+		if (doneJson != null && !doneJson.toString().isEmpty()) {
+			List<String> ran;
+			try {
+				ran = JSON.readValue(doneJson.toString(), new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+			} catch (java.io.IOException e) {
+				ran = null;
+			}
+			if (ran == null || ran.size() >= p.stmts.size() || !p.stmts.subList(0, ran.size()).equals(ran)) {
+				p.deny = "앞 [DB 반영] 에서 이미 반영된 문장이 지금 만든 문장의 앞부분과 다릅니다 — 이어서 실행할 수 없습니다. "
+						+ "DB 를 직접 확인하세요 (반영된 문장: " + doneJson + ")";
+				p.stmts = null;
+				p.create = false;
+				return p;
+			}
+			p.done = ran.size();
 		}
 		return p;
 	}
@@ -713,8 +738,9 @@ public class DataModelApprovalController {
 			out.put("dsNm", p.mds == null ? null : p.mds.get("dsn"));
 			out.put("dbmsTp", p.mds == null ? null : p.mds.get("dbmsTp"));
 			out.put("status", p.deny != null ? "DENY" : p.skip != null ? "SKIP" : "RUN");
-			out.put("message", p.deny != null ? p.deny : p.skip);
-			out.put("statements", p.stmts == null ? new ArrayList<String>() : p.stmts);
+			out.put("message", p.deny != null ? p.deny : p.skip != null ? p.skip
+					: p.done > 0 ? "앞 실행에서 " + p.done + "문장은 이미 반영됐습니다 — 나머지 " + (p.stmts.size() - p.done) + "문장만 실행합니다" : null);
+			out.put("statements", p.stmts == null ? new ArrayList<String>() : p.stmts.subList(p.done, p.stmts.size()));
 			res.setResultInfo(RestResult.CODE_200);
 			res.setContents(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(out));
 		} catch (Exception e) {
@@ -734,6 +760,8 @@ public class DataModelApprovalController {
 	 * 같은 테이블의 그 뒤 승인된 미반영 변경은 CREATE TABLE 에 포함된 것으로 기록한다.
 	 * 109번 #3 — 다른 변경도 이력의 값으로 문장을 다시 만들어(검사 포함) 실행한다. 문장은 한 번에 하나씩 실행하고,
 	 * 실행한 문장으로 이력의 조각을 바꾼다. 검사에 걸리면 실행하지 않는다.
+	 * 109번 #17 — 여러 문장 중 중간에 실패하면 실행된 문장을 DDL_EXEC_DONE 에 남기고, 다시 실행하면 그 문장들이 지금 만든 문장의
+	 * 앞부분과 같을 때 건너뛰고 나머지만 실행한다(다르면 거부). 같은 건을 다른 요청이 실행하는 중이면 그 건은 실패로 센다.
 	 * 응답 contents = {success, failed, noPriv, skipped, messages}
 	 */
 	@PostMapping("/execDdl")
@@ -750,61 +778,73 @@ public class DataModelApprovalController {
 			String adminId = changeHistory.safeUserId();
 			String now = LocalDateTime.now().format(DT_FMT);
 			for (Object seq : seqList) {
-				DdlPlan p = plan(seq);
-				if (p.deny != null) { failed++; messages.add(seq + ": " + p.deny); continue; }
-				if (p.skip != null) {
-					skipped++;
-					messages.add(seq + ": SKIPPED — " + p.skip);
-					Map<String, Object> u = new HashMap<>();
-					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
-					u.put("ddlExecResult", "SKIPPED"); u.put("ddlExecMessage", p.skip);
-					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
-					continue;
-				}
-				Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
-				String dmId = (String) hist.get("dm_id");
-				String owner = hist.get("obj_owner") == null ? "" : (String) hist.get("obj_owner");
-				String objNm = (String) hist.get("obj_nm");
-				List<String> stmts = p.stmts;
-				String ranSnippet = String.join(";\n", stmts) + ";";
-
-				com.ndata.model.DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", p.mds.get("dsId"));
-				com.ndata.datasource.dbms.handler.DBHandler h = null;
-				int done = 0;
+				// 109번 #17 — 같은 건을 다른 요청이 실행하는 중이면 기다리지 않고 실패로 센다. 그 실행이 끝난 뒤에는 판정이 "이미 반영된 변경" 으로 막는다
+				String runKey = String.valueOf(seq);
+				if (!ddlRunning.add(runKey)) { failed++; messages.add(seq + ": 다른 요청이 이 변경을 DB 에 반영하고 있습니다"); continue; }
 				try {
-					h = dataSourceUtils.getDBHandler(ds);
-					for (String s : stmts) {
-						h.execute(s);
-						done++;
+					DdlPlan p = plan(seq);
+					if (p.deny != null) { failed++; messages.add(seq + ": " + p.deny); continue; }
+					if (p.skip != null) {
+						skipped++;
+						messages.add(seq + ": SKIPPED — " + p.skip);
+						Map<String, Object> u = new HashMap<>();
+						u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
+						u.put("ddlExecResult", "SKIPPED"); u.put("ddlExecMessage", p.skip);
+						sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
+						continue;
 					}
-					success++;
-					Map<String, Object> u = new HashMap<>();
-					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
-					u.put("ddlExecResult", "SUCCESS"); u.put("ddlExecMessage", "OK (" + ds.getDsn() + ", " + stmts.size() + "문장)");
-					u.put("ddlSnippet", ranSnippet);
-					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
-					if (p.create) {
-						Map<String, Object> inc = new HashMap<>();
-						inc.put("dmId", dmId); inc.put("objOwner", owner); inc.put("objNm", objNm); inc.put("changeSeq", seq);
-						inc.put("ddlExecDt", now); inc.put("ddlExecUserId", adminId);
-						inc.put("ddlExecMessage", "테이블 생성(#" + seq + ")에 포함");
-						int n = sqlSessionTemplate.update("dmChangeHistory.markIncludedInCreate", inc);
-						if (n > 0) messages.add(seq + ": 같은 테이블의 뒤 변경 " + n + "건은 테이블 생성에 포함");
+					Map<String, Object> hist = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+					String dmId = (String) hist.get("dm_id");
+					String owner = hist.get("obj_owner") == null ? "" : (String) hist.get("obj_owner");
+					String objNm = (String) hist.get("obj_nm");
+					List<String> stmts = p.stmts;
+					String ranSnippet = String.join(";\n", stmts) + ";";
+
+					com.ndata.model.DataSourceVo ds = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", p.mds.get("dsId"));
+					com.ndata.datasource.dbms.handler.DBHandler h = null;
+					// 109번 #17 — 앞 실행에서 반영된 문장은 건너뛰고, 이번에 실행한 문장까지 기록해 둔다(중간에 실패하면 다음 실행이 이어서 한다)
+					List<String> ran = new ArrayList<>(stmts.subList(0, p.done));
+					try {
+						h = dataSourceUtils.getDBHandler(ds);
+						for (String s : stmts.subList(p.done, stmts.size())) {
+							h.execute(s);
+							ran.add(s);
+						}
+						success++;
+						Map<String, Object> u = new HashMap<>();
+						u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
+						u.put("ddlExecResult", "SUCCESS");
+						u.put("ddlExecMessage", "OK (" + ds.getDsn() + ", " + stmts.size() + "문장"
+								+ (p.done > 0 ? " — 앞 실행에서 반영된 " + p.done + "문장은 건너뜀" : "") + ")");
+						u.put("ddlSnippet", ranSnippet);
+						u.put("ddlExecDone", "");
+						sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
+						if (p.create) {
+							Map<String, Object> inc = new HashMap<>();
+							inc.put("dmId", dmId); inc.put("objOwner", owner); inc.put("objNm", objNm); inc.put("changeSeq", seq);
+							inc.put("ddlExecDt", now); inc.put("ddlExecUserId", adminId);
+							inc.put("ddlExecMessage", "테이블 생성(#" + seq + ")에 포함");
+							int n = sqlSessionTemplate.update("dmChangeHistory.markIncludedInCreate", inc);
+							if (n > 0) messages.add(seq + ": 같은 테이블의 뒤 변경 " + n + "건은 테이블 생성에 포함");
+						}
+					} catch (Exception ex) {
+						String msg = ex.getMessage() == null ? "" : ex.getMessage();
+						if (stmts.size() > 1) msg = "(" + (ran.size() + 1) + "/" + stmts.size() + "번째 문장, 앞 " + ran.size() + "문장은 반영됨) " + msg;
+						boolean priv = msg.contains("ORA-01031") || msg.contains("insufficient")
+								|| msg.contains("denied") || msg.contains("permission");
+						String result = priv ? "NO_PRIVILEGE" : "FAILED";
+						if (priv) noPriv++; else failed++;
+						messages.add(seq + ": " + result + " — " + msg.substring(0, Math.min(200, msg.length())));
+						Map<String, Object> u = new HashMap<>();
+						u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
+						u.put("ddlExecResult", result); u.put("ddlExecMessage", msg.substring(0, Math.min(2000, msg.length())));
+						u.put("ddlExecDone", ran.isEmpty() ? "" : JSON.writeValueAsString(ran));
+						sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
+					} finally {
+						if (h != null) try { h.close(); } catch (Exception e) {}
 					}
-				} catch (Exception ex) {
-					String msg = ex.getMessage() == null ? "" : ex.getMessage();
-					if (stmts.size() > 1) msg = "(" + (done + 1) + "/" + stmts.size() + "번째 문장, 앞 " + done + "문장은 반영됨) " + msg;
-					boolean priv = msg.contains("ORA-01031") || msg.contains("insufficient")
-							|| msg.contains("denied") || msg.contains("permission");
-					String result = priv ? "NO_PRIVILEGE" : "FAILED";
-					if (priv) noPriv++; else failed++;
-					messages.add(seq + ": " + result + " — " + msg.substring(0, Math.min(200, msg.length())));
-					Map<String, Object> u = new HashMap<>();
-					u.put("changeSeq", seq); u.put("ddlExecDt", now); u.put("ddlExecUserId", adminId);
-					u.put("ddlExecResult", result); u.put("ddlExecMessage", msg.substring(0, Math.min(2000, msg.length())));
-					sqlSessionTemplate.update("dmChangeHistory.updateDdlExecResult", u);
 				} finally {
-					if (h != null) try { h.close(); } catch (Exception e) {}
+					ddlRunning.remove(runKey);
 				}
 			}
 			Map<String, Object> out = new java.util.LinkedHashMap<>();

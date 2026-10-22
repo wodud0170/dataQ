@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<!-- 104번 WP7-27 — 쓰이지 않는 표준 (사전 안). 컬럼은 사용 중·승인 모델 중 모델 사전(없으면 기본 사전)이 같은 것만 본다 -->
+<!-- 104번 WP7-27 — 쓰이지 않는 표준 (사전 안). 컬럼은 사용 중·승인 모델 중 모델 사전(없으면 기본 사전)이 같은 것만 본다.
+     109번 #24 — 하위 사전 모델도 본다. 진단·컬럼 표준 검사는 모델 사전의 상위 사전 항목도 쓰므로(WP5-11, 5단계까지),
+     모델 사전이 이 사전이거나 이 사전을 상위로 둔 사전(하위 사전)인 모델의 컬럼을 센다 -->
 <mapper namespace="unusedStd">
 
 	<sql id="modelDict">COALESCE(M.DICT_ID, (SELECT SD.DICT_ID FROM TB_STD_DICT SD WHERE SD.DEFAULT_YN = 'Y' ORDER BY SD.DICT_ID LIMIT 1))</sql>
+	<!-- 이 사전과 그 하위 사전들 (WITH RECURSIVE 의 첫 항목으로 쓴다) -->
+	<sql id="subDicts">
+		SUBD (DICT_ID, DEPTH) AS (
+			SELECT CAST(#{dictId} AS VARCHAR), 0
+			UNION ALL
+			SELECT CAST(SD.DICT_ID AS VARCHAR), S.DEPTH + 1 FROM TB_STD_DICT SD JOIN SUBD S ON SD.PARENT_DICT_ID = S.DICT_ID WHERE S.DEPTH &lt; 5
+		)
+	</sql>
 	<sql id="colJoin">
 		  FROM TB_DATA_MODEL M
 		  JOIN TB_DATA_MODEL_ATTR A
@@ -16,10 +26,11 @@
 	<!-- 104번 WP9 — 쓰인 토큰·컬럼명을 먼저 모으고 NOT IN(해시)으로 뺀다. NOT EXISTS 는 행마다 컬럼 전체를 훑는 중첩 루프로 계획되어
 	     용어 1만여 건에 100초 넘게 걸렸다 -->
 	<select id="selectUnusedWords" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
-		WITH USED AS MATERIALIZED (
+		WITH RECURSIVE <include refid="subDicts"/>,
+		USED AS MATERIALIZED (
 		SELECT DISTINCT UNNEST(string_to_array(UPPER(TRIM(A.ATTR_NM)), '_')) AS TOK
 		<include refid="colJoin"/>
-		   AND <include refid="modelDict"/> = #{dictId}
+		   AND <include refid="modelDict"/> IN (SELECT S.DICT_ID FROM SUBD S)
 		)
 		SELECT W.WORD_ID AS "id", W.WORD_NM AS "nm", W.WORD_ENG_ABRV_NM AS "engAbrvNm",
 		       CASE WHEN W.WORD_CLSF_YN = 'Y' THEN '형식단어' ELSE '' END AS "extra",
@@ -37,10 +48,11 @@
 
 	<!-- 용어(코드 포함) — 어떤 컬럼에도 쓰이지 않는 용어 (컬럼명 = 용어 영문약어명인 컬럼이 없음) -->
 	<select id="selectUnusedTerms" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
-		WITH USED AS MATERIALIZED (
+		WITH RECURSIVE <include refid="subDicts"/>,
+		USED AS MATERIALIZED (
 		SELECT DISTINCT TRIM(A.ATTR_NM) AS NM
 		<include refid="colJoin"/>
-		   AND <include refid="modelDict"/> = #{dictId}
+		   AND <include refid="modelDict"/> IN (SELECT S.DICT_ID FROM SUBD S)
 		)
 		SELECT T.TERMS_ID AS "id", T.TERMS_NM AS "nm", T.TERMS_ENG_ABRV_NM AS "engAbrvNm",
 		       COALESCE(T.DOMAIN_NM, '') || CASE WHEN T.CODE_GRP IS NOT NULL THEN ' (코드 ' || T.CODE_GRP || ')' ELSE '' END AS "extra",

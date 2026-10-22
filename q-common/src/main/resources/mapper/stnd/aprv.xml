@@ -117,12 +117,20 @@
 		 WHERE D.REQ_TP = #{reqTp} AND D.TARGET_ID = #{targetId} AND D.DOC_STAT = 'PROGRESS'
 	</select>
 
-	<!-- 여러 대상의 진행 중 문서 — 승인 화면 목록에 단계 표시 -->
+	<!-- 여러 대상의 진행 중 문서 — 승인 화면 목록에 단계 표시.
+	     109번 #15 — viewerId 를 주면(승인 화면 openDocs, 관리자 아님) 문서 상세(/api/aprv/doc)와 같은 범위만:
+	     요청자·결재자인 문서와 그 유형의 승인 권한이 있는 문서 -->
 	<select id="selectOpenDocsByTargets" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
 		SELECT <include refid="docCols"/>
 		  FROM TB_APRV_DOC D
 		 WHERE D.DOC_STAT = 'PROGRESS'
 		   AND D.TARGET_ID IN <foreach collection="targetIds" item="t" open="(" separator="," close=")">#{t}</foreach>
+		<if test="viewerId != null">
+		   AND (D.REQ_USER_ID = #{viewerId}
+		        OR EXISTS (SELECT 1 FROM TB_APRV_DOC_STEP S WHERE S.DOC_ID = D.DOC_ID AND S.APRVR_USER_ID = #{viewerId})
+		        <if test="stdApprove"> OR D.REQ_TP &lt;&gt; 'DM_CHANGE' </if>
+		        <if test="dmApprove"> OR D.REQ_TP = 'DM_CHANGE' </if>)
+		</if>
 	</select>
 
 	<select id="selectDocSteps" parameterType="String" resultType="java.util.LinkedHashMap">

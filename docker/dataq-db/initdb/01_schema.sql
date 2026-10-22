@@ -1505,7 +1505,8 @@ CREATE TABLE quality.tb_data_model_change_history (
     ddl_exec_result character varying(20),
     ddl_exec_message character varying(2000),
     ddl_dbms_tp character varying(20),
-    stnd_except_reason character varying(500)
+    stnd_except_reason character varying(500),
+    ddl_exec_done text
 );
 
 
@@ -1521,6 +1522,13 @@ COMMENT ON COLUMN quality.tb_data_model_change_history.ddl_dbms_tp IS 'DDL_SNIPP
 --
 
 COMMENT ON COLUMN quality.tb_data_model_change_history.stnd_except_reason IS '표준 예외 신청 사유 — 표준 준수 필수 모델에 비표준 컬럼을 넣을 때 (104번 WP7-25)';
+
+
+--
+-- Name: COLUMN tb_data_model_change_history.ddl_exec_done; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_change_history.ddl_exec_done IS '중간에 실패한 [DB 반영] 에서 이미 실행된 문장 (JSON 배열). 다시 실행하면 건너뛰고 나머지만 실행, 성공하면 비움 (109번 #17)';
 
 
 --

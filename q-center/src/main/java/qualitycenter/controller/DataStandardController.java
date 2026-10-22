@@ -868,6 +868,14 @@ public class DataStandardController {
 			return Mono.just(r);
 		}
 		dataVo.setUpdtUserId(sessionService.getUserId());
+		// 109번 #18 — 중복 검사·운영 옵션·통합 코드 구성 저장은 저장된 용어의 사전으로 한다 (요청의 dictId 를 믿지 않는다)
+		String storedDictId = dictService.dictIdOf("TB_TERMS", "TERMS_ID", dataVo.getId());
+		if (storedDictId == null) {
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "없는 용어입니다: " + dataVo.getId());
+			return Mono.just(r);
+		}
+		dataVo.setDictId(storedDictId);
 		log.info(">> updateTerms : {}", dataVo);
 
 		SqlSession session = sqlSessionFactory.openSession();
@@ -3797,7 +3805,7 @@ public class DataStandardController {
 	}
 
 	/**
-	 * 104번 WP7-26 — 용어 영향도: 이 용어를 쓰는 컬럼 (모델 사전 = 용어 사전, 영문명 일치 ENG / 한글명만 일치 KR)
+	 * 104번 WP7-26 — 용어 영향도: 이 용어를 쓰는 컬럼 (모델 사전 = 용어 사전 또는 그 하위 사전(109번 #24), 영문명 일치 ENG / 한글명만 일치 KR)
 	 */
 	@GetMapping("/impact/term")
 	public Map<String, Object> getTermImpact(@RequestParam String termsId) {

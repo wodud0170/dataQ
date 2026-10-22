@@ -10,12 +10,14 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
@@ -27,7 +29,7 @@ import reactor.core.publisher.Mono;
 
 /**
  * 104번 WP1 — 조직(관리 > 조직). 부서 트리, 부서장, 부서원. 결재선의 "요청자 부서장" 이 이 정보를 쓴다.
- * 바꾸는 API 는 사용자·권한 관리 권한(USER_ADMIN). 부서 목록은 로그인 사용자 누구나(사용자 화면·결재선 화면의 선택 목록).
+ * 바꾸는 API 와 부서원 목록은 사용자·권한 관리 권한(USER_ADMIN). 부서 목록은 로그인 사용자 누구나(사용자 화면·결재선 화면의 선택 목록).
  */
 @RestController
 @RequestMapping("/api/org")
@@ -64,9 +66,12 @@ public class OrgController {
 		return sqlSessionTemplate.selectList("aprv.selectOrgList");
 	}
 
-	/** 부서원 */
+	/** 부서원 — 109번 #16 사용자 목록(getUserList)과 같이 사용자·권한 관리 권한(USER_ADMIN)만 (부서원 ID·이름·이메일) */
 	@GetMapping("/users")
 	public List<Map<String, Object>> users(@RequestParam("orgId") String orgId) {
+		if (!sessionService.hasPerm(PermCode.USER_ADMIN)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN, "부서원 목록을 볼 권한이 없습니다 (사용자·권한 관리 권한 필요).");
+		}
 		return sqlSessionTemplate.selectList("aprv.selectOrgUsers", orgId);
 	}
 

@@ -64,6 +64,8 @@ public class CodeTypeService {
 	 */
 	public void checkAndSave(SqlSession session, StdTermsVo vo, boolean isNew, String userId) {
 		String grp = vo.getCodeGrp() == null ? null : vo.getCodeGrp().trim();
+		Map<String, Object> stored = isNew ? null : session.selectOne("codeType.selectCodeById", vo.getId());
+		if (stored != null) checkGrpChange(session, stored, grp);
 		if (grp == null || grp.isEmpty()) {
 			vo.setCodeTp(null);
 			vo.setParentCodeGrp(null);
@@ -104,6 +106,19 @@ public class CodeTypeService {
 				Map<String, Object> c = codeByGrp(session, dictId, cur);
 				cur = c == null ? null : (String) c.get("parentCodeGrp");
 			}
+			// 109번 #22 — 유형·상위 코드·코드 그룹을 바꾸면 이미 있는 코드값도 새 규칙에 맞아야 한다 (값 등록 때 검사 checkValue 와 같은 규칙)
+			if (stored != null && !(tp.equals(stored.get("codeTp")) && parent.equals(stored.get("parentCodeGrp")) && grp.equals(stored.get("codeGrp")))) {
+				Map<String, Object> q = grpParam(dictId, grp);
+				q.put("parentCodeGrp", parent);
+				q.put("hier", "HIER".equals(tp));
+				List<String> bad = session.selectList("codeType.selectValuesNotInParent", q);
+				if (!bad.isEmpty()) {
+					String eg = String.join(", ", bad.subList(0, Math.min(5, bad.size()))) + (bad.size() > 5 ? " 외" : "");
+					throw new IllegalArgumentException("HIER".equals(tp)
+							? "계층 코드로 바꾸려면 코드값마다 상위 코드 그룹 " + parent + " 의 값을 상위 코드값으로 가져야 합니다 — 맞지 않는 값 " + bad.size() + "건: " + eg + ". 값을 먼저 고치세요."
+							: "파생 코드로 바꾸려면 코드값이 모두 상위 코드 그룹 " + parent + " 의 값이어야 합니다 — 없는 값 " + bad.size() + "건: " + eg + ". 값을 먼저 고치세요.");
+				}
+			}
 			vo.setParentCodeGrp(parent);
 		} else {
 			vo.setParentCodeGrp(null);
@@ -129,6 +144,31 @@ public class CodeTypeService {
 			p.put("subs", new ArrayList<>(subs));
 			p.put("userId", userId);
 			session.insert("codeType.insertInteg", p);
+		}
+	}
+
+	/**
+	 * 109번 #22 — 수정에서 코드 그룹 이름을 바꾸거나 비울 때. 옛 그룹을 가진 용어가 이 용어뿐이면 그 그룹의 코드값·통합 구성,
+	 * 그 그룹을 상위로 쓰는 계층·파생 코드, 하위로 묶는 통합 코드가 옛 이름에 남으므로 그런 것이 있으면 거부한다.
+	 * 같은 코드 그룹을 쓰는 다른 용어가 있으면 옛 그룹은 그대로 남으므로 바꿀 수 있다.
+	 *
+	 * @param stored codeType.selectCodeById 행 (저장된 값)
+	 */
+	private void checkGrpChange(SqlSession session, Map<String, Object> stored, String newGrp) {
+		String old = (String) stored.get("codeGrp");
+		if (old == null || old.trim().isEmpty() || old.equals(newGrp)) return;
+		Map<String, Object> p = grpParam((String) stored.get("dictId"), old);
+		p.put("termsId", stored.get("termsId"));
+		int others = session.selectOne("codeType.countOtherGrpHolders", p);
+		if (others > 0) return;
+		int vals = session.selectOne("codeType.countValuesByGrp", p);
+		int integ = session.selectOne("codeType.countIntegSubsOf", p);
+		int child = session.selectOne("codeType.countChildCodes", p);
+		int parents = session.selectOne("codeType.countIntegParents", p);
+		if (vals + integ + child + parents > 0) {
+			throw new IllegalArgumentException("코드 그룹 '" + old + "' 를 " + (newGrp == null || newGrp.isEmpty() ? "비우면" : "'" + newGrp + "' 로 바꾸면")
+					+ " 옛 이름에 남는 것이 있어 바꿀 수 없습니다 — 코드값 " + vals + "건, 통합 구성 하위 코드 " + integ + "개, 이 코드를 상위로 쓰는 계층·파생 코드 "
+					+ child + "개, 하위로 묶는 통합 코드 " + parents + "개. 먼저 옮기거나 지우세요.");
 		}
 	}
 

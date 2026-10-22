@@ -121,14 +121,19 @@ public class StdDictService {
 
 	/** 104번 WP5-14 — 항목(단어·용어·도메인 등) 하나의 사전으로 checkWritable. 행이 없으면 넘어간다 */
 	public void checkWritableOf(String table, String idCol, String id) {
-		if (id == null) return;
+		String dictId = dictIdOf(table, idCol, id);
+		if (dictId != null) checkWritable(dictId);
+	}
+
+	/** 109번 #18 — 저장된 항목 하나의 사전 (행이 없으면 null). table·idCol 은 호출하는 코드의 상수만 */
+	public String dictIdOf(String table, String idCol, String id) {
+		if (id == null) return null;
 		Map<String, Object> p = new HashMap<>();
 		p.put("table", table);
 		p.put("idCol", idCol);
 		p.put("id", id);
 		try (SqlSession session = sqlSessionFactory.openSession()) {
-			String dictId = session.selectOne("stddict.selectDictIdOf", p);
-			if (dictId != null) checkWritable(dictId);
+			return session.selectOne("stddict.selectDictIdOf", p);
 		}
 	}
 

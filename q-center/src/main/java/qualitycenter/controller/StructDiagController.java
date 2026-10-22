@@ -71,7 +71,10 @@ public class StructDiagController {
 	 * 추가: 모델에 테이블이 없으면 테이블부터 추가하고, 실 DB 값(코멘트 → 한글명·타입·길이·소수·NULL·PK·기본값)으로 컬럼 추가.
 	 * 변경: 모델 컬럼의 타입·길이·소수·NULL 만 실 DB 값으로. 삭제: 모델 컬럼 삭제 — 테이블의 컬럼을 모두 지우게 되면 테이블째 삭제.
 	 * 표준 준수 필수 모델의 비표준 컬럼은 사유 "구조 진단 현행화"로 표준 예외 신청이 된다.
-	 * 반영한 행은 APPLIED_DT 로 표시하고 다시 반영하지 않는다. 테이블 하나가 실패해도 나머지 테이블은 반영한다.</p>
+	 * 반영한 행은 APPLIED_DT 로 표시한다. 테이블 하나가 실패해도 나머지 테이블은 반영한다.
+	 * 109번 #23 — 반영할 수 있는지는 APPLIED_DT 가 아니라 지금 모델로 판정한다({@link #notApplicable}) — 모델의 가장 최근 완료 진단이고,
+	 * 그 컬럼의 모델 값이 진단 때(이전 값)와 같아야 한다. 승인 대기로 반영한 것은 모델 행이 이미 바뀌어 다시 반영되지 않고,
+	 * 그 변경이 반려되면 모델이 진단 때로 돌아가 다시 반영할 수 있다. 진단 뒤 모델을 고쳤으면 반영하지 않는다(진단을 다시 한다).</p>
 	 */
 	@PostMapping("/apply")
 	public Mono<Response> apply(@RequestBody Map<String, Object> body) {
@@ -86,13 +89,16 @@ public class StructDiagController {
 			Map<String, Object> history = sqlSessionTemplate.selectOne("structdiag.selectStructDiagHistoryById", diagId);
 			if (history == null) throw new IllegalArgumentException("구조 진단 결과를 찾을 수 없습니다.");
 			String dmId = (String) history.get("dataModelId");
+			if (!diagId.equals(sqlSessionTemplate.selectOne("structdiag.selectLatestDoneDiagId", dmId)))
+				throw new IllegalArgumentException(NOT_LATEST);
 
+			Map<String, Map<String, Object>> model = modelAttrs(dmId);
 			Map<String, List<Map<String, Object>>> groups = new LinkedHashMap<>();   // owner|table → 행
 			for (Map<String, Object> d : sqlSessionTemplate.<Map<String, Object>>selectList("structdiag.selectStructDiagDetailList", diagId)) {
-				if (!seqs.contains(((Number) d.get("seq")).intValue()) || d.get("appliedDt") != null) continue;
+				if (!seqs.contains(((Number) d.get("seq")).intValue())) continue;
 				groups.computeIfAbsent(d.get("owner") + "|" + d.get("tableNm"), k -> new ArrayList<>()).add(d);
 			}
-			if (groups.isEmpty()) throw new IllegalArgumentException("반영할 행이 없습니다 (이미 반영한 행은 다시 반영하지 않습니다).");
+			if (groups.isEmpty()) throw new IllegalArgumentException("반영할 행이 없습니다.");
 
 			List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByDmId", dmId);
 			int applied = 0;
@@ -101,6 +107,13 @@ public class StructDiagController {
 				String owner = (String) rows.get(0).get("owner");
 				String tbl = (String) rows.get(0).get("tableNm");
 				try {
+					// 109번 #23 — 지금 모델에 반영할 수 없는 행이 있으면 그 테이블은 반영하지 않는다
+					List<String> stale = new ArrayList<>();
+					for (Map<String, Object> r : rows) {
+						String why = notApplicable(r, model);
+						if (why != null) stale.add(r.get("columnNm") + " — " + why);
+					}
+					if (!stale.isEmpty()) throw new IllegalStateException(String.join(" / ", stale));
 					applyTable(dmId, owner == null ? "" : owner, tbl, rows, objs);
 					List<Object> done = new ArrayList<>();
 					for (Map<String, Object> r : rows) done.add(r.get("seq"));
@@ -227,6 +240,39 @@ public class StructDiagController {
 		if (r.getResultCode() != RestResult.CODE_200.getCode()) throw new IllegalStateException(r.getResultMessage());
 	}
 
+	private static final String NOT_LATEST = "더 최근 구조 진단 결과가 있습니다 — 최근 결과에서 반영하세요.";
+
+	/** 109번 #23 — 지금 모델의 사용 중 컬럼 (대문자 소유자|테이블|컬럼 → 타입·길이·NULL) */
+	private Map<String, Map<String, Object>> modelAttrs(String dmId) {
+		Map<String, Map<String, Object>> m = new HashMap<>();
+		for (Map<String, Object> a : sqlSessionTemplate.<Map<String, Object>>selectList("structdiag.selectModelAttrsForApply", dmId)) {
+			m.put(a.get("owner") + "|" + a.get("tableNm") + "|" + a.get("columnNm"), a);
+		}
+		return m;
+	}
+
+	/**
+	 * 109번 #23 — 진단 결과 한 행을 지금 모델에 반영할 수 없는 이유 (반영할 수 있으면 null).
+	 * 추가는 모델에 그 컬럼이 없어야, 변경·삭제는 모델 컬럼의 타입·길이·NULL 이 진단 때 값(이전 값)과 같아야 한다.
+	 */
+	private static String notApplicable(Map<String, Object> d, Map<String, Map<String, Object>> model) {
+		String owner = d.get("owner") == null ? "" : d.get("owner").toString().toUpperCase();
+		Map<String, Object> m = model.get(owner + "|" + d.get("tableNm") + "|" + d.get("columnNm"));
+		if ("ADDED".equals(d.get("changeType"))) {
+			return m == null ? null : "모델에 이미 있는 컬럼입니다 (반영했거나 진단 뒤 모델이 바뀜)";
+		}
+		if (m == null) return "모델에 없는 컬럼입니다 (반영했거나 진단 뒤 모델이 바뀜)";
+		if (!Objects.equals(str(m.get("dataType")), str(d.get("prevDataType"))) || !Objects.equals(str(m.get("dataLen")), str(d.get("prevDataLen")))
+				|| !Objects.equals(str(m.get("nullableYn")), str(d.get("prevNullable")))) {
+			return "진단 뒤 모델 컬럼이 바뀌었습니다 (반영했거나 직접 수정함) — 구조 진단을 다시 하세요";
+		}
+		return null;
+	}
+
+	private static String str(Object o) {
+		return o == null ? null : o.toString().trim();
+	}
+
 	/**
 	 * 구조 진단 실행
 	 *
@@ -348,6 +394,17 @@ public class StructDiagController {
 		Map<String, Object> result = new HashMap<>();
 		Map<String, Object> history = sqlSessionTemplate.selectOne("structdiag.selectStructDiagHistoryById", diagId);
 		List<Map<String, Object>> details = sqlSessionTemplate.selectList("structdiag.selectStructDiagDetailList", diagId);
+		// 109번 #23 — 행마다 지금 모델에 반영할 수 있는지 (화면은 반영할 수 있는 행만 고르게 하고, 못 하는 이유를 보인다)
+		if (history != null && !details.isEmpty()) {
+			String dmId = (String) history.get("dataModelId");
+			boolean latest = diagId.equals(sqlSessionTemplate.selectOne("structdiag.selectLatestDoneDiagId", dmId));
+			Map<String, Map<String, Object>> model = latest ? modelAttrs(dmId) : null;
+			for (Map<String, Object> d : details) {
+				String why = latest ? notApplicable(d, model) : NOT_LATEST;
+				d.put("applicable", why == null);
+				d.put("notApplicableReason", why);
+			}
+		}
 		List<Map<String, Object>> indexDetails = sqlSessionTemplate.selectList("structdiag.selectStructDiagIndexDetailList", diagId);
 		List<Map<String, Object>> constraintDetails = sqlSessionTemplate.selectList("structdiag.selectStructDiagConstraintDetailList", diagId);
 		result.put("history", history);

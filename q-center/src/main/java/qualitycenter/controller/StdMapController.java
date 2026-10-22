@@ -78,6 +78,12 @@ public class StdMapController {
 		Map<String, Object> p = new HashMap<>();
 		String mapId = s(body.get("mapId"));
 		String dictId = (String) dictService.dictParam(s(body.get("dictId"))).get("dictId");
+		// 109번 #18 — 수정은 저장된 매핑의 사전으로 판정한다 (요청의 dictId 로 참조 사전 검사를 피하지 못하게)
+		if (mapId != null && !mapId.isEmpty()) {
+			Map<String, Object> cur = sqlSessionTemplate.selectOne("stdMap.selectById", mapId);
+			if (cur == null) return Mono.just(result(RestResult.CODE_500.getCode(), "없는 매핑입니다: " + mapId, null));
+			dictId = (String) cur.get("dictId");
+		}
 		String mapTp = s(body.get("mapTp"));
 		String oldNm = s(body.get("oldNm"));
 		String oldEng = s(body.get("oldEngAbrvNm"));

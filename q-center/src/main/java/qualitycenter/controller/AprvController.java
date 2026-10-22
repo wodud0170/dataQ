@@ -96,7 +96,10 @@ public class AprvController {
 		return sqlSessionTemplate.selectOne("aprv.countTurn", sessionService.getUserId());
 	}
 
-	/** 대상들의 진행 중 결재 문서 — 기존 승인 화면 목록에 "결재 n/m 단계 · 현재 결재자" 를 보인다. {targetIds: [..]} → {targetId: 문서} */
+	/**
+	 * 대상들의 진행 중 결재 문서 — 기존 승인 화면 목록에 "결재 n/m 단계 · 현재 결재자" 를 보인다. {targetIds: [..]} → {targetId: 문서}
+	 * 109번 #15 — 문서 상세(doc)와 같은 범위: 요청자·결재자·관리자·그 유형의 승인 권한자인 문서만 돌려준다
+	 */
 	@PostMapping("/openDocs")
 	@SuppressWarnings("unchecked")
 	public Map<String, Object> openDocs(@RequestBody Map<String, Object> body) {
@@ -105,6 +108,11 @@ public class AprvController {
 		if (ids == null || ids.isEmpty()) return out;
 		Map<String, Object> p = new HashMap<>();
 		p.put("targetIds", ids);
+		if (!sessionService.isAdmin()) {
+			p.put("viewerId", sessionService.getUserId());
+			p.put("stdApprove", sessionService.hasPerm(PermCode.STD_APPROVE));
+			p.put("dmApprove", sessionService.hasPerm(PermCode.DM_APPROVE));
+		}
 		for (Map<String, Object> d : sqlSessionTemplate.<Map<String, Object>>selectList("aprv.selectOpenDocsByTargets", p)) {
 			out.put((String) d.get("targetId"), d);
 		}

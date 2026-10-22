@@ -36,15 +36,26 @@
 		    ON A.DM_ID = M.DM_ID AND A.USE_YN = 'Y' AND COALESCE(A.APRV_STATUS, 'APPROVED') = 'APPROVED'
 	</sql>
 
-	<!-- 단어 → 연관 컬럼. 104번 WP7-26 — 컬럼명을 '_' 로 나눈 토큰 중 하나가 단어 영문약어와 같은 컬럼, 모델 사전 = 단어 사전
+	<!-- 109번 #24 — 항목 사전(ROOT_ID)과 그 하위 사전들(DICT_ID). 진단·컬럼 표준 검사는 모델 사전의 상위 사전 항목도 쓰므로(WP5-11, 5단계까지)
+	     모델 사전이 항목 사전이거나 그 하위 사전인 모델의 컬럼을 본다. WITH RECURSIVE 의 항목으로 쓰고, 시작 행(SUBD 의 첫 SELECT)은 쓰는 쪽이 준다 -->
+	<sql id="subDictsStep">
+			UNION ALL
+			SELECT S.ROOT_ID, SD.DICT_ID, S.DEPTH + 1 FROM TB_STD_DICT SD JOIN SUBD S ON SD.PARENT_DICT_ID = S.DICT_ID WHERE S.DEPTH &lt; 5
+	</sql>
+
+	<!-- 단어 → 연관 컬럼. 104번 WP7-26 — 컬럼명을 '_' 로 나눈 토큰 중 하나가 단어 영문약어와 같은 컬럼, 모델 사전 = 단어 사전(109번 #24 — 또는 그 하위 사전)
 	     (예전: 컬럼명에 약어가 들어 있기만 하면 — NO 가 NOTE 에도 걸렸다) -->
 	<select id="selectImpactColumnsByWordId" parameterType="String" resultType="java.util.LinkedHashMap">
+		WITH RECURSIVE SUBD (ROOT_ID, DICT_ID, DEPTH) AS (
+			SELECT W0.DICT_ID, W0.DICT_ID, 0 FROM TB_WORD W0 WHERE W0.WORD_ID = #{wordId}
+			<include refid="subDictsStep"/>
+		)
 		SELECT <include refid="colCols"/>
 		  FROM TB_WORD W
 		<include refid="colJoin"/>
 		   AND W.WORD_ENG_ABRV_NM = ANY(string_to_array(UPPER(TRIM(A.ATTR_NM)), '_'))
 		 WHERE W.WORD_ID = #{wordId}
-		   AND <include refid="modelDict"/> = W.DICT_ID
+		   AND <include refid="modelDict"/> IN (SELECT S.DICT_ID FROM SUBD S)
 		 ORDER BY M.DM_NM, A.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD
 		 LIMIT 2000
 	</select>
@@ -60,9 +71,14 @@
 		ORDER BY t.TERMS_NM
 	</select>
 
-	<!-- 104번 WP7-26 — 용어(들) → 연관 컬럼. 모델 사전 = 용어 사전이고 컬럼 영문명 = 용어 영문약어명(ENG),
+	<!-- 104번 WP7-26 — 용어(들) → 연관 컬럼. 모델 사전 = 용어 사전(109번 #24 — 또는 그 하위 사전)이고 컬럼 영문명 = 용어 영문약어명(ENG),
 	     또는 영문명은 다르고 한글명만 용어명과 같은 컬럼(KR — 비표준 후보) -->
 	<select id="selectImpactColumnsByTermIds" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		WITH RECURSIVE SUBD (ROOT_ID, DICT_ID, DEPTH) AS (
+			SELECT DISTINCT T0.DICT_ID, T0.DICT_ID, 0 FROM TB_TERMS T0
+			 WHERE T0.TERMS_ID IN <foreach collection="termsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
+			<include refid="subDictsStep"/>
+		)
 		SELECT T.TERMS_NM AS "termsNm"
 		      ,T.TERMS_ENG_ABRV_NM AS "termsEngAbrvNm"
 		      ,CASE WHEN TRIM(A.ATTR_NM) = T.TERMS_ENG_ABRV_NM THEN 'ENG' ELSE 'KR' END AS "matchType"
@@ -71,7 +87,7 @@
 		<include refid="colJoin"/>
 		   AND (TRIM(A.ATTR_NM) = T.TERMS_ENG_ABRV_NM OR TRIM(A.ATTR_NM_KR) = T.TERMS_NM)
 		 WHERE T.TERMS_ID IN <foreach collection="termsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
-		   AND <include refid="modelDict"/> = T.DICT_ID
+		   AND (T.DICT_ID, <include refid="modelDict"/>) IN (SELECT S.ROOT_ID, S.DICT_ID FROM SUBD S)
 		 ORDER BY 3, M.DM_NM, A.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD
 		 LIMIT 2000
 	</select>

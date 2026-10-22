@@ -56,8 +56,30 @@
 	</select>
 
 	<select id="selectCodeById" parameterType="String" resultType="java.util.LinkedHashMap">
-		SELECT TERMS_ID as "termsId", TERMS_NM as "termsNm", CODE_GRP as "codeGrp", DICT_ID as "dictId"
+		SELECT TERMS_ID as "termsId", TERMS_NM as "termsNm", CODE_GRP as "codeGrp", DICT_ID as "dictId",
+		       COALESCE(CODE_TP, 'SINGLE') as "codeTp", COALESCE(PARENT_CODE_GRP, '') as "parentCodeGrp"
 		  FROM TB_TERMS WHERE TERMS_ID = #{termsId}
+	</select>
+
+	<!-- 109번 #22 — 같은 코드 그룹을 가진 다른 용어 수 (코드 그룹 이름을 바꿀 때 옛 그룹이 남는지) -->
+	<select id="countOtherGrpHolders" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_TERMS WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp} AND TERMS_ID &lt;&gt; #{termsId}
+	</select>
+
+	<!-- 109번 #22 — 이 통합 코드의 구성 하위 코드 수 -->
+	<select id="countIntegSubsOf" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_CODE_INTEG WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+	</select>
+
+	<!-- 109번 #22 — 계층·파생으로 바꿀 때 규칙에 맞지 않는 기존 코드값. 계층(hier)은 상위 코드값이, 파생은 값 자신이 상위 코드 그룹 값에 있어야 한다 -->
+	<select id="selectValuesNotInParent" parameterType="java.util.Map" resultType="String">
+		SELECT D.CODE_VAL
+		  FROM TB_CODE_DATA D
+		 WHERE D.DICT_ID = #{dictId} AND D.CODE_GRP = #{codeGrp}
+		   AND NOT EXISTS (SELECT 1 FROM TB_CODE_DATA P
+		                    WHERE P.DICT_ID = D.DICT_ID AND P.CODE_GRP = #{parentCodeGrp}
+		                      AND P.CODE_VAL = <choose><when test="hier">D.PARENT_CODE_VAL</when><otherwise>D.CODE_VAL</otherwise></choose>)
+		 ORDER BY D.CODE_VAL
 	</select>
 
 	<!-- 이 코드 그룹을 상위로 쓰는 계층·파생 코드 수 -->

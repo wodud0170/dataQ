@@ -29,7 +29,7 @@
             <v-alert v-else type="info" dense text class="mt-1">관련 코드가 없습니다.</v-alert>
           </template>
           <div class="font-weight-bold mb-2 mt-4">연관 컬럼 ({{ columns.length }}건{{ columns.length >= 2000 ? ' — 2,000건까지' : '' }})</div>
-          <div class="mb-2" style="font-size:.78rem; color:#546E7A;">사용 중인 데이터 모델 중 모델 사전이 같은 컬럼. "영문명" 은 컬럼명 = 용어 영문약어명, "한글명만" 은 영문명은 다르고 한글명이 용어명과 같은 컬럼(비표준 후보)입니다.</div>
+          <div class="mb-2" style="font-size:.78rem; color:#546E7A;">사용 중인 데이터 모델 중 모델 사전이 같거나 하위 사전인 컬럼. "영문명" 은 컬럼명 = 용어 영문약어명, "한글명만" 은 영문명은 다르고 한글명이 용어명과 같은 컬럼(비표준 후보)입니다.</div>
           <v-simple-table dense v-if="columns.length > 0" id="impactColumnTable">
             <thead><tr><th v-if="kind !== 'term'">용어</th><th>데이터 모델</th><th>테이블</th><th>컬럼</th><th>컬럼 한글명</th><th>타입</th><th>일치</th><th>표준</th></tr></thead>
             <tbody>

@@ -163,6 +163,8 @@
 		       DDL_EXEC_RESULT  = #{ddlExecResult},
 		       DDL_EXEC_MESSAGE = #{ddlExecMessage, jdbcType=VARCHAR}
 		       <if test="ddlSnippet != null">, DDL_SNIPPET = #{ddlSnippet}</if>
+		       <!-- 109번 #17 — 이미 실행된 문장(JSON 배열). '' 면 비운다, 주지 않으면(건너뜀) 그대로 둔다 -->
+		       <if test="ddlExecDone != null">, DDL_EXEC_DONE = NULLIF(#{ddlExecDone}, '')</if>
 		 WHERE CHANGE_SEQ = #{changeSeq}
 	</update>
 
@@ -199,7 +201,7 @@
 		       APRV_STATUS as aprv_status, CHANGE_USER_ID as change_user_id,
 		       BEFORE_JSON as before_json, AFTER_JSON as after_json,
 		       DDL_SNIPPET as ddl_snippet, DDL_DBMS_TP as ddl_dbms_tp, SUBMISSION_ID as submission_id,
-		       DDL_EXEC_DT as ddl_exec_dt, DDL_EXEC_RESULT as ddl_exec_result
+		       DDL_EXEC_DT as ddl_exec_dt, DDL_EXEC_RESULT as ddl_exec_result, DDL_EXEC_DONE as ddl_exec_done
 		  FROM TB_DATA_MODEL_CHANGE_HISTORY
 		 WHERE CHANGE_SEQ = #{value}
 	</select>

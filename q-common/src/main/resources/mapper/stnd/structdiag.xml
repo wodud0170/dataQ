@@ -119,6 +119,23 @@
 		 WHERE DM_ID = #{dataModelId} AND OBJ_OWNER = #{objOwner} AND OBJ_NM = #{objNm} AND USE_YN = 'Y'
 	</select>
 
+	<!-- 109번 #23 — 모델의 가장 최근 완료 구조 진단 (반영은 이 결과에서만) -->
+	<select id="selectLatestDoneDiagId" parameterType="String" resultType="String">
+		SELECT DIAG_ID FROM TB_STRUCT_DIAG_HISTORY
+		 WHERE DATA_MODEL_ID = #{dataModelId} AND STATUS = 'DONE'
+		 ORDER BY DIAG_DT DESC, DIAG_ID DESC
+		 LIMIT 1
+	</select>
+
+	<!-- 109번 #23 — 반영 판정용 지금 모델 컬럼 (사용 중인 테이블·컬럼, 승인 대기 포함 — 승인 대기 수정도 모델 행을 이미 바꿔 둔다) -->
+	<select id="selectModelAttrsForApply" parameterType="String" resultType="java.util.HashMap">
+		SELECT UPPER(COALESCE(A.OBJ_OWNER, '')) AS "owner", A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm",
+		       A.DATA_TYPE AS "dataType", A.DATA_LEN AS "dataLen", A.NULLABLE_YN AS "nullableYn"
+		  FROM TB_DATA_MODEL_ATTR A
+		  JOIN TB_DATA_MODEL_OBJ O ON O.DM_ID = A.DM_ID AND COALESCE(O.OBJ_OWNER, '') = COALESCE(A.OBJ_OWNER, '') AND O.OBJ_NM = A.OBJ_NM
+		 WHERE A.DM_ID = #{dataModelId} AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
+	</select>
+
 	<!-- 104번 WP8-63 — 모델에 반영한 행 표시 (seqs) -->
 	<update id="markStructDiagApplied" parameterType="java.util.Map">
 		UPDATE TB_STRUCT_DIAG_DETAIL

@@ -82,7 +82,7 @@
               <v-chip small :color="colFilter === 'MODIFIED' ? 'orange' : ''" :outlined="colFilter !== 'MODIFIED'" @click="colFilter = 'MODIFIED'">변경 ({{ countByType(changeList, 'MODIFIED') }})</v-chip>
               <v-chip small :color="colFilter === 'DELETED' ? 'red' : ''" :outlined="colFilter !== 'DELETED'" @click="colFilter = 'DELETED'">삭제 ({{ countByType(changeList, 'DELETED') }})</v-chip>
               <v-spacer />
-              <!-- 104번 WP8-63 — 고른 행을 모델에 반영 (반영한 행은 다시 고를 수 없다) -->
+              <!-- 104번 WP8-63 — 고른 행을 모델에 반영. 109번 #23 — 지금 모델에 반영할 수 있는 행만 고를 수 있다(서버 판정 applicable) -->
               <v-btn id="structApply" small class="btn-auto" color="indigo" :dark="colSel.length > 0" :disabled="!colSel.length" @click="confirmApply">
                 <v-icon small left>mdi-database-sync</v-icon>모델에 반영 ({{ colSel.length }})
               </v-btn>
@@ -99,7 +99,8 @@
               <template v-slot:item.currNullable="{ item }">{{ item.currNullable || '-' }}</template>
               <template v-slot:item.currAttrNmKr="{ item }">{{ item.currAttrNmKr || '-' }}</template>
               <template v-slot:item.appliedDt="{ item }">
-                <v-chip v-if="item.appliedDt" x-small color="indigo" text-color="white" :title="item.appliedUserId + ' · ' + fmtDt(item.appliedDt)">반영됨</v-chip>
+                <v-chip v-if="item.appliedDt && !item.applicable" x-small color="indigo" text-color="white" :title="item.appliedUserId + ' · ' + fmtDt(item.appliedDt)">반영됨</v-chip>
+                <v-chip v-else-if="!item.applicable" x-small outlined :title="item.notApplicableReason">반영 불가</v-chip>
               </template>
             </v-data-table>
           </v-sheet>
@@ -308,8 +309,8 @@ export default {
             totalChanges: colChanges + idxChanges + cstChanges,
           };
           self.selectedDiagDt = h.diagDt || '';
-          // 104번 WP8-63 — 반영한 행은 고를 수 없다
-          self.changeList = (data.details || []).map(function(d) { return Object.assign({}, d, { _selectable: !d.appliedDt }); });
+          // 104번 WP8-63 — 반영한 행은 고를 수 없다. 109번 #23 — 판정은 서버(지금 모델·최근 진단 기준)
+          self.changeList = (data.details || []).map(function(d) { return Object.assign({}, d, { _selectable: !!d.applicable }); });
           self.colSel = [];
           self.indexChangeList = data.indexDetails || [];
           self.constraintChangeList = data.constraintDetails || [];
@@ -350,9 +351,11 @@ export default {
         }
         var c = JSON.parse(res.data.contents || '{}');
         var errs = c.errors || [];
+        // 109번 #20 — 테이블명·오류 메시지는 실 DB·서버에서 온 값이라 HTML 로 해석하지 않는다
+        var esc = function(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
         var html = '<div style="text-align:left;font-size:.9rem;">반영: <b>' + c.applied + '건</b>'
           + (errs.length ? '<br><br><span style="color:#D32F2F">반영하지 못한 테이블 ' + errs.length + '개</span><br>'
-            + errs.map(function(e) { return '· ' + e.tableNm + ' — ' + e.message; }).join('<br>') : '')
+            + errs.map(function(e) { return '· ' + esc(e.tableNm) + ' — ' + esc(e.message); }).join('<br>') : '')
           + '</div>';
         self.$swal.fire({ title: errs.length ? '일부 반영' : '반영 완료', html: html, icon: errs.length ? 'warning' : 'success', confirmButtonText: '확인' });
         self.loadResult();
