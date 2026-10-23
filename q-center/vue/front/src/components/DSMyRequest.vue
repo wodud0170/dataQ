@@ -113,7 +113,6 @@
 
 <script>
 import axios from "axios";
-import { eventBus } from '../eventBus';
 import DatePicker from 'vue2-datepicker';
 import 'vue2-datepicker/index.css';
 
@@ -162,13 +161,6 @@ export default {
   created() {
     this.loadData();
   },
-  activated() {
-    if (eventBus.pendingMyRequestFilter) {
-      this.activeFilter = eventBus.pendingMyRequestFilter;
-      eventBus.pendingMyRequestFilter = null;
-      this.loadData();
-    }
-  },
   methods: {
     setFilter(filter) {
       this.activeFilter = filter;
@@ -177,14 +169,12 @@ export default {
     },
     getStatusColor(stat) {
       if (stat === 0) return 'orange lighten-4';
-      if (stat === 1) return 'blue lighten-4';
       if (stat === 2) return 'green lighten-4';
       if (stat === 3) return 'red lighten-4';
       return 'grey lighten-3';
     },
     getStatusTextColor(stat) {
       if (stat === 0) return 'orange darken-3';
-      if (stat === 1) return 'blue darken-3';
       if (stat === 2) return 'green darken-3';
       if (stat === 3) return 'red darken-3';
       return 'grey darken-1';
@@ -213,7 +203,6 @@ export default {
               let raw = res.data[i].aprvStat;
               res.data[i].aprvStatRaw = raw;
               if (raw === 0) res.data[i].aprvStat = "승인대기";
-              else if (raw === 1) res.data[i].aprvStat = "검토중";
               else if (raw === 2) res.data[i].aprvStat = "승인완료";
               else if (raw === 3) res.data[i].aprvStat = "반려";
 

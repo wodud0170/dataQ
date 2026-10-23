@@ -43,6 +43,15 @@ export default {
   created() {
     this.load();
   },
+  watch: {
+    // 110번 2.4-2-a — 부모가 사전을 바꾸면(통합 검색 결과로 이동) 선택기도 따라간다. 조회는 부모가 한다
+    value(v) {
+      if (!v || v === this.selected || !this.dicts.some(function (d) { return d.dictId === v; })) return;
+      this.selected = v;
+      this.writeStored(v);
+      this.$emit('meta', this.dicts.find(function (d) { return d.dictId === v; }) || null);
+    },
+  },
   methods: {
     load() {
       const self = this;

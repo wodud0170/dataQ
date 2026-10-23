@@ -27,6 +27,7 @@ import org.xml.sax.XMLReader;
 
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.PermCode;
+import com.ndata.quality.common.StdInputRule;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -137,15 +138,23 @@ public class ExcelUploadService {
 
 					// 104번 WP6-13 — 사전 운영 옵션: 단어 영문명 중복
 					dictService.checkWordEngNmDup(dictId, dataRow.get(4), stdWordVo.getId());
-					// 영문약어 규격 체크: 대문자 영문(A-Z) + 숫자(0-9)만 허용
-					if (engAbrv != null && !engAbrv.matches("^[A-Z0-9]+$")) {
-						throw new Exception("단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다. (입력값: " + dataRow.get(3) + ")");
+					// 영문약어 규격 체크 — 110번 3.12-12-c: 화면 등록과 같은 규칙 (대문자 영문으로 시작, 대문자·숫자만)
+					String abrvErr = StdInputRule.wordEngAbrvError(engAbrv);
+					if (abrvErr != null) {
+						throw new Exception(abrvErr);
 					}
 					// 금칙어 체크: 등록하려는 단어명이 다른 단어의 금칙어인 경우 등록 차단
 					Map<String, Object> forbiddenWord = session.selectOne("word.selectWordByForbiddenNm", byName(dictId, "wordNm", dataRow.get(2)));
 					if (forbiddenWord != null) {
 						String stdWordNm = (String) forbiddenWord.get("wordNm");
 						throw new Exception("'" + dataRow.get(2) + "'은(는) '" + stdWordNm + "'의 금칙어입니다. '" + stdWordNm + "'를 사용해주세요.");
+					}
+					// 110번 3.12-12-c — 화면 등록과 같이, 다른 단어의 유사어(이음동의어)인 이름은 받지 않는다
+					List<StdWordVo> sameNm = session.selectList("word.selectWordInfoByNm", byName(dictId, "wordNm", dataRow.get(2)));
+					for (StdWordVo w : sameNm) {
+						if (!w.getWordNm().equals(dataRow.get(2))) {
+							throw new Exception(StdInputRule.synonymOfMsg(dataRow.get(2), w.getWordNm()));
+						}
 					}
 
 					stdWordVo.setWordEngAbrvNm(engAbrv);
@@ -161,7 +170,7 @@ public class ExcelUploadService {
 					stdWordVo.setForbdnWordLst(splitArrayString(dataRow.get(9)));
 					String reqSysNm = checkInvalidVal(dataRow.get(10));
 					if (reqSysNm != null) {
-						stdWordVo.setReqSysCd(session.selectOne("sysinfo.selectSysInfoBySysNm", reqSysNm));
+						stdWordVo.setReqSysCd(session.selectOne("sysinfo.selectSysCdBySysNm", reqSysNm));
 					}
 					if (dataRow.size() > 11) {
 						stdWordVo.setCommStndYn(dataRow.get(11));
@@ -173,11 +182,11 @@ public class ExcelUploadService {
 					stdWordVo.setDictId(dictId);
 					session.insert("word.insertWord", stdWordVo);
 					session.commit();
-					result.addSuccess();
+					result.addSuccess(stdWordVo.getId(), stdWordVo.getWordNm());
 					if ("N".equals(aprvYn)) aprvService.open("WORD", stdWordVo.getId(), stdWordVo.getWordNm(), null, dictId, userId);
 				} catch (Exception e) {
 					session.rollback();
-					String errMsg = translateDuplicateError(e.getMessage());
+					String errMsg = StdInputRule.translateDuplicateError(e.getMessage());
 					if (errMsg == null) errMsg = e.getMessage();
 					String detail = String.format("단어(%s): %s", stdWordVo.getWordNm() != null ? stdWordVo.getWordNm() : dataRow.get(2), errMsg);
 					log.error("upload words row failed: {}", detail);
@@ -208,6 +217,12 @@ public class ExcelUploadService {
 	}
 
 	public UploadResult uploadTermsList(String userId, String dictId, MultipartFile multiPart, BiConsumer<Integer,Integer> progressCallback) throws Exception {
+		return uploadTermsList(userId, dictId, multiPart, progressCallback, "TERM", "용어");
+	}
+
+	/** 110번 3.12-7-e — 코드 일괄등록도 같은 처리라 이력 대상(TERM·CODE)만 받아 한 건으로 남긴다 (예전에는 코드가 TERM·CODE 두 건) */
+	private UploadResult uploadTermsList(String userId, String dictId, MultipartFile multiPart, BiConsumer<Integer,Integer> progressCallback,
+			String histTargetType, String histLabel) throws Exception {
 		dictId = resolveDict(dictId);
 		SqlSession session = sqlSessionFactory.openSession();
 		UploadResult result = new UploadResult();
@@ -240,7 +255,7 @@ public class ExcelUploadService {
 					stdTermsVo.setAllophSynmLst(splitArrayString(dataRow.get(11)));
 					String reqSysNm = checkInvalidVal(dataRow.get(12));
 					if (reqSysNm != null) {
-						stdTermsVo.setReqSysCd(session.selectOne("sysinfo.selectSysInfoBySysNm", reqSysNm));
+						stdTermsVo.setReqSysCd(session.selectOne("sysinfo.selectSysCdBySysNm", reqSysNm));
 					}
 					if (dataRow.size() > 13) {
 						stdTermsVo.setCommStndYn(dataRow.get(13));
@@ -302,14 +317,14 @@ public class ExcelUploadService {
 					}
 					session.insert("terms.insertTermsWords", wordList);
 					session.commit();
-					result.addSuccess();
+					result.addSuccess(stdTermsVo.getId(), stdTermsVo.getTermsNm());
 					if ("N".equals(aprvYn)) {
 						String reqTp = stdTermsVo.getCodeGrp() != null && !stdTermsVo.getCodeGrp().isEmpty() ? "CODE" : "TERMS";
 						aprvService.open(reqTp, stdTermsVo.getId(), stdTermsVo.getTermsNm(), null, dictId, userId);
 					}
 				} catch (Exception e) {
 					session.rollback();
-					String errMsg = translateDuplicateError(e.getMessage());
+					String errMsg = StdInputRule.translateDuplicateError(e.getMessage());
 					if (errMsg == null) errMsg = e.getMessage();
 					String detail = String.format("용어(%s): %s", stdTermsVo.getTermsNm() != null ? stdTermsVo.getTermsNm() : dataRow.get(2), errMsg);
 					log.error("upload terms row failed: {}", detail);
@@ -324,12 +339,12 @@ public class ExcelUploadService {
 			session.close();
 		}
 		// 일괄 등록 이력 저장
-		saveUploadHistory(userId, "TERM", "용어", result);
+		saveUploadHistory(userId, histTargetType, histLabel, result);
 		return result;
 	}
 
 	/**
-	 * 코드 Excel 일괄 등록 - 내부적으로 uploadTermsList를 호출
+	 * 코드 Excel 일괄 등록 - 내부적으로 uploadTermsList를 호출 (이력은 CODE 한 건)
 	 *
 	 * @param userId    실행 사용자 ID
 	 * @param multiPart 업로드된 Excel 파일
@@ -337,10 +352,7 @@ public class ExcelUploadService {
 	 * @throws Exception Excel 파싱 실패 시
 	 */
 	public UploadResult uploadCodeInfoList(String userId, String dictId, MultipartFile multiPart) throws Exception {
-		UploadResult result = uploadTermsList(userId, dictId, multiPart);
-		// 코드 일괄 등록 이력 (uploadTermsList에서 TERM으로 저장되므로 CODE로도 기록)
-		saveUploadHistory(userId, "CODE", "코드", result);
-		return result;
+		return uploadTermsList(userId, dictId, multiPart, null, "CODE", "코드");
 	}
 
 	/**
@@ -382,7 +394,7 @@ public class ExcelUploadService {
 					codeTypeService.checkValue(session, stdCodeDataVo);
 					session.insert("codedata.insertCodeData", stdCodeDataVo);
 					session.commit();
-					result.addSuccess();
+					result.addSuccess(stdCodeDataVo.getId(), stdCodeDataVo.getCodeNm() + " / " + stdCodeDataVo.getCodeVal());
 				} catch (Exception e) {
 					session.rollback();
 					String detail = String.format("코드데이터(%s/%s): %s", stdCodeDataVo.getCodeNm(), stdCodeDataVo.getCodeVal(), e.getMessage());
@@ -447,7 +459,7 @@ public class ExcelUploadService {
 					stdDomainVo.setDataUnit(dataRow.get(11));
 					String reqSysNm = checkInvalidVal(dataRow.get(13));
 					if (reqSysNm != null) {
-						stdDomainVo.setReqSysCd(session.selectOne("sysinfo.selectSysInfoBySysNm", reqSysNm));
+						stdDomainVo.setReqSysCd(session.selectOne("sysinfo.selectSysCdBySysNm", reqSysNm));
 					}
 					if (dataRow.size() > 14) {
 						stdDomainVo.setCommStndYn(dataRow.get(14));
@@ -462,12 +474,12 @@ public class ExcelUploadService {
 					stdDomainVo.setDictId(dictId);
 					session.insert("domain.insertDomain", stdDomainVo);
 					session.commit();
-					result.addSuccess();
+					result.addSuccess(stdDomainVo.getId(), stdDomainVo.getDomainNm());
 					if ("N".equals(aprvYn)) aprvService.open("DOMAIN", stdDomainVo.getId(), stdDomainVo.getDomainNm(), null, dictId, userId);
 				} catch (Exception e) {
 					session.rollback();
 					String domainNm = stdDomainVo.getDomainNm() != null ? stdDomainVo.getDomainNm() : dataRow.get(4);
-					String dupMsg = translateDuplicateError(e.getMessage());
+					String dupMsg = StdInputRule.translateDuplicateError(e.getMessage());
 					String reason = dupMsg != null ? dupMsg : translateDomainInsertError(e, stdDomainVo);
 					String detail = String.format("도메인(%s): %s", domainNm, reason);
 					log.error("upload domains row failed: {}", detail);
@@ -515,7 +527,7 @@ public class ExcelUploadService {
 					vo.setDictId(dictId);
 					session.insert("domain.insertDomainGroup", vo);
 					session.commit();
-					result.addSuccess();
+					result.addSuccess(vo.getId(), vo.getDomainGrpNm());
 				} catch (Exception e) {
 					session.rollback();
 					String detail = String.format("도메인그룹(%s): %s",
@@ -570,7 +582,7 @@ public class ExcelUploadService {
 					vo.setDictId(dictId);
 					session.insert("domain.insertDomainClassification", vo);
 					session.commit();
-					result.addSuccess();
+					result.addSuccess(vo.getId(), vo.getDomainClsfNm());
 				} catch (Exception e) {
 					session.rollback();
 					String reason = translateDomainClsfInsertError(e, vo);
@@ -601,15 +613,6 @@ public class ExcelUploadService {
 
 	// 도메인 INSERT 실패 메시지를 사용자가 알기 쉬운 형태로 변환.
 	// FK 위반(도메인 그룹/분류 미등록)을 우선 감지하여 친절한 메시지로 바꾸고, 그 외는 원본 메시지 반환.
-	private String translateDuplicateError(String msg) {
-		if (msg == null) return null;
-		if (msg.contains("uix_word_nm")) return "이미 등록된 단어명입니다.";
-		if (msg.contains("uix_word_eng_abrv_nm")) return "이미 등록된 단어 영문약어입니다.";
-		if (msg.contains("uix_terms_nm")) return "이미 등록된 용어명입니다.";
-		if (msg.contains("uix_domain_nm")) return "이미 등록된 도메인명입니다.";
-		return null;
-	}
-
 	private String translateDomainInsertError(Exception e, StdDomainVo vo) {
 		String msg = e.getMessage();
 		if (msg == null) {
@@ -624,20 +627,32 @@ public class ExcelUploadService {
 		return msg;
 	}
 
-	// 일괄 등록 이력 저장 헬퍼
+	// 일괄 등록 이력 저장 헬퍼 — 110번 3.12-7-e: 등록 경로(BULK_UPLOAD)와 등록된 행을 상세 건(TB_CHANGE_HISTORY_DETAIL)으로
 	private void saveUploadHistory(String userId, String targetType, String targetLabel, UploadResult result) {
 		try {
 			SqlSession histSession = sqlSessionFactory.openSession();
 			try {
+				String changeId = StringUtils.getUUID();
 				Map<String, Object> history = new HashMap<>();
-				history.put("changeId", StringUtils.getUUID());
+				history.put("changeId", changeId);
 				history.put("changeType", "BULK_INSERT");
 				history.put("targetType", targetType);
 				history.put("changeCnt", result.getSuccessCount());
 				history.put("summary", String.format("%s 일괄등록 (성공:%d, 건너뜀:%d, 실패:%d)",
 						targetLabel, result.getSuccessCount(), result.getSkipCount(), result.getFailCount()));
 				history.put("changeUserId", userId);
+				history.put("changeSource", "BULK_UPLOAD");
 				histSession.insert("changehistory.insertChangeHistory", history);
+				int seq = 0;
+				for (String[] item : result.getSuccessItems()) {
+					Map<String, Object> d = new HashMap<>();
+					d.put("changeId", changeId);
+					d.put("seq", ++seq);
+					d.put("targetId", item[0]);
+					d.put("targetNm", item[1]);
+					d.put("detailType", "SUCCESS");
+					histSession.insert("changehistory.insertChangeHistoryDetail", d);
+				}
 				histSession.commit();
 			} finally {
 				histSession.close();

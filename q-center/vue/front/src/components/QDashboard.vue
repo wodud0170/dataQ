@@ -584,8 +584,8 @@ export default {
       } catch (e) { console.error(e); }
     },
     onModelFilterChange() {
+      // 구조 일치율은 getDataModelStat 이 끝난 뒤 부른다 (110번 2.4-9 — 여기서 또 부르면 두 번 조회했다)
       this.getDataModelStat();
-      this.getStructDiagRate();
       this.getDiagTrend();
       this.loadStructDiagChanges();
     },
@@ -689,8 +689,10 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/structDiag/history").then(result => {
           var data = result.data || [];
-          // selectedModelId 가 있으면 그것만, 없으면 활성 모델 전체 중 latest
+          // selectedModelId 가 있으면 그것만, 없으면 활성 모델 전체 중 latest.
+          // 110번 2.4-8-b — 완료(DONE)된 진단만 (실행 중·실패한 진단의 빈 건수로 일치율을 내지 않게, DA 목표 달성도와 같은 기준)
           var filtered = data.filter(function(h) {
+            if (h.status !== 'DONE') return false;
             if (selectedId) return h.dataModelId === selectedId;
             return activeIds[h.dataModelId];
           });
@@ -776,11 +778,12 @@ export default {
       return map[type] || type;
     },
     getTargetTypeLabel(type) {
-      var map = { 'WORD': '단어', 'TERM': '용어', 'DOMAIN': '도메인', 'CODE': '코드', 'CODE_DATA': '코드데이터' };
+      var map = { 'WORD': '단어', 'TERM': '용어', 'DOMAIN': '도메인', 'CODE': '코드', 'CODE_DATA': '코드데이터', 'DOMAIN_GRP': '도메인 그룹', 'DOMAIN_CLSF': '도메인 분류' };
       return map[type] || type;
     },
     goToModelStatus() {
-      this.addTabItem('현황', 'datamodelStatus');
+      // 110번 2.4-7 — 메뉴와 같은 탭 제목
+      this.addTabItem('데이터 모델 현황', 'datamodelStatus');
     },
     goToTable() {
       if (this.selectedModelId && this.selectedClctId) {
@@ -1008,74 +1011,6 @@ export default {
   max-width: 200px;
   max-height: 200px;
   margin: 0 auto;
-}
-
-/* ===== 3. 승인 현황 카드 ===== */
-.aprv-card {
-  position: relative;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  width: 22%;
-  height: calc(65% - 20px);
-  margin: 8px;
-  cursor: pointer;
-  background: #fff !important;
-  border: 1px solid #ECEFF1;
-  border-radius: 12px !important;
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.aprv-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12) !important;
-}
-
-.aprv-card__bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-}
-
-.aprv-card__icon-area {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  min-width: 60px;
-  height: 100%;
-}
-
-.aprv-card__content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 8px 12px;
-}
-
-.aprv-card__label {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: #546E7A;
-  margin-bottom: 4px;
-}
-
-.aprv-card__value {
-  font-size: 2vw;
-  font-weight: 700;
-  color: #283593;
-  line-height: 1.1;
-}
-
-.aprv-card__unit {
-  font-size: 0.75rem;
-  font-weight: 400;
-  color: #9E9E9E;
-  margin-left: 3px;
 }
 
 /* 88번 — 구조 변경 감지 패널 */

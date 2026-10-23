@@ -572,7 +572,7 @@
                     </v-list-item>
 
                     <v-list-item v-if="$can('STD_APPROVE')" link id="nav_approval" href="#tab_approval" active-class="ndColor--text" title="표준 사전 변경 승인"
-                        v-on:click.stop=" sendApprovalStatus(); addTabItem('표준 사전 변경 승인', 'approval'); ">
+                        v-on:click.stop=" addTabItem('표준 사전 변경 승인', 'approval'); ">
                         <v-list-item-icon>
                             <v-icon></v-icon>
                         </v-list-item-icon>
@@ -732,11 +732,6 @@ export default {
         },
         wsLogShowClick() {
             this.wsLogShow = !this.wsLogShow;
-        },
-        sendApprovalStatus() {
-            // 승인 메뉴 선택 시 대시보드에서 보내주는 상태값과 다르게 보내줘야 함.
-            // 대시보드에서 직접 승인 메뉴 접근하지 않고 네비게이션으로 접근할 경우 초기화 필요함
-            this.$emit('sendApprovalStatus');
         },
     },
     mounted() {

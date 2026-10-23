@@ -41,7 +41,17 @@ public class ExcelDownloadService {
 	
 	@Autowired
 	private ExcelExportHandler excelExportHandler;
-	
+
+	@Autowired
+	private StdDictService dictService;
+
+	/** 110번 3.12-6-a — 표준 사전 다운로드는 화면에서 고른 사전만 (비면 기본 사전). 예전에는 사전 없이 조회해 전 사전이 섞였다 */
+	private NDQualityRetrieveCond stdCond(String dictId) {
+		NDQualityRetrieveCond c = new NDQualityRetrieveCond();
+		c.setDictId(StringUtils.isNotEmpty(dictId) ? dictId.trim() : dictService.defaultDictId());
+		return c;
+	}
+
     // 104번 WP5-16 — 개인정보 컬럼 (실제 값과 출처)
     public void getPrivColExcel(Map<String, Object> filter, HttpServletRequest request, HttpServletResponse response) throws Exception {
         List<Map<String, Object>> rows = sqlSessionTemplate.selectList("privCol.selectPrivColList", filter);
@@ -229,9 +239,9 @@ public class ExcelDownloadService {
     }
 
     //단어
-    public void getWordsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public void getWordsExcel(String searchKey, String dictId, HttpServletRequest request, HttpServletResponse response) throws Exception {
         // 엑셀에 저장할 데이터를 조회
-        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+        NDQualityRetrieveCond retrieveCond = stdCond(dictId);
         retrieveCond.setSchAprvYn("Y");
         if (StringUtils.isNotEmpty(searchKey)) {
             retrieveCond.setSchNm(searchKey);
@@ -290,9 +300,9 @@ public class ExcelDownloadService {
     }
     
     //용어
-    public void getTermsListExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public void getTermsListExcel(String searchKey, String dictId, HttpServletRequest request, HttpServletResponse response) throws Exception {
         // 엑셀에 저장할 데이터를 조회
-        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+        NDQualityRetrieveCond retrieveCond = stdCond(dictId);
         retrieveCond.setSchAprvYn("Y");
         if (StringUtils.isNotEmpty(searchKey)) {
             retrieveCond.setSchNm(searchKey);
@@ -360,9 +370,9 @@ public class ExcelDownloadService {
     }
 
     //코드정보
-    public void getCodeInfoListExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public void getCodeInfoListExcel(String searchKey, String dictId, HttpServletRequest request, HttpServletResponse response) throws Exception {
         // 엑셀에 저장할 데이터를 조회
-        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+        NDQualityRetrieveCond retrieveCond = stdCond(dictId);
         retrieveCond.setSchAprvYn("Y");
         if (StringUtils.isNotEmpty(searchKey)) {
             retrieveCond.setSchNm(searchKey);
@@ -425,9 +435,9 @@ public class ExcelDownloadService {
     }
 
     //코드데이터(항목값)
-    public void getCodeDataListExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public void getCodeDataListExcel(String searchKey, String dictId, HttpServletRequest request, HttpServletResponse response) throws Exception {
         // 엑셀에 저장할 데이터를 조회
-        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+        NDQualityRetrieveCond retrieveCond = stdCond(dictId);
         retrieveCond.setSchAprvYn("Y");
         if (StringUtils.isNotEmpty(searchKey)) {
             retrieveCond.setSchNm(searchKey);
@@ -476,9 +486,9 @@ public class ExcelDownloadService {
     }
 
     //도메인
-    public void getDomainsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    public void getDomainsExcel(String searchKey, String dictId, HttpServletRequest request, HttpServletResponse response) throws Exception {
         // 엑셀에 저장할 데이터를 조회
-        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+        NDQualityRetrieveCond retrieveCond = stdCond(dictId);
         retrieveCond.setSchAprvYn("Y");
         if (StringUtils.isNotEmpty(searchKey)) {
             retrieveCond.setSchNm(searchKey);
@@ -547,8 +557,8 @@ public class ExcelDownloadService {
     }
 
     //도메인 그룹
-    public void getDomainGroupsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+    public void getDomainGroupsExcel(String searchKey, String dictId, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        NDQualityRetrieveCond retrieveCond = stdCond(dictId);
         retrieveCond.setSchAprvYn("Y");
         if (StringUtils.isNotEmpty(searchKey)) {
             retrieveCond.setSchNm(searchKey);
@@ -580,8 +590,8 @@ public class ExcelDownloadService {
     }
 
     //도메인 분류
-    public void getDomainClsfsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        NDQualityRetrieveCond retrieveCond = new NDQualityRetrieveCond();
+    public void getDomainClsfsExcel(String searchKey, String dictId, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        NDQualityRetrieveCond retrieveCond = stdCond(dictId);
         retrieveCond.setSchAprvYn("Y");
         if (StringUtils.isNotEmpty(searchKey)) {
             retrieveCond.setSchNm(searchKey);

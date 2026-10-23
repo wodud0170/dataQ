@@ -89,8 +89,13 @@
           <v-select id="dictParent" v-model="form.parentDictId" :items="parentOptions" item-text="dictNm" item-value="dictId"
             label="상위 사전 (비우면 없음)" dense clearable class="mt-2" />
           <div class="ml-8 mb-2 dict-opt-desc">상위 사전을 두면 표준 진단·컬럼 표준 검사·자동완성이 상위 사전 용어도 쓰고(같은 영문약어는 이 사전이 우선), 단어·용어·도메인 목록에서 "상위 사전 포함" 으로 함께 볼 수 있습니다.</div>
-          <v-switch v-model="form.defaultYn" true-value="Y" false-value="N" dense
+          <!-- 110번 3.12-11-a — 지금 기본 사전은 여기서 끌 수 없다(꺼도 저장되지 않았다). 다른 사전을 기본으로 지정하면 바뀐다 -->
+          <v-switch id="dictDefaultYn" v-model="form.defaultYn" true-value="Y" false-value="N" dense
+            :disabled="editing && !!selected && selected.defaultYn === 'Y'"
             label="기본 사전으로 지정 (신규 모델에 미리 선택됨)" />
+          <div v-if="editing && selected && selected.defaultYn === 'Y'" class="ml-8 mb-2 dict-opt-desc">
+            기본 사전을 바꾸려면 다른 사전을 수정해 기본 사전으로 지정합니다.
+          </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />

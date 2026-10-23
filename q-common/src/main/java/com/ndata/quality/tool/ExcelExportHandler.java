@@ -84,11 +84,13 @@ public class ExcelExportHandler {
 				sxssfWorkbook = getWorkbook(fileName, headers, keys, widths, aligns, excelData, start, sxssfWorkbook);
 				excelData.clear(); // 리스트 페이징 처리 및 메모리
 			}
-			if (sxssfWorkbook != null) {
-				sxssfWorkbook.write(output);
-				output.flush();
-				sxssfWorkbook.close();
+			// 110번 3.12-6-c — 조회 0건이면 루프를 안 돌아 0바이트 응답이 나갔다. 헤더만 있는 파일을 만든다
+			if (sxssfWorkbook == null) {
+				sxssfWorkbook = getWorkbook(fileName, headers, keys, widths, aligns, new java.util.ArrayList<>(), 0, null);
 			}
+			sxssfWorkbook.write(output);
+			output.flush();
+			sxssfWorkbook.close();
 
 			return new ByteArrayInputStream(output.toByteArray());
 		} catch (Exception e) {

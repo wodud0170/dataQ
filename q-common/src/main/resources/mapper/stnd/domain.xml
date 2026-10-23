@@ -188,6 +188,8 @@
 				,(select SYS_NM from TB_SYS_INFO where sys_cd = REQ_SYS_CD) as REQ_SYS_NM
 			from TB_DOMAIN
 			where DOMAIN_CLSF_NM = #{domainClsfNm} AND DICT_ID = #{dictId}
+			<!-- 110번 3.12-5-e-2 — 용어·코드 화면의 도메인 후보는 승인된 도메인만 -->
+			<if test="schAprvYn != null and schAprvYn != ''"> AND APRV_YN = #{schAprvYn} </if>
       order by DOMAIN_NM
   </select>
 
@@ -315,6 +317,19 @@
     </foreach>
   </delete>
 
+  <!-- 110번 3.12-10-a·8.5-4 — 이 도메인들을 쓰는 용어 (승인 여부 무관). TB_TERMS FK(dict_id, domain_nm)에 ON DELETE 가 없어
+       쓰는 용어가 있으면 도메인 삭제·반려가 DB 오류로 실패했다. 지우기 전에 이름을 알려 거부한다 -->
+  <select id="selectTermsUsingDomains" parameterType="java.util.List" resultType="String">
+    SELECT DISTINCT T.TERMS_NM
+      FROM TB_TERMS T
+      JOIN TB_DOMAIN D ON D.DICT_ID = T.DICT_ID AND D.DOMAIN_NM = T.DOMAIN_NM
+     WHERE D.DOMAIN_ID IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                #{item}
+    </foreach>
+     ORDER BY T.TERMS_NM
+  </select>
+
   <!-- 도메인 그룹-->
   <!-- 104번 WP6-4 — 다단계 트리. 경로("상위 > 하위")·단계·하위 수를 함께 주고 트리 순서(같은 상위 안 순서 → 이름)로 정렬 -->
   <select id="selectDomainGroupList" resultType="com.ndata.quality.model.std.StdDomainGroupVo">
@@ -350,6 +365,8 @@
 			from TB_DOMAIN_GRP A
 			join G on G.DOMAIN_GRP_ID = A.DOMAIN_GRP_ID
 			left join TB_DOMAIN_GRP P on P.DOMAIN_GRP_ID = A.PARENT_GRP_ID
+			<!-- 110번 3.12-6-b — 다운로드의 검색어 (화면 그룹명 검색과 같은 부분 일치) -->
+			<if test="schNm != null and schNm != ''"> where A.DOMAIN_GRP_NM ILIKE '%' || #{schNm} || '%' </if>
 			order by G.SORT_PATH
   </select>
 
@@ -450,6 +467,8 @@
 			from TB_DOMAIN_CLSF
 			where 1=1
 			<if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
+			<!-- 110번 3.12-6-b — 다운로드의 검색어 (화면 분류명 검색과 같은 부분 일치) -->
+			<if test="schNm != null and schNm != ''"> AND DOMAIN_CLSF_NM ILIKE '%' || #{schNm} || '%' </if>
 			order by DOMAIN_CLSF_NM
   </select>
 

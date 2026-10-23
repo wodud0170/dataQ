@@ -41,7 +41,7 @@
 
     <!-- 승인 목록 -->
     <v-data-table id="approval_table" :headers="approvalHeaders" :items="filteredItems" :page.sync="page"
-      :items-per-page="itemsPerPage" hide-default-footer item-key="key" show-select class="px-4 pb-3"
+      :items-per-page="itemsPerPage" hide-default-footer item-key="key" show-select selectable-key="selectable" class="px-4 pb-3"
       v-model="selectedItem" :loading="loadTable" loading-text="Loading" @click:row="bindDetail">
       <template v-slot:[`item.reqItemNm`]="{ item }">
         <span class="ndColor--text" :style="{ cursor: 'pointer' }">{{ item.reqItemNm }}</span>
@@ -63,7 +63,8 @@
         <template v-else-if="rowRejectId === item.key">
           <!-- 반려 사유 인라인 입력 모드 -->
           <div class="d-flex align-center" style="gap:4px;" @click.stop>
-            <v-text-field v-model="rowRejectReason" dense hide-details outlined single-line
+            <!-- 110번 8.5-6 — 처리 사유는 50자까지 저장된다 -->
+            <v-text-field v-model="rowRejectReason" dense hide-details outlined single-line maxlength="50"
               placeholder="사유" style="max-width:120px; font-size:.8rem;" autofocus></v-text-field>
             <v-btn icon x-small color="red" @click.stop="confirmRowReject(item)" title="반려 확정">
               <v-icon small>mdi-check</v-icon>
@@ -74,12 +75,13 @@
           </div>
         </template>
         <template v-else>
+          <!-- 110번 8.5-3a — 처리된 행(승인완료·반려)은 승인·반려 둘 다 막는다 (서버도 승인 대기 항목만 처리) -->
           <div class="d-flex align-center justify-center" style="gap:4px; white-space:nowrap;">
-            <v-btn x-small color="success" :disabled="item.aprvStatRaw === 2"
+            <v-btn x-small color="success" :disabled="item.aprvStatRaw !== 0"
               @click.stop="approveItem(item)" title="승인">
               <v-icon x-small left>mdi-check</v-icon>승인
             </v-btn>
-            <v-btn x-small color="red" dark :disabled="item.aprvStatRaw === 3"
+            <v-btn x-small color="red" :dark="item.aprvStatRaw === 0" :disabled="item.aprvStatRaw !== 0"
               @click.stop="startRowReject(item)" title="반려">
               <v-icon x-small left>mdi-close</v-icon>반려
             </v-btn>
@@ -165,17 +167,17 @@
       <v-divider class="my-3" v-if="canApprove"></v-divider>
       <v-row v-if="canApprove" align="center">
         <v-col cols="auto">
-          <v-btn color="success" @click="approveItem(detailItem)" :disabled="detailItem.aprvStatRaw === 2">
+          <v-btn color="success" @click="approveItem(detailItem)" :disabled="detailItem.aprvStatRaw !== 0">
             <v-icon small class="mr-1">mdi-check</v-icon> 승인
           </v-btn>
         </v-col>
         <v-col cols="auto">
-          <v-btn color="red" dark @click="showRejectDialog(detailItem)" :disabled="detailItem.aprvStatRaw === 3">
+          <v-btn color="red" :dark="detailItem.aprvStatRaw === 0" @click="showRejectDialog(detailItem)" :disabled="detailItem.aprvStatRaw !== 0">
             <v-icon small class="mr-1">mdi-close</v-icon> 반려
           </v-btn>
         </v-col>
         <v-col>
-          <v-text-field v-model="rejectReason" dense hide-details clearable color="ndColor"
+          <v-text-field v-model="rejectReason" dense hide-details clearable color="ndColor" maxlength="50"
             placeholder="반려 사유 입력" v-if="showRejectInput"></v-text-field>
         </v-col>
         <v-col cols="auto" v-if="showRejectInput">
@@ -231,7 +233,7 @@
         <v-card-title>일괄 반려</v-card-title>
         <v-card-text>
           <p>선택한 {{ selectedItem.length }}건을 반려합니다.</p>
-          <v-text-field v-model="batchRejectReason" label="반려 사유" color="ndColor"></v-text-field>
+          <v-text-field v-model="batchRejectReason" label="반려 사유" color="ndColor" counter="50" maxlength="50"></v-text-field>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -245,7 +247,6 @@
 
 <script>
 import axios from "axios";
-import { eventBus } from '../eventBus';
 import DatePicker from 'vue2-datepicker';
 import 'vue2-datepicker/index.css';
 import ChangeDiffTable from './ChangeDiffTable.vue';
@@ -253,7 +254,7 @@ import ChangeDiffTable from './ChangeDiffTable.vue';
 export default {
   name: 'MMApproval',
   components: { DatePicker, ChangeDiffTable },
-  props: ['isMobile', 'approvalStatus'],
+  props: ['isMobile'],
   data: () => ({
     approvalAllItems: [],
     aprvDocs: {},   // 104번 WP1 — 항목 ID → 진행 중 결재 문서
@@ -324,24 +325,12 @@ export default {
     }
   },
   watch: {
-    approvalStatus() {
-      if (this.approvalStatus && this.approvalStatus.length > 0) {
-        this.activeStatusFilter = this.approvalStatus[0];
-      }
-    },
     datetimeitem() {
       this.getApprovalData();
     }
   },
   created() {
     this.getApprovalData();
-  },
-  activated() {
-    if (eventBus.pendingApprovalFilter) {
-      this.activeStatusFilter = eventBus.pendingApprovalFilter;
-      eventBus.pendingApprovalFilter = null;
-      this.getApprovalData();
-    }
   },
   methods: {
     getStatusChipColor(stat) {
@@ -410,7 +399,16 @@ export default {
         .then(res => { this.detailData = res.data && res.data.length > 0 ? res.data[0] : {}; });
     },
     approveItem(item) {
-      this.updateApproval([item], 'APPROVED', '');
+      // 110번 8.5-14 — 한 건 승인도 일괄 승인처럼 확인을 받는다
+      this.$swal.fire({
+        title: "'" + item.reqItemNm + "' 을(를) 승인하시겠습니까?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '승인',
+        cancelButtonText: '취소'
+      }).then(result => {
+        if (result.isConfirmed) this.updateApproval([item], 'APPROVED', '');
+      });
     },
     /** 행별 반려 — 사유 입력 인라인 모드로 전환 */
     startRowReject(item) {
@@ -427,8 +425,33 @@ export default {
         this.$swal.fire({ title: '반려 사유를 입력해주세요.', icon: 'warning', confirmButtonText: '확인' });
         return;
       }
-      this.updateApproval([item], 'REJECTED', reason);
       this.cancelRowReject();
+      // 110번 8.5-13 — 단어를 반려하면 그 단어를 쓰는 승인 대기 용어도 함께 지워진다. 상세 패널처럼 미리 알리고 확인을 받는다
+      if (item._reqTpRaw !== 'WORD') {
+        this.updateApproval([item], 'REJECTED', reason);
+        return;
+      }
+      axios.get(this.$APIURL.base + "api/std/getRelatedUnapprovedTerms", { params: { wordId: item.reqItemId } })
+        .then(res => {
+          var terms = res.data || [];
+          if (terms.length === 0) {
+            this.updateApproval([item], 'REJECTED', reason);
+            return;
+          }
+          this.$swal.fire({
+            title: '연관 미승인 용어도 함께 삭제됩니다',
+            text: "단어 '" + item.reqItemNm + "' 을(를) 반려하면 다음 미승인 용어도 함께 삭제됩니다: " + terms.map(t => t.termsNm).join(', '),
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '반려',
+            cancelButtonText: '취소'
+          }).then(result => {
+            if (result.isConfirmed) this.updateApproval([item], 'REJECTED', reason);
+          });
+        })
+        .catch(() => {
+          this.$swal.fire({ title: '연관 미승인 용어 조회 실패 - API 확인 필요', icon: 'error', confirmButtonText: '확인' });
+        });
     },
     showRejectDialog(item) {
       this.showRejectInput = true;
@@ -495,8 +518,8 @@ export default {
             let msg = aprvStat === 'APPROVED' ? '승인이 완료되었습니다.' : '반려가 완료되었습니다.';
             // 104번 WP1 — 결재선이 걸린 항목은 단계만 넘어갈 수 있다
             if (aprvStat === 'APPROVED' && (result.data.resultMessage || '').indexOf('다음 ') >= 0) msg = '결재 단계를 승인했습니다.';
-            // 경고 메시지가 있으면 표시
-            if (result.data.resultMessage) {
+            // 경고 메시지가 있으면 표시 — 110번 8.5-5: 정상 응답의 기본 문구 "OK" 는 안내가 아니다
+            if (result.data.resultMessage && result.data.resultMessage !== 'OK') {
               this.$swal.fire({ title: msg, text: result.data.resultMessage, icon: 'warning', confirmButtonText: '확인' });
             } else {
               this.$swal.fire({ title: msg, icon: 'success', showConfirmButton: false, timer: 1500 });
@@ -534,6 +557,8 @@ export default {
             for (let i = 0; i < res.data.length; i++) {
               let raw = res.data[i].aprvStat;
               res.data[i].aprvStatRaw = raw;
+              // 110번 8.5-3a — 일괄 승인·반려도 승인 대기 행만 고를 수 있다
+              res.data[i].selectable = raw === 0;
               if (raw === 0) res.data[i].aprvStat = "승인대기";
               else if (raw === 2) res.data[i].aprvStat = "승인";
               else if (raw === 3) res.data[i].aprvStat = "반려";

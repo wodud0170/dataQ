@@ -670,8 +670,6 @@
 <script>
 import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
-import Treeselect from '@riophae/vue-treeselect'
-import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { eventBus } from './../eventBus.js'
 import DictSelector from './DictSelector.vue'
 
@@ -679,7 +677,6 @@ export default {
   name: 'DSDomain',
   components: {
     NdModal,
-    Treeselect,
     DictSelector
   },
   watch: {
@@ -854,8 +851,6 @@ export default {
     ],
     // 테이블 편의성 관련
     tableViewLengthList: [10, 20, 30, 40, 50],
-    // 승인 시스템에서 사용할 시스템 네임 리스트
-    systemNameList: [],
   }),
   methods: {
     resetSearch() {
@@ -867,59 +862,6 @@ export default {
       this.searchPrivYn = '';
       this.searchEncrYn = '';
       this.searchApproval = true;
-    },
-    getSystemList() {
-      // 시스템 리스트 가지고 오기
-      try {
-        axios.get(this.$APIURL.base + 'api/sysinfo/getSysInfoList')
-          .then((res) => {
-            // console 표시
-            console.log("📃 SYSTEM INFO LIST ↓↓↓")
-            console.log(res.data);
-
-            let _list = res.data;
-
-            const treeData = []
-            const idMap = {}
-
-            // 노드 생성 및 idMap 구성
-            _list.forEach(node => {
-              idMap[node.sysCd] = { ...node, children: [] }
-            })
-
-            // children 속성 채워넣기
-            Object.values(idMap).forEach(node => {
-              if (node.parentSysCd) {
-                idMap[node.parentSysCd].children.push(node)
-              } else {
-                treeData.push(node)
-              }
-            })
-
-            function removeEmptyChildren(node) {
-              // 노드 및 하위 노드에 대한 속성 채우기
-              node.id = node.sysCd
-              node.label = node.sysNm
-
-              // 자식 요소가 없으면 지우기
-              if (node.children.length === 0) {
-                delete node.children;
-              } else {
-                node.children.forEach(childNode => removeEmptyChildren(childNode));
-              }
-            }
-
-            treeData.forEach(node => removeEmptyChildren(node));
-
-            this.systemNameList = treeData;
-
-          })
-          .catch((err) => {
-            console.log(err);
-          })
-      } catch (error) {
-        console.log(err);
-      }
     },
     showDetail(item) {
       // 도메인명 클릭 시 보여지는 하단 리스트
@@ -1660,6 +1602,12 @@ export default {
       if (!msg.data || !msg.data.startsWith('[도메인]')) return;
       const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
       this._addUploadLog(level, msg.data);
+      // 110번 3.12-12-a — 파일을 못 읽는 등 일괄등록 자체가 실패하면 "완료" 가 오지 않는다. 60초를 기다리지 않고 끝낸다
+      if (msg.data.includes('일괄등록 실패')) {
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+        return;
+      }
       if (msg.data.includes('완료 -')) {
         this.isUploading = false;
         clearTimeout(this._uploadTimer);
@@ -1702,7 +1650,7 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/downloadDomains",
           {
-            params: { 'searchKey': _keyWord },
+            params: { 'searchKey': _keyWord, 'dictId': this.dictId },   // 110번 3.12-6-a — 고른 사전만
             responseType: 'blob',
             headers: { "Accept": "application/vnd.ms-excel" }
           }).then(response => {
@@ -1905,10 +1853,10 @@ export default {
 
     },
     resetUpdateDomainTextfield() {
-      this.updatDomain_exprFmtLst_arr = [{ id: 'exprFmt_0', value: '', addBtnView: true, removeBtnView: false }];
-      this.updatDomain_exprFmtLst_count = 0;
-      this.updatDomain_allowValLst_arr = [{ id: 'allowVal_0', value: '', addBtnView: true, removeBtnView: false }];
-      this.updatDomain_allowValLst_count = 0;
+      this.updateDomain_exprFmtLst_arr = [{ id: 'exprFmt_0', value: '', addBtnView: true, removeBtnView: false }];
+      this.updateDomain_exprFmtLst_count = 0;
+      this.updateDomain_allowValLst_arr = [{ id: 'allowVal_0', value: '', addBtnView: true, removeBtnView: false }];
+      this.updateDomain_allowValLst_count = 0;
       this.updateDomain_reqSysCd = null;
     },
   },
@@ -1922,9 +1870,10 @@ export default {
         this.searchDataType = '';
         this.searchDataLen = '';
       }
+      // 110번 2.4-2-a — 통합 검색에서 찾은 사전으로 연다
+      if (pending.dictId) this.dictId = pending.dictId;
     }
     // 104번 WP5 — 첫 조회는 DictSelector 가 사전을 정한 뒤 change 로 건다. 여기서 먼저 부르면 기본 사전 목록이 늦게 도착해 고른 사전 목록을 덮어쓴다
-    this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
   },
   activated() {
@@ -1937,6 +1886,7 @@ export default {
         this.searchDataType = '';
         this.searchDataLen = '';
       }
+      if (pending.dictId) this.dictId = pending.dictId;
       this.getDomainData();
     }
   },

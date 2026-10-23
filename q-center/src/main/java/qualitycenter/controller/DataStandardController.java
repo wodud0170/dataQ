@@ -35,6 +35,7 @@ import com.ndata.common.handler.WebClientHandler;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityApproveStat;
 import com.ndata.quality.common.PermCode;
+import com.ndata.quality.common.StdInputRule;
 import com.ndata.quality.common.NDQualityConstant;
 import com.ndata.quality.common.NDQualityRetrieveCond;
 import com.ndata.quality.common.NDQualityStdObjectType;
@@ -228,17 +229,34 @@ public class DataStandardController {
 		codeTypeService.checkAndSave(session, vo, isNew, sessionService.getUserId());
 	}
 
+	/** 코드도 TB_TERMS 에 저장된다 — 코드 그룹이 있으면 코드 (승인 목록·결재 유형과 같은 기준) */
+	private static boolean isCode(String codeGrp) {
+		return codeGrp != null && !codeGrp.trim().isEmpty();
+	}
+
+	/** 110번 3.12-10-a·8.5-4 — 도메인들을 쓰는 용어 이름 ("A, B, C 외 N건"), 없으면 null */
+	private String termsUsingDomainsMsg(List<String> domainIds) {
+		if (domainIds.isEmpty()) return null;
+		List<String> terms = sqlSessionTemplate.selectList("domain.selectTermsUsingDomains", domainIds);
+		if (terms.isEmpty()) return null;
+		return terms.size() <= 3 ? String.join(", ", terms)
+				: String.join(", ", terms.subList(0, 3)) + " 외 " + (terms.size() - 3) + "건";
+	}
+
 	/**
 	 * 통합 검색 API - 단어/용어/도메인/컬럼을 키워드로 일괄 검색
 	 *
 	 * @param keyword 검색 키워드
+	 * @param dictId  표준사전 (110번 2.4-2-a — 화면에서 고른 사전, 비면 기본 사전). 단어·용어·도메인에만 쓴다 — 컬럼은 모든 모델
 	 * @return 단어(words), 용어(terms), 도메인(domains), 컬럼(columns) 검색 결과 Map
 	 */
 	@GetMapping("/search")
-	public Map<String, Object> globalSearch(@RequestParam String keyword) {
+	public Map<String, Object> globalSearch(@RequestParam String keyword,
+			@RequestParam(value = "dictId", required = false) String dictId) {
 		Map<String, Object> result = new HashMap<>();
 		Map<String, Object> param = new HashMap<>();
 		param.put("keyword", keyword);
+		param.put("dictId", resolveDictOrDefault(dictId));
 		result.put("words", sqlSessionTemplate.selectList("search.selectSearchWords", param));
 		result.put("terms", sqlSessionTemplate.selectList("search.selectSearchTerms", param));
 		result.put("domains", sqlSessionTemplate.selectList("search.selectSearchDomains", param));
@@ -286,7 +304,7 @@ public class DataStandardController {
 			if (existingWord != null) {
 				// 104번 WP7-8 — 다른 단어의 이음동의어(유사어)와 같으면 표준 단어를 안내한다
 				String dupMsg = !existingWord.getWordNm().equals(dataVo.getWordNm())
-						? "'" + dataVo.getWordNm() + "'은(는) '" + existingWord.getWordNm() + "'의 유사어입니다. 표준 단어 '" + existingWord.getWordNm() + "'를 사용해주세요."
+						? StdInputRule.synonymOfMsg(dataVo.getWordNm(), existingWord.getWordNm())
 						: "Y".equals(existingWord.getAprvYn())
 						? "이미 승인된 단어명입니다."
 						: "승인 대기 중인 단어명입니다.";
@@ -320,7 +338,7 @@ public class DataStandardController {
 			}
 		} catch (Exception e) {
 			log.error(">> createWord failed : {}", e.getMessage());
-			String dupMsg = translateDuplicateError(e.getMessage());
+			String dupMsg = StdInputRule.translateDuplicateError(e.getMessage());
 			String userMsg = dupMsg != null ? dupMsg : e.getMessage();
 			// 86번 #29 — raw DB/MyBatis stacktrace 노출 차단 (사용자 친화적 fallback)
 			if (userMsg != null && (userMsg.startsWith("\r\n### Error") || userMsg.contains("PSQLException") || userMsg.contains("org.postgresql"))) {
@@ -377,6 +395,8 @@ public class DataStandardController {
 			// 변경 전 값 조회
 			List<StdWordVo> prevList = sqlSessionTemplate.selectList("word.selectWordInfoById", dataVo.getId());
 			String prevValue = prevList != null && !prevList.isEmpty() ? prevList.get(0).toString() : null;
+			// 110번 3.12-7-g — 수정은 승인 여부를 바꾸지 않는다. 요청 VO 의 기본값('N')이 이력에 남아 승인상태가 Y→N 으로 보였다
+			if (prevList != null && !prevList.isEmpty()) dataVo.setAprvYn(prevList.get(0).getAprvYn());
 			sqlSessionTemplate.update("word.updateWord", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 			// 이력 저장
@@ -425,21 +445,18 @@ public class DataStandardController {
 						"다음 용어에서 사용 중이므로 삭제할 수 없습니다: " + termList);
 				return Mono.just(result);
 			}
-			// 삭제 전 기존 값 보존
-			List<String> deletedNames = new ArrayList<>();
+			// 삭제 전 기존 값 보존 — 110번 3.12-7-c·d: 화면은 id 만 보내므로 지우기 전에 읽어 항목마다 이력(대상명·이전 값)을 남긴다
+			List<StdWordVo> prevs = new ArrayList<>();
 			for (StdWordVo vo : dataVos) {
-				if (vo.getWordNm() != null) deletedNames.add(vo.getWordNm());
-				else if (vo.getId() != null) {
-					List<StdWordVo> prev = sqlSessionTemplate.selectList("word.selectWordInfoById", vo.getId());
-					if (prev != null && !prev.isEmpty()) deletedNames.add(prev.get(0).getWordNm());
-				}
+				List<StdWordVo> prev = sqlSessionTemplate.selectList("word.selectWordInfoById", vo.getId());
+				if (prev != null && !prev.isEmpty()) prevs.add(prev.get(0));
 			}
 			sqlSessionTemplate.delete("word.deleteWords", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 			// 이력 저장
-			String names = String.join(", ", deletedNames);
-			saveChangeHistory("DELETE", "WORD", null, names,
-					names, null, "단어 삭제 " + dataVos.size() + "건: " + names);
+			for (StdWordVo p : prevs) {
+				saveChangeHistory("DELETE", "WORD", p.getId(), p.getWordNm(), p.toString(), null, "단어 삭제: " + p.getWordNm());
+			}
 		} catch (Exception e) {
 			log.error(">> deleteWords failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), "단어 삭제 중 오류가 발생했습니다.");
@@ -620,11 +637,11 @@ public class DataStandardController {
 	 * @param searchKey 검색 키워드 (null이면 전체)
 	 */
 	@RequestMapping(value = "/downloadWords", method = RequestMethod.GET)
-	public void downloadWordsExcel(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+	public void downloadWordsExcel(HttpServletRequest request, HttpServletResponse response, String searchKey, String dictId) {
 		log.info(">> download words excel started : {}", searchKey);
 
 		try {
-			excelDownloadService.getWordsExcel(searchKey, request, response);
+			excelDownloadService.getWordsExcel(searchKey, dictId, request, response);
 		} catch (Exception e) {
 			log.error(">> download words excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -655,9 +672,11 @@ public class DataStandardController {
 		if (dataVo.getTermsDesc() == null || dataVo.getTermsDesc().isEmpty()) {
 			dataVo.setTermsDesc(dataVo.getTermsNm());
 		}
-		// domainNm이 null이면 빈 문자열 대신 null 유지 방지
+		// 110번 3.12-15-e — 도메인은 필수 (TB_TERMS.DOMAIN_NM NOT NULL). 예전에는 null 로 넣어 DB 오류 원문이 나갔다
 		if (dataVo.getDomainNm() == null || dataVo.getDomainNm().trim().isEmpty()) {
-			dataVo.setDomainNm(null);
+			Response r = new Response();
+			r.setResultInfo(RestResult.CODE_500.getCode(), "도메인명은 필수입니다.");
+			return Mono.just(r);
 		}
 		// 사용자가 어드민인 경우에 자동승인 처리
 		if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
@@ -710,15 +729,16 @@ public class DataStandardController {
 			} else {
 				result.setResultInfo(RestResult.CODE_200);
 			}
-			// 이력 저장 (관리자 즉시 승인 시에만)
+			// 이력 저장 (관리자 즉시 승인 시에만). 110번 3.12-7-b — 코드(코드 그룹이 있는 용어)는 CODE 한 건 (createCode 가 따로 남기던 것은 뺐다)
 			if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
-				saveChangeHistory("INSERT", "TERM", dataVo.getId(), dataVo.getTermsNm(),
-						null, dataVo.toString(), "용어 등록: " + dataVo.getTermsNm());
+				boolean code = isCode(dataVo.getCodeGrp());
+				saveChangeHistory("INSERT", code ? "CODE" : "TERM", dataVo.getId(), dataVo.getTermsNm(),
+						null, dataVo.toString(), (code ? "코드 등록: " : "용어 등록: ") + dataVo.getTermsNm());
 			}
 		} catch (Exception e) {
 			session.rollback();
 			log.error("create terms : {}", e.getMessage());
-			String dupMsg = translateDuplicateError(e.getMessage());
+			String dupMsg = StdInputRule.translateDuplicateError(e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg != null ? dupMsg : e.getMessage());
 		} finally {
 			session.close();
@@ -883,9 +903,12 @@ public class DataStandardController {
 		Response result = new Response();
 
 		try {
-			// 변경 전 값 조회
-			StdTermsVo prevTerms = session.selectOne("terms.selectTermsByNm", dictService.nameParam(dataVo.getDictId(), "termsNm", dataVo.getTermsNm()));
+			// 변경 전 값 조회 — 110번 3.12-7-g: 이름을 바꾸면 새 이름으로는 못 찾아 이전 값이 비었다. ID 로 찾는다
+			List<StdTermsVo> prevList = session.selectList("terms.selectTermsInfoById", dataVo.getId());
+			StdTermsVo prevTerms = prevList.isEmpty() ? null : prevList.get(0);
 			String prevValue = prevTerms != null ? prevTerms.toString() : null;
+			// 수정은 승인 여부를 바꾸지 않는다 (요청 VO 의 기본값 'N' 이 이력에 남지 않게)
+			if (prevTerms != null) dataVo.setAprvYn(prevTerms.getAprvYn());
 
 			// 기존 용어를 이미 존재하는 용어로 업데이트하는 경우에는 Exception 발생시킨다.
 			dataVo.setTermsNm(dataVo.getTermsNm().replaceAll("\\s", ""));
@@ -894,19 +917,30 @@ public class DataStandardController {
 				throw new Exception("previously registered terms can not be updated to existing terms("
 						+ dataVo.getTermsNm() + ")");
 			}
+			// 110번 3.12-3-b — 단어 구성을 보내지 않으면(코드 수정 창은 1·2단계를 거치지 않고 [수정] 할 수 있다) 구성은 그대로 둔다.
+			// 예전에는 지운 뒤 빈 목록을 넣어 SQL 오류로 수정이 실패했다
+			StdTermsVo.Word[] words = dataVo.getWordList();
+			boolean wordsGiven = words != null && words.length > 0;
+			// 110번 3.12-9-b — 등록과 같이, 사전이 요구하면 마지막 단어가 형식단어인지 본다 (구성을 바꿀 때)
+			if (wordsGiven && dictService.isTermLastWordClsfRequired(dataVo.getDictId()) && words[words.length - 1].getWordId() != null) {
+				checkLastWordClsf(session, words[words.length - 1].getWordId());
+			}
 			// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자, 용어 영문약어명 최대 길이
 			dataVo.setTermsEngAbrvNm(dictService.checkTermEngAbrv(dataVo.getDictId(), dataVo.getTermsEngAbrvNm()));
 			// 104번 WP6-3 — 코드 유형 검사 (코드일 때)
 			checkCodeType(session, dataVo, false);
 
 			session.update("terms.updateTerms", dataVo);
-			session.delete("terms.deleteTermsWords", dataVo.getId());
-			session.insert("terms.insertTermsWords", Arrays.asList(dataVo.getWordList()));
+			if (wordsGiven) {
+				session.delete("terms.deleteTermsWords", dataVo.getId());
+				session.insert("terms.insertTermsWords", Arrays.asList(words));
+			}
 			session.commit();
 			result.setResultInfo(RestResult.CODE_200);
-			// 이력 저장
-			saveChangeHistory("UPDATE", "TERM", dataVo.getId(), dataVo.getTermsNm(),
-					prevValue, dataVo.toString(), "용어 수정: " + dataVo.getTermsNm());
+			// 이력 저장 — 110번 3.12-7-a: 코드는 CODE 한 건 (updateCode 가 결과와 관계없이 따로 남기던 것은 뺐다)
+			boolean code = isCode(dataVo.getCodeGrp()) || (prevTerms != null && isCode(prevTerms.getCodeGrp()));
+			saveChangeHistory("UPDATE", code ? "CODE" : "TERM", dataVo.getId(), dataVo.getTermsNm(),
+					prevValue, dataVo.toString(), (code ? "코드 수정: " : "용어 수정: ") + dataVo.getTermsNm());
 		} catch (Exception e) {
 			session.rollback();
 			log.error("update terms : {}", e.getMessage());
@@ -936,16 +970,20 @@ public class DataStandardController {
 		}
 		Response result = new Response();
 		try {
-			List<String> deletedNames = new ArrayList<>();
+			// 110번 3.12-7-c·d — 화면은 id 만 보내므로 지우기 전에 읽어 항목마다 이력(대상명·이전 값)을 남긴다. 코드(코드 그룹이 있는 용어)는 CODE
+			List<StdTermsVo> prevs = new ArrayList<>();
 			for (StdTermsVo vo : dataVos) {
-				if (vo.getTermsNm() != null) deletedNames.add(vo.getTermsNm());
+				List<StdTermsVo> prev = sqlSessionTemplate.selectList("terms.selectTermsInfoById", vo.getId());
+				if (!prev.isEmpty()) prevs.add(prev.get(0));
 			}
 			sqlSessionTemplate.delete("terms.deleteTermsList", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 			// 이력 저장
-			String names = String.join(", ", deletedNames);
-			saveChangeHistory("DELETE", "TERM", null, names,
-					names, null, "용어 삭제 " + dataVos.size() + "건: " + names);
+			for (StdTermsVo p : prevs) {
+				boolean code = isCode(p.getCodeGrp());
+				saveChangeHistory("DELETE", code ? "CODE" : "TERM", p.getId(), p.getTermsNm(), p.toString(), null,
+						(code ? "코드 삭제: " : "용어 삭제: ") + p.getTermsNm());
+			}
 		} catch (Exception e) {
 			log.error(">> deleteTermsList failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -1028,11 +1066,11 @@ public class DataStandardController {
 	 * @param searchKey 검색 키워드
 	 */
 	@RequestMapping(value = "/downloadTermsList", method = RequestMethod.GET)
-	public void downloadTermsListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+	public void downloadTermsListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey, String dictId) {
 		log.info(">> download terms excel started : {}", searchKey);
 
 		try {
-			excelDownloadService.getTermsListExcel(searchKey, request, response);
+			excelDownloadService.getTermsListExcel(searchKey, dictId, request, response);
 		} catch (Exception e) {
 			log.error(">> download terms excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -1073,13 +1111,8 @@ public class DataStandardController {
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlocked(dataVo.getDictId());
 		if (rb0 != null) return Mono.just(rb0);
-		Mono<Response> resp = createTerms(dataVo);
-		// 코드 이력을 별도로 저장 (관리자 즉시 승인 시에만)
-		if (sessionService.hasPerm(PermCode.STD_MANAGE)) {
-			saveChangeHistory("INSERT", "CODE", dataVo.getId(), dataVo.getTermsNm(),
-					null, dataVo.toString(), "코드 등록: " + dataVo.getTermsNm());
-		}
-		return resp;
+		// 110번 3.12-7-b — 이력은 createTerms 가 성공했을 때 CODE 한 건으로 남긴다
+		return createTerms(dataVo);
 	}
 
 	/**
@@ -1093,10 +1126,8 @@ public class DataStandardController {
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlockedOf("TB_TERMS", "TERMS_ID", java.util.Collections.singletonList(dataVo.getId()));
 		if (rb0 != null) return Mono.just(rb0);
-		Mono<Response> resp = updateTerms(dataVo);
-		saveChangeHistory("UPDATE", "CODE", dataVo.getId(), dataVo.getTermsNm(),
-				null, dataVo.toString(), "코드 수정: " + dataVo.getTermsNm());
-		return resp;
+		// 110번 3.12-7-a — 이력은 updateTerms 가 성공했을 때 CODE 한 건으로 남긴다 (예전에는 권한 거부·실패여도 남았다)
+		return updateTerms(dataVo);
 	}
 
 	/**
@@ -1110,10 +1141,6 @@ public class DataStandardController {
 		// 104번 WP5-14 — 참조 사전은 고치지 못한다
 		Response rb0 = refBlockedOf("TB_TERMS", "TERMS_ID", ids(dataVos, StdTermsVo::getId));
 		if (rb0 != null) return Mono.just(rb0);
-		List<String> deletedNames = new ArrayList<>();
-		for (StdTermsVo vo : dataVos) {
-			if (vo.getTermsNm() != null) deletedNames.add(vo.getTermsNm());
-		}
 		// 104번 WP6-3 — 다른 코드가 상위·하위로 쓰는 코드는 지우지 않는다. 지우면 통합 구성도 지운다
 		List<Map<String, Object>> codes = new ArrayList<>();
 		try (SqlSession chk = sqlSessionFactory.openSession()) {
@@ -1129,17 +1156,27 @@ public class DataStandardController {
 							+ "개, 하위로 쓰는 통합 코드 " + integ + "개가 있어 지울 수 없습니다.");
 					return Mono.just(r);
 				}
+				p.put("termsNm", c.get("termsNm"));
 				codes.add(p);
 			}
 		}
+		// 삭제 이력(항목마다 CODE)은 deleteTermsList 가 성공했을 때 남긴다 — 110번 3.12-7-a: 예전에는 결과와 관계없이 남았다
 		Mono<Response> resp = deleteTermsList(dataVos);
 		Response r0 = resp.block();
 		if (r0 != null && r0.getResultCode() == RestResult.CODE_200.getCode()) {
-			for (Map<String, Object> p : codes) sqlSessionTemplate.delete("codeType.deleteInteg", p);
+			for (Map<String, Object> p : codes) {
+				sqlSessionTemplate.delete("codeType.deleteInteg", p);
+				// 110번 3.12-10-b — 그 코드 그룹을 가진 용어가 더 없으면 코드값도 지운다 (FK 가 없어 코드값이 남았다)
+				int holders = sqlSessionTemplate.selectOne("codeType.countGrpHolders", p);
+				if (holders == 0) {
+					int n = sqlSessionTemplate.delete("codeType.deleteValuesByGrp", p);
+					if (n > 0) {
+						saveChangeHistory("DELETE", "CODE_DATA", null, (String) p.get("codeGrp"), null, null,
+								"코드 '" + p.get("termsNm") + "' 삭제로 코드값 " + n + "건 함께 삭제");
+					}
+				}
+			}
 		}
-		String names = String.join(", ", deletedNames);
-		saveChangeHistory("DELETE", "CODE", null, names,
-				names, null, "코드 삭제 " + dataVos.size() + "건: " + names);
 		return resp;
 	}
 
@@ -1172,11 +1209,11 @@ public class DataStandardController {
 	 * @param searchKey 검색 키워드
 	 */
 	@RequestMapping(value = "/downloadCodeInfoList", method = RequestMethod.GET)
-	public void downloadCodeInfoListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+	public void downloadCodeInfoListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey, String dictId) {
 		log.info(">> download code excel started : {}", searchKey);
 
 		try {
-			excelDownloadService.getCodeInfoListExcel(searchKey, request, response);
+			excelDownloadService.getCodeInfoListExcel(searchKey, dictId, request, response);
 		} catch (Exception e) {
 			log.error(">> download code infos excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -1315,9 +1352,11 @@ public class DataStandardController {
 		if (rb0 != null) return Mono.just(rb0);
 		Response result = new Response();
 		try {
-			List<String> deletedNames = new ArrayList<>();
+			// 110번 3.12-7-c·d — 화면은 id 만 보내므로 지우기 전에 읽어 항목마다 이력(대상명·이전 값)을 남긴다
+			List<StdCodeDataVo> prevs = new ArrayList<>();
 			for (StdCodeDataVo vo : dataVos) {
-				if (vo.getCodeNm() != null) deletedNames.add(vo.getCodeNm());
+				StdCodeDataVo prev = sqlSessionTemplate.selectOne("codedata.selectCodeDataInfoById", vo.getId());
+				if (prev != null) prevs.add(prev);
 			}
 			// 104번 WP6-3 — 계층 코드값이 상위로 쓰는 값은 지우지 않는다 (함께 지우는 하위 값은 세지 않는다)
 			java.util.Set<String> delIds = new java.util.HashSet<>();
@@ -1341,9 +1380,10 @@ public class DataStandardController {
 			sqlSessionTemplate.delete("codedata.deleteCodeDatas", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 			// 이력 저장
-			String names = String.join(", ", deletedNames);
-			saveChangeHistory("DELETE", "CODE_DATA", null, names,
-					names, null, "코드데이터 삭제 " + dataVos.size() + "건: " + names);
+			for (StdCodeDataVo p : prevs) {
+				saveChangeHistory("DELETE", "CODE_DATA", p.getId(), p.getCodeNm(), p.toString(), null,
+						"코드데이터 삭제: " + p.getCodeNm() + " / " + p.getCodeVal());
+			}
 		} catch (Exception e) {
 			log.error(">> deleteCodeDatas failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -1382,11 +1422,11 @@ public class DataStandardController {
 	 * @param searchKey 검색 키워드
 	 */
 	@RequestMapping(value = "/downloadCodeDataList", method = RequestMethod.GET)
-	public void downloadCodeDataListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+	public void downloadCodeDataListExcel(HttpServletRequest request, HttpServletResponse response, String searchKey, String dictId) {
 		log.info(">> download code excel started : {}", searchKey);
 
 		try {
-			excelDownloadService.getCodeDataListExcel(searchKey, request, response);
+			excelDownloadService.getCodeDataListExcel(searchKey, dictId, request, response);
 		} catch (Exception e) {
 			log.error(">> download code datas excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -1443,7 +1483,7 @@ public class DataStandardController {
 			}
 		} catch (Exception e) {
 			log.error(">> createDomain failed : {}", e.getMessage());
-			String dupMsg = translateDuplicateError(e.getMessage());
+			String dupMsg = StdInputRule.translateDuplicateError(e.getMessage());
 			String userMsg = dupMsg != null ? dupMsg : translateDomainInsertError(e, dataVo);
 			// 86번 #30 — raw DB stacktrace 차단
 			if (userMsg != null && (userMsg.startsWith("\r\n### Error") || userMsg.contains("PSQLException") || userMsg.contains("org.postgresql"))) {
@@ -1474,8 +1514,10 @@ public class DataStandardController {
 			throw new Exception("단어 영문약어가 너무 깁니다 (최대 100자, 입력 길이: " + abrv.length() + ")");
 		}
 		// 86번 #42 — 단어는 원자(atomic). 언더바는 용어(단어 조합)의 구분자라 단어 영문약어에 허용 안 함
-		if (!abrv.matches("^[A-Z][A-Z0-9]*$")) {
-			throw new Exception("단어 영문약어는 대문자 영문(A-Z)으로 시작하고 영문/숫자(0-9)만 사용할 수 있습니다. (입력값: " + abrv + ")");
+		// 110번 3.12-12-c — 엑셀 일괄등록·한글컬럼 일괄 표준화와 같은 규칙(StdInputRule)
+		String abrvErr = StdInputRule.wordEngAbrvError(abrv);
+		if (abrvErr != null) {
+			throw new Exception(abrvErr);
 		}
 		String eng = vo.getWordEngNm();
 		if (eng == null || eng.trim().isEmpty()) {
@@ -1596,9 +1638,11 @@ public class DataStandardController {
 		try {
 			// 86번 #30 — updateDomain 도 동일 검증
 			validateDomainInput(dataVo);
-			// 변경 전 값 조회 — 98번: 도메인 화면에서 고른(수정 대상이 속한) 사전
-			List<StdDomainVo> prevList = sqlSessionTemplate.selectList("domain.selectDomainInfoByNm", dictService.nameParam(dataVo.getDictId(), "domainNm", dataVo.getDomainNm()));
-			String prevValue = prevList != null && !prevList.isEmpty() ? prevList.get(0).toString() : null;
+			// 변경 전 값 조회 — 110번 3.12-7-g: ID 로 찾는다 (이름을 바꾸면 새 이름으로는 못 찾았다)
+			StdDomainVo prev = sqlSessionTemplate.selectOne("domain.selectDomainInfoById", dataVo.getId());
+			String prevValue = prev != null ? prev.toString() : null;
+			// 수정은 승인 여부를 바꾸지 않는다 (요청 VO 의 기본값 'N' 이 이력에 남지 않게)
+			if (prev != null) dataVo.setAprvYn(prev.getAprvYn());
 			sqlSessionTemplate.update("domain.updateDomain", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
 			// 이력 저장
@@ -1634,16 +1678,24 @@ public class DataStandardController {
 		}
 		Response result = new Response();
 		try {
-			List<String> deletedNames = new ArrayList<>();
+			// 110번 3.12-10-a — 쓰는 용어가 있는 도메인은 지우지 않는다 (TB_TERMS FK 에 ON DELETE 가 없어 DB 오류 원문이 나갔다)
+			String using = termsUsingDomainsMsg(ids(dataVos, StdDomainVo::getId));
+			if (using != null) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), "다음 용어에서 사용 중이므로 삭제할 수 없습니다: " + using);
+				return Mono.just(result);
+			}
+			// 110번 3.12-7-c·d — 화면은 id 만 보내므로 지우기 전에 읽어 항목마다 이력(대상명·이전 값)을 남긴다
+			List<StdDomainVo> prevs = new ArrayList<>();
 			for (StdDomainVo vo : dataVos) {
-				if (vo.getDomainNm() != null) deletedNames.add(vo.getDomainNm());
+				StdDomainVo prev = sqlSessionTemplate.selectOne("domain.selectDomainInfoById", vo.getId());
+				if (prev != null) prevs.add(prev);
 			}
 			sqlSessionTemplate.delete("domain.deleteDomains", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 			// 이력 저장
-			String names = String.join(", ", deletedNames);
-			saveChangeHistory("DELETE", "DOMAIN", null, names,
-					names, null, "도메인 삭제 " + dataVos.size() + "건: " + names);
+			for (StdDomainVo p : prevs) {
+				saveChangeHistory("DELETE", "DOMAIN", p.getId(), p.getDomainNm(), p.toString(), null, "도메인 삭제: " + p.getDomainNm());
+			}
 		} catch (Exception e) {
 			log.error(">> deleteDomains failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -1683,8 +1735,11 @@ public class DataStandardController {
 	 * @return 해당 분류의 도메인 목록
 	 */
 	@RequestMapping(value = "/getDomainInfoByClsfNm", method = RequestMethod.GET)
-	public List<StdDomainVo> getDomainInfoByClsfNm(String clsfNm, String dictId) {
-		return sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", dictService.nameParam(dictId, "domainClsfNm", clsfNm));
+	public List<StdDomainVo> getDomainInfoByClsfNm(String clsfNm, String dictId, String schAprvYn) {
+		Map<String, Object> p = dictService.nameParam(dictId, "domainClsfNm", clsfNm);
+		// 110번 3.12-5-e-2 — 용어·코드 화면의 도메인 후보는 승인된 도메인만 (schAprvYn=Y)
+		p.put("schAprvYn", schAprvYn);
+		return sqlSessionTemplate.selectList("domain.selectDomainInfoByClsfNm", p);
 	}
 
 	/**
@@ -2042,11 +2097,11 @@ public class DataStandardController {
 	 * @param searchKey 검색 키워드
 	 */
 	@RequestMapping(value = "/downloadDomains", method = RequestMethod.GET)
-	public void downloadDomains(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+	public void downloadDomains(HttpServletRequest request, HttpServletResponse response, String searchKey, String dictId) {
 		log.info(">> download domains excel started : {}", searchKey);
 
 		try {
-			excelDownloadService.getDomainsExcel(searchKey, request, response);
+			excelDownloadService.getDomainsExcel(searchKey, dictId, request, response);
 		} catch (Exception e) {
 			log.error(">> download domains excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -2071,10 +2126,10 @@ public class DataStandardController {
 	 * 도메인 그룹 목록 Excel 다운로드
 	 */
 	@RequestMapping(value = "/downloadDomainGroups", method = RequestMethod.GET)
-	public void downloadDomainGroups(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+	public void downloadDomainGroups(HttpServletRequest request, HttpServletResponse response, String searchKey, String dictId) {
 		log.info(">> download domain groups excel started : {}", searchKey);
 		try {
-			excelDownloadService.getDomainGroupsExcel(searchKey, request, response);
+			excelDownloadService.getDomainGroupsExcel(searchKey, dictId, request, response);
 		} catch (Exception e) {
 			log.error(">> download domain groups excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -2099,10 +2154,10 @@ public class DataStandardController {
 	 * 도메인 분류 목록 Excel 다운로드
 	 */
 	@RequestMapping(value = "/downloadDomainClsfs", method = RequestMethod.GET)
-	public void downloadDomainClsfs(HttpServletRequest request, HttpServletResponse response, String searchKey) {
+	public void downloadDomainClsfs(HttpServletRequest request, HttpServletResponse response, String searchKey, String dictId) {
 		log.info(">> download domain clsfs excel started : {}", searchKey);
 		try {
-			excelDownloadService.getDomainClsfsExcel(searchKey, request, response);
+			excelDownloadService.getDomainClsfsExcel(searchKey, dictId, request, response);
 		} catch (Exception e) {
 			log.error(">> download domain clsfs excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -2192,12 +2247,22 @@ public class DataStandardController {
 
 			// 109번 #8 — 승인 대기 항목만, 요청 유형이 항목의 실제 유형과 같을 때만, 참조 사전 항목은 안 된다.
 			// 예전에는 승인된 항목도 "반려"로 물리 삭제됐고, 용어를 코드로 보내면 용어 결재선을 건너뛰었다
-			String targetErr = aprvTargetError(dataVo);
+			Map<String, Object> target = Arrays.asList("WORD", "TERMS", "CODE", "DOMAIN").contains(dataVo.getReqTp())
+					? sqlSessionTemplate.selectOne("approve.selectAprvTarget", dataVo) : null;
+			String targetErr = aprvTargetError(dataVo, target);
 			if (targetErr != null) {
 				fails.add(new String[] { itemNm, targetErr });
 				if (failCode == 0) failCode = 400;
 				continue;
 			}
+			// 110번 8.5-9 — 처리 행의 요청자·요청일은 항목의 등록자·등록 시각 (화면이 보낸 값을 쓰지 않는다 — 예전에는 요청일이 처리 시각,
+			// 결재함에서 처리하면 요청자가 비었다)
+			dataVo.setReqUserId((String) target.get("cretUserId"));
+			dataVo.setReqCretDt((String) target.get("cretDt"));
+			// 110번 8.5-6 — 처리 사유 칸(TB_APRV_STATS.APRV_STAT_UPDT_RSN)은 50자. 넘으면 INSERT 가 실패해 처리가 안 됐다
+			// (결재 문서의 의견에는 전문을 넘긴다)
+			String fullRsn = dataVo.getAprvStatUpdtRsn();
+			dataVo.setAprvStatUpdtRsn(rsn50(fullRsn));
 
 			Map<String, Object> aprvDoc = aprvService.openDoc(dataVo.getReqTp(), dataVo.getReqItemId());
 			if (aprvDoc == null && !stdApprover) {
@@ -2228,10 +2293,19 @@ public class DataStandardController {
 								+ " (해당 용어를 먼저 정리한 뒤 반려하세요)");
 					}
 				}
+				// 110번 8.5-4 — 도메인 반려 가드: 이 도메인을 쓰는 용어가 있으면 물리 삭제가 FK(tb_terms_fk, ON DELETE 없음)로 실패해
+				// DB 원문이 나갔다. 단어처럼 미리 이름을 알려 거부한다
+				if (objType == NDQualityStdObjectType.DOMAIN && !approve) {
+					String using = termsUsingDomainsMsg(java.util.Collections.singletonList(dataVo.getReqItemId()));
+					if (using != null) {
+						throw new Exception("이 도메인을 쓰는 용어가 있어 반려할 수 없습니다: " + using
+								+ " (해당 용어를 먼저 정리한 뒤 반려하세요)");
+					}
+				}
 
 				if (aprvDoc != null) {
 					AprvService.Result step = aprvService.act(session, (String) aprvDoc.get("docId"), sessionService.getUserId(),
-							approve, dataVo.getAprvStatUpdtRsn());
+							approve, fullRsn);
 					notis.addAll(step.notis);
 					if (!step.done) {
 						session.commit();
@@ -2261,6 +2335,11 @@ public class DataStandardController {
 				if (!approve) {
 					// === 반려: 물리 삭제 ===
 					session.insert("approve.insertStdAprvStat", dataVo);
+					// 110번 8.5-7 — 반려도 변경 이력(DELETE·관리자 반려)에 남긴다. 지우기 전 값을 읽어 둔다 {대상 유형, id, 이름, 이전 값, 요약}
+					List<String[]> rejectHist = new ArrayList<>();
+					rejectHist.add(new String[] { histTargetType(objType), dataVo.getReqItemId(), dataVo.getReqItemNm(),
+							aprvItemValue(session, objType, dataVo.getReqItemId()),
+							"반려: " + dataVo.getReqItemNm() + (fullRsn != null && !fullRsn.isEmpty() ? " (" + dataVo.getAprvStatUpdtRsn() + ")" : "") });
 
 					switch (objType) {
 						case WORD:
@@ -2277,8 +2356,14 @@ public class DataStandardController {
 									cascadeVo.setReqItemNm((String) t.get("termsNm"));
 									cascadeVo.setAprvStat((short) NDQualityApproveStat.REJECTED.getValue());
 									cascadeVo.setAprvUserId(sessionService.getUserId());
-									cascadeVo.setAprvStatUpdtRsn("단어 '" + dataVo.getReqItemNm() + "' 반려에 의한 연쇄 삭제");
+									// 110번 8.5-8 — 요청자·요청일은 그 용어의 등록자·등록 시각 (비어 있어 요청자의 변경 요청 현황에 안 나왔다)
+									cascadeVo.setReqUserId((String) t.get("cretUserId"));
+									cascadeVo.setReqCretDt((String) t.get("cretDt"));
+									cascadeVo.setAprvStatUpdtRsn(rsn50("단어 '" + dataVo.getReqItemNm() + "' 반려에 의한 연쇄 삭제"));
 									session.insert("approve.insertStdAprvStat", cascadeVo);
+									rejectHist.add(new String[] { "TERM", (String) t.get("termsId"), (String) t.get("termsNm"),
+											aprvItemValue(session, NDQualityStdObjectType.TERMS, (String) t.get("termsId")),
+											"반려: " + t.get("termsNm") + " (단어 '" + dataVo.getReqItemNm() + "' 반려에 의한 연쇄 삭제)" });
 								}
 								// 용어 먼저 삭제 (TB_TERMS_WORDS는 FK CASCADE 자동 정리)
 								Map<String, Object> cascadeParam = new HashMap<>();
@@ -2306,6 +2391,9 @@ public class DataStandardController {
 					session.commit();
 					websocketService.sendUserNotis(notis);
 					doneCnt++;
+					for (String[] h : rejectHist) {
+						saveChangeHistory("DELETE", h[0], h[1], h[2], h[3], null, h[4], "ADMIN_REJECT");
+					}
 
 				} else {
 					// === 승인 ===
@@ -2404,10 +2492,9 @@ public class DataStandardController {
 	 * 109번 #8 — 승인·반려 대상 검사. 대상이 있고, 승인 대기(APRV_YN='N')이고, 요청 유형이 항목의 실제 유형과 같고(용어·코드는
 	 * 같은 TB_TERMS 라 CODE_GRP 로 가른다 — 승인 목록과 같은 기준), 참조 사전 항목이 아니어야 한다. 문제가 없으면 null
 	 */
-	private String aprvTargetError(StdApproveStatVo vo) {
+	private String aprvTargetError(StdApproveStatVo vo, Map<String, Object> t) {
 		if (!Arrays.asList("WORD", "TERMS", "CODE", "DOMAIN").contains(vo.getReqTp()))
 			return "요청 유형(reqTp)은 WORD·TERMS·CODE·DOMAIN 중 하나여야 합니다: " + vo.getReqTp();
-		Map<String, Object> t = sqlSessionTemplate.selectOne("approve.selectAprvTarget", vo);
 		if (t == null) return "승인·반려할 항목이 없습니다: " + vo.getReqItemId();
 		if (!vo.getReqTp().equals(t.get("reqTp")))
 			return "요청 유형(" + vo.getReqTp() + ")이 항목의 유형(" + t.get("reqTp") + ")과 다릅니다.";
@@ -2423,6 +2510,29 @@ public class DataStandardController {
 	/** 109번 #8 — 승인·반려 문장은 승인 대기 행 하나만 바꾼다. 0건이면 그 사이 다른 처리가 있었던 것 */
 	private static void onePending(int n) {
 		if (n != 1) throw new IllegalStateException("승인 대기 항목이 아닙니다 (다른 사용자가 먼저 처리했을 수 있습니다).");
+	}
+
+	/** 110번 8.5-6 — TB_APRV_STATS.APRV_STAT_UPDT_RSN varchar(50) 에 맞춘다 */
+	private static String rsn50(String rsn) {
+		return rsn != null && rsn.length() > 50 ? rsn.substring(0, 50) : rsn;
+	}
+
+	/** 110번 8.5-7 — 반려(물리 삭제) 전 항목 값 (변경 이력의 이전 값) */
+	private String aprvItemValue(SqlSession session, NDQualityStdObjectType objType, String id) {
+		Object v;
+		switch (objType) {
+			case WORD: { List<StdWordVo> l = session.selectList("word.selectWordInfoById", id); v = l.isEmpty() ? null : l.get(0); break; }
+			case DOMAIN: v = session.selectOne("domain.selectDomainInfoById", id); break;
+			default: { List<StdTermsVo> l = session.selectList("terms.selectTermsInfoById", id); v = l.isEmpty() ? null : l.get(0); break; }
+		}
+		return v != null ? v.toString() : null;
+	}
+
+	/** 승인 유형 → 변경 이력 대상 유형 */
+	private static String histTargetType(NDQualityStdObjectType objType) {
+		return objType == NDQualityStdObjectType.TERMS ? "TERM"
+				: objType == NDQualityStdObjectType.WORD ? "WORD"
+				: objType == NDQualityStdObjectType.CODE ? "CODE" : "DOMAIN";
 	}
 
 
@@ -2665,10 +2775,11 @@ public class DataStandardController {
 			return res;
 		}
 
-		// 영문약어 규격 체크: 대문자 영문(A-Z) + 숫자(0-9)만 허용
-		if (!wordEngAbrvNm.trim().matches("^[A-Z0-9]+$")) {
+		// 영문약어 규격 체크 — 110번 3.12-12-c: 화면 단어 등록과 같은 규칙 (대문자 영문으로 시작, 대문자·숫자만)
+		String abrvErr = StdInputRule.wordEngAbrvError(wordEngAbrvNm.trim());
+		if (abrvErr != null) {
 			res.put("success", false);
-			res.put("message", "단어 영문약어는 대문자 영문(A-Z)과 숫자(0-9)만 사용할 수 있습니다. (입력값: " + wordEngAbrvNm + ")");
+			res.put("message", abrvErr);
 			return res;
 		}
 
@@ -3888,36 +3999,4 @@ public class DataStandardController {
 		}
 	}
 
-	private String translateDuplicateError(String msg) {
-		if (msg == null) return null;
-		// 86번 #31 — DDL 에 동일 컬럼에 두 인덱스 (uix_*, tb_*_ux_*) 가 존재 — 양쪽 모두 매칭.
-		//   "Detail: Key (col)=(val)" 패턴도 감지 → 어떤 컬럼이 충돌했는지 친화적 메시지.
-		// word: uix_word_nm / tb_word_ux_1 = word_nm. uix_word_eng_abrv_nm / tb_word_ux_2 = word_eng_abrv_nm.
-		// terms: uix_terms_nm / tb_terms_ux_1 = terms_nm. tb_terms_ux_2 = terms_eng_abrv_nm.
-		// domain: uix_domain_nm / tb_domain_ux_1 = domain_nm.
-		if (msg.contains("(word_eng_abrv_nm)") || msg.contains("uix_word_eng_abrv_nm") || msg.contains("tb_word_ux_2")) {
-			java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\(word_eng_abrv_nm\\)=\\(([^)]+)\\)").matcher(msg);
-			String dup = m.find() ? m.group(1) : null;
-			return dup != null
-					? "이미 등록된 단어 영문약어입니다: '" + dup + "'"
-					: "이미 등록된 단어 영문약어입니다.";
-		}
-		if (msg.contains("(word_nm)") || msg.contains("uix_word_nm") || msg.contains("tb_word_ux_1")) {
-			java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\(word_nm[^)]*\\)=\\(([^)]+)\\)").matcher(msg);
-			String dup = m.find() ? m.group(1) : null;
-			return dup != null
-					? "이미 등록된 단어명입니다: '" + dup + "'"
-					: "이미 등록된 단어명입니다.";
-		}
-		if (msg.contains("(terms_eng_abrv_nm)") || msg.contains("tb_terms_ux_2")) {
-			return "이미 등록된 용어 영문약어입니다.";
-		}
-		if (msg.contains("(terms_nm)") || msg.contains("uix_terms_nm") || msg.contains("tb_terms_ux_1")) {
-			return "이미 등록된 용어명입니다.";
-		}
-		if (msg.contains("(domain_nm)") || msg.contains("uix_domain_nm") || msg.contains("tb_domain_ux_1")) {
-			return "이미 등록된 도메인명입니다.";
-		}
-		return null;
-	}
 }

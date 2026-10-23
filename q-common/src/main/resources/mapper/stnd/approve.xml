@@ -220,17 +220,21 @@
            )
   </insert>
 
-  <!-- 109번 #8 — 승인·반려 대상의 실제 유형·승인 여부·사전. 용어·코드는 같은 TB_TERMS 라 CODE_GRP 로 가른다(위 승인 목록과 같은 기준) -->
+  <!-- 109번 #8 — 승인·반려 대상의 실제 유형·승인 여부·사전. 용어·코드는 같은 TB_TERMS 라 CODE_GRP 로 가른다(위 승인 목록과 같은 기준).
+       110번 8.5-9 — 요청자·요청일(등록자·등록 시각)도 — 처리 행(TB_APRV_STATS)에 화면이 보낸 값 대신 이 값을 넣는다 -->
   <select id="selectAprvTarget" parameterType="com.ndata.quality.model.std.StdApproveStatVo" resultType="java.util.HashMap">
     <choose>
       <when test="reqTp == 'WORD'">
-        SELECT 'WORD' as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId" FROM TB_WORD WHERE WORD_ID = #{reqItemId}
+        SELECT 'WORD' as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId", CRET_USER_ID as "cretUserId", CRET_DT as "cretDt"
+          FROM TB_WORD WHERE WORD_ID = #{reqItemId}
       </when>
       <when test="reqTp == 'DOMAIN'">
-        SELECT 'DOMAIN' as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId" FROM TB_DOMAIN WHERE DOMAIN_ID = #{reqItemId}
+        SELECT 'DOMAIN' as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId", CRET_USER_ID as "cretUserId", CRET_DT as "cretDt"
+          FROM TB_DOMAIN WHERE DOMAIN_ID = #{reqItemId}
       </when>
       <otherwise>
-        SELECT CASE WHEN CODE_GRP IS NULL THEN 'TERMS' ELSE 'CODE' END as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId"
+        SELECT CASE WHEN CODE_GRP IS NULL THEN 'TERMS' ELSE 'CODE' END as "reqTp", APRV_YN as "aprvYn", DICT_ID as "dictId",
+               CRET_USER_ID as "cretUserId", CRET_DT as "cretDt"
           FROM TB_TERMS WHERE TERMS_ID = #{reqItemId}
       </otherwise>
     </choose>
@@ -293,9 +297,9 @@
       AND w.APRV_YN = 'N'
   </select>
 
-  <!-- 단어 반려 시: 해당 단어를 사용하는 미승인 용어 조회 -->
+  <!-- 단어 반려 시: 해당 단어를 사용하는 미승인 용어 조회. 110번 8.5-8 — 연쇄 반려 처리 행의 요청자·요청일로 등록자·등록 시각 -->
   <select id="selectUnapprovedTermsByWordId" parameterType="String" resultType="hashmap">
-    SELECT t.TERMS_ID as "termsId", t.TERMS_NM as "termsNm"
+    SELECT t.TERMS_ID as "termsId", t.TERMS_NM as "termsNm", t.CRET_USER_ID as "cretUserId", t.CRET_DT as "cretDt"
     FROM TB_TERMS_WORDS tw
     JOIN TB_TERMS t ON tw.TERMS_ID = t.TERMS_ID
     WHERE tw.WORD_ID = #{wordId}

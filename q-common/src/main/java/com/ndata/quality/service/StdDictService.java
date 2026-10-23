@@ -313,7 +313,11 @@ public class StdDictService {
 			Map<String, Object> p = new HashMap<>();
 			p.put("dictId", dictId);
 			p.put("userId", userId);
-			session.update("stddict.disableDict", p);
+			// 110번 3.12-11-b — 기본 사전·없는 사전은 0건 갱신인데 성공으로 응답했다
+			if (session.update("stddict.disableDict", p) != 1) {
+				throw new IllegalArgumentException(dictId != null && dictId.equals(defaultDictId())
+						? "기본 사전은 사용 중지할 수 없습니다." : "없는 사전입니다: " + dictId);
+			}
 			session.commit();
 		}
 		invalidate();

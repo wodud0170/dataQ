@@ -1,7 +1,6 @@
 package qualitycenter.controller;
 
 import java.util.HashMap;
-import java.util.List;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ndata.quality.common.PermCode;
 import com.ndata.quality.model.std.StdApproveStatVo;
 import com.ndata.quality.service.PermService;
 
@@ -47,24 +45,9 @@ public class SearchController {
         return m;
     }
 
+    /** 대시보드 표준 현황 — 승인된 용어·단어·도메인 건수 (110번 2.4-10-b: 화면이 쓰지 않는 승인 건수 3종은 뺐다) */
     @RequestMapping(value = "/getDashboardInfo", method = RequestMethod.GET)
 	public HashMap getDashboardInfo() {
-        StdApproveStatVo.RetrieveCond retCond = new StdApproveStatVo.RetrieveCond();
-        String reqUserId = null;
-		if (!sessionService.hasPerm(PermCode.STD_APPROVE)) {// 승인 권한이 없으면 자신 신청내역만 확인
-			reqUserId = sessionService.getUserId();
-			retCond.setReqUserId(reqUserId);
-		}
-		return sqlSessionTemplate.selectOne("search.selectDataboardInfo", retCond);
-	}
-
-    @RequestMapping(value = "/getDataModelStat", method = RequestMethod.GET)
-	public HashMap getDataModelStat() {
-		return sqlSessionTemplate.selectOne("search.selectDataModelStat");
-	}
-
-    @RequestMapping(value = "/getTopDataModelList", method = RequestMethod.GET)
-	public List<HashMap> getTopDataModelList() {
-		return sqlSessionTemplate.selectList("search.selectTopDataModelList");
+		return sqlSessionTemplate.selectOne("search.selectDataboardInfo", new StdApproveStatVo.RetrieveCond());
 	}
 }

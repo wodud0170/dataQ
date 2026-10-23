@@ -20,7 +20,24 @@
             TB_CODE_DATA
         WHERE 1=1
         <if test="dictId != null and dictId != ''"> AND DICT_ID = #{dictId} </if>
+        <!-- 110번 3.12-6-b — 다운로드의 검색어 (화면 코드 항목 검색과 같은 코드명 부분 일치) -->
+        <if test="schNm != null and schNm != ''"> AND CODE_NM ILIKE '%' || #{schNm} || '%' </if>
         ORDER BY CODE_NM, CODE_VAL
+  </select>
+
+  <!-- 110번 3.12-7-c — 지우기 전 코드값 (삭제 이력의 대상명·이전 값) -->
+  <select id="selectCodeDataInfoById" parameterType="String" resultType="com.ndata.quality.model.std.StdCodeDataVo">
+        SELECT
+             CODE_ID            as id
+            ,CODE_GRP           as codeGrp
+            ,CODE_NM            as codeNm
+            ,CODE_ENG_NM        as codeEngNm
+            ,CODE_VAL           as codeVal
+            ,CODE_VAL_DESC      as codeValDesc
+            ,PARENT_CODE_VAL    as parentCodeVal
+            ,DICT_ID            as dictId
+        FROM TB_CODE_DATA
+        WHERE CODE_ID = #{id}
   </select>
 
   <select id="selectCodeDataListByNm" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdCodeDataVo">

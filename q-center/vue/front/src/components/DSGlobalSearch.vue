@@ -4,6 +4,10 @@
       <!-- 검색 입력 -->
       <v-sheet class="pa-4 mb-4" elevation="1" rounded>
         <v-row align="center" no-gutters>
+          <!-- 110번 2.4-2-a — 단어·용어·도메인은 고른 표준사전 안에서 찾는다 -->
+          <v-col cols="auto">
+            <DictSelector v-model="dictId" @change="onDictChange" />
+          </v-col>
           <v-col cols="auto" class="mr-2">
             <v-icon color="indigo">mdi-magnify</v-icon>
           </v-col>
@@ -109,11 +113,14 @@
 <script>
 import axios from 'axios'
 import { eventBus } from './../eventBus.js'
+import DictSelector from './DictSelector.vue'
 
 export default {
   name: 'DSGlobalSearch',
   props: ['isMobile', 'addTabs'],
+  components: { DictSelector },
   data: () => ({
+    dictId: null,
     keyword: '',
     loading: false,
     searched: false,
@@ -143,6 +150,8 @@ export default {
       { text: '데이터길이', value: 'dataLen', sortable: false },
     ],
     columnHeaders: [
+      // 110번 2.4-2-b — 컬럼은 모든 모델에서 찾으므로 어느 모델의 컬럼인지 보인다
+      { text: '데이터 모델명', value: 'dataModelNm', sortable: false },
       { text: '테이블명', value: 'objNm', sortable: false },
       { text: '테이블한글명', value: 'objNmKr', sortable: false },
       { text: '컬럼명', value: 'attrNm', sortable: false },
@@ -169,26 +178,37 @@ export default {
       this.keyword = keyword;
       this.doSearch();
     },
+    // 사전이 정해지거나 바뀌면 검색어가 있을 때 그 사전으로 다시 찾는다
+    // (헤더 검색으로 탭이 처음 열리면 사전 목록이 오기 전에 검색이 먼저 나간다)
+    onDictChange() {
+      if (this.keyword && this.keyword.trim()) this.doSearch();
+    },
     async doSearch() {
       if (!this.keyword || !this.keyword.trim()) return;
+      const seq = this.searchSeq = (this.searchSeq || 0) + 1;
       this.loading = true;
       this.searched = false;
       try {
         const url = this.$APIURL.base + 'api/std/search';
-        const res = await axios.get(url, { params: { keyword: this.keyword.trim() } });
+        const res = await axios.get(url, { params: { keyword: this.keyword.trim(), dictId: this.dictId || '' } });
+        if (seq !== this.searchSeq) return;   // 뒤에 나간 검색이 있으면 그 결과를 쓴다
         this.results = res.data;
         this.panels = [0, 1, 2, 3];
       } catch (e) {
+        if (seq !== this.searchSeq) return;
         console.error('통합 검색 오류:', e);
         this.results = { words: [], terms: [], domains: [], columns: [] };
       } finally {
-        this.loading = false;
-        this.searched = true;
+        if (seq === this.searchSeq) {
+          this.loading = false;
+          this.searched = true;
+        }
       }
     },
     navigateTo(tabName, searchInfo) {
       if (searchInfo) {
-        eventBus.pendingSearch = { type: tabName, field: searchInfo.field, value: searchInfo.value };
+        // 110번 2.4-2-a — 찾은 사전으로 대상 화면의 사전도 맞춘다
+        eventBus.pendingSearch = { type: tabName, field: searchInfo.field, value: searchInfo.value, dictId: this.dictId };
       }
       // 이미 열린 탭이면 그 탭으로 이동 (NdHaeder/QDashboard 와 동일)
       let tab = this.addTabs.find(item => item.name === tabName);

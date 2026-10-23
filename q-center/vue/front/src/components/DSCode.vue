@@ -46,7 +46,7 @@
             <v-btn v-if="canManage" class="gradient" v-on:click="excelFileUpload" title="일괄 등록">일괄 등록</v-btn>
             <v-btn class="gradient" v-on:click="codeListDownload()" title="다운로드">다운로드</v-btn>
             <v-btn v-if="canManage" class="gradient" v-on:click="codeRemoveItem()" title="삭제">삭제</v-btn>
-            <input type="file" @change="readExcelFile" ref="file" id="inputCodeUpload" :style="{ display: 'none' }"
+            <input type="file" @change="readExcelFile" id="inputCodeUpload" :style="{ display: 'none' }"
               accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           </v-sheet>
         </v-sheet>
@@ -166,8 +166,7 @@
                 <v-btn class="gradient" v-on:click="codeValListDownload()" title="다운로드">다운로드</v-btn> -->
                 <!-- 109번 #13 — 코드값 쓰기는 표준 직접 관리 권한 -->
                 <v-btn v-if="canManage" class="gradient" v-on:click="codeValRemoveItem()" title="삭제">삭제</v-btn>
-                <input type="file" @change="readCodeValExcelFile" ref="file" id="inputCodeValUpload"
-                  :style="{ display: 'none' }" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+                <!-- 110번 3.12-13-c — 이 탭의 [일괄 등록] 은 주석이라 파일 칸을 뺐다 (코드 항목 관리 창의 칸과 id 가 겹쳤다) -->
               </v-sheet>
 
             </v-sheet>
@@ -851,7 +850,7 @@
                   <v-btn v-if="canManage" class="gradient" v-on:click="excelCodeValFileUpload()" title="일괄 등록">일괄 등록</v-btn>
                   <v-btn class="gradient" v-on:click="codeValListDownload()" title="다운로드">다운로드</v-btn>
                   <v-btn v-if="canManage" class="gradient" v-on:click="codeDataRemoveItem()" title="삭제">삭제</v-btn>
-                  <input type="file" @change="readCodeValExcelFile" ref="file" id="inputCodeValUpload"
+                  <input type="file" @change="readCodeValExcelFile" id="inputCodeValUpload"
                     :style="{ display: 'none' }"
                     accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
                 </v-sheet>
@@ -920,8 +919,6 @@
 <script>
 import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
-import Treeselect from '@riophae/vue-treeselect'
-import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { eventBus } from './../eventBus.js'
 import DictSelector from './DictSelector.vue'
 import StdImpactDialog from './StdImpactDialog.vue'
@@ -931,7 +928,6 @@ export default {
   props: ['isMobile'],
   components: {
     NdModal,
-    Treeselect,
     DictSelector,
     StdImpactDialog
   },
@@ -1234,8 +1230,6 @@ export default {
     ],
     // 테이블 편의성 관련
     tableViewLengthList: [10, 20, 30, 40, 50],
-    // 승인 시스템에서 사용할 시스템 네임 리스트
-    systemNameList: [],
   }),
   methods: {
     resetSearch() {
@@ -1258,59 +1252,6 @@ export default {
       // 페이지네이션 버튼 개수
       this.codeDataPageCount = Math.ceil(this.codeDataItems.length / this.codeDataitemsPerPage);
       if (this.codeDataPage > this.codeDataPageCount) this.codeDataPage = Math.max(1, this.codeDataPageCount);
-    },
-    getSystemList() {
-      // 시스템 리스트 가지고 오기
-      try {
-        axios.get(this.$APIURL.base + 'api/sysinfo/getSysInfoList')
-          .then((res) => {
-            // console 표시
-            console.log("📃 SYSTEM INFO LIST ↓↓↓")
-            console.log(res.data);
-
-            let _list = res.data;
-
-            const treeData = []
-            const idMap = {}
-
-            // 노드 생성 및 idMap 구성
-            _list.forEach(node => {
-              idMap[node.sysCd] = { ...node, children: [] }
-            })
-
-            // children 속성 채워넣기
-            Object.values(idMap).forEach(node => {
-              if (node.parentSysCd) {
-                idMap[node.parentSysCd].children.push(node)
-              } else {
-                treeData.push(node)
-              }
-            })
-
-            function removeEmptyChildren(node) {
-              // 노드 및 하위 노드에 대한 속성 채우기
-              node.id = node.sysCd
-              node.label = node.sysNm
-
-              // 자식 요소가 없으면 지우기
-              if (node.children.length === 0) {
-                delete node.children;
-              } else {
-                node.children.forEach(childNode => removeEmptyChildren(childNode));
-              }
-            }
-
-            treeData.forEach(node => removeEmptyChildren(node));
-
-            this.systemNameList = treeData;
-
-          })
-          .catch((err) => {
-            console.log(err);
-          })
-      } catch (error) {
-        console.log(err);
-      }
     },
     // ===== 104번 WP6-3 코드 유형 =====
     codeTpNm(tp) {
@@ -1445,7 +1386,7 @@ export default {
         return;
       }
 
-      this.excelFile = this.$refs.file.files[0];
+      this.excelFile = file;   // 110번 3.12-13-c — 이벤트가 온 파일 칸의 파일 (같은 ref 가 세 곳이라 다른 칸을 읽을 수 있었다)
 
       // 진행 다이얼로그 열기
       this.uploadLogs = [];
@@ -1487,7 +1428,7 @@ export default {
         return;
       }
 
-      this.codeValExcelFile = this.$refs.file.files[0];
+      this.codeValExcelFile = file;
 
       // 진행 다이얼로그 열기
       this.uploadLogs = [];
@@ -1526,6 +1467,12 @@ export default {
       if (!msg.data || !msg.data.startsWith(tag)) return;
       const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
       this._addUploadLog(level, msg.data);
+      // 110번 3.12-12-a — 파일을 못 읽는 등 일괄등록 자체가 실패하면 "완료" 가 오지 않는다. 60초를 기다리지 않고 끝낸다
+      if (msg.data.includes('일괄등록 실패')) {
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+        return;
+      }
       if (msg.data.includes('완료 -')) {
         this.isUploading = false;
         clearTimeout(this._uploadTimer);
@@ -1662,7 +1609,7 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/downloadCodeInfoList",
           {
-            params: { 'searchKey': _keyWord },
+            params: { 'searchKey': _keyWord, 'dictId': this.dictId },   // 110번 3.12-6-a — 고른 사전만
             responseType: 'blob',
             headers: { "Accept": "application/vnd.ms-excel" }
           }).then(response => {
@@ -1698,7 +1645,7 @@ export default {
       try {
         axios.get(this.$APIURL.base + "api/std/downloadCodeDataList",
           {
-            params: { 'searchKey': _keyWord },
+            params: { 'searchKey': _keyWord, 'dictId': this.dictId },   // 110번 3.12-6-a — 고른 사전만
             responseType: 'blob',
             headers: { "Accept": "application/vnd.ms-excel" }
           }).then(response => {
@@ -2816,7 +2763,7 @@ export default {
       // 도메인 리스트에서 도메인명을 가지고 와 도메인명을 추출하여 배열 생성
       try {
         // 98번 — getDomainList 는 검색조건을 본문으로 받는다 (GET 쿼리의 dictId 는 읽히지 않아 기본 사전이 나왔다)
-        axios.post(this.$APIURL.base + "api/std/getDomainList", { dictId: this.dictId }).then(result => {
+        axios.post(this.$APIURL.base + "api/std/getDomainList", { dictId: this.dictId, schAprvYn: 'Y' }).then(result => {   // 110번 3.12-5-e-2 — 승인된 도메인만 후보로
           let _data = result.data;
           // console.log(_data);
 
@@ -2843,7 +2790,8 @@ export default {
         axios.get(this.$APIURL.base + "api/std/getDomainInfoByClsfNm", {
           params: {
             'clsfNm': _domainClsfNm,
-            'dictId': this.dictId
+            'dictId': this.dictId,
+            'schAprvYn': 'Y'   // 110번 3.12-5-e-2 — 승인된 도메인만 후보로
           }
         }).then(result => {
           let _data = result.data;
@@ -3065,7 +3013,6 @@ export default {
   created() {
     // 104번 WP5 — 첫 조회는 DictSelector 가 사전을 정한 뒤 change 로 건다. 여기서 먼저 부르면 기본 사전 목록이 늦게 도착해 고른 사전 목록을 덮어쓴다
     this.getCodeDataList();
-    this.getSystemList();
     eventBus.$on('NOTICE', this.onUploadNotice);
   },
   beforeDestroy() {

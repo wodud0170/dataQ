@@ -348,10 +348,11 @@ def test_dashboard_ui(driver):
     # 2-5 데이터 모델 현황
     try:
         s_api = api_login(ADMIN_ID, ADMIN_PW)
-        r = s_api.get(f"{BASE}/api/search/getDataModelStat")
-        data = r.json()
+        # 110번 2.4-11 — 호출 화면이 없던 /api/search/getDataModelStat 을 지웠다. 대시보드가 쓰는 모델 통계 목록으로 본다
+        r = s_api.post(f"{BASE}/api/dm/getDataModelStatsList", json={"schNm": None, "schSysNm": None})
+        data = {"dataModelCnt": len(r.json())}
         ok = True  # API returns successfully
-        model_cnt = data.get("modelCnt", data.get("dataModelCnt", "?"))
+        model_cnt = data["dataModelCnt"]
         add_result("2-5", "데이터 모델 현황 숫자 표시", ok, f"data={json.dumps(data, ensure_ascii=False)[:200]}")
     except Exception as e:
         add_result("2-5", "데이터 모델 현황 숫자 표시", False, str(e))

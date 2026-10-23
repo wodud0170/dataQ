@@ -88,8 +88,7 @@ public class DataStandardService implements Runnable {
 				stompSessionService.sendNotice(WsNoticeLevel.INFO, "단어가 일괄저장되었습니다.");
 			}
 		} catch (Exception e) {
-			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[단어] 일괄등록 시작"); } catch (Exception ignored) {}
-			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[단어] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
+			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[단어] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadWords failed.", e);
 		}
 	}
@@ -109,7 +108,6 @@ public class DataStandardService implements Runnable {
 			}
 		} catch (Exception e) {
 			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[용어] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
-			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[용어] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadTermsList failed.", e);
 		}
 	}
@@ -126,7 +124,6 @@ public class DataStandardService implements Runnable {
 			}
 		} catch (Exception e) {
 			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[코드] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
-			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[코드] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadCodeInfoList failed.", e);
 		}
 	}
@@ -143,7 +140,6 @@ public class DataStandardService implements Runnable {
 			}
 		} catch (Exception e) {
 			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[코드데이터] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
-			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[코드데이터] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadCodeDataList failed.", e);
 		}
 	}
@@ -160,7 +156,6 @@ public class DataStandardService implements Runnable {
 			}
 		} catch (Exception e) {
 			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[도메인] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
-			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[도메인] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadDomains failed.", e);
 		}
 	}
@@ -177,7 +172,6 @@ public class DataStandardService implements Runnable {
 			}
 		} catch (Exception e) {
 			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[도메인그룹] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
-			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[도메인그룹] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadDomainGroups failed.", e);
 		}
 	}
@@ -194,7 +188,6 @@ public class DataStandardService implements Runnable {
 			}
 		} catch (Exception e) {
 			try { stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "[도메인분류] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
-			try { stompSessionService.sendNotice(WsNoticeLevel.ERROR, "[도메인분류] 일괄등록 실패: " + e.getMessage()); } catch (Exception ignored) {}
 			log.error(">> uploadDomainClsfs failed.", e);
 		}
 	}
@@ -210,8 +203,9 @@ public class DataStandardService implements Runnable {
 		WsNoticeLevel summaryLevel = result.getFailCount() > 0 ? WsNoticeLevel.ERROR : WsNoticeLevel.INFO;
 		String summary = String.format("%s 완료 - 전체: %d건, 등록: %d건, 중복: %d건, 실패: %d건",
 				tag, result.getTotalCount(), result.getSuccessCount(), result.getSkipCount(), result.getFailCount());
-		// 개인 큐 전송 실패해도 브로드캐스트는 반드시 전송
+		// 110번 3.12-12-f — 요약은 요청한 창(개인 큐)에만. 예전에는 전체 방송도 보내 요청한 창은 같은 요약을 두 번 받고,
+		// 같은 종류 업로드 창을 연 다른 사용자 화면에도 들어갔다 (SSID 가 없으면 sendMessage 가 전체 방송으로 보낸다).
+		// 실패 안내도 요청한 창에만 보낸다. 전체 공지는 성공 시 "…일괄저장되었습니다" 하나다
 		try { stompSessionService.sendMessage(ssId, summaryLevel, summary); } catch (Exception ignored) {}
-		try { stompSessionService.sendNotice(summaryLevel, summary); } catch (Exception ignored) {}
 	}
 }

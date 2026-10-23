@@ -41,7 +41,7 @@
                 :class="{ active: this.activeContent === 'dashboard' }">
                 <keep-alive>
                     <dashboard :key="dashboardKey" :isMobile="isMobile" :addTabs="addTabs" @addTabItem="addTabItem"
-                        @addActiveContent="addActiveContent" @navAndTabSync="navAndTabSync" @sendApprovalStatus="sendApprovalStatus"/>
+                        @addActiveContent="addActiveContent" @navAndTabSync="navAndTabSync"/>
                 </keep-alive>
             </div>
             <div v-if="this.activeContent === 'term'" id="tab_term" class="tab_contents"
@@ -282,7 +282,7 @@
             <div v-if="this.activeContent === 'approval'" id="tab_approval" class="tab_contents"
                 :class="{ active: this.activeContent === 'approval' }">
                 <keep-alive>
-                    <approval :key="approvalKey" :isMobile="isMobile" :approvalStatus="approvalStatus"/>
+                    <approval :key="approvalKey" :isMobile="isMobile"/>
                 </keep-alive>
             </div>
             <!-- 88번 거버넌스 — 데이터 모델 변경 승인 (관리자) -->
@@ -559,7 +559,7 @@ import draggable from "vuedraggable"
 
 export default {
     name: 'NdContent',
-    props: ['isMobile', 'drawer', 'activeContent', 'tab', 'tabs', 'navApprovalStatus'],
+    props: ['isMobile', 'drawer', 'activeContent', 'tab', 'tabs'],
     watch: {
         tab() {
             if (this.tab !== null) {
@@ -571,9 +571,6 @@ export default {
         tabs() {
             this.addTabs = this.tabs;
         },
-        navApprovalStatus() {
-            this.approvalStatus = this.navApprovalStatus;
-        }
     },
     created() {
         // 맨 처음 생성할 때 대시보드 탭을 활성화 시킨다.
@@ -588,7 +585,6 @@ export default {
             removeSnackbarTimeout: 2000,
             removeSnackbarText: null,
             activeNames: null,
-            approvalStatus: [],// 대시보드에서 승인 페이지 호출 시 승인 상태를 저장하는 변수
             dashboardKey: this.createUUID(),
             termKey: this.createUUID(),
             codeKey: this.createUUID(),
@@ -966,9 +962,6 @@ export default {
         addTabItem(title, name, index) {
             this.$emit('addTabItem', title, name, index);
         },
-        sendApprovalStatus(status) {
-            this.approvalStatus = [status];
-        }
     }
 }
 

@@ -120,18 +120,13 @@
 			order by PATH
   </select>
 
-  <select id="selectSysInfoBySysNm" parameterType="String" resultType="com.ndata.quality.model.mgmt.SysInfoVo">
-				select SYS_CD,
-				       P_SYS_CD,
-				       SYS_TP,
-				       SYS_NM,
-				       SYS_DESC,
-				       CRET_DT, 
-               CRET_USER_ID, 
-               UPDT_DT, 
-               UPDT_USER_ID
+  <!-- 110번 3.12-12-b — 엑셀 일괄등록의 요청시스템 셀(시스템명) → 시스템 코드. 예전에는 SysInfoVo 를 돌려줘 String 필드에 넣다가 ClassCastException -->
+  <select id="selectSysCdBySysNm" parameterType="String" resultType="String">
+				select SYS_CD
 				from TB_SYS_INFO
         where SYS_NM = #{sysNm}
+        order by SYS_CD
+        limit 1
   </select>
 
   <insert id="insertSysInfo" parameterType="com.ndata.quality.model.mgmt.SysInfoVo">

@@ -52,7 +52,7 @@
             </v-list-item>
           </v-list>
         </v-menu>
-        <input type="file" id="inputDomainClsfUpload" ref="file" accept=".xlsx,.xls"
+        <input type="file" id="inputDomainClsfUpload" ref="file" accept=".xlsx"
           @change="readExcelFile($event)" :style="{ display: 'none' }" />
       </v-sheet>
     </v-sheet>
@@ -677,6 +677,12 @@ export default {
       if (!msg.data || !msg.data.startsWith('[도메인분류]')) return;
       const level = msg.noticeType === 'ERROR' ? 'ERROR' : 'INFO';
       this._addUploadLog(level, msg.data);
+      // 110번 3.12-12-a — 파일을 못 읽는 등 일괄등록 자체가 실패하면 "완료" 가 오지 않는다. 60초를 기다리지 않고 끝낸다
+      if (msg.data.includes('일괄등록 실패')) {
+        this.isUploading = false;
+        clearTimeout(this._uploadTimer);
+        return;
+      }
       if (msg.data.includes('완료 -')) {
         this.isUploading = false;
         clearTimeout(this._uploadTimer);
@@ -716,7 +722,7 @@ export default {
       let _keyWord = this.searchDomainClassification && this.searchDomainClassification.length !== 0 ? this.searchDomainClassification : null;
       try {
         axios.get(this.$APIURL.base + "api/std/downloadDomainClsfs", {
-          params: { 'searchKey': _keyWord },
+          params: { 'searchKey': _keyWord, 'dictId': this.dictId },   // 110번 3.12-6-a — 고른 사전만
           responseType: 'blob',
           headers: { "Accept": "application/vnd.ms-excel" }
         }).then(response => {

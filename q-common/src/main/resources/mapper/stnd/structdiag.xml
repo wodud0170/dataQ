@@ -204,6 +204,7 @@
 		FROM TB_STRUCT_DIAG_HISTORY h
 		LEFT JOIN TB_DATA_MODEL dm ON dm.DM_ID = h.DATA_MODEL_ID
 		WHERE h.DATA_MODEL_ID = #{dataModelId}
+		  AND h.STATUS = 'DONE'   <!-- 110번 2.4-8-b — 실행 중·실패한 진단은 빼고 최신 완료 1건 (DA 목표 달성도와 같은 기준) -->
 		ORDER BY h.DIAG_DT DESC
 		LIMIT 1
 	</select>

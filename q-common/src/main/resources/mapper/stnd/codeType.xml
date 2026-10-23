@@ -96,6 +96,15 @@
 		DELETE FROM TB_CODE_INTEG WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
 	</delete>
 
+	<!-- 110번 3.12-10-b — 코드를 지운 뒤 그 코드 그룹을 가진 용어가 더 없으면 코드값(TB_CODE_DATA)도 지운다 (FK 가 없어 남았다) -->
+	<select id="countGrpHolders" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_TERMS WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+	</select>
+
+	<delete id="deleteValuesByGrp" parameterType="java.util.Map">
+		DELETE FROM TB_CODE_DATA WHERE DICT_ID = #{dictId} AND CODE_GRP = #{codeGrp}
+	</delete>
+
 	<insert id="insertInteg" parameterType="java.util.Map">
 		INSERT INTO TB_CODE_INTEG (DICT_ID, CODE_GRP, SUB_CODE_GRP, SORT_ORDER, CRET_DT, CRET_USER_ID)
 		VALUES

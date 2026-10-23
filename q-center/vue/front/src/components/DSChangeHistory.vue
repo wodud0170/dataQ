@@ -5,7 +5,7 @@
                 변경 이력 조회
             </v-card-title>
             <v-card-text>
-                <!-- 86번 #38 — 등록경로 필터 제거 (DB 가 항상 NULL). 다른 col 폭 확보 -->
+                <!-- 86번 #38 에서 등록 경로 필터를 뺐다(그때는 DB 가 항상 NULL). 2026-08-23 부터 서버가 값을 채워 110번 3.12-14-c 에서 되살린다 -->
                 <v-row dense align="center">
                     <v-col cols="2">
                         <v-select v-model="filter.targetType" :items="targetTypes" item-text="text" item-value="value"
@@ -15,10 +15,14 @@
                         <v-select v-model="filter.changeType" :items="changeTypes" item-text="text" item-value="value"
                             label="유형" dense outlined hide-details />
                     </v-col>
-                    <v-col cols="3">
+                    <v-col cols="2">
+                        <v-select id="chgSourceFilter" v-model="filter.changeSource" :items="changeSources" item-text="text" item-value="value"
+                            label="등록 경로" dense outlined hide-details />
+                    </v-col>
+                    <v-col cols="2">
                         <v-text-field v-model="filter.fromDt" label="시작일" type="date" dense outlined hide-details />
                     </v-col>
-                    <v-col cols="3">
+                    <v-col cols="2">
                         <v-text-field v-model="filter.toDt" label="종료일" type="date" dense outlined hide-details />
                     </v-col>
                     <v-col cols="2">
@@ -30,6 +34,10 @@
         </v-card>
 
         <v-card outlined>
+            <!-- 110번 3.12-15-f — 목록은 최근 200건까지만 온다. 다 찼으면 조건으로 좁히라고 알린다 -->
+            <div v-if="historyList.length >= 200" id="chgLimitNote" class="chg-limit-note">
+                최근 200건까지만 보입니다. 대상·유형·등록 경로·기간으로 좁혀 조회하세요.
+            </div>
             <v-data-table :headers="headers" :items="historyList" :loading="loading" dense
                 @click:row="onRowClick" item-key="changeId" single-select
                 :items-per-page="20" :footer-props="{ 'items-per-page-options': [10, 20, 50, 100] }"
@@ -169,7 +177,10 @@ export default {
                 { text: "용어", value: "TERM" },
                 { text: "도메인", value: "DOMAIN" },
                 { text: "코드", value: "CODE" },
-                { text: "코드데이터", value: "CODE_DATA" }
+                { text: "코드데이터", value: "CODE_DATA" },
+                // 110번 3.12-7-f — 도메인 그룹·분류 일괄등록 이력
+                { text: "도메인 그룹", value: "DOMAIN_GRP" },
+                { text: "도메인 분류", value: "DOMAIN_CLSF" }
             ],
             changeTypes: [
                 { text: "전체", value: "" },
@@ -302,7 +313,7 @@ export default {
             return map[type] || "grey";
         },
         getTargetTypeLabel(type) {
-            const map = { WORD: "단어", TERM: "용어", DOMAIN: "도메인", CODE: "코드", CODE_DATA: "코드데이터" };
+            const map = { WORD: "단어", TERM: "용어", DOMAIN: "도메인", CODE: "코드", CODE_DATA: "코드데이터", DOMAIN_GRP: "도메인 그룹", DOMAIN_CLSF: "도메인 분류" };
             return map[type] || type;
         }
     }
@@ -312,6 +323,12 @@ export default {
 <style scoped>
 .history-table >>> tbody tr {
     cursor: pointer;
+}
+.chg-limit-note {
+    font-size: .8rem;
+    color: #E65100;
+    background: #FFF3E0;
+    padding: 6px 12px;
 }
 .history-table >>> tbody tr:hover {
     background-color: #E8EAF6 !important;

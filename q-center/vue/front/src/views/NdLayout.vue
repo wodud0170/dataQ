@@ -16,12 +16,11 @@
                         :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup" :navGovMetaGroup="navGovMetaGroup"
                         @addTabItem="addTabItem" @addActiveContent="addActiveContent" @navAllGroupClose="navAllGroupClose"
                         @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
-                        @addNavSubGroupData="addNavSubGroupData" @resetSplit="resetSplit"
-                        @sendApprovalStatus="sendApprovalStatus" />
+                        @addNavSubGroupData="addNavSubGroupData" @resetSplit="resetSplit" />
                 </SplitArea>
                 <SplitArea :size="85" id="splistMain">
                     <router-view name="content" :isMobile="isMobile" :tab="tab" :activeContent="activeContent" :tabs="tabs"
-                        :navApprovalStatus="navApprovalStatus" @addActiveContent="addActiveContent"
+                        @addActiveContent="addActiveContent"
                         @removeTabItem="removeTabItem" @navAndTabSync="navAndTabSync" @changeTabStatu="changeTabStatu"
                         @addTabItem="addTabItem" @changeTabItem="changeTabItem" />
                 </SplitArea>
@@ -79,7 +78,6 @@ export default {
         navGovMetaGroup: null,
         navQualGroup: null,
         navMyPageGroup: null,
-        navApprovalStatus: []// 대시보드에서 승인 페이지 호출 시 승인 상태를 저장하는 변수
     }),
     beforeDestroy() {
         if (typeof window === 'undefined') return
@@ -94,9 +92,6 @@ export default {
         tabs() {
             this.matchContent();
         },
-        approvalStatus() {
-            this.navApprovalStatus = [];
-        }
     },
     mounted() {
         this.onResize()
@@ -680,16 +675,6 @@ export default {
         changeTabStatu() {
             this.tabStatu = 'change';
         },
-        sendApprovalStatus() {
-            // 승인 메뉴 선택 시 대시보드에서 보내주는 상태값과 다르게 보내줘야 함.
-            // 대시보드에서 직접 승인 메뉴 접근하지 않고 네비게이션으로 접근할 경우 초기화 필요함
-            // 탭에 이미 승인이 있을 때는 return하고 없으면 초기화
-            if (this.tabs.filter(tab => tab.title === '승인').length > 0) {
-                return;
-            } else {
-                this.navApprovalStatus = [];
-            }
-        }
     },
 }
 </script>
