@@ -23,6 +23,7 @@
 """
 import base64
 from dbcmd import PSQL
+import os
 import json
 import subprocess
 import sys
@@ -269,7 +270,7 @@ def main():
     # P16. 시드 SQL 멱등성 (재실행)
     def _p16():
         # 시드 SQL 파일 다시 실행
-        with open(r"C:\Users\장재영\Desktop\dataQ\dataQ설계\sync\qual_rule_catalog_seed_2026-05-07.sql",
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "sync", "qual_rule_catalog_seed_2026-05-07.sql"),
                   encoding="utf-8") as f:
             sql_text = f.read()
         cmd = PSQL

@@ -10,6 +10,9 @@
 """
 import time
 from edgeopt import headless
+import os
+SHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")
+os.makedirs(SHOT_DIR, exist_ok=True)
 import sys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -85,7 +88,7 @@ def main():
 
         # 통합검색 탭이 열리고 결과 로딩 대기
         time.sleep(4)
-        driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_gs_step2.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, "test_gs_step2.png"))
         print("  스크린샷: test_gs_step2.png")
 
         # 3. "단어등록TEST" 행 클릭
@@ -127,12 +130,12 @@ def main():
 
         if not target_found:
             print("  [FAIL] 검색결과 행이 하나도 없음")
-            driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_gs_step3_fail.png")
+            driver.save_screenshot(os.path.join(SHOT_DIR, "test_gs_step3_fail.png"))
             return 1
 
         # 4. 단어 사전 탭 이동 + 검색조건 확인
         time.sleep(3)
-        driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_gs_step4.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, "test_gs_step4.png"))
 
         print("\n[STEP 4] 단어 사전 탭 이동 확인")
         tab_found = False
@@ -183,7 +186,7 @@ def main():
             for i, r in enumerate(rows[:3]):
                 print(f"    행[{i}]: {r.text[:80]}")
 
-        driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_gs_final.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, "test_gs_final.png"))
         print(f"  최종 스크린샷: test_gs_final.png")
 
         # 결과
@@ -205,7 +208,7 @@ def main():
         print(f"\n[ERROR] 예외: {e}")
         import traceback
         traceback.print_exc()
-        driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_gs_exception.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, "test_gs_exception.png"))
         return 1
     finally:
         print("\n10초 후 브라우저 종료...")

@@ -28,6 +28,9 @@
 """
 import time
 from edgeopt import headless
+import os
+SHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")
+os.makedirs(SHOT_DIR, exist_ok=True)
 import sys
 import os
 import random
@@ -48,7 +51,7 @@ TEST_WORD_A_ENG = f"SELAPRV{_SUFFIX}"
 TEST_WORD_B = f"셀반려{_SUFFIX}"
 TEST_WORD_B_ENG = f"SELREJ{_SUFFIX}"
 TEST_DOMAIN = f"셀도메인{_SUFFIX}"
-SCREENSHOT_DIR = "C:/Users/장재영/Desktop/dataQ/dataQ설계/테스트/selenium/screenshots"
+SCREENSHOT_DIR = SHOT_DIR
 
 
 def create_driver():

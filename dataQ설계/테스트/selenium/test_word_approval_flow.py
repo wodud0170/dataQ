@@ -13,6 +13,9 @@
 """
 import time
 from edgeopt import headless
+import os
+SHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")
+os.makedirs(SHOT_DIR, exist_ok=True)
 import sys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -55,7 +58,7 @@ def wait_clickable(driver, by, value, timeout=15):
 
 
 def screenshot(driver, name):
-    path = f"C:/Users/장재영/Desktop/dataQ/dataQ설계/테스트/selenium/screenshots/{name}.png"
+    path = os.path.join(SHOT_DIR, f"{name}.png")
     driver.save_screenshot(path)
     print(f"  스크린샷: {name}.png")
 
@@ -193,7 +196,7 @@ def main():
 
     # 스크린샷 폴더 생성
     import os
-    os.makedirs("C:/Users/장재영/Desktop/dataQ/dataQ설계/테스트/selenium/screenshots", exist_ok=True)
+    os.makedirs(SHOT_DIR, exist_ok=True)
 
     try:
         # ============================================================

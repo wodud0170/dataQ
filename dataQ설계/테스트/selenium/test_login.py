@@ -8,6 +8,9 @@ STOMP WebSocket 로그인/로그아웃 테스트
 """
 import time
 from edgeopt import headless
+import os
+SHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")
+os.makedirs(SHOT_DIR, exist_ok=True)
 import sys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -73,7 +76,7 @@ def login(driver, user_id, password, step_name):
         print(f"  [ERROR] 로그인 폼 조작 실패: {e}")
         # 페이지 소스로 디버깅
         print(f"  Page title: {driver.title}")
-        driver.save_screenshot(f"C:/Users/장재영/Desktop/dataQ/test_login_error_{user_id}.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, f"test_login_error_{user_id}.png"))
         print(f"  스크린샷 저장됨: test_login_error_{user_id}.png")
         return False
 
@@ -96,11 +99,11 @@ def login(driver, user_id, password, step_name):
     if not bounced:
         final_url = driver.current_url
         print(f"  [PASS] 5초간 메인 페이지 유지. URL: {final_url}")
-        driver.save_screenshot(f"C:/Users/장재영/Desktop/dataQ/test_login_success_{user_id}.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, f"test_login_success_{user_id}.png"))
         print(f"  스크린샷 저장됨: test_login_success_{user_id}.png")
         return True
     else:
-        driver.save_screenshot(f"C:/Users/장재영/Desktop/dataQ/test_login_bounced_{user_id}.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, f"test_login_bounced_{user_id}.png"))
         print(f"  스크린샷 저장됨: test_login_bounced_{user_id}.png")
         return False
 
@@ -197,7 +200,7 @@ def logout(driver):
 
     except Exception as e:
         print(f"  [ERROR] 로그아웃 실패: {e}")
-        driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_logout_error.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, "test_logout_error.png"))
         return False
 
 def main():
@@ -212,7 +215,7 @@ def main():
         driver.get(BASE_URL)
         time.sleep(3)
         print(f"초기 URL: {driver.current_url}")
-        driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_00_initial.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, "test_00_initial.png"))
 
         # 2. space/123 로그인
         result1 = login(driver, "space", "123", "STEP 1")
@@ -249,7 +252,7 @@ def main():
 
     except Exception as e:
         print(f"\n[ERROR] 테스트 중 예외: {e}")
-        driver.save_screenshot("C:/Users/장재영/Desktop/dataQ/test_exception.png")
+        driver.save_screenshot(os.path.join(SHOT_DIR, "test_exception.png"))
         return 1
     finally:
         print("\n10초 후 브라우저 종료...")

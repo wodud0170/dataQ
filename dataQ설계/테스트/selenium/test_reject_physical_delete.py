@@ -17,6 +17,9 @@
 """
 import time
 from edgeopt import headless
+import os
+SHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")
+os.makedirs(SHOT_DIR, exist_ok=True)
 import sys
 import random
 from selenium import webdriver
@@ -33,7 +36,7 @@ BASE_URL = "http://localhost:28091"
 _SUFFIX = time.strftime("%H%M%S") + str(random.randint(10, 99))
 TEST_WORD = f"셀반려삭제{_SUFFIX}"
 TEST_WORD_ENG = f"SELREJDEL{_SUFFIX}"
-SCREENSHOT_DIR = "C:/Users/장재영/Desktop/dataQ/dataQ설계/테스트/selenium/screenshots"
+SCREENSHOT_DIR = SHOT_DIR
 
 passed = 0
 failed = 0

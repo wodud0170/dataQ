@@ -12,6 +12,9 @@
 """
 import time
 from edgeopt import headless
+import os
+SHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots")
+os.makedirs(SHOT_DIR, exist_ok=True)
 import sys
 import random
 from selenium import webdriver
@@ -33,7 +36,7 @@ WORD_B = f"셀선승{_SUFFIX}"
 WORD_B_ENG = f"SELPRE{_SUFFIX}"
 TERM_A = f"{WORD_A}명"          # 단어A + 형식단어 "명"
 TERM_B = f"{WORD_B}명"          # 단어B + 형식단어 "명"
-SCREENSHOT_DIR = "C:/Users/장재영/Desktop/dataQ/dataQ설계/테스트/selenium/screenshots"
+SCREENSHOT_DIR = SHOT_DIR
 
 passed = 0
 failed = 0
