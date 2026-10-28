@@ -31,6 +31,9 @@ public class DdlGenerator {
 	@Autowired
 	private DdlRuleService rules;
 
+	/** 114 권고 채택(10-28) — 내려받기에서 DDL 규칙 매핑이 없는 타입을 그대로 낸 컬럼 줄 끝 주석 */
+	static final String UNMAPPED_NOTE = "-- DDL 규칙 매핑 없음";
+
 	/**
 	 * 모델 전체 DDL (내려받기). dbType 이 규칙 없는 DBMS 면 Oracle 문법.
 	 * 110 4.12-11 — 테이블·컬럼은 화면 목록과 같이 승인됐거나 viewerId 가 요청한 행만 (예전에는 다른 사용자의 미승인 행까지 담았다)
@@ -70,7 +73,7 @@ public class DdlGenerator {
 			// 110 4.12-15-a — 컬럼·제약조건은 (소유자, 테이블) 로 묶는다 (예전에는 테이블명만이라 소유자가 다른 같은 이름 테이블이 섞였다)
 			String key = ownerKey(obj.getObjOwner(), obj.getObjNm());
 			try {
-				for (String stmt : createTableStatements(null, obj, attrByObj.get(key), consByObj.get(key), dialect)) {
+				for (String stmt : createTableStatements(null, obj, attrByObj.get(key), consByObj.get(key), dialect, true)) {
 					sb.append(stmt).append(";\n");
 				}
 			} catch (DdlSafety.Invalid e) {
@@ -95,7 +98,7 @@ public class DdlGenerator {
 		if (obj == null) return null;
 		List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList("ddlRule.selectApprovedAttrsOfObj", p);
 		List<Map<String, Object>> cons = sqlSessionTemplate.selectList("ddlRule.selectApprovedConstraintsOfObj", p);
-		return createTableStatements(objOwner, obj, attrs, cons, dialect);
+		return createTableStatements(objOwner, obj, attrs, cons, dialect, false);
 	}
 
 	private void appendHeader(StringBuilder sb, String modelNm, String dmId, SqlDialect dialect, int objCnt, int attrCnt) {
@@ -133,20 +136,26 @@ public class DdlGenerator {
 	/**
 	 * CREATE TABLE 1문장 + 주석 문장들 (끝 ';' 없음). owner 가 비면 접두어 없음.
 	 * 109번 #3 — 이름·타입·기본값·테이블스페이스·삭제 규칙은 dialect·{@link DdlSafety} 로 검사한다 (걸리면 DdlSafety.Invalid).
+	 * 114 권고 채택(10-28) — download(내려받기)면 DDL 규칙 매핑이 없는 타입은 타입 이름 그대로 내고 그 컬럼 줄 끝에 "-- DDL 규칙 매핑 없음" 을 붙인다.
+	 * [DB 반영](download=false)은 매핑 없는 타입을 계속 거부한다.
 	 */
 	private List<String> createTableStatements(String owner, StdDataModelObjVo obj, List<StdDataModelAttrVo> objAttrs,
-			List<Map<String, Object>> objCons, SqlDialect dialect) {
+			List<Map<String, Object>> objCons, SqlDialect dialect, boolean download) {
 		String tbl = obj.getObjNm();
 		StringBuilder sb = new StringBuilder();
 		sb.append("CREATE TABLE ").append(dialect.qualify(owner, tbl)).append(" (\n");
 
 		List<String> colLines = new ArrayList<>();
+		List<String> colNotes = new ArrayList<>();
 		List<StdDataModelAttrVo> pkAttrsFromFlag = new ArrayList<>();
 		if (objAttrs != null) {
 			for (StdDataModelAttrVo a : objAttrs) {
 				StringBuilder line = new StringBuilder();
 				line.append("    ").append(pad(dialect.id("컬럼", a.getAttrNm()), 30)).append(" ");
-				line.append(pad(dialect.columnType(a.getDataType(), a.getDataLen(), a.getDataDecimalLen()), 16));
+				boolean unmapped = download && !rules.mapped(dialect.dbmsTp(), a.getDataType());
+				line.append(pad(unmapped ? DdlRuleService.rawType(a.getDataType(), a.getDataLen(), a.getDataDecimalLen())
+						: dialect.columnType(a.getDataType(), a.getDataLen(), a.getDataDecimalLen()), 16));
+				colNotes.add(unmapped ? UNMAPPED_NOTE : null);
 				String dflt = dialect.defaultExpr(a.getDefaultVal());
 				if (dflt != null) {
 					line.append(" DEFAULT ").append(dflt);
@@ -175,6 +184,7 @@ public class DdlGenerator {
 		for (int i = 0; i < allLines.size(); i++) {
 			sb.append(allLines.get(i));
 			if (i < allLines.size() - 1) sb.append(",");
+			if (i < colNotes.size() && colNotes.get(i) != null) sb.append(" ").append(colNotes.get(i));
 			sb.append("\n");
 		}
 		sb.append(")");

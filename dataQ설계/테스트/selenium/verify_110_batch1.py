@@ -459,6 +459,7 @@ def s5(sa, su):
         cnm = "ZZ110업코드" + TAG
         path = xlsx(os.path.join(TMP, "codes.xlsx"), TERM_HDR, [
             [1, "1", cnm, "110 업로드 코드", w4ab, FX["dom"], "", "", "", "Z1U" + TAG, "", "", "", "N", "", ""]])
+        time.sleep(1.1)   # since 는 초 단위 — 바로 앞 S5-1 단어 일괄등록 이력과 같은 초에 들어가지 않게
         since = time.strftime("%Y%m%d%H%M%S")
         r = upload(sa, "/api/std/uploadCodeInfoList", path, d)
         assert r.status_code == 200, r.text[:200]

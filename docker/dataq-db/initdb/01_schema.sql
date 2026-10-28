@@ -1506,7 +1506,8 @@ CREATE TABLE quality.tb_data_model_change_history (
     ddl_exec_message character varying(2000),
     ddl_dbms_tp character varying(20),
     stnd_except_reason character varying(500),
-    ddl_exec_done text
+    ddl_exec_done text,
+    submit_dt character varying(14)
 );
 
 
@@ -1529,6 +1530,13 @@ COMMENT ON COLUMN quality.tb_data_model_change_history.stnd_except_reason IS '�
 --
 
 COMMENT ON COLUMN quality.tb_data_model_change_history.ddl_exec_done IS '중간에 실패한 [DB 반영] 에서 이미 실행된 문장 (JSON 배열). 다시 실행하면 건너뛰고 나머지만 실행, 성공하면 비움 (109번 #17)';
+
+
+--
+-- Name: COLUMN tb_data_model_change_history.submit_dt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_change_history.submit_dt IS '신청(DRAFT → SUBMITTED) 시각 yyyyMMddHHmmss (114 권고 채택, 신청하지 않은 이력·이전 이력은 NULL)';
 
 
 --

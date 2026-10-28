@@ -91,15 +91,16 @@ export default {
     submitted: [],
     rejected: [],
     checkedDrafts: [],
+    // 114 권고 채택(10-28) — 신청 시각은 신청(SUBMITTED)한 시각 SUBMIT_DT (예전에는 저장 시각 CHANGE_DT 였다). 신청 전(DRAFT)은 비어 있다
     headers: [
       { text: '유형', value: 'changeType', width: '140px' },
       { text: '대상', value: 'path' },
-      { text: '신청 시각', value: 'changeDt', width: '160px' },
+      { text: '신청 시각', value: 'submitDt', width: '160px' },
     ],
     headersRej: [
       { text: '유형', value: 'changeType', width: '140px' },
       { text: '대상', value: 'path' },
-      { text: '신청 시각', value: 'changeDt', width: '160px' },
+      { text: '신청 시각', value: 'submitDt', width: '160px' },
       { text: '반려 사유', value: 'aprvComment' },
     ],
   }),

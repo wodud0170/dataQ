@@ -207,10 +207,11 @@ def step4_upload_and_commit(d):
     shot(d, "04a_model_selected")
 
     # keep-alive 로 Table/Column 두 컴포넌트 file input 이 공존할 수 있음.
-    # 컬럼 업로드 버튼(id=btn-upload-attrs) 이후의 첫 file input 으로 고정.
+    # 컬럼 화면 탭(tab_datamodelStatusColumn) 안의 file input 으로 고정 — 업로드 메뉴 항목(btn-upload-attrs)은
+    # [엑셀] 드롭다운을 열어야 그려지므로(bb092a8 이후) 그 뒤를 따라가는 셀렉터는 찾지 못한다.
     file_input = d.find_element(
         By.XPATH,
-        "//*[@id='btn-upload-attrs']/following::input[@type='file'][1]"
+        "//div[@id='tab_datamodelStatusColumn']//input[@type='file']"
     )
     d.execute_script("arguments[0].style.display='block';", file_input)
     file_input.send_keys(state["xlsx"])

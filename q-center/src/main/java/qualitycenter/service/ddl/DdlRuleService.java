@@ -65,6 +65,25 @@ public class DdlRuleService {
 		return DdlSafety.physType(render(String.valueOf(row.get("physDataType")), len, dec));
 	}
 
+	/** 114 권고 채택(10-28) — 그 DBMS 의 DDL 규칙에 이 타입 매핑이 있는지. 타입이 비면 VARCHAR 로 본다(physType 과 같다) */
+	public boolean mapped(String dbmsTp, String dataType) {
+		load();
+		String t = (dataType == null || dataType.trim().isEmpty()) ? "VARCHAR" : dataType.trim().toUpperCase();
+		return typeMap.getOrDefault(dbmsTp, new HashMap<>()).containsKey(t);
+	}
+
+	/**
+	 * 114 권고 채택(10-28) — DDL 내려받기에서 매핑 없는 타입은 타입 이름 그대로 낸다(길이·소수점이 있으면 이름(길이[,소수점])).
+	 * 타입 이름·길이·만든 타입은 저장 때와 같은 규칙으로 본다. [DB 반영]은 {@link #physType} 으로 계속 막는다.
+	 */
+	public static String rawType(String dataType, Long dataLen, Short dataDecimalLen) {
+		String t = DdlSafety.dataType(dataType);
+		long len = dataLen == null ? 0L : dataLen;
+		int dec = dataDecimalLen == null ? 0 : dataDecimalLen;
+		DdlSafety.length(len, dec);
+		return DdlSafety.physType(render(t + "[({len}[,{dec}])]", len, dec));
+	}
+
 	/** 틀 → 타입. [...] 는 안쪽부터 보고, 안의 {len}·{dec} 값이 0 보다 클 때만 남긴다 */
 	public static String render(String tmpl, long len, int dec) {
 		String s = tmpl;

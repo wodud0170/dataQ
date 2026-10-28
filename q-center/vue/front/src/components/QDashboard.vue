@@ -101,6 +101,8 @@
           <!-- 구조 일치율 -->
           <div class="donut-chart-wrapper" style="flex:1;">
             <div class="donut-chart-title">구조 일치율</div>
+            <!-- 114 권고 채택(10-28)·110번 2.4-8-a — 계산 기준을 적는다 (구조 변경 감지와 기준이 다르다) -->
+            <div id="dashStructRateBasis" class="chart-basis">기준: 테이블·컬럼 (인덱스·제약조건 제외)</div>
             <apexchart type="donut" class="chart_full" :options="struct_pie_chartOptions" :series="struct_series"
               :key="struct_pie_Key"></apexchart>
           </div>
@@ -118,6 +120,8 @@
       <v-card class="itemsWrapper">
         <div class="d-flex align-center">
           <h2><v-icon>mdi-shield-alert-outline</v-icon>&nbsp;&nbsp;구조 변경 감지</h2>
+          <!-- 114 권고 채택(10-28)·110번 2.4-8-a — 감지 기준 (구조 일치율과 다르다) -->
+          <span id="dashStructDiagBasis" class="chart-basis ml-3">기준: 테이블·컬럼·인덱스·제약조건</span>
           <v-chip x-small class="ml-2" outlined color="grey darken-1" v-if="structDiagHistory">
             {{ structDiagHistory.diagDt }}
           </v-chip>
@@ -1003,6 +1007,13 @@ export default {
   font-weight: 600;
   color: #546E7A;
   margin-bottom: 4px;
+  text-align: center;
+}
+
+/* 114 권고 채택(10-28) — 구조 일치율·구조 변경 감지 계산 기준 */
+.chart-basis {
+  font-size: 0.7rem;
+  color: #78909C;
   text-align: center;
 }
 

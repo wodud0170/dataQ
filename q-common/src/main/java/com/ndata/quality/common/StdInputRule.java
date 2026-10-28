@@ -21,6 +21,16 @@ public final class StdInputRule {
 		return "단어 영문약어는 대문자 영문(A-Z)으로 시작하고 영문/숫자(0-9)만 사용할 수 있습니다. (입력값: " + abrv + ")";
 	}
 
+	/** 114 권고 채택(10-28)·110번 3.12-15-c — 길이가 있어야 하는 도메인 데이터 타입(문자열). 그 밖의 타입은 길이 0(빈칸)이 "길이 없음" 이다 */
+	public static final java.util.Set<String> LEN_REQUIRED_TYPES = new java.util.HashSet<>(java.util.Arrays.asList(
+			"VARCHAR", "VARCHAR2", "CHAR", "NVARCHAR", "NVARCHAR2", "NCHAR"));
+
+	/** 도메인 데이터 길이가 그 타입에 맞지 않으면 안내 문구, 맞으면 null */
+	public static String domainLenError(String dataType, long dataLen) {
+		if (dataType == null || !LEN_REQUIRED_TYPES.contains(dataType.trim().toUpperCase()) || dataLen >= 1) return null;
+		return "데이터 타입 " + dataType.trim().toUpperCase() + " 은(는) 데이터 길이를 1 이상으로 입력해야 합니다.";
+	}
+
 	/** 입력한 단어명이 다른 단어의 유사어(이음동의어)일 때의 안내 */
 	public static String synonymOfMsg(String wordNm, String stdWordNm) {
 		return "'" + wordNm + "'은(는) '" + stdWordNm + "'의 유사어입니다. 표준 단어 '" + stdWordNm + "'를 사용해주세요.";

@@ -32,8 +32,9 @@
         <template #item.aprvStatus="{ item }">
           <v-chip x-small :color="statusColor(item.aprvStatus)" dark>{{ item.aprvStatus }}</v-chip>
         </template>
-        <template #item.changeDt="{ item }">
-          <span class="nowrap">{{ formatDt(item.changeDt) }}</span>
+        <!-- 114 권고 채택(10-28) — 신청 시각은 신청(SUBMITTED)한 시각. 신청을 거치지 않은 행(신청 전·관리자 직접 반영)은 비어 있다 -->
+        <template #item.submitDt="{ item }">
+          <span class="nowrap">{{ formatDt(item.submitDt) }}</span>
         </template>
         <template #item.actions="{ item }">
           <div class="nowrap">
@@ -43,7 +44,8 @@
           <v-btn v-if="item.ddlSnippet" x-small text class="btn-auto act-btn" v-on:click="copyDdl(item)">
             <v-icon x-small>mdi-content-copy</v-icon>DDL
           </v-btn>
-          <v-btn v-if="canExecDdl && item.aprvStatus==='APPROVED' && item.ddlSnippet && !item.ddlExecDt"
+          <!-- 114 권고 채택(10-28) — 실패(FAILED)한 행에는 다시 보인다(이어서 실행). 권한 없음·건너뜀은 숨김 -->
+          <v-btn v-if="canExecDdl && item.aprvStatus==='APPROVED' && item.ddlSnippet && (!item.ddlExecDt || item.ddlExecResult==='FAILED')"
             x-small text class="btn-auto act-btn" color="success" v-on:click="execDdl(item)">
             <v-icon x-small>mdi-database-arrow-up</v-icon>DB 반영
           </v-btn>
@@ -132,7 +134,7 @@ export default {
       { text: 'Tier', value: 'changeTier', width: '80px' },
       { text: '대상', value: 'path' },
       { text: '신청자', value: 'changeUserId', width: '120px' },
-      { text: '신청 시각', value: 'changeDt', width: '150px' },
+      { text: '신청 시각', value: 'submitDt', width: '150px' },
       { text: '상태', value: 'aprvStatus', width: '100px' },
       { text: '', value: 'actions', width: '200px', sortable: false },
     ],

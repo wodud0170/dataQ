@@ -565,6 +565,14 @@
                       <v-text-field v-model="addTerm_magntdOrd" dense color="ndColor" placeholder="1차" hide-details></v-text-field>
                     </v-col>
                   </v-row>
+                  <!-- 114 권고 채택(10-28)·110번 3.12-15-d — 제목의 "시스템CD" 입력 칸 (요청 시스템, 관리 > 시스템) -->
+                  <v-row align="center">
+                    <v-col cols="4"><v-subheader>시스템CD</v-subheader></v-col>
+                    <v-col cols="8">
+                      <v-autocomplete id="addTermReqSysCd" v-model="addTerm_reqSysCd" :items="sysInfoItems" item-text="text" item-value="value"
+                        dense color="ndColor" clearable hide-details placeholder="선택" no-data-text="시스템이 없습니다."></v-autocomplete>
+                    </v-col>
+                  </v-row>
                 </v-expansion-panel-content>
               </v-expansion-panel>
             </v-expansion-panels>
@@ -1014,6 +1022,8 @@ export default {
     addTerm_encrYn: '',
     addTerm_magntdOrd: null,
     addTerm_reqSysCd: null,
+    // 114 권고 채택(10-28) — "시스템CD" 선택지 {text: '시스템명 (코드)', value: 시스템 코드}
+    sysInfoItems: [],
     addTerm_selected_word_list: [],
     // addTerm_word_length: 0,
     addTerm_wordList: [],
@@ -2921,6 +2931,10 @@ export default {
     }
     // 104번 WP5 — 첫 조회는 DictSelector 가 사전을 정한 뒤 change 로 건다. 여기서 먼저 부르면 기본 사전 목록이 늦게 도착해 고른 사전 목록을 덮어쓴다
     eventBus.$on('NOTICE', this.onUploadNotice);
+    // 114 권고 채택(10-28) — 용어 등록 "추가 메타" 의 시스템CD 선택지
+    axios.get(this.$APIURL.base + 'api/sysinfo/getSysInfoList').then(res => {
+      this.sysInfoItems = (res.data || []).map(s => ({ text: `${s.sysNm} (${s.sysCd})`, value: s.sysCd }));
+    }).catch(() => { this.sysInfoItems = []; });
   },
   activated() {
     if (eventBus.pendingSearch && eventBus.pendingSearch.type === 'term') {

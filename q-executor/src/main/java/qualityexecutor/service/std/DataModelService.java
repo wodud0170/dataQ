@@ -95,6 +95,8 @@ public class DataModelService implements Runnable {
 	 *   <li>컬럼(ATTR) 메타 수집 → TB_DATA_MODEL_ATTR UPSERT (소프트 삭제 포함)</li>
 	 *   <li>수집 완료 처리 + WebSocket 알림</li>
 	 * </ol>
+	 * <p>114 권고 채택(10-28) — 수집 이력 시작 행(같은 모델 동시 수집을 막는 기록)만 먼저 커밋하고, 테이블·컬럼·인덱스·제약조건 MERGE,
+	 * 재수집 자동 반려, 수집 완료 기록은 한 트랜잭션이다. 도중에 실패하면 모델 행은 하나도 바뀌지 않는다(시작 행은 미완료로 닫는다).</p>
 	 *
 	 * @param userId 실행 사용자 ID
 	 * @param ssId   WebSocket 세션 ID (진행 상황 전송용)
@@ -148,7 +150,8 @@ public class DataModelService implements Runnable {
 			stdDataModelCollectVo.setDataModelId(dataModelId);
 			stdDataModelCollectVo.setClctType("DBMS");
 			stdDataModelCollectVo.setCretUserId(userId);
-			session.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
+			// 114 권고 채택(10-28) — 수집 시작 기록만 먼저 커밋한다(q-center 가 진행 중 수집을 보고 같은 모델 수집을 막는다). 나머지는 session 한 트랜잭션
+			sqlSessionTemplate.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
 			// 수집 대상 스키마 목록 조회 (TB_DATA_MODEL_SCHEMA 필터 사용, 없으면 기본 스키마)
 			List<StdDataModelSchemaVo> schemaFilter = sqlSessionTemplate.selectList("datamodel.selectDataModelSchemaList", dataModelId);
 			List<String> schemas = new ArrayList<String>();
@@ -193,7 +196,6 @@ public class DataModelService implements Runnable {
 				pstmt.close();
 				rs.close();
 			}
-			session.commit();
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "테이블 목록 수집 완료 (" + totalObjCnt + "개)");
 			// 3. ATTR 모델 수집
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "컬럼 정보 수집 중...");
@@ -262,7 +264,6 @@ public class DataModelService implements Runnable {
 				pstmt.close();
 				rs.close();
 			}
-			session.commit();
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "컬럼 정보 수집 완료 (" + totalAttrCnt + "개)");
 			// 86번 #11 — 소프트 삭제 비활성화. 수집은 MERGE 만 수행 (물리명 일치 시 덮어쓰기).
 			// 기존 모델 행은 유지. 삭제는 사용자가 명시적으로 수행해야 함.
@@ -298,7 +299,6 @@ public class DataModelService implements Runnable {
 						rs.close();
 					}
 					// 86번 #11 — soft-delete 제거 (수집은 MERGE 전용)
-					session.commit();
 					readKeys.indexesRead();
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "인덱스 정보 수집 완료 (" + totalIndexCnt + "개)");
 				}
@@ -346,7 +346,6 @@ public class DataModelService implements Runnable {
 						dbHandler.freeConnection(fkConn);
 					}
 					// 86번 #11 — soft-delete 제거 (수집은 MERGE 전용)
-					session.commit();
 					readKeys.constraintsRead();
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 완료 (" + totalConstraintCnt + "개)");
 				}
@@ -370,9 +369,10 @@ public class DataModelService implements Runnable {
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "수집 완료!");
 			collected = true;
 		} catch (Exception e) {
+			// 114 권고 채택(10-28) — 테이블·컬럼·인덱스·제약조건·자동 반려를 모두 되돌린다(모델 행은 수집 전 그대로)
 			session.rollback();
 			log.error("collect data model : {}", e.getMessage());
-			// 110 4.12-38 — 테이블 단계를 커밋한 뒤 실패하면 수집 이력이 미완료로 남아 6시간 동안 같은 모델 수집이 막혔다.
+			// 110 4.12-38 — 먼저 커밋한 수집 시작 행이 미완료로 남으면 6시간 동안 같은 모델 수집이 막힌다.
 			// 끝난 시각을 남기고 미완료(N)로 닫는다 (진행 중 = 끝난 시각 없음)
 			if (clctId != null) {
 				stdDataModelCollectVo.setClctEndDt(DateUtils.dateToStr(new Date(), "yyyyMMddHHmmss"));

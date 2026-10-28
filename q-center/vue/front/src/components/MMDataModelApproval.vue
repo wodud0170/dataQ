@@ -76,7 +76,8 @@
                 <v-chip v-if="item.stndExceptReason" x-small color="deep-orange" text-color="white" class="ml-1 stnd-except-chip"
                   :title="'표준 예외 사유: ' + item.stndExceptReason">표준 예외 — {{ item.stndExceptReason }}</v-chip>
               </template>
-              <template #item.changeDt="{ item }"><span class="nowrap">{{ formatDt(item.changeDt) }}</span></template>
+              <!-- 114 권고 채택(10-28) — 신청 시각은 신청(SUBMITTED)한 시각 (예전에는 저장 시각 CHANGE_DT 였다) -->
+              <template #item.submitDt="{ item }"><span class="nowrap">{{ formatDt(item.submitDt) }}</span></template>
               <template #item.aprvStatus="{ item }">
                 <v-chip x-small :color="statusColor(item.aprvStatus)" dark>{{ item.aprvStatus }}</v-chip>
               </template>
@@ -109,7 +110,7 @@ export default {
       { text: '유형', value: 'changeType', width: '130px' },
       { text: 'Tier', value: 'changeTier', width: '80px' },
       { text: '대상', value: 'path' },
-      { text: '신청 시각', value: 'changeDt', width: '150px' },
+      { text: '신청 시각', value: 'submitDt', width: '150px' },
       { text: '상태', value: 'aprvStatus', width: '100px' },
       { text: '전후', value: 'data-table-expand', width: '64px', sortable: false, align: 'center' },
     ],

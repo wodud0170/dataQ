@@ -13,6 +13,8 @@ public class NDQualityRetrieveCond {
     private String schCretUserId;
     private String schUpdtUserId;
     private String schAprvYn;
+    /** 114 권고 채택(10-28)·110번 3.12-15-a — 값이 있으면 승인 대기(APRV_YN='N') 항목은 이 사용자가 등록한 것만. 컨트롤러가 표준 승인 권한이 없을 때 채운다 */
+    private String pendingOwnerId;
     private String schStndYn;
     private String schCommStndYn;
     private String schPrivYn;   // 104번 WP5-16 — 개인정보여부 (용어는 도메인 값을 따른 실제 값)

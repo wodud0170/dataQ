@@ -9,9 +9,13 @@
       </v-card-title>
       <v-divider />
       <v-card-text style="max-height:60vh;">
-        <div style="font-size:.82rem; color:#78909C; margin:8px 0;">
+        <!-- 114 권고 채택(10-28)·110 4.12-9·5.8-19 — 안내를 실제 동작대로 (예전 "승인 전까지는 본인에게만 보입니다" 는 추가에만 맞았다) -->
+        <div id="dmSubmitGuide" style="font-size:.82rem; color:#78909C; margin:8px 0;">
           저장된(DRAFT) 변경을 선택해 관리자에게 일괄 신청합니다.
-          신청하면 SUBMITTED 가 되어 관리자 승인 화면에 노출되며, 승인 전까지는 본인에게만 보입니다.
+          신청하면 SUBMITTED 가 되어 관리자 승인 화면에 노출됩니다.<br>
+          추가한 테이블·컬럼은 승인 전까지 본인에게만 보입니다. 수정(이름·타입·길이 등)은 저장할 때 이미 모델에 반영되어 모든 사용자에게 보이고,
+          삭제는 저장할 때 모든 사용자 화면에서 감춰집니다. PK·FK 추가·삭제는 컬럼의 PK·FK 표시가 저장할 때 바뀝니다.
+          반려되면 수정·삭제·PK·FK 변경은 변경 전으로 되돌아갑니다.
         </div>
         <v-data-table v-if="drafts.length > 0" :headers="headers" :items="drafts"
           item-key="changeSeq" show-select v-model="checked"

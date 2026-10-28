@@ -5,7 +5,8 @@
   R1. 준비 — 개발 DB PostgreSQL 에 시험 역할·스키마(정상 a, 컬럼 단계에서 실패하는 c)·테이블, 데이터 소스(맞는 비밀번호·틀린 비밀번호), 모델 수집
   R2. 변경 — 일반 사용자(jyjang)가 컬럼 추가·길이 수정·영문명 변경·삭제, 테이블 추가(+컬럼)·이름 변경·삭제, FK 추가, PK 추가·삭제를 DRAFT 로 두고
       일부는 신청(결재선 DM_CHANGE 1단계 관리자를 켠 신청 = 결재 문서, 결재선을 끈 신청 = 문서 없음). 관리자가 승인한 변경·관리자 직접 변경
-  R3. 수집 실패 — 틀린 비밀번호(접속 단계), 컬럼 단계 실패(테이블 단계 커밋 뒤) → 아무것도 반려되지 않음(이력·결재 문서·알림·자동 반려 수)
+  R3. 수집 실패 — 틀린 비밀번호(접속 단계), 컬럼 단계 실패(테이블 단계 뒤) → 아무것도 반려되지 않음(이력·결재 문서·알림·자동 반려 수).
+      114 권고 채택(10-28) — 수집은 한 트랜잭션이라 컬럼 단계에서 실패하면 테이블 단계도 남지 않는다(모델 행 그대로)
   R4. 재수집(화면 — 관리자 수집 확인창·진행 창, 요청자는 다른 창에 로그인) → 대기 이력 전부 REJECTED(반려자 system·사유·일시), 결재 문서 반려,
       요청자 알림(실시간 토스트·헤더 종·알림 테이블), 모델은 실제 DB 구조, 수집 결과(진행 창·수집이력·모델 목록)에 자동 반려 N건.
       권고 채택(10-28) — 수집이 읽은 칸은 수집 값, 수집이 덮지 않는 칸(컬럼 한글명, 테이블 한글명·설명)은 신청 전 값, 수집에 없는 컬럼·테이블의
@@ -199,6 +200,7 @@ def r1(sa, su):
             assert code(r) == 200, r
             ds[k] = psql(f"select ds_id from ndata.tb_data_source where dsn='{dsn}'")
             cleanup.append(lambda i=ds[k]: psql(f"delete from ndata.tb_data_source where ds_id='{i}'"))
+            cleanup.append(lambda i=ds[k]: psql(f"delete from quality.tb_gov_meta_db where ds_id='{i}'"))   # 수집이 남기는 DBMS 정보
         psql(f"update ndata.tb_data_source set conn_test_yn='Y' where ds_id in ('{ds['ok']}', '{ds['bad']}')")
         FX.update(role=role, a=a, c=c, ds=ds)
         nm = "ZZ110재수집모델_" + TAG
@@ -322,24 +324,35 @@ def r3(sa, su):
         assert res in ("(수집 이력 없음)", "N|||") and st == "DRAFT=15,SUBMITTED=3" and doc == "PROGRESS" and noti == "0"
     step("R3-1. 수집 실패(데이터 소스 비밀번호 틀림) → 아무것도 반려되지 않음", _bad_pw)
 
+    def model_sig():
+        # 모델 행 전체(테이블·컬럼·인덱스·제약조건)의 지문 — 실패한 수집 앞뒤로 같아야 한다
+        return psql("select " + "||'/'||".join(
+            f"(select count(*)||':'||coalesce(md5(string_agg(t::text, '|' order by t::text)),'') from quality.{tb} t where dm_id='{dm}')"
+            for tb in ("tb_data_model_obj", "tb_data_model_attr", "tb_data_model_index", "tb_data_model_constraint")))
+
     def _attr_fail():
-        # DBA 가 삭제 신청과 같이 실제 DB 에서도 지운 경우(컬럼 — 인덱스도 함께 없어짐, 테이블, PK), DB 에서도 이름을 바꾼 테이블.
-        # 아래 실패한 수집보다 먼저 한다 — 컬럼 단계에서 실패해도 그 앞 테이블 단계는 이미 커밋돼(4.12-38) 그때 DB 에 있던 테이블을 모델에 넣는다
+        # DBA 가 삭제 신청과 같이 실제 DB 에서도 지운 경우(컬럼 — 인덱스도 함께 없어짐, 테이블, PK), DB 에서도 이름을 바꾼 테이블
         psql(f"alter table {a}.t_main drop column gone_col")
         psql(f"drop table {a}.t_gone")
         psql(f"alter table {a}.t_pk2 drop constraint t_pk2_pkey")
         psql(f"alter table {a}.t_dbren rename to t_dbren2")
+        sig0 = model_sig()
         res = collect(sa, [a, c], FX["ds"]["ok"])
         st, doc, noti = status_summary()
-        print(f"  컬럼 단계 실패 수집={res} / 대기 이력={st} 결재 문서={doc} 반려 알림={noti}")
-        assert res.startswith("N|") and res.endswith("|") and st == "DRAFT=15,SUBMITTED=3" and doc == "PROGRESS" and noti == "0"
+        sig1 = model_sig()
+        print(f"  컬럼 단계 실패 수집={res} / 대기 이력={st} 결재 문서={doc} 반려 알림={noti} / 모델 행 그대로={sig0 == sig1}")
+        assert res == "N|||" and st == "DRAFT=15,SUBMITTED=3" and doc == "PROGRESS" and noti == "0"
+        # 114 권고 채택(10-28) — 수집 한 트랜잭션: 테이블 단계(c.t_bad, a.t_dbren2 MERGE)도 되돌려져 모델 행이 하나도 바뀌지 않는다
+        assert sig0 == sig1 and obj(c, "t_bad") == ""
         assert code(post(sa, "/api/dm/saveDataModelSchemas", [{"dataModelId": dm, "schemaNm": a, "useYn": "Y"},
                                                               {"dataModelId": dm, "schemaNm": c, "useYn": "N"}])) == 200
-        # 실패한 수집이 넣은 c 스키마 테이블을 삭제 대기로 — 다음 수집은 c 를 읽지 않으므로 감춘 채 남아야 한다(물리 삭제 안 함)
+        # 읽지 않는 c 스키마의 테이블을 삭제 대기로 — 다음 수집은 c 를 읽지 않으므로 감춘 채 남아야 한다(물리 삭제 안 함).
+        # 실패한 수집이 넣지 않으므로 관리자가 모델에 직접 추가해 둔다
+        assert code(post(sa, "/api/dm/addObj", {"dataModelId": dm, "objOwner": c, "objNm": "t_bad", "objNmKr": "읽지않는스키마"})) == 200
         assert obj(c, "t_bad") == "APPROVED|Y"
         assert code(post(su, "/api/dm/deleteObj", {"dataModelId": dm, "objOwner": c, "objNm": "t_bad"})) == 200
         FX["pending"].append(seq_of("DEL_OBJ", "t_bad"))
-    step("R3-2. 수집 실패(테이블 단계 커밋 뒤 컬럼 단계) → 아무것도 반려되지 않음", _attr_fail)
+    step("R3-2. 수집 실패(테이블 단계 뒤 컬럼 단계) → 아무것도 반려되지 않고 모델 행도 그대로", _attr_fail)
 
 
 # ---------------------------------------------------------------- R4 (화면)

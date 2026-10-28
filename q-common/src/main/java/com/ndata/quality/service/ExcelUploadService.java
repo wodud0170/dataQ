@@ -451,6 +451,9 @@ public class ExcelUploadService {
 					if (checkInvalidVal(dataRow.get(8)) != null) {
 						stdDomainVo.setDataDecimalLen(Short.parseShort(dataRow.get(8)));
 					}
+					// 114 권고 채택(10-28)·110번 3.12-15-c — 화면 등록과 같이 길이가 있어야 하는 타입(VARCHAR 등)은 1 이상
+					String lenErr = StdInputRule.domainLenError(stdDomainVo.getDataType(), stdDomainVo.getDataLen());
+					if (lenErr != null) throw new Exception(lenErr);
 					if (!dataRow.get(9).contains("CHAR")) {
 						stdDomainVo.setStorFmt(dataRow.get(9));
 					}

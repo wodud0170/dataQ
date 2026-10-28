@@ -127,6 +127,10 @@
 				<if test="schAprvYn != null">
 					AND A.APRV_YN = #{schAprvYn}
 				</if>
+				<!-- 114 권고 채택(10-28)·110번 3.12-15-a — 표준 승인 권한이 없으면 승인 대기 항목은 본인 것만 -->
+				<if test="pendingOwnerId != null">
+					AND (A.APRV_YN = 'Y' OR A.CRET_USER_ID = #{pendingOwnerId})
+				</if>
 				<if test="schCommStndYn != null and schCommStndYn != ''">
 					AND A.COMM_STND_YN = #{schCommStndYn}
 				</if>
@@ -514,6 +518,10 @@
 			</if>
 			<if test="schAprvYn != null">
 				AND A.APRV_YN = #{schAprvYn}
+			</if>
+			<!-- 114 권고 채택(10-28)·110번 3.12-15-a — 표준 승인 권한이 없으면 승인 대기 항목은 본인 것만 -->
+			<if test="pendingOwnerId != null">
+				AND (A.APRV_YN = 'Y' OR A.CRET_USER_ID = #{pendingOwnerId})
 			</if>
 			<if test="from != null and from != ''">
 				AND A.CRET_DT &gt;= #{from}

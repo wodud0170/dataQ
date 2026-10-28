@@ -12,6 +12,7 @@
 		<result property="changeType"      column="CHANGE_TYPE"/>
 		<result property="changeTier"      column="CHANGE_TIER"/>
 		<result property="submissionId"    column="SUBMISSION_ID"/>
+		<result property="submitDt"        column="SUBMIT_DT"/>
 		<result property="objOwner"        column="OBJ_OWNER"/>
 		<result property="objNm"           column="OBJ_NM"/>
 		<result property="attrNm"          column="ATTR_NM"/>
@@ -144,11 +145,12 @@
 		   <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
 	</update>
 
-	<!-- DRAFT → SUBMITTED 일괄 (신청 묶음) -->
+	<!-- DRAFT → SUBMITTED 일괄 (신청 묶음). 114 권고 채택(10-28) — 신청 시각 SUBMIT_DT (화면 "신청 시각") -->
 	<update id="submitDrafts" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
 		   SET APRV_STATUS  = 'SUBMITTED',
-		       SUBMISSION_ID = #{submissionId}
+		       SUBMISSION_ID = #{submissionId},
+		       SUBMIT_DT     = to_char(now(), 'YYYYMMDDHH24MISS')
 		 WHERE CHANGE_USER_ID = #{currentUserId}
 		   AND APRV_STATUS    = 'DRAFT'
 		   AND CHANGE_SEQ IN

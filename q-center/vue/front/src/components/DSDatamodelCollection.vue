@@ -222,6 +222,18 @@
                   color="ndColor"></v-text-field>
               </v-col>
             </v-row>
+            <!-- 114 권고 채택(10-28)·110 4.12-5-b — 모델의 시스템 (선택). 지정은 모델 직접 반영 권한(109번 #2 와 같은 기준) -->
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>시스템</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-autocomplete id="addDataModelSysCd" dense clearable color="ndColor" v-model="add_dataModelSysCd" :items="sysItems"
+                  item-text="text" item-value="value" placeholder="선택 (비워두면 시스템 없음)" no-data-text="시스템이 없습니다."
+                  :disabled="!canSetDs" :hint="canSetDs ? '' : '시스템 지정은 모델 직접 반영 권한이 필요합니다'" :persistent-hint="!canSetDs"
+                  :menu-props="{ top: false, offsetY: true }"></v-autocomplete>
+              </v-col>
+            </v-row>
             <!-- 데이터 소스 (선택) — 논리모델(설계 단계)은 비워둘 수 있음 -->
             <v-row>
               <v-col cols="4">
@@ -287,6 +299,18 @@
                 <v-text-field v-model="update_dataModelNm" ref="update_dataModelNm" name="update_dataModelNm"
                   :rules="[() => !!update_dataModelNm || '데이터모델명은 필수 입력값입니다.']" clearable required dense
                   placeholder="데이터모델명" color="ndColor"></v-text-field>
+              </v-col>
+            </v-row>
+            <!-- 114 권고 채택(10-28)·110 4.12-5-b — 모델의 시스템. 변경은 모델 직접 반영 권한(109번 #2 와 같은 기준) -->
+            <v-row>
+              <v-col cols="4">
+                <v-subheader>시스템</v-subheader>
+              </v-col>
+              <v-col cols="8">
+                <v-autocomplete id="updateDataModelSysCd" dense clearable color="ndColor" v-model="update_dataModelSysCd" :items="sysItems"
+                  item-text="text" item-value="value" placeholder="선택 (비워두면 시스템 없음)" no-data-text="시스템이 없습니다."
+                  :disabled="!canSetDs" :hint="canSetDs ? '' : '시스템 변경은 모델 직접 반영 권한이 필요합니다'" :persistent-hint="!canSetDs"
+                  :menu-props="{ top: false, offsetY: true }"></v-autocomplete>
               </v-col>
             </v-row>
             <!-- 데이터 소스 (선택) — 논리모델은 비워둘 수 있음 -->
@@ -384,6 +408,12 @@ export default {
     canSetDs() { return this.$can('DM_MANAGE'); },
     // 109번 #9 — 모델 수정에서 표준 준수 필수 켜고 끄기도 모델 직접 반영 권한. 서버도 다시 막는다
     canSetStndReq() { return this.$can('DM_MANAGE'); },
+    // 114 권고 채택(10-28)·110 4.12-5-b — 등록·수정 창의 시스템 선택지 (하위 시스템은 상위 > 하위 경로로)
+    sysItems() {
+      return (this.dataModelSysDataList || []).map(s => ({
+        text: (s.path && s.path.length ? s.path.join(' > ') : s.sysNm), value: s.sysCd,
+      }));
+    },
     hasDataSource() {
       return this.selectedItem.length > 0 && !!this.selectedItem[0].dataModelDsId;
     },

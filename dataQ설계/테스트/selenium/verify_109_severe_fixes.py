@@ -22,7 +22,7 @@
 필요:
   - q-center(28091) 기동
   - 환경 변수 PGPASSWORD (개발 DB admin), 선택 PSQL (psql.exe 경로)
-  - Docker oracle-19c 실행 (sqlplus / as sysdba 로 시험 계정을 만들고 지운다)
+  - Docker oracle-19c 실행 (sqlplus / as sysdba 로 시험 계정을 만들고 지운다). DATAQ_NO_ORACLE=1 이면 Oracle 을 건너뛰고 PostgreSQL 만
 시험 데이터(결재선·단어·결재 문서·알림·역할·시험 사용자·시스템·데이터소스·모델·대상 DB 시험 스키마)는 끝에서 지운다.
 """
 import base64, json, os, secrets, subprocess, sys, time, traceback
@@ -417,6 +417,10 @@ def s3(sa):
         targets.append({"dbms": "PostgreSQL", "owner": nm, "dm": dm, "cols": lambda t, o=nm: pg_cols(o, t),
                         "victim": lambda o=nm: psql(f"select count(*) from information_schema.tables where table_schema='{o}' and table_name='zz_victim'"),
                         "num": "NUMERIC", "fn": "CURRENT_TIMESTAMP", "ts_type": "TIMESTAMP"})
+        # DATAQ_NO_ORACLE=1 — PostgreSQL 만 (Docker 의 oracle-19c 를 부르지 않는다)
+        if os.environ.get("DATAQ_NO_ORACLE") == "1":
+            print(f"  DATAQ_NO_ORACLE=1 — Oracle 건너뜀 / 대상 {[(t['dbms'], t['owner'], t['dm']) for t in targets]}")
+            return
 
         onm = ("ZZ109O" + TAG).upper()
         opw = "Zz" + secrets.token_hex(6)

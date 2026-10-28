@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
  *   <li>DBMS 별 함수·키워드 목록({@link #FUNCS}) — 끝의 () 는 있어도 없어도 된다. DBMS 를 모르는 저장 때는 목록 전체</li>
  *   <li>PostgreSQL: 위 값 뒤의 ::타입, nextval('시퀀스'::regclass)</li>
  *   </ul>
- *   어디에 있든 ; -- /* *&#47; # \ 와 줄바꿈 같은 제어 문자는 받지 않는다. 255자까지.</li>
+ *   어디에 있든 ; -- /* *&#47; \ 와 줄바꿈 같은 제어 문자는 받지 않는다. # 은 작은따옴표 문자열 안에서만 받는다(예: '#FFFFFF'). 255자까지.</li>
  * </ul>
  * 실행 직전에는 문장마다 {@link #checkStatement} 로 한 문장인지(문자열 밖 ; 없음)·주석 표시가 없는지·괄호와 따옴표 짝이 맞는지 다시 본다.
  */
@@ -139,9 +139,29 @@ public final class DdlSafety {
 			if (c < 0x20 || c == 0x7f) return "줄바꿈·제어 문자는 쓸 수 없습니다";
 		}
 		if (t.indexOf(';') >= 0) return "; 는 쓸 수 없습니다";
-		if (t.contains("--") || t.contains("/*") || t.contains("*/") || t.indexOf('#') >= 0) return "주석 표시(-- /* */ #)는 쓸 수 없습니다";
+		// 114 권고 채택(10-28) — # 은 작은따옴표 문자열 안에서만 받는다 (예: '#FFFFFF'). 문자열 밖의 # 은 MariaDB 주석 시작이다
+		if (t.contains("--") || t.contains("/*") || t.contains("*/") || outsideStrings(t).indexOf('#') >= 0) return "주석 표시(-- /* */, 문자열 밖의 #)는 쓸 수 없습니다";
 		if (t.indexOf('\\') >= 0) return "\\ 는 쓸 수 없습니다";
 		return null;
+	}
+
+	/** 작은따옴표 문자열을 뺀 나머지 ('' 는 문자열 안의 따옴표) */
+	private static String outsideStrings(String t) {
+		StringBuilder b = new StringBuilder();
+		boolean inStr = false;
+		for (int i = 0; i < t.length(); i++) {
+			char c = t.charAt(i);
+			if (inStr) {
+				if (c == '\'') {
+					if (i + 1 < t.length() && t.charAt(i + 1) == '\'') { i++; continue; }
+					inStr = false;
+				}
+				continue;
+			}
+			if (c == '\'') inStr = true;
+			else b.append(c);
+		}
+		return b.toString();
 	}
 
 	private static boolean defaultForm(String t, String dbmsTp, int depth) {

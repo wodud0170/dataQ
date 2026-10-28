@@ -17,6 +17,8 @@ public class StdDataModelChangeHistoryVo {
 	private String changeType;     // ADD_OBJ / DEL_OBJ / RENAME_OBJ / ADD_ATTR / DEL_ATTR / MODIFY_ATTR_TYPE / MODIFY_ATTR_KR / SWAP_ATTR_ORD / ADD_PK / DEL_PK / ADD_FK / DEL_FK / ...
 	private String changeTier;     // TIER1 / TIER1_5 / TIER2
 	private String submissionId;   // 묶음 신청 ID (Tier 1 만)
+	/** 114 권고 채택(10-28) — 신청(DRAFT → SUBMITTED)한 시각 yyyyMMddHHmmss. 신청을 거치지 않은 이력은 null */
+	private String submitDt;
 	private String objOwner;
 	private String objNm;
 	private String attrNm;

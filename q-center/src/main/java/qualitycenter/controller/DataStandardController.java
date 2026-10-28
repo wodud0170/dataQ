@@ -168,6 +168,18 @@ public class DataStandardController {
 	}
 
 	/**
+	 * 114 권고 채택(10-28)·110번 3.12-15-a — 단어·용어·코드·도메인 목록에서 표준 승인 권한(STD_APPROVE)이 없는 사용자는
+	 * 승인 대기 항목을 본인이 등록한 것만 본다("승인 여부" 를 풀었을 때 다른 사용자의 승인 대기 항목이 보였다). 승인 화면과 같은 기준
+	 */
+	private NDQualityRetrieveCond pendingScope(NDQualityRetrieveCond c) {
+		if (!sessionService.hasPerm(PermCode.STD_APPROVE)) {
+			String uid = sessionService.getUserId();
+			c.setPendingOwnerId(uid == null ? "" : uid);   // 로그인하지 않은 호출은 승인 대기 항목을 보지 않는다
+		}
+		return c;
+	}
+
+	/**
 	 * 98번 — 엑셀 일괄등록 파일을 q-executor 로 넘긴다. 화면에서 고른 사전을 함께 보낸다.
 	 *
 	 * <p>외부 jar 의 WebClientHandler.postMultipartData 는 파일 파트만 싣기 때문에 사전은
@@ -473,7 +485,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getWordList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdWordVo> getWordList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getWordList : {}", retCond);
-		return sqlSessionTemplate.selectList("word.selectWordList", withDict(retCond));
+		return sqlSessionTemplate.selectList("word.selectWordList", pendingScope(withDict(retCond)));
 	}
 
 	/**
@@ -1000,7 +1012,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getTermsList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdTermsVo> getTermsList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getTermsList : {}", retCond);
-		return sqlSessionTemplate.selectList("terms.selectTermsList", withDict(retCond));
+		return sqlSessionTemplate.selectList("terms.selectTermsList", pendingScope(withDict(retCond)));
 	}
 
 	/**
@@ -1012,7 +1024,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getTermsListByCond", method = RequestMethod.POST)
 	public List<StdTermsVo> getTermsListByCond(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getTermsListByCond : {}", retCond);
-		return sqlSessionTemplate.selectList("terms.selectTermsList", withDict(retCond));
+		return sqlSessionTemplate.selectList("terms.selectTermsList", pendingScope(withDict(retCond)));
 	}
 
 	/**
@@ -1086,7 +1098,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getCodeInfoList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdCodeInfoVo> getCodeInfoList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getCodeInfoList : {}", retCond);
-		return sqlSessionTemplate.selectList("terms.selectCodeInfoList", withDict(retCond));
+		return sqlSessionTemplate.selectList("terms.selectCodeInfoList", pendingScope(withDict(retCond)));
 	}
 
 	/**
@@ -1592,6 +1604,11 @@ public class DataStandardController {
 		if (len < 0) {
 			throw new Exception("데이터 길이는 0 이상이어야 합니다 (입력값: " + len + ")");
 		}
+		// 114 권고 채택(10-28)·110번 3.12-15-c — 빈칸은 지금처럼 0(길이 없음)이지만, 길이가 있어야 하는 타입(VARCHAR 등)은 1 이상
+		String lenErr = StdInputRule.domainLenError(dt, len);
+		if (lenErr != null) {
+			throw new Exception(lenErr);
+		}
 		// dataDecimalLen: 음수 차단
 		short dec = vo.getDataDecimalLen();
 		if (dec < 0) {
@@ -1712,7 +1729,7 @@ public class DataStandardController {
 	@RequestMapping(value = "/getDomainList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDomainVo> getDomainList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		log.info(">> getDomainList : {}", retCond);
-		return sqlSessionTemplate.selectList("domain.selectDomainList", withDict(retCond));
+		return sqlSessionTemplate.selectList("domain.selectDomainList", pendingScope(withDict(retCond)));
 	}
 
 	/**
