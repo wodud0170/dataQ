@@ -651,8 +651,8 @@ export default {
           <hr style="margin:8px 0;">
           <div style="color:#D32F2F;font-weight:600;margin-bottom:6px;">⚠ 다음 사항을 확인해 주세요</div>
           <ul style="padding-left:18px;margin:0;color:#37474F;font-size:.9rem;line-height:1.6;">
-            <li>이미 등록된 테이블/컬럼 중 <b>물리명이 동일</b>한 행은 DB 메타데이터로 <b>덮어쓰기</b> 됩니다 (한글명/타입/길이/PK/FK 등)</li>
-            <li>사용자가 직접 입력한 한글명도 DB 코멘트로 <b>대체될 수 있습니다</b></li>
+            <li>이미 등록된 테이블/컬럼 중 <b>물리명이 동일</b>한 행은 DB 메타데이터로 <b>덮어쓰기</b> 됩니다 (타입/길이/NULL/PK/FK/기본값/코멘트, 표준 여부는 다시 판정)</li>
+            <li>한글명은 바꾸지 않습니다 — DB 코멘트는 코멘트 칸에만 들어갑니다</li>
             <li>이번 수집에 포함되지 않은 기존 행은 <b>그대로 보존</b>됩니다 (자동 삭제 없음)</li>
           </ul>
         </div>`,
@@ -864,7 +864,8 @@ export default {
           let _obj = {};
           _obj = {
             'id': _data[i].id,
-            'dsn': _data[i].dsn,
+            'dsn': _data[i].dsn + (_data[i].connTestYn === 'Y' ? '' : ' (연결 미확인)'),
+            'connTestYn': _data[i].connTestYn,
           }
           _dataSourceList.push(_obj);
         }
@@ -930,8 +931,9 @@ export default {
     fieldcheck(status) {
       let _attr = null;
 
+      // 110 4.12-13-a — 지운 뒤 남은 빈칸·공백도 빈 이름이다 (예전에는 null 만 막았다)
       if (status === 'add') {
-        if (this.add_dataModelNm === null) {
+        if (!(this.add_dataModelNm || '').trim()) {
           _attr = '데이터 모델명은';
           this.$refs.add_dataModelNm.focus()
         }
@@ -947,7 +949,7 @@ export default {
           return false;
         }
       } else if (status === 'update') {
-        if (this.update_dataModelNm === null) {
+        if (!(this.update_dataModelNm || '').trim()) {
           _attr = '데이터 모델명은';
           this.$refs.update_dataModelNm.focus()
         }
@@ -1057,6 +1059,19 @@ export default {
     },
     updateDataModel() {
       try {
+        // 110 4.12-13-b — 데이터 소스를 바꿀 때도 등록과 같이 연결 테스트를 확인한다
+        if (this.update_dataSource && this.update_dataSource !== this.selectedItem[0].dataModelDsId) {
+          const selectedDs = this.dataSourceList.find(ds => ds.id === this.update_dataSource);
+          if (selectedDs && selectedDs.connTestYn !== 'Y') {
+            this.$swal.fire({
+              title: '연결 테스트가 필요합니다',
+              text: '데이터 소스의 연결 테스트를 먼저 수행해주세요. (관리 > 데이터 소스)',
+              icon: 'warning',
+              confirmButtonText: '확인',
+            });
+            return;
+          }
+        }
         const _ver = (this.update_ver && String(this.update_ver).trim()) || '1.0';
         let dataModleData = {
           'dataModelId': this.update_dataModelId,

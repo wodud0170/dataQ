@@ -108,14 +108,14 @@
           <v-alert v-if="uploadErrors && uploadErrors.length > 0" type="error" dense text>
             오류 {{ uploadErrors.length }}건 — 수정 후 다시 업로드하세요.
             <div v-for="(e, i) in uploadErrors.slice(0, 5)" :key="'e' + i" style="font-size:.8rem;">
-              · {{ e.row }}행: {{ e.msg || e.reason }}
+              · {{ e.row }}행: {{ e.message }}
             </div>
             <div v-if="uploadErrors.length > 5" style="font-size:.8rem;">외 {{ uploadErrors.length - 5 }}건</div>
           </v-alert>
           <v-alert v-if="uploadWarnings && uploadWarnings.length > 0" type="warning" dense text>
             경고 {{ uploadWarnings.length }}건
             <div v-for="(w, i) in uploadWarnings.slice(0, 5)" :key="'w' + i" style="font-size:.8rem;">
-              · {{ w.row }}행: {{ w.msg || w.reason }}
+              · {{ w.row }}행: {{ w.message }}
             </div>
             <div v-if="uploadWarnings.length > 5" style="font-size:.8rem;">외 {{ uploadWarnings.length - 5 }}건</div>
           </v-alert>
@@ -578,6 +578,7 @@ export default {
           const pv = await axios.get(this.$APIURL.base + 'api/dm/previewObjRename', {
             params: {
               dataModelId: this.selectedModelId,
+              objOwner:    this.objForm.origObjOwner,   // 110 4.12-17 — 그 테이블의 소유자로 센다
               origObjNm:   this.objForm.origObjNm,
               newObjNm:    newNm,
             }

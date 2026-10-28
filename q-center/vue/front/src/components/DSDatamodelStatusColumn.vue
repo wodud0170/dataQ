@@ -493,15 +493,16 @@
         <v-card-text style="max-height: 70vh; overflow-y: auto;">
           <v-alert v-if="uploadErrors && uploadErrors.length > 0" type="error" dense text>
             오류 {{ uploadErrors.length }}건 — 수정 후 다시 업로드하세요.
+            <!-- 110 4.12-20 — 서버는 사유를 message 로 보낸다 -->
             <div v-for="(e, i) in uploadErrors.slice(0, 5)" :key="'e' + i" style="font-size:.8rem;">
-              · {{ e.row }}행: {{ e.msg || e.reason }}
+              · {{ e.row }}행: {{ e.message }}
             </div>
             <div v-if="uploadErrors.length > 5" style="font-size:.8rem;">외 {{ uploadErrors.length - 5 }}건</div>
           </v-alert>
           <v-alert v-if="uploadWarnings && uploadWarnings.length > 0" type="warning" dense text>
             경고 {{ uploadWarnings.length }}건
             <div v-for="(w, i) in uploadWarnings.slice(0, 5)" :key="'w' + i" style="font-size:.8rem;">
-              · {{ w.row }}행: {{ w.msg || w.reason }}
+              · {{ w.row }}행: {{ w.message }}
             </div>
           </v-alert>
           <v-data-table :items="uploadRows" :headers="uploadAttrHeaders" dense
@@ -526,38 +527,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- 용어 상세 정보 Modal -->
-    <v-dialog max-width="800" v-model="termDataModalShow">
-      <NdModal @hide="termDataModalShow = false" :footer-submit="false" header-title="용어 상세 정보" footer-hide-title="확인">
-        <template v-slot:body>
-          <v-container fluid>
-            <v-data-table id="term_detail_table" :items="termDetailItem" :loading="termLoading"
-              hide-default-footer class="px-4 pb-3">
-              <template v-slot:body="{ items }" v-if="termDetailItem.length !== 0">
-                <tbody>
-                  <tr v-for="header in termDetaileHeaders" :key="header.value">
-                    <td :style="{ backgroundColor: 'rgba(63, 81, 181, 0.08)', width: '25%' }">{{ header.text }}</td>
-                    <td v-for="item in items" :key="item.termNm">
-                      <div v-if="Array.isArray(item[header.value])">
-                        <div v-for="item2 in item[header.value]" :key="item2">{{ item2 }}</div>
-                      </div>
-                      <div v-else>{{ item[header.value] }}</div>
-                    </td>
-                  </tr>
-                </tbody>
-              </template>
-              <template #top>
-                <v-progress-linear v-show="termLoading" color="indigo darken-2" indeterminate />
-              </template>
-              <template #no-data>
-                <v-alert v-show="!termLoading">데이터가 존재하지 않습니다.</v-alert>
-              </template>
-            </v-data-table>
-          </v-container>
-        </template>
-      </NdModal>
-    </v-dialog>
-
     <!-- 88번 거버넌스 — 내 변경 신청 모달 (DRAFT 일괄 → SUBMITTED) -->
     <DMSubmitModal v-model="submitModalShow" @submitted="load" />
     <!-- 104번 WP7-26 -->
@@ -569,14 +538,13 @@
 <script>
 import axios from 'axios';
 import { eventBus } from '../eventBus';
-import NdModal from "./../views/modal/NdModal.vue"
 import DMSubmitModal from './DMSubmitModal.vue';
 import StdImpactDialog from './StdImpactDialog.vue';
 
 export default {
   name: 'DSDatamodelStatusColumn',
   props: ['isMobile'],
-  components: { NdModal, DMSubmitModal, StdImpactDialog },
+  components: { DMSubmitModal, StdImpactDialog },
   watch: {
     mergedItems() {
       this.pageCount = Math.ceil(this.mergedItems.length / this.itemsPerPage);
@@ -632,9 +600,6 @@ export default {
     pageCount: null,
     itemsPerPage: 20,
     tableViewLengthList: [10, 20, 30, 50, 100],
-    termDataModalShow: false,
-    termDetailItem: [],
-    termLoading: false,
     // 그리드 편집 상태
     objOptions: [],
     addTargetKey: null,
@@ -728,23 +693,6 @@ export default {
       { text: '참조 컬럼', value: 'refAttrNmKr', align: 'center', sortable: false, width: '120px' },
       { text: '삭제 규칙', value: 'deleteRule', align: 'center', sortable: false, width: '90px' },
       { text: '메시지', value: '_msg', sortable: false },
-    ],
-    termDetaileHeaders: [
-      { text: '용어명', align: 'center', sortable: false, value: 'termsNm' },
-      { text: '용어영문약어명', sortable: false, align: 'center', value: 'termsEngAbrvNm' },
-      { text: '용어설명', sortable: false, align: 'center', value: 'termsDesc' },
-      { text: '도메인명', sortable: false, align: 'center', value: 'domainNm' },
-      { text: '이음동의어목록', sortable: false, align: 'center', value: 'allophSynmLst' },
-      { text: '코드그룹', sortable: false, align: 'center', value: 'codeGrp' },
-      { text: '담당기관명', sortable: false, align: 'center', value: 'chrgOrg' },
-      { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn' },
-      { text: '제정차수', sortable: false, align: 'center', value: 'magntdOrd' },
-      { text: '승인여부', sortable: false, align: 'center', value: 'aprvYn' },
-      { text: '승인상태수정일시', sortable: false, align: 'center', value: 'aprvStatUpdtDt' },
-      { text: '생성일시', sortable: false, align: 'center', value: 'cretDt' },
-      { text: '생성사용자ID', sortable: false, align: 'center', value: 'cretUserId' },
-      { text: '수정일시', sortable: false, align: 'center', value: 'updtDt' },
-      { text: '수정사용자ID', sortable: false, align: 'center', value: 'updtUserId' },
     ],
   }),
   computed: {
@@ -932,32 +880,6 @@ export default {
       return entry && entry.byCol[item.attrNm] && entry.byCol[item.attrNm].fk || null;
     },
 
-    // 그리드 셀의 PK/FK 체크박스 클릭 — 설정된 행은 해제(삭제), 미설정 행은 안내
-    onPkCheckClick(item, e) {
-      if (e && typeof e.preventDefault === 'function') e.preventDefault();
-      if (this.getPkInfo(item)) {
-        this.confirmDeletePk(item);
-      } else {
-        this.$swal.fire({
-          title: 'PK 생성은 위쪽 [PK 생성] 버튼 사용',
-          text: '왼쪽 체크박스로 컬럼들을 선택한 뒤 상단 [PK 생성] 을 클릭하세요. (다중 컬럼 = 복합키)',
-          icon: 'info',
-        });
-      }
-    },
-    onFkCheckClick(item, e) {
-      if (e && typeof e.preventDefault === 'function') e.preventDefault();
-      if (this.getFkInfo(item)) {
-        this.confirmDeleteFk(item);
-      } else {
-        this.$swal.fire({
-          title: 'FK 생성은 위쪽 [FK 생성] 버튼 사용',
-          text: '왼쪽 체크박스로 자기 테이블의 컬럼들을 선택한 뒤 상단 [FK 생성] 을 클릭하세요.',
-          icon: 'info',
-        });
-      }
-    },
-
     // 선택된 행들에서 PK 모달 진입 — 같은 테이블 + saved 만 허용
     openPkDialogFromSelection() {
       const sel = this.selectedRows || [];
@@ -982,6 +904,11 @@ export default {
         columns: sel.map(r => r.attrNm),
       };
       this.pkDialog = true;
+      // 104번 WP3 — 비우면 쓰일 이름을 DDL 규칙(PK 이름 규칙)으로 보여 준다
+      // (110 4.12-6-b — 진입이 없던 openPkDialog 에만 있어 안내가 늘 기본값이었다)
+      axios.get(this.$APIURL.base + 'api/ddlRule/pkTemplate').then(res => {
+        if (res.data && res.data.resultCode === 200 && res.data.contents) this.pkNameTemplate = res.data.contents;
+      });
     },
     openFkDialogFromSelection() {
       const sel = this.selectedRows || [];
@@ -1013,20 +940,6 @@ export default {
     },
 
     // ===== PK 모달 =====
-    openPkDialog(item) {
-      this.pkForm = {
-        dataModelId: this.selectedModelId,
-        objOwner: item.objOwner || '',
-        objNm: item.objNm,
-        pkName: '',
-        columns: [item.attrNm],
-      };
-      this.pkDialog = true;
-      // 104번 WP3 — 비우면 쓰일 이름을 DDL 규칙(PK 이름 규칙)으로 보여 준다
-      axios.get(this.$APIURL.base + 'api/ddlRule/pkTemplate').then(res => {
-        if (res.data && res.data.resultCode === 200 && res.data.contents) this.pkNameTemplate = res.data.contents;
-      });
-    },
     submitPk() {
       const cols = (this.pkForm.columns || []).filter(c => c);
       if (cols.length === 0) {
@@ -1109,20 +1022,6 @@ export default {
     },
 
     // ===== FK 모달 =====
-    openFkDialog(item) {
-      this.fkForm = {
-        dataModelId: this.selectedModelId,
-        objOwner: item.objOwner || '',
-        objNm: item.objNm,
-        fkName: '',
-        refOwner: '',
-        refTableNm: '',
-        refTableKey: null,
-        mappings: [{ ownAttrNm: item.attrNm, refAttrNm: null }],
-      };
-      this.fkRefColumnOptions = [];
-      this.fkDialog = true;
-    },
     onRefTableChange(key) {
       const tgt = (this.objOptions || []).find(o => o.key === key);
       if (!tgt) { this.fkForm.refOwner = ''; this.fkForm.refTableNm = ''; this.fkRefColumnOptions = []; return; }
@@ -1309,8 +1208,11 @@ export default {
           attrOrder,
           nullableYn, termsStndYn: item.termsStndYn, domainStndYn: item.domainStndYn,
           pkYn, fkYn, defaultVal,
+          // 110 4.12-25 — 미승인 행 색(row-draft·row-rejected)이 이 값을 본다
+          aprvStatus: item.aprvStatus,
           clctId: item.clctId, dataModelId: item.dataModelId,
-          _rowKey: 's_' + item.objNm + '_' + item.attrNm,
+          // 110 4.12-26 — 소유자까지 (같은 이름 테이블이 다른 소유자로 있으면 행 키가 겹쳤다)
+          _rowKey: 's_' + (item.objOwner || '') + '_' + item.objNm + '_' + item.attrNm,
           _mode: 'saved',
           _resolveReason: null,
           _orig: { attrNmKr, nullableYn, pkYn, fkYn, defaultVal,
@@ -1467,7 +1369,14 @@ export default {
         objNm: item.objNm,
         attrNm: item.attrNm,
         direction: direction,
-      }).then(() => { this.load(); })
+      }).then((res) => {
+        // 110 4.12-28-b — 서버는 실패를 HTTP 200 + resultCode 로 돌려준다 (예전에는 보지 않고 재조회만 했다)
+        if (!(res.data && res.data.resultCode === 200)) {
+          this.$swal.fire({ title: '순서 변경 실패', text: (res.data && res.data.resultMessage) || '실패', icon: 'error' });
+          return;
+        }
+        this.load();
+      })
       .catch((e) => this.$swal.fire({
         title: '순서 변경 실패',
         text: (e.response && e.response.data && e.response.data.resultMessage) || '실패',
@@ -1715,7 +1624,8 @@ export default {
         showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소'
       }).then((r) => {
         if (!r.isConfirmed) return;
-        this.pendingDeletes.push({ objNm: item.objNm, attrNm: item.attrNm });
+        // 110 4.12-26 — 소유자까지 보낸다 (없으면 서버가 같은 이름 테이블 중 첫 행의 소유자로 정했다)
+        this.pendingDeletes.push({ objOwner: item.objOwner || '', objNm: item.objNm, attrNm: item.attrNm });
         this.dmColumnAllItems = this.dmColumnAllItems.filter(x => x._rowKey !== item._rowKey);
       });
     },
@@ -1737,7 +1647,7 @@ export default {
           if (!r.isConfirmed) return;
           newSel.forEach(n => this.removeNewRow(n));
           savedSel.forEach(s => {
-            this.pendingDeletes.push({ objNm: s.objNm, attrNm: s.attrNm });
+            this.pendingDeletes.push({ objOwner: s.objOwner || '', objNm: s.objNm, attrNm: s.attrNm });
             this.dmColumnAllItems = this.dmColumnAllItems.filter(x => x._rowKey !== s._rowKey);
           });
           this.selectedRows = [];
@@ -1874,7 +1784,8 @@ export default {
     saveAll() {
       // 영문명(ATTR_NM) 변경된 UPDATE 행이 있으면 cascade 안내 confirm
       const dirtyForCheck = (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it));
-      const renamed = dirtyForCheck.filter(r => r._orig && (r.attrNm || '') !== (r._orig.attrNm || ''));
+      // 110 4.12-23 — 대소문자만 다르면 서버가 이름 변경으로 보지 않는다
+      const renamed = dirtyForCheck.filter(r => r._orig && (r.attrNm || '').toUpperCase() !== (r._orig.attrNm || '').toUpperCase());
       if (renamed.length > 0) {
         const list = renamed.slice(0, 6).map(r =>
           '· ' + r.objNm + ': ' + (r._orig.attrNm || '') + ' → ' + (r.attrNm || '')).join('<br>');
@@ -2123,7 +2034,6 @@ export default {
         attrs: saved.map(r => ({
           objNm: r.objNm, attrNm: r.attrNm, attrNmKr: r.attrNmKr, objOwner: r.objOwner,
         })),
-        dryRun: true,
       };
       axios.post(this.$APIURL.base + 'api/dm/resolveAttrs', payload).then((res) => {
         const data = res.data || {};
@@ -2203,7 +2113,6 @@ export default {
         attrs: saved.map(r => ({
           objNm: r.objNm, attrNm: r.attrNm, attrNmKr: r.attrNmKr, objOwner: r.objOwner,
         })),
-        dryRun: true,
       };
       axios.post(this.$APIURL.base + 'api/dm/resolveAttrsByEng', payload).then((res) => {
         const data = res.data || {};
@@ -2239,19 +2148,6 @@ export default {
         this.resolvingByEng = false;
         const msg = (err.response && err.response.data && err.response.data.resultMessage) || '변환 실패';
         this.$swal.fire({ title: '변환 실패', text: msg, icon: 'error' });
-      });
-    },
-    showTermData(item) {
-      this.termLoading = true;
-      this.termDataModalShow = true;
-      axios.get(this.$APIURL.base + "api/std/getTermsInfoByNm", {
-        params: { 'termsNm': item.attrNmKr }
-      }).then((res) => {
-        this.termDetailItem = res.data;
-        this.termLoading = false;
-      }).catch(() => {
-        this.$swal.fire({ title: '용어 검색 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
-        this.termLoading = false;
       });
     },
     columnDataDownload() {
@@ -2401,7 +2297,15 @@ export default {
     if (this._pasteHandler) document.removeEventListener('paste', this._pasteHandler);
     if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
   },
+  // 110 4.12-29 — 탭이 keep-alive 라 다른 탭에 있을 때도 붙여넣기가 이 화면에 신규 행을 만들었다. 보이는 동안만 듣는다
+  deactivated() {
+    if (this._pasteHandler) document.removeEventListener('paste', this._pasteHandler);
+  },
   activated() {
+    if (this._pasteHandler) {
+      document.removeEventListener('paste', this._pasteHandler);
+      document.addEventListener('paste', this._pasteHandler);
+    }
     if (eventBus.pendingColumnView) {
       const pending = eventBus.pendingColumnView;
       eventBus.pendingColumnView = null;

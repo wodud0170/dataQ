@@ -284,9 +284,13 @@ export default {
       }).catch((e) => this.$swal.fire({ title: '저장 실패', text: this._msg(null, e), icon: 'error' }));
     },
     delBiz(item) {
-      this.$swal.fire({ title: `'${item.bizAreaNm}' 삭제?`, icon: 'warning', showCancelButton: true, confirmButtonText: '삭제' }).then(r => {
+      // 110 5.8-31-c — 취소 버튼 라벨, 5.8-11-c — 실패(resultCode) 안내 (예전에는 권한 없음도 조용히 넘어갔다)
+      this.$swal.fire({ title: `'${item.bizAreaNm}' 삭제?`, icon: 'warning', showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소' }).then(r => {
         if (!r.isConfirmed) return;
-        axios.post(this.$APIURL.base + 'api/area/biz/delete', { bizAreaId: item.bizAreaId }).then(() => { this.loadAll(); });
+        axios.post(this.$APIURL.base + 'api/area/biz/delete', { bizAreaId: item.bizAreaId }).then((res) => {
+          if (!(res.data && res.data.resultCode === 200)) { this.$swal.fire({ title: '삭제 실패', text: this._msg(res), icon: 'error' }); return; }
+          this.loadAll();
+        }).catch((e) => this.$swal.fire({ title: '삭제 실패', text: this._msg(null, e), icon: 'error' }));
       });
     },
     // ===== 104번 WP8-38 — 주제영역 =====
@@ -325,7 +329,7 @@ export default {
       }).catch((e) => this.$swal.fire({ title: '저장 실패', text: this._msg(null, e), icon: 'error' }));
     },
     delSubj(item) {
-      this.$swal.fire({ title: `'${item.subjAreaNm}' 삭제?`, icon: 'warning', showCancelButton: true, confirmButtonText: '삭제' }).then(r => {
+      this.$swal.fire({ title: `'${item.subjAreaNm}' 삭제?`, icon: 'warning', showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소' }).then(r => {
         if (!r.isConfirmed) return;
         axios.post(this.$APIURL.base + 'api/area/subj/delete', { subjAreaId: item.subjAreaId }).then((res) => {
           if (!(res.data && res.data.resultCode === 200)) { this.$swal.fire({ title: '삭제 실패', text: this._msg(res), icon: 'error' }); return; }

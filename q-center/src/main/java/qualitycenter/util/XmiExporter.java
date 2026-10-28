@@ -29,9 +29,12 @@ public class XmiExporter {
     /**
      * tables + columns → XMI 2.1 XML String.
      *
+     * 110 4.12-34 — 테이블 목록 기준으로 내보낸다(컬럼 없는 테이블 포함). 한글명은 ownedComment body(XmiParser 가 읽는 자리),
+     * 데이터 타입·길이·소수점은 xmi:Extension(extender="DataQ")의 column 요소로 싣는다 — 다시 가져올 때 XmiParser 가 읽는다.
+     *
      * @param modelName 모델명 (uml:Model name)
-     * @param tables    테이블 list (objNm 만 사용)
-     * @param columns   컬럼 list (objNm/attrNm/dataType/nullableYn/pkYn/fkYn/fkParentObjNm/attrOrder)
+     * @param tables    테이블 list (objOwner/objNm/objNmKr)
+     * @param columns   컬럼 list (objOwner/objNm/attrNm/attrNmKr/dataType/dataLen/dataDecimalLen/nullableYn/pkYn/fkYn/fkParentObjNm/attrOrder)
      */
     public static String export(String modelName,
                                  List<Map<String, Object>> tables,
@@ -52,9 +55,10 @@ public class XmiExporter {
             xml.append("    <packagedElement xmi:type=\"uml:Class\"")
                .append(" xmi:id=\"cls-").append(slug(tableName)).append("\"")
                .append(" name=\"").append(esc(tableName)).append("\">\n");
+            appendComment(xml, "      ", "cmt-cls-" + slug(tableName), str(tbl.get("objNmKr")));
 
-            // 해당 테이블의 컬럼들 (attrOrder 정렬)
-            List<Map<String, Object>> cols = filterAndSort(columns, tableName);
+            // 해당 테이블의 컬럼들 (attrOrder 정렬) — 소유자까지 같은 컬럼만
+            List<Map<String, Object>> cols = filterAndSort(columns, str(tbl.get("objOwner")), tableName);
             for (Map<String, Object> col : cols) {
                 appendOwnedAttribute(xml, col, tableName);
             }
@@ -104,8 +108,28 @@ public class XmiExporter {
         xml.append("        <lowerValue xmi:type=\"uml:LiteralInteger\" value=\"")
            .append(lower).append("\"/>\n");
         xml.append("        <upperValue xmi:type=\"uml:LiteralUnlimitedNatural\" value=\"1\"/>\n");
+        appendComment(xml, "        ", "cmt-attr-" + slug(tableName) + "-" + slug(attrName), str(col.get("attrNmKr")));
+        // 110 4.12-34 — DataQ 가 다시 가져올 때 쓰는 실제 타입·길이 (UML PrimitiveType 만으로는 VARCHAR(20) 같은 정보가 없다)
+        if (!dataType.isEmpty()) {
+            xml.append("        <xmi:Extension extender=\"DataQ\"><column dataType=\"").append(esc(dataType))
+               .append("\" dataLen=\"").append(parseLong(col.get("dataLen")))
+               .append("\" dataDecimalLen=\"").append(parseShort(col.get("dataDecimalLen"), 0))
+               .append("\"/></xmi:Extension>\n");
+        }
 
         xml.append("      </ownedAttribute>\n");
+    }
+
+    /** 한글명 → ownedComment body (비었으면 쓰지 않는다 — XmiParser 는 없으면 영문명을 한글명으로 둔다) */
+    private static void appendComment(StringBuilder xml, String indent, String id, String body) {
+        if (body == null || body.trim().isEmpty()) return;
+        xml.append(indent).append("<ownedComment xmi:type=\"uml:Comment\" xmi:id=\"").append(id)
+           .append("\" body=\"").append(esc(body.trim())).append("\"/>\n");
+    }
+
+    private static long parseLong(Object v) {
+        if (v instanceof Number) return ((Number) v).longValue();
+        return 0L;
     }
 
     /** DataQ 의 자유로운 dataType 을 XMI PrimitiveType 으로 normalize. */
@@ -128,10 +152,10 @@ public class XmiExporter {
     }
 
     private static List<Map<String, Object>> filterAndSort(List<Map<String, Object>> all,
-                                                            String tableName) {
+                                                            String owner, String tableName) {
         List<Map<String, Object>> out = new java.util.ArrayList<>();
         for (Map<String, Object> c : all) {
-            if (tableName.equals(str(c.get("objNm")))) out.add(c);
+            if (tableName.equals(str(c.get("objNm"))) && owner.equals(str(c.get("objOwner")))) out.add(c);
         }
         out.sort((a, b) -> {
             int oa = parseShort(a.get("attrOrder"), 0);

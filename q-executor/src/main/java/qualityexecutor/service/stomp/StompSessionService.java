@@ -74,6 +74,22 @@ public class StompSessionService {
     }
 
     /**
+     * 110 4.12-37-b — reload 메시지를 요청한 창(소켓 세션)에만 전송. ssId 가 없으면 전체 (sendMessage 와 같은 규칙)
+     */
+    public void sendReload(String ssId, WsDestType dest, String data) {
+        WsVo vo = new WsVo();
+        vo.setType(WsType.RELOAD);
+        vo.setDest(dest);
+        vo.setData(data);
+        vo.setReceiver("ALL");
+        if (StringUtils.isEmpty(ssId)) {
+            sendMessage(vo);
+        } else {
+            this.stompSession.send(this.DEST_WINDOW + ssId, new Gson().toJson(vo, WsVo.class));
+        }
+    }
+
+    /**
      * alram 메시지를 전송
      * @param noticeType	INFO, WARNING, ERROR 등
      * @param data	전송할 알림 메시지

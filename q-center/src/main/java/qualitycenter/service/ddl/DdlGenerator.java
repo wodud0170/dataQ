@@ -16,6 +16,7 @@ import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelObjVo;
 
 import lombok.extern.slf4j.Slf4j;
+import qualitycenter.controller.DataModelController;
 
 @Slf4j
 @Service
@@ -30,8 +31,11 @@ public class DdlGenerator {
 	@Autowired
 	private DdlRuleService rules;
 
-	/** 모델 전체 DDL (내려받기). dbType 이 규칙 없는 DBMS 면 Oracle 문법 */
-	public String generate(String dataModelId, String dbType) {
+	/**
+	 * 모델 전체 DDL (내려받기). dbType 이 규칙 없는 DBMS 면 Oracle 문법.
+	 * 110 4.12-11 — 테이블·컬럼은 화면 목록과 같이 승인됐거나 viewerId 가 요청한 행만 (예전에는 다른 사용자의 미승인 행까지 담았다)
+	 */
+	public String generate(String dataModelId, String dbType, String viewerId) {
 		SqlDialect dialect = dialects.forDbms(dbType);
 		if (dialect == null) dialect = new OracleDialect(rules);
 
@@ -39,8 +43,14 @@ public class DdlGenerator {
 		String modelNm = model == null ? dataModelId : String.valueOf(model.get("dataModelNm"));
 
 		// CLCT 폐기 이후 OBJ/ATTR 은 DM_ID 기반 — clctId 파라미터는 실제로 DM_ID가 들어감
-		List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", dataModelId);
-		List<StdDataModelAttrVo> attrs = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", dataModelId);
+		List<StdDataModelObjVo> objs = new ArrayList<>();
+		for (StdDataModelObjVo o : sqlSessionTemplate.<StdDataModelObjVo>selectList("datamodel.selectDataModelObjListByClctId", dataModelId)) {
+			if (DataModelController.visibleTo(o.getAprvStatus(), o.getRequesterUserId(), viewerId)) objs.add(o);
+		}
+		List<StdDataModelAttrVo> attrs = new ArrayList<>();
+		for (StdDataModelAttrVo a : sqlSessionTemplate.<StdDataModelAttrVo>selectList("datamodel.selectDataModelAttrListByClctId", dataModelId)) {
+			if (DataModelController.visibleTo(a.getAprvStatus(), a.getRequesterUserId(), viewerId)) attrs.add(a);
+		}
 		List<Map<String, Object>> constraints = sqlSessionTemplate.selectList("datamodel.selectDataModelConstraintListByDmId", dataModelId);
 
 		StringBuilder sb = new StringBuilder();
@@ -52,13 +62,15 @@ public class DdlGenerator {
 		}
 
 		Map<String, List<StdDataModelAttrVo>> attrByObj = groupAttrsByObj(attrs);
-		Map<String, List<Map<String, Object>>> consByObj = groupConstraintsByObj(constraints);
+		Map<String, List<Map<String, Object>>> consByObj = groupConstraintsByObj(constraints, viewerId);
 
 		for (StdDataModelObjVo obj : objs) {
 			// 내려받기 파일은 소유자 접두어 없이 만든다 (받은 쪽 스키마에서 실행)
 			// 109번 #3 — 이름·타입·기본값 검사에 걸린 테이블은 문장 대신 이유를 주석으로 남긴다
+			// 110 4.12-15-a — 컬럼·제약조건은 (소유자, 테이블) 로 묶는다 (예전에는 테이블명만이라 소유자가 다른 같은 이름 테이블이 섞였다)
+			String key = ownerKey(obj.getObjOwner(), obj.getObjNm());
 			try {
-				for (String stmt : createTableStatements(null, obj, attrByObj.get(obj.getObjNm()), consByObj.get(obj.getObjNm()), dialect)) {
+				for (String stmt : createTableStatements(null, obj, attrByObj.get(key), consByObj.get(key), dialect)) {
 					sb.append(stmt).append(";\n");
 				}
 			} catch (DdlSafety.Invalid e) {
@@ -96,20 +108,24 @@ public class DdlGenerator {
 		sb.append("-- ====================================================\n\n");
 	}
 
+	private static String ownerKey(Object owner, Object objNm) {
+		return (owner == null ? "" : owner) + "|" + objNm;
+	}
+
 	private Map<String, List<StdDataModelAttrVo>> groupAttrsByObj(List<StdDataModelAttrVo> attrs) {
 		Map<String, List<StdDataModelAttrVo>> m = new LinkedHashMap<>();
 		for (StdDataModelAttrVo a : attrs) {
-			m.computeIfAbsent(a.getObjNm(), k -> new ArrayList<>()).add(a);
+			m.computeIfAbsent(ownerKey(a.getObjOwner(), a.getObjNm()), k -> new ArrayList<>()).add(a);
 		}
 		return m;
 	}
 
-	private Map<String, List<Map<String, Object>>> groupConstraintsByObj(List<Map<String, Object>> cons) {
+	/** 110 4.12-11 — 제약조건도 승인됐거나 viewerId 가 요청한 행만 */
+	private Map<String, List<Map<String, Object>>> groupConstraintsByObj(List<Map<String, Object>> cons, String viewerId) {
 		Map<String, List<Map<String, Object>>> m = new LinkedHashMap<>();
-		if (cons == null) return m;
 		for (Map<String, Object> c : cons) {
-			String tbl = String.valueOf(c.get("tableNm"));
-			m.computeIfAbsent(tbl, k -> new ArrayList<>()).add(c);
+			if (!DataModelController.visibleTo((String) c.get("aprvStatus"), (String) c.get("requesterUserId"), viewerId)) continue;
+			m.computeIfAbsent(ownerKey(c.get("objOwner"), c.get("tableNm")), k -> new ArrayList<>()).add(c);
 		}
 		return m;
 	}

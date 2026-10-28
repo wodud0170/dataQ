@@ -625,16 +625,22 @@ public class ExcelDownloadService {
     }
 
     //데이터모델 테이블정보 다운로드
-    public void getDMObjsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        // 엑셀에 저장할 데이터를 조회
-        List<StdDataModelObjVo> dmObjVoLst = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", searchKey);
+    public void getDMObjsExcel(String searchKey, String viewerId, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        // 엑셀에 저장할 데이터를 조회 — 110 4.12-11: 화면 목록과 같이 승인됐거나 내가 요청한 행만 (DataModelController.visibleTo)
+        List<StdDataModelObjVo> dmObjVoLst = new ArrayList<>();
+        for (StdDataModelObjVo o : sqlSessionTemplate.<StdDataModelObjVo>selectList("datamodel.selectDataModelObjListByClctId", searchKey)) {
+            if (dmVisible(o.getAprvStatus(), o.getRequesterUserId(), viewerId)) dmObjVoLst.add(o);
+        }
         long listSize = dmObjVoLst.size();
 
         // 86번 #11 — 업로드 양식 (DataModelController.TABLE_HEADERS) 와 동일 순서·명칭. 다운로드 → 재업로드 가능.
+        // 110 4.12-22 — 업로드 양식의 "업무영역"·"테이블스페이스" 열도 (예전에는 빠져 다시 올리면 비었다)
         List<String[]> headers = new ArrayList<>(Arrays.asList(
             new String[]{"소유자","20","LEFT"},
-            new String[]{"테이블명(영문)","25","LEFT"},
+            new String[]{"업무영역","20","LEFT"},
             new String[]{"테이블명(한글)","30","LEFT"},
+            new String[]{"테이블명(영문)","25","LEFT"},
+            new String[]{"테이블스페이스","20","LEFT"},
             new String[]{"설명","40","LEFT"}
         ));
         // 104번 WP8-31 — 사용 중인 사용자 정의 속성 열 (업로드 양식과 같은 이름이라 다시 올릴 수 있다)
@@ -653,10 +659,12 @@ public class ExcelDownloadService {
             StdDataModelObjVo dataVo = dmObjVoLst.get(i);
             Map<String, Object> tempMap = new LinkedHashMap<>();
             tempMap.put("HEADER1", dataVo.getObjOwner());
-            tempMap.put("HEADER2", dataVo.getObjNm());
+            tempMap.put("HEADER2", dataVo.getBizAreaNm());
             tempMap.put("HEADER3", dataVo.getObjNmKr());
-            tempMap.put("HEADER4", dataVo.getObjDesc());
-            int h = 5;
+            tempMap.put("HEADER4", dataVo.getObjNm());
+            tempMap.put("HEADER5", dataVo.getTablespaceNm());
+            tempMap.put("HEADER6", dataVo.getObjDesc());
+            int h = 7;
             for (Map<String, Object> d : udpDefs) {
                 tempMap.put("HEADER" + (h++), udpVals.get((dataVo.getObjOwner() == null ? "" : dataVo.getObjOwner()) + "|" + dataVo.getObjNm() + "|" + d.get("udpId")));
             }
@@ -676,9 +684,18 @@ public class ExcelDownloadService {
     }
 
     //데이터모델 컬럼정보 다운로드
-    public void getDMAttrsExcel(String searchKey, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        // 엑셀에 저장할 데이터를 조회
-        List<StdDataModelAttrVo> dmAttrVoLst = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", searchKey);
+    public void getDMAttrsExcel(String searchKey, String viewerId, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        // 엑셀에 저장할 데이터를 조회 — 110 4.12-11: 화면 목록과 같이 승인됐거나 내가 요청한 행만
+        List<StdDataModelAttrVo> all = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", searchKey);
+        List<StdDataModelAttrVo> dmAttrVoLst = new ArrayList<>();
+        // 110 4.12-22 — "참조 테이블(한글)"·"참조 컬럼(한글)" 은 업로드가 한글명으로 찾으므로 한글명을 쓴다 (예전에는 물리명)
+        Map<String, String> objKr = new HashMap<>();    // 소유자|테이블 → 테이블 한글명
+        Map<String, String> attrKr = new HashMap<>();   // 소유자|테이블|컬럼 → 컬럼 한글명
+        for (StdDataModelAttrVo a : all) {
+            if (dmVisible(a.getAprvStatus(), a.getRequesterUserId(), viewerId)) dmAttrVoLst.add(a);
+            objKr.put(a.getObjOwner() + "|" + a.getObjNm(), a.getObjNmKr());
+            attrKr.put(a.getObjOwner() + "|" + a.getObjNm() + "|" + a.getAttrNm(), a.getAttrNmKr());
+        }
         long listSize = dmAttrVoLst.size();
 
         // 86번 #11 — 업로드 양식 (DataModelController.ATTR_HEADERS) 와 동일 순서·명칭 (다운로드 → 재업로드 가능).
@@ -720,8 +737,10 @@ public class ExcelDownloadService {
             tempMap.put("HEADER11", dataVo.getPkYn());
             tempMap.put("HEADER12", dataVo.getFkYn());
             tempMap.put("HEADER13", dataVo.getDefaultVal());
-            tempMap.put("HEADER14", dataVo.getFkParentObjNm());
-            tempMap.put("HEADER15", dataVo.getFkParentAttrNm());
+            String refOwner = dataVo.getFkParentObjOwner() == null ? dataVo.getObjOwner() : dataVo.getFkParentObjOwner();
+            tempMap.put("HEADER14", dataVo.getFkParentObjNm() == null ? null : objKr.get(refOwner + "|" + dataVo.getFkParentObjNm()));
+            tempMap.put("HEADER15", dataVo.getFkParentAttrNm() == null ? null
+                    : attrKr.get(refOwner + "|" + dataVo.getFkParentObjNm() + "|" + dataVo.getFkParentAttrNm()));
             tempMap.put("HEADER16", "");  // 삭제 규칙 — VO 에 미보존 (CONSTRAINT 테이블 별도). 백업 시 공란
             list.add(tempMap);
         }
@@ -736,6 +755,11 @@ public class ExcelDownloadService {
         // 엑셀데이터 생성
         ByteArrayInputStream stream = excelExportHandler.buildExcelDocument(excelMap, request, response);
         IOUtils.copy(stream, response.getOutputStream());
+    }
+
+    /** 88번 거버넌스 — 화면에 보이는 모델 행 (q-center DataModelController.visibleTo 와 같은 기준): 승인됐거나(상태 없음 포함) 본인이 요청한 행 */
+    private static boolean dmVisible(String aprvStatus, String requesterUserId, String userId) {
+        return aprvStatus == null || "APPROVED".equals(aprvStatus) || (userId != null && userId.equals(requesterUserId));
     }
 
     //구조진단 결과 다운로드

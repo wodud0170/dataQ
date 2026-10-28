@@ -115,19 +115,17 @@ export default {
     },
     rollbackSelected() {
       const seqList = this.checked.map(d => d.changeSeq);
+      // 110 5.8-17 — 롤백은 모델 변경도 되돌린다 (한 요청·한 트랜잭션, 나중 변경부터)
       this.$swal.fire({
         title: `${seqList.length}건 롤백`,
-        text: '선택한 DRAFT 가 삭제됩니다 (이미 적용된 모델 변경은 별도). 진행하시겠습니까?',
+        text: '선택한 DRAFT 를 지우고 그 변경(추가·수정·삭제)도 모델에서 되돌립니다. 진행하시겠습니까?',
         icon: 'warning', showCancelButton: true,
         confirmButtonText: '롤백', cancelButtonText: '취소',
       }).then(r => {
         if (!r.isConfirmed) return;
-        Promise.all(seqList.map(seq =>
-          axios.post(this.$APIURL.base + 'api/dmApproval/rollbackDraft', { changeSeq: seq })
-        )).then(results => {
-          const failed = results.filter(res => res.data.resultCode !== 200);
-          if (failed.length > 0) {
-            this.$swal.fire({ title: `롤백 실패 ${failed.length}건`, text: failed[0].data.resultMessage || '', icon: 'error' });
+        axios.post(this.$APIURL.base + 'api/dmApproval/rollbackDraft', { changeSeqList: seqList }).then(res => {
+          if (res.data.resultCode !== 200) {
+            this.$swal.fire({ title: '롤백 실패', text: res.data.resultMessage || '', icon: 'error' });
           } else {
             this.$swal.fire({ title: '롤백 완료', icon: 'success', timer: 1200, showConfirmButton: false });
           }

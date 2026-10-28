@@ -116,26 +116,32 @@
        </foreach>
   </update>
 
-  <!-- 통계: 모델별 OBJ/ATTR 진단 대상 카운트 -->
-  <select id="selectDiagTargetStats" parameterType="String" resultType="java.util.HashMap">
+  <!-- 통계: 모델별 OBJ/ATTR 진단 대상 카운트.
+       110 5.8-30 — 화면 목록과 같이 승인됐거나 조회자가 요청한 행만 센다 (예전에는 다른 사용자의 미승인 행까지 셌다).
+       110 5.8-9 — 품질 진단 OFF 집계는 뺐다 (품질 진단은 DQ 제품으로 분리) -->
+  <sql id="statsVisible">
+    AND (COALESCE(${t}.APRV_STATUS,'APPROVED')='APPROVED' OR ${t}.REQUESTER_USER_ID = #{userId, jdbcType=VARCHAR})
+  </sql>
+  <select id="selectDiagTargetStats" parameterType="java.util.Map" resultType="java.util.HashMap">
     SELECT
-        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID=#{dmId} AND USE_YN='Y') AS totalObj,
-        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID=#{dmId} AND USE_YN='Y' AND COALESCE(STND_DIAG_TARGET_YN,'Y')='N')   AS objStndOff,
-        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID=#{dmId} AND USE_YN='Y' AND COALESCE(STRUCT_DIAG_TARGET_YN,'Y')='N') AS objStructOff,
-        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ WHERE DM_ID=#{dmId} AND USE_YN='Y' AND COALESCE(QUAL_DIAG_TARGET_YN,'Y')='N')   AS objQualOff,
-        (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR WHERE DM_ID=#{dmId} AND USE_YN='Y') AS totalAttr,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ o WHERE o.DM_ID=#{dmId} AND o.USE_YN='Y'
+                <include refid="statsVisible"><property name="t" value="o"/></include>) AS totalObj,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ o WHERE o.DM_ID=#{dmId} AND o.USE_YN='Y' AND COALESCE(o.STND_DIAG_TARGET_YN,'Y')='N'
+                <include refid="statsVisible"><property name="t" value="o"/></include>) AS objStndOff,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ o WHERE o.DM_ID=#{dmId} AND o.USE_YN='Y' AND COALESCE(o.STRUCT_DIAG_TARGET_YN,'Y')='N'
+                <include refid="statsVisible"><property name="t" value="o"/></include>) AS objStructOff,
+        (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR a WHERE a.DM_ID=#{dmId} AND a.USE_YN='Y'
+                <include refid="statsVisible"><property name="t" value="a"/></include>) AS totalAttr,
         (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR a INNER JOIN TB_DATA_MODEL_OBJ o ON a.DM_ID=o.DM_ID AND a.OBJ_NM=o.OBJ_NM
                      AND COALESCE(a.OBJ_OWNER,'')=COALESCE(o.OBJ_OWNER,'')
                 WHERE a.DM_ID=#{dmId} AND a.USE_YN='Y' AND o.USE_YN='Y'
-                  AND (COALESCE(a.STND_DIAG_TARGET_YN,'Y')='N' OR COALESCE(o.STND_DIAG_TARGET_YN,'Y')='N')) AS attrStndOff,
+                  AND (COALESCE(a.STND_DIAG_TARGET_YN,'Y')='N' OR COALESCE(o.STND_DIAG_TARGET_YN,'Y')='N')
+                  <include refid="statsVisible"><property name="t" value="a"/></include>) AS attrStndOff,
         (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR a INNER JOIN TB_DATA_MODEL_OBJ o ON a.DM_ID=o.DM_ID AND a.OBJ_NM=o.OBJ_NM
                      AND COALESCE(a.OBJ_OWNER,'')=COALESCE(o.OBJ_OWNER,'')
                 WHERE a.DM_ID=#{dmId} AND a.USE_YN='Y' AND o.USE_YN='Y'
-                  AND (COALESCE(a.STRUCT_DIAG_TARGET_YN,'Y')='N' OR COALESCE(o.STRUCT_DIAG_TARGET_YN,'Y')='N')) AS attrStructOff,
-        (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR a INNER JOIN TB_DATA_MODEL_OBJ o ON a.DM_ID=o.DM_ID AND a.OBJ_NM=o.OBJ_NM
-                     AND COALESCE(a.OBJ_OWNER,'')=COALESCE(o.OBJ_OWNER,'')
-                WHERE a.DM_ID=#{dmId} AND a.USE_YN='Y' AND o.USE_YN='Y'
-                  AND (COALESCE(a.QUAL_DIAG_TARGET_YN,'Y')='N' OR COALESCE(o.QUAL_DIAG_TARGET_YN,'Y')='N')) AS attrQualOff
+                  AND (COALESCE(a.STRUCT_DIAG_TARGET_YN,'Y')='N' OR COALESCE(o.STRUCT_DIAG_TARGET_YN,'Y')='N')
+                  <include refid="statsVisible"><property name="t" value="a"/></include>) AS attrStructOff
   </select>
 
   <!-- OBJ 단건 상세 -->

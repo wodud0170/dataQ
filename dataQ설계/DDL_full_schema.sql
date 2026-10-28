@@ -904,7 +904,9 @@ CREATE TABLE quality.tb_data_model_clct (
     clct_type character varying(20) DEFAULT 'DBMS'::character varying,
     added_cnt integer DEFAULT 0,
     deleted_cnt integer DEFAULT 0,
-    modified_cnt integer DEFAULT 0
+    modified_cnt integer DEFAULT 0,
+    obj_cnt integer,
+    attr_cnt integer
 );
 
 
@@ -941,6 +943,20 @@ COMMENT ON COLUMN quality.tb_data_model_clct.deleted_cnt IS '재수집 시 삭�
 --
 
 COMMENT ON COLUMN quality.tb_data_model_clct.modified_cnt IS '재수집 시 변경된 테이블·컬럼 합계';
+
+
+--
+-- Name: COLUMN tb_data_model_clct.obj_cnt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_clct.obj_cnt IS '이 수집(가져오기)에서 읽은 테이블 수 (110번 4.12-14-a, 이전 이력은 NULL)';
+
+
+--
+-- Name: COLUMN tb_data_model_clct.attr_cnt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_clct.attr_cnt IS '이 수집(가져오기)에서 읽은 컬럼 수 (110번 4.12-14-a, 이전 이력은 NULL)';
 
 
 --

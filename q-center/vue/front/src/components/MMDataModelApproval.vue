@@ -54,6 +54,7 @@
               </v-btn>
             </div>
             <!-- 104번 WP9-55 — 행을 펼치면 변경 전후 비교 -->
+            <!-- 110 5.8-12-a — 처리 끝난 건(승인·반려)은 고를 수 없다 (행의 isSelectable) -->
             <v-data-table id="dmAprvItems" :headers="headers" :items="items" item-key="changeSeq" show-select show-expand
               :expanded.sync="expanded" v-model="checkedItems" :items-per-page="50" hide-default-footer dense>
               <template #expanded-item="{ headers: hs, item }">
@@ -132,14 +133,14 @@ export default {
       axios.post(this.$APIURL.base + 'api/dmApproval/submissionItems', {
         submissionId: s.submissionId,
       }).then(res => {
-        this.items = res.data || [];
+        this.items = (res.data || []).map(i => ({ ...i, isSelectable: i.aprvStatus === 'SUBMITTED' }));
       }).catch(() => { this.items = []; });
     },
     toggleAll(v) {
-      this.checkedItems = v ? [...this.items] : [];
+      this.checkedItems = v ? this.items.filter(i => i.isSelectable) : [];
     },
     approveSelected() {
-      const seqList = (this.selectedDoc ? this.items : this.checkedItems).map(i => i.changeSeq);
+      const seqList = (this.selectedDoc ? this.items.filter(i => i.isSelectable) : this.checkedItems).map(i => i.changeSeq);
       this.$swal.fire({
         title: `${seqList.length}건 승인하시겠습니까?`,
         icon: 'question', showCancelButton: true,
@@ -167,7 +168,7 @@ export default {
       });
     },
     rejectSelected() {
-      const seqList = (this.selectedDoc ? this.items : this.checkedItems).map(i => i.changeSeq);
+      const seqList = (this.selectedDoc ? this.items.filter(i => i.isSelectable) : this.checkedItems).map(i => i.changeSeq);
       this.$swal.fire({
         title: `${seqList.length}건 반려`,
         input: 'textarea',

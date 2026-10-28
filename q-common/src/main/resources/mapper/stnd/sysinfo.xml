@@ -293,6 +293,7 @@
             ,DSN                as dsn
             ,DS_TP              as dsTp
             ,DBMS_TP            as dbmsTp
+            ,CONN_TEST_YN       as connTestYn   <!-- 110 4.12-13-b — 모델 수정 창의 연결 테스트 확인 -->
         FROM ndata.tb_data_source
         WHERE DS_ID IN (SELECT UNNEST(CASE WHEN array_length(SYS_DS_LST, 1) >= 1
                 THEN SYS_DS_LST

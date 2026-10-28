@@ -167,10 +167,11 @@ def step3_add_table_and_attr(d):
 
 
 def step4_resolve(d):
-    """resolveAttrs — 비표준 컬럼을 표준 매칭으로 'Y' 로 전환"""
+    """resolveAttrs 후보 → saveAttrs UPDATE — 비표준 컬럼을 표준 매칭으로 'Y' 로 전환 (화면 [선택 컬럼 물리모델 변환] → [저장] 과 같은 경로).
+    110 2묶음(4.12-1) — resolveAttrs 의 바로 반영 경로를 지워 후보만 받는다."""
     r = requests.post(BASE_URL + "/api/dm/resolveAttrs", cookies=state["cookies"], json={
         "dataModelId": state["modelId"],
-        "attrs": [{"objNm": state["objNm"], "attrNm": state["tempAttrNm"]}],
+        "attrs": [{"objNm": state["objNm"], "attrNm": state["tempAttrNm"], "attrNmKr": ORIG_KR}],
     }, timeout=15)
     r.raise_for_status()
     res = r.json() or {}
@@ -178,6 +179,16 @@ def step4_resolve(d):
           f"failed={res.get('failed')}")
     if (res.get("succeeded") or 0) < 1:
         raise RuntimeError(f"resolveAttrs 실패: {res.get('failedList')}")
+    it = res["items"][0]
+    r = requests.post(BASE_URL + "/api/dm/saveAttrs", cookies=state["cookies"], json={
+        "dataModelId": state["modelId"], "objNm": state["objNm"],
+        "attrs": [{"mode": "UPDATE", "origAttrNm": state["tempAttrNm"], "attrNm": it["newAttrNm"], "attrNmKr": it["newAttrNmKr"],
+                   "dataType": it["newDataType"], "dataLen": it["newDataLen"], "dataDecimalLen": it["newDataDecimalLen"],
+                   "pkYn": "N", "fkYn": "N", "nullableYn": "Y", "defaultVal": ""}],
+    }, timeout=15)
+    r.raise_for_status()
+    if not (r.json().get("resultCode") == 200):
+        raise RuntimeError(f"변환 저장 실패: {r.json()}")
 
     # 변환 후 attrNm 이 바뀜 — 한글명으로 다시 찾기
     r = requests.get(BASE_URL + "/api/dm/getDataModelAttrListByClctId",

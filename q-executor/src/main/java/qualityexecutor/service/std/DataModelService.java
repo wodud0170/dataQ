@@ -109,6 +109,7 @@ public class DataModelService implements Runnable {
 
 		DBHandler dbHandler = null;
 		boolean collected = false;
+		String clctId = null;
 
 		try {
 			// 데이터소스 조회
@@ -136,7 +137,7 @@ public class DataModelService implements Runnable {
 				log.warn(">> DBMS 제품 정보를 읽지 못했습니다 dsId={} : {}", dataSource.getId(), e.getMessage());
 			}
 			// 1. 수집테이블(TB_DATA_MODEL_CLCT) 입력
-			String clctId = StringUtils.getUUID();
+			clctId = StringUtils.getUUID();
 			String dataModelId = dataVo.getDataModelId();
 			// 98번 — 이 모델이 쓰는 사전. 수집 중 표준여부 판정에 쓴다.
 			final String clctDictId = dictService.resolve(null, dataModelId);
@@ -348,9 +349,11 @@ public class DataModelService implements Runnable {
 			} catch (Exception e) {
 				log.warn(">> constraint collect skipped: {}", e.getMessage());
 			}
-			// 4. 데이터 모델 수집 완료 처리
+			// 4. 데이터 모델 수집 완료 처리 (110 4.12-14-a — 이 수집에서 읽은 테이블·컬럼 수)
 			stdDataModelCollectVo.setClctEndDt(DateUtils.dateToStr(new Date(), "yyyyMMddHHmmss"));
 			stdDataModelCollectVo.setClctCmptnYn("Y");
+			stdDataModelCollectVo.setObjCnt(totalObjCnt);
+			stdDataModelCollectVo.setAttrCnt(totalAttrCnt);
 			session.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
 			session.commit();
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "수집 완료!");
@@ -358,7 +361,15 @@ public class DataModelService implements Runnable {
 		} catch (Exception e) {
 			session.rollback();
 			log.error("collect data model : {}", e.getMessage());
-			stompSessionService.sendNotice(WsNoticeLevel.ERROR, "데이터모델 수집에 실패하였습니다. : model=[" + dataVo.getDataModelNm() + "],error=" + e.getMessage());
+			// 110 4.12-38 — 테이블 단계를 커밋한 뒤 실패하면 수집 이력이 미완료로 남아 6시간 동안 같은 모델 수집이 막혔다.
+			// 끝난 시각을 남기고 미완료(N)로 닫는다 (진행 중 = 끝난 시각 없음)
+			if (clctId != null) {
+				stdDataModelCollectVo.setClctEndDt(DateUtils.dateToStr(new Date(), "yyyyMMddHHmmss"));
+				stdDataModelCollectVo.setClctCmptnYn("N");
+				sqlSessionTemplate.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
+			}
+			// 110 4.12-37-b — 실패 알림은 요청한 창에만 (전체 방송이라 다른 사용자의 진행 창에도 들어갔다)
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.ERROR, "데이터모델 수집에 실패하였습니다. : model=[" + dataVo.getDataModelNm() + "],error=" + e.getMessage());
 		} finally {
 			session.close();
 			if (dbHandler != null) {
@@ -370,10 +381,11 @@ public class DataModelService implements Runnable {
 		}
 
 		stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, ">> collectDataModel finished");
-		stompSessionService.sendReload(WsDestType.QUALITY_STANDARD, "DATA_MODEL_ATTR_RELOAD");
+		// 110 4.12-37-b — RELOAD·완료 알림도 요청한 창에만 (다른 사용자의 열린 진행 창이 남의 수집 완료로 끝나지 않게)
+		stompSessionService.sendReload(ssId, WsDestType.QUALITY_STANDARD, "DATA_MODEL_ATTR_RELOAD");
 		// 실패 시에는 catch 의 ERROR 알림만 나간다.
 		if (collected) {
-			stompSessionService.sendNotice(WsNoticeLevel.INFO, "데이터모델이 수집되었습니다.");
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "데이터모델이 수집되었습니다.");
 		}
 	}
 

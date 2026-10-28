@@ -550,12 +550,21 @@ export default {
     exportPdf() {
       if (!this.network) return;
       this.exportingPdf = true;
-      this.fitView();
+      // 110 4.12-35 — "고해상도" 는 그림을 2배 크기 캔버스로 다시 그려 해상도를 올린다
+      // (예전에는 배치 크기만 2배로 잡은 뒤 가로·세로를 각각 페이지에 잘라 비율이 바뀔 수 있었다)
+      const el = this.$refs.networkContainer;
+      const scale = this.pdfHighRes ? 2 : 1;
+      if (scale > 1) {
+        this.network.setSize((el.clientWidth * scale) + 'px', (el.clientHeight * scale) + 'px');
+        this.network.redraw();
+        this.network.fit();
+      } else {
+        this.fitView();
+      }
       setTimeout(() => {
         try {
           const out = this.composeExportCanvas(true);
           if (!out) throw new Error('canvas not found');
-          const scale = this.pdfHighRes ? 2 : 1;
           const imgData = out.toDataURL('image/png', 1.0);
 
           const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: this.pdfFormat });
@@ -565,11 +574,12 @@ export default {
           const availW = pageW - margin * 2;
           const availH = pageH - margin * 2;
 
+          // 가로세로 비율을 지켜 페이지 안에 맞춘다
           const imgW = out.width;
           const imgH = out.height;
           const ratio = Math.min(availW / imgW, availH / imgH);
-          const drawW = Math.min(imgW * ratio * scale, availW);
-          const drawH = Math.min(imgH * ratio * scale, availH);
+          const drawW = imgW * ratio;
+          const drawH = imgH * ratio;
           const offsetX = margin + (availW - drawW) / 2;
           const offsetY = margin + (availH - drawH) / 2;
 
@@ -582,6 +592,11 @@ export default {
           console.error('PDF export 실패', e);
           this.$swal('PDF 생성 실패', e.message || '', 'error');
         } finally {
+          if (scale > 1) {
+            this.network.setSize('100%', '100%');
+            this.network.redraw();
+            this.fitView();
+          }
           this.exportingPdf = false;
         }
       }, 500);

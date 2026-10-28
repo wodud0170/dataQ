@@ -101,11 +101,12 @@ public class StructDiagService implements Runnable {
             // (prev 만 빼면 curr 에는 그대로 남아 ADDED 로 잘못 잡힘)
             List<Map<String, Object>> offRows = sqlSessionTemplate.selectList(
                     "datamodel.selectStructDiagOffSet", dataModelId);
-            Set<String> offObjs = new HashSet<>();    // tableNm
-            Set<String> offAttrs = new HashSet<>();   // tableNm|columnNm
+            // 110 5.8-25 — 소유자까지 구분 (다중 소유자 모델에서 한 소유자의 테이블을 끄면 다른 소유자의 같은 이름 테이블까지 빠졌다)
+            Set<String> offObjs = new HashSet<>();    // owner|tableNm
+            Set<String> offAttrs = new HashSet<>();   // owner|tableNm|columnNm
             for (Map<String, Object> r : offRows) {
                 String kind = String.valueOf(r.get("kind"));
-                String tbl  = String.valueOf(r.get("tableNm"));
+                String tbl  = r.get("owner") + "|" + r.get("tableNm");
                 if ("OBJ".equals(kind)) {
                     offObjs.add(tbl);
                 } else {
@@ -149,7 +150,8 @@ public class StructDiagService implements Runnable {
                     String tbl = rs.getString("objNm");
                     String col = rs.getString("attrNm");
                     // 79번 진단 제외: OFF 된 OBJ/ATTR 는 curr 에도 포함 안 함 → 결과에서 완전 제외
-                    if (offObjs.contains(tbl) || offAttrs.contains(tbl + "|" + col)) continue;
+                    String offKey = schema + "|" + tbl;
+                    if (offObjs.contains(offKey) || offAttrs.contains(offKey + "|" + col)) continue;
                     Map<String, Object> attr = new HashMap<>();
                     attr.put("owner", schema);
                     attr.put("tableNm", tbl);
@@ -650,11 +652,11 @@ public class StructDiagService implements Runnable {
             // 79번 진단 제외: curr 도 OFF 된 OBJ/ATTR 빼야 결과에서 완전 사라짐
             List<Map<String, Object>> offRows = sqlSessionTemplate.selectList(
                     "datamodel.selectStructDiagOffSet", dataModelId);
-            Set<String> offObjs = new HashSet<>();
-            Set<String> offAttrs = new HashSet<>();
+            Set<String> offObjs = new HashSet<>();    // owner|tableNm (110 5.8-25)
+            Set<String> offAttrs = new HashSet<>();   // owner|tableNm|columnNm
             for (Map<String, Object> r : offRows) {
                 String kind = String.valueOf(r.get("kind"));
-                String tbl  = String.valueOf(r.get("tableNm"));
+                String tbl  = r.get("owner") + "|" + r.get("tableNm");
                 if ("OBJ".equals(kind)) offObjs.add(tbl);
                 else offAttrs.add(tbl + "|" + r.get("columnNm"));
             }
@@ -681,7 +683,8 @@ public class StructDiagService implements Runnable {
                 while (rs.next()) {
                     String tbl = rs.getString("objNm");
                     String col = rs.getString("attrNm");
-                    if (offObjs.contains(tbl) || offAttrs.contains(tbl + "|" + col)) continue;
+                    String offKey = schema + "|" + tbl;
+                    if (offObjs.contains(offKey) || offAttrs.contains(offKey + "|" + col)) continue;
                     Map<String, Object> attr = new HashMap<>();
                     attr.put("owner", schema);
                     attr.put("tableNm", tbl);

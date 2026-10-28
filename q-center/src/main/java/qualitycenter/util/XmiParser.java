@@ -199,6 +199,13 @@ public class XmiParser {
         }
         col.put("dataType", dataType != null ? dataType : "VARCHAR");
         col.put("dataLen", 0L);     // XMI 에 길이 정보 없음 (tagged value 로 가능하나 1차 POC 미지원)
+        // 110 4.12-34 — DataQ 가 내보낸 XMI 는 xmi:Extension(extender="DataQ") 에 실제 타입·길이·소수점이 있다
+        Element ext = dataqColumnExtension(attrEl);
+        if (ext != null) {
+            col.put("dataType", ext.getAttribute("dataType"));
+            col.put("dataLen", Long.parseLong(ext.getAttribute("dataLen")));
+            col.put("dataDecimalLen", Short.parseShort(ext.getAttribute("dataDecimalLen")));
+        }
 
         // nullable: lowerValue 가 0이면 null 허용
         col.put("nullableYn", parseNullable(attrEl) ? "Y" : "N");
@@ -209,6 +216,28 @@ public class XmiParser {
 
         col.put("attrOrder", (short) order);
         columns.add(col);
+    }
+
+    /** 110 4.12-34 — &lt;xmi:Extension extender="DataQ"&gt;&lt;column .../&gt; (XmiExporter 가 쓴다). 없으면 null */
+    private static Element dataqColumnExtension(Element attrEl) {
+        NodeList kids = attrEl.getChildNodes();
+        for (int i = 0; i < kids.getLength(); i++) {
+            Node n = kids.item(i);
+            if (!(n instanceof Element)) continue;
+            Element e = (Element) n;
+            String local = e.getLocalName() != null ? e.getLocalName() : e.getTagName();
+            if (!"Extension".equals(local) && !"xmi:Extension".equals(local)) continue;
+            if (!"DataQ".equals(e.getAttribute("extender"))) continue;
+            NodeList cs = e.getChildNodes();
+            for (int j = 0; j < cs.getLength(); j++) {
+                Node c = cs.item(j);
+                if (!(c instanceof Element)) continue;
+                Element ce = (Element) c;
+                String cl = ce.getLocalName() != null ? ce.getLocalName() : ce.getTagName();
+                if ("column".equals(cl)) return ce;
+            }
+        }
+        return null;
     }
 
     /** type 자식의 href 또는 type 속성으로 데이터타입 추론. */

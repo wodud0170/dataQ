@@ -463,9 +463,9 @@ def s3_target(sa, t):
         checks = []
         checks.append(("테이블스페이스", add_obj(sa, dm, owner, "ZZ_TS", tablespaceNm="USERS; DROP TABLE ZZ_VICTIM")))
         assert code(add_obj(sa, dm, owner, "ZZ_T1")) == 200
-        checks.append(("addAttr 기본값", post(sa, "/api/dm/addAttr", {"dataModelId": dm, "objOwner": owner, "objNm": "ZZ_T1",
-                                                                       "attrNm": "C_X", "attrNmKr": "x", "dataType": "VARCHAR", "dataLen": 10,
-                                                                       "defaultVal": inj, "termsStndYn": "N"})))
+        # 110 2묶음(4.12-1) — /addAttr 는 호출 화면이 없어 지웠다. 같은 값을 화면 경로(saveAttrs ADD)로 본다
+        checks.append(("saveAttrs 기본값 괄호", save([{"mode": "ADD", "attrNm": "C_X", "attrNmKr": "x", "dataType": "VARCHAR", "dataLen": 10,
+                                                    "defaultVal": inj}])))
         checks.append(("saveAttrs 기본값 ;", save([{"mode": "ADD", "attrNm": "C_X", "attrNmKr": "x", "dataType": "VARCHAR", "dataLen": 10,
                                                    "defaultVal": "'a'; DROP TABLE ZZ_VICTIM"}])))
         checks.append(("saveAttrs 기본값 쉼표", save([{"mode": "ADD", "attrNm": "C_X", "attrNmKr": "x", "dataType": "VARCHAR", "dataLen": 10,

@@ -21,9 +21,9 @@ public class StdDataModelCollectVo {
 	private String clctEndDt;
 	private String clctCmptnYn;
     private String cretUserId;
-    // 통계 필드
-    private int objCnt;
-    private int attrCnt;
+    // 통계 필드 — 110 4.12-14-a: 수집이력은 그 수집에서 읽은 건수(TB_DATA_MODEL_CLCT.OBJ_CNT·ATTR_CNT, 그 칸이 생기기 전 이력은 null)
+    private Integer objCnt;
+    private Integer attrCnt;
     private double totalStndRate;
     private double termsStndRate;
     private double wordStndRate;

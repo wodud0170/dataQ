@@ -3,19 +3,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="datamodel">
 
-	<!-- 88번 거버넌스 — 가시성 필터 SQL 조각.
-	     관리자가 아니면 (APPROVED OR 본인이 신청한 row) 만 노출.
-	     매개변수 currentUserId / isAdmin 둘 다 필요. 둘 다 NULL 이면 admin 처럼 동작 (호환성).
-	     테이블 별칭 alias 매개변수로 받음 (예: alias=A → A.APRV_STATUS).
-	     사용 예: <include refid="visibilityFilter"><property name="alias" value="A"/></include> -->
-	<sql id="visibilityFilter">
-		<if test="isAdmin == null or isAdmin == false">
-			<if test="currentUserId != null and currentUserId != ''">
-				AND (${alias}.APRV_STATUS = 'APPROVED' OR ${alias}.REQUESTER_USER_ID = #{currentUserId})
-			</if>
-		</if>
-	</sql>
-
 	<!-- 데이터모델 -->
 	<resultMap id="stdDataModelMap" type="com.ndata.quality.model.std.StdDataModelVo">
 		<result property="dataModelId" column="DM_ID"/>
@@ -149,25 +136,6 @@
         order by A.DM_NM
     </select>
 
-    <select id="selectDataModelStatsByClctId" parameterType="String" resultMap="stdDataModelMap">
-        select
-             A.DM_ID
-            ,A.DM_NM
-            ,A.DM_SYS_CD
-            ,(select SYS_NM from TB_SYS_INFO where sys_cd = A.DM_SYS_CD) as DM_SYS_NM
-            ,A.DM_DS_ID
-            ,(select DSN from ndata.TB_DATA_SOURCE where ds_id = A.DM_DS_ID) as DM_DS_NM
-            ,COALESCE(A.MODEL_TYPE, 'PHYSICAL') as MODEL_TYPE
-            ,A.DICT_ID
-            ,(select DICT_NM from TB_STD_DICT where dict_id = A.DICT_ID) as DICT_NM
-            ,COALESCE(A.STND_REQ_YN, 'N') as STND_REQ_YN
-            ,A.VER
-            ,(select count(*) from TB_DATA_MODEL_OBJ  where DM_ID = A.DM_ID and USE_YN='Y' and COALESCE(APRV_STATUS,'APPROVED')='APPROVED') as OBJ_CNT
-            ,(select count(*) from TB_DATA_MODEL_ATTR where DM_ID = A.DM_ID and USE_YN='Y' and COALESCE(APRV_STATUS,'APPROVED')='APPROVED') as ATTR_CNT
-        from TB_DATA_MODEL A
-        where A.USE_YN = 'Y' AND A.DM_ID = #{clctId}
-    </select>
-
 	<select id="selectDataModelList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelCollectVo">
 			select 
 			     T.DM_CLCT_ID    as clctId
@@ -200,39 +168,6 @@
 			order by M.CRET_DT DESC NULLS LAST, T.CLCT_END_DT DESC NULLS LAST
 	</select>
 
-	<select id="selectDataModelClctList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelCollectVo">
-			select 
-			     T.DM_CLCT_ID    as clctId
-				,M.DM_ID         as dataModelId
-				,M.DM_NM         as dataModelNm
-				,M.DM_SYS_CD     as dataModelSysCd
-				,(select SYS_NM from TB_SYS_INFO where sys_cd = M.DM_SYS_CD) as dataModelSysNm	
-				,M.DM_DS_ID      as dataModelDsId
-				,(select DSN from ndata.TB_DATA_SOURCE where ds_id = M.DM_DS_ID) as dataModelDsNm
-				,M.VER           as dataModelVer
-				,to_char(to_timestamp(T.CLCT_START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as clctStartDt			
-				,to_char(to_timestamp(T.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS')   as clctEndDt
-				,T.CLCT_CMPTN_YN     as clctCmptnYn
-			from TB_DATA_MODEL_CLCT T, TB_DATA_MODEL M
-			where T.DM_ID = M.DM_ID AND M.USE_YN = 'Y' 
-		<if test="schId != null">
-			    AND M.DM_ID = #{schId}
-		</if>
-		<if test="schNm != null">
-				AND M.DM_NM ILIKE '%' || #{schNm} || '%'
-		</if>
-		<if test="schSysNm != null">
-				AND M.DM_SYS_CD in (select SYS_CD from TB_SYS_INFO where SYS_NM ILIKE '%' || #{schSysNm} || '%')
-		</if>
-		<if test="from != null">
-				AND T.CLCT_END_DT &gt;= #{from}
-		</if>
-		<if test="to != null">
-				AND T.CLCT_END_DT &lt;= #{to}
-		</if>
-			order by T.CLCT_END_DT DESC NULLS LAST
-	</select>
-
 	<!-- DM_ID 기반 OBJ 조회 (CLCT 폐기 후) -->
 	<select id="selectDataModelObjListByClctId" parameterType="String" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
 			select
@@ -257,7 +192,8 @@
 				,TABLESPACE_NM       as tablespaceNm
 				,BIZ_AREA_ID         as bizAreaId
 				,SUBJ_AREA_ID        as subjAreaId
-				,(SELECT biz_area_nm FROM tb_biz_area WHERE biz_area_id = o.BIZ_AREA_ID) as bizAreaNm
+				<!-- 110 5.8-31-b — 지운 업무영역(USE_YN='N')의 이름은 보이지 않는다 -->
+				,(SELECT biz_area_nm FROM tb_biz_area WHERE biz_area_id = o.BIZ_AREA_ID AND use_yn = 'Y') as bizAreaNm
 				,(SELECT subj_area_nm FROM tb_subj_area WHERE subj_area_id = o.SUBJ_AREA_ID) as subjAreaNm   <!-- 104번 WP8-38 -->
 			from TB_DATA_MODEL_OBJ o
 			where DM_ID = #{clctId} AND USE_YN = 'Y'
@@ -283,22 +219,6 @@
 			where DM_ID = #{dataModelId}
 			<if test="_parameter != null">
 				AND USE_YN = 'Y'
-			</if>
-			order by OBJ_NM
-	</select>
-
-	<select id="selectDataModelObjListByObjNm" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
-			select
-				 OBJ_NM        as objNm
-				,OBJ_NM_KR     as objNmKr
-				,OBJ_OWNER     as objOwner
-				,OBJ_DESC      as objDesc
-				,OBJ_COMMENT   as objComment
-				,OBJ_ATTR_CNT  as objAttrCnt
-			from TB_DATA_MODEL_OBJ
-			where DM_ID = #{schId} AND USE_YN = 'Y'
-			<if test="schObjNm != null">
-				AND OBJ_NM ILIKE '%'||#{schObjNm}||'%'
 			</if>
 			order by OBJ_NM
 	</select>
@@ -404,41 +324,21 @@
 		ORDER BY A.OBJ_NM, A.ATTR_ORD
 	</select>
 
-	<!-- 79번 구조 진단 OFF set — q-executor 가 curr (Oracle 실제) ResultSet 필터에 사용 -->
+	<!-- 79번 구조 진단 OFF set — q-executor 가 curr (Oracle 실제) ResultSet 필터에 사용.
+	     110 5.8-25 — 소유자도 돌려준다 (다중 소유자 모델에서 한 소유자의 테이블을 끄면 다른 소유자의 같은 이름 테이블까지 빠졌다) -->
 	<select id="selectStructDiagOffSet" parameterType="String" resultType="java.util.HashMap">
-		SELECT 'OBJ' AS "kind", OBJ_NM AS "tableNm", '' AS "columnNm"
+		SELECT 'OBJ' AS "kind", COALESCE(OBJ_OWNER,'') AS "owner", OBJ_NM AS "tableNm", '' AS "columnNm"
 		FROM TB_DATA_MODEL_OBJ
 		WHERE DM_ID = #{dmId} AND USE_YN = 'Y'
 		  AND COALESCE(STRUCT_DIAG_TARGET_YN,'Y') = 'N'
 		UNION ALL
-		SELECT 'ATTR' AS "kind", A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm"
+		SELECT 'ATTR' AS "kind", COALESCE(A.OBJ_OWNER,'') AS "owner", A.OBJ_NM AS "tableNm", A.ATTR_NM AS "columnNm"
 		FROM TB_DATA_MODEL_ATTR A
 		INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID=O.DM_ID AND A.OBJ_OWNER=O.OBJ_OWNER AND A.OBJ_NM=O.OBJ_NM
 		WHERE A.DM_ID = #{dmId}
 		  AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
 		  AND COALESCE(O.STRUCT_DIAG_TARGET_YN,'Y') = 'Y'
 		  AND COALESCE(A.STRUCT_DIAG_TARGET_YN,'Y') = 'N'
-	</select>
-
-	<!-- 79번 진단 메타에 제외 카운트 (모델별) -->
-	<select id="selectDiagExcludedCount" parameterType="java.util.Map" resultType="int">
-			select COUNT(*) FROM TB_DATA_MODEL_ATTR A
-			INNER JOIN TB_DATA_MODEL_OBJ O ON A.DM_ID=O.DM_ID AND A.OBJ_OWNER=O.OBJ_OWNER AND A.OBJ_NM=O.OBJ_NM
-			where A.DM_ID = #{dmId}
-			  AND A.USE_YN = 'Y' AND O.USE_YN = 'Y'
-			  AND (
-			    <choose>
-			      <when test="diagType == 'STND'">
-			        COALESCE(O.STND_DIAG_TARGET_YN,'Y')='N' OR COALESCE(A.STND_DIAG_TARGET_YN,'Y')='N'
-			      </when>
-			      <when test="diagType == 'STRUCT'">
-			        COALESCE(O.STRUCT_DIAG_TARGET_YN,'Y')='N' OR COALESCE(A.STRUCT_DIAG_TARGET_YN,'Y')='N'
-			      </when>
-			      <otherwise>
-			        COALESCE(O.QUAL_DIAG_TARGET_YN,'Y')='N' OR COALESCE(A.QUAL_DIAG_TARGET_YN,'Y')='N'
-			      </otherwise>
-			    </choose>
-			  )
 	</select>
 
 	<!-- 비표준 컬럼 목록 (일괄 변환용) -->
@@ -469,40 +369,6 @@
 		where A.DM_ID = #{dataModelId}
 		  and A.USE_YN = 'Y'
 		  and A.TERMS_STND_YN = 'N'
-		order by A.OBJ_NM, A.ATTR_ORD
-	</select>
-
-	<!-- 복합키(OBJ_NM, ATTR_NM) 리스트로 컬럼 조회 (선택 변환용) -->
-	<select id="selectAttrListByKeys" parameterType="java.util.Map" resultMap="stdDataModelAttrMap">
-		select
-			 COALESCE(A.OBJ_OWNER, '') as OBJ_OWNER
-			,A.DM_ID
-			,A.OBJ_NM
-			,A.ATTR_NM
-			,A.ATTR_NM_KR
-			,A.ATTR_COMMENT
-			,A.DATA_TYPE
-			,A.DATA_LEN
-			,A.DATA_DECIMAL_LEN
-			,A.TERMS_STND_YN
-			,A.DOMAIN_STND_YN
-			,A.WORD_LST
-			,A.WORD_STND_LST
-			,A.NULLABLE_YN
-			,A.PK_YN
-			,A.FK_YN
-			,A.FK_PARENT_OBJ_NM
-			,A.FK_PARENT_OBJ_OWNER
-			,A.FK_PARENT_ATTR_NM
-			,A.DEFAULT_VAL
-			,A.ATTR_ORD
-		from TB_DATA_MODEL_ATTR A
-		where A.DM_ID = #{dataModelId}
-		  and A.USE_YN = 'Y'
-		  and (A.OBJ_NM, A.ATTR_NM) in
-		  <foreach item="k" collection="attrs" open="(" separator="," close=")">
-			(#{k.objNm}, #{k.attrNm})
-		  </foreach>
 		order by A.OBJ_NM, A.ATTR_ORD
 	</select>
 
@@ -539,7 +405,8 @@
 		SELECT OBJ_OWNER AS "objOwner", TABLE_NM AS "tableNm", CONSTRAINT_NM AS "constraintNm",
 			CONSTRAINT_TYPE AS "constraintType", COLUMN_NM AS "columnNm", COLUMN_POS AS "columnPos",
 			REF_OWNER AS "refOwner", REF_TABLE_NM AS "refTableNm", REF_COLUMN_NM AS "refColumnNm",
-			DELETE_RULE AS "deleteRule", STATUS AS "status", SEARCH_CONDITION AS "searchCondition"
+			DELETE_RULE AS "deleteRule", STATUS AS "status", SEARCH_CONDITION AS "searchCondition",
+			APRV_STATUS AS "aprvStatus", REQUESTER_USER_ID AS "requesterUserId"   <!-- 110 4.12-11 — DDL 내려받기 가시성 -->
 		FROM TB_DATA_MODEL_CONSTRAINT
 		WHERE DM_ID = #{dataModelId} AND USE_YN = 'Y'
 		ORDER BY OBJ_OWNER, TABLE_NM, CONSTRAINT_NM, COLUMN_POS
@@ -559,41 +426,6 @@
 		WHERE DM_CLCT_ID = #{clctId}
 	</select>
 
-	<select id="selectDataModelAttrListByRetreiveCond" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultMap="stdDataModelAttrMap">
-			select 
-				 A.OBJ_NM
-				,(select OBJ_NM_KR from TB_DATA_MODEL_OBJ
-				  where DM_ID = A.DM_ID and OBJ_OWNER = A.OBJ_OWNER and OBJ_NM = A.OBJ_NM) as OBJ_NM_KR
-				,A.ATTR_NM
-				,A.ATTR_NM_KR
-				,A.ATTR_COMMENT
-				,A.DATA_TYPE
-				,A.DATA_LEN
-				,A.DATA_DECIMAL_LEN
-				,A.TERMS_STND_YN
-				,A.DOMAIN_STND_YN
-				,A.WORD_LST
-				,A.WORD_STND_LST
-				,A.NULLABLE_YN
-				,A.PK_YN
-				,A.FK_YN
-				,A.FK_PARENT_OBJ_NM
-			,A.FK_PARENT_OBJ_OWNER
-				,A.FK_PARENT_OBJ_OWNER
-				,A.FK_PARENT_ATTR_NM
-				,A.DEFAULT_VAL
-				,A.ATTR_ORD
-			from TB_DATA_MODEL_ATTR	A
-			where A.DM_ID = #{schId}
-			<if test="schObjNm != null or schAttrNm != null">
-				AND (A.OBJ_NM ILIKE '%'||#{schObjNm}||'%' OR A.ATTR_NM ILIKE '%'||#{schAttrNm}||'%')
-			</if>
-			<if test="schStndYn != null">
-				AND A.TERMS_STND_YN = #{schStndYn}
-			</if>
-			order by A.OBJ_NM, A.ATTR_ORD
-	</select>
-
 	<select id="selectDataModelHistoryList" parameterType="com.ndata.quality.common.NDQualityRetrieveCond" resultType="com.ndata.quality.model.std.StdDataModelCollectVo">
 		select
 			 T.DM_CLCT_ID    as clctId
@@ -607,8 +439,9 @@
 			,to_char(to_timestamp(T.CLCT_START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as clctStartDt
 			,to_char(to_timestamp(T.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS')   as clctEndDt
 			,T.CLCT_CMPTN_YN as clctCmptnYn
-			,(select count(*) from TB_DATA_MODEL_OBJ where DM_ID = M.DM_ID and USE_YN='Y') as objCnt
-			,(select count(*) from TB_DATA_MODEL_ATTR where DM_ID = M.DM_ID and USE_YN='Y') as attrCnt
+			<!-- 110 4.12-14-a — 그 수집(가져오기)에서 읽은 테이블·컬럼 수. 이 칸이 생기기 전 이력은 비어 있다 -->
+			,T.OBJ_CNT       as objCnt
+			,T.ATTR_CNT      as attrCnt
 			,0 as stndRate
 			,0 as nonStndCnt
 			,0 as noTermsCnt
@@ -616,6 +449,10 @@
 		from TB_DATA_MODEL_CLCT T
 		JOIN TB_DATA_MODEL M on T.DM_ID = M.DM_ID
 		where M.USE_YN = 'Y'
+		<!-- 110 4.12-14-b — 화면은 모델을 DM_ID 로 고른다 (모델명 부분 일치로 이름이 포함 관계인 다른 모델이 섞였다) -->
+		<if test="schId != null">
+			AND M.DM_ID = #{schId}
+		</if>
 		<if test="schNm != null">
 			AND M.DM_NM ILIKE '%' || #{schNm} || '%'
 		</if>
@@ -738,6 +575,9 @@
             SET
               CLCT_END_DT = #{clctEndDt, jdbcType=VARCHAR}
 			 ,CLCT_CMPTN_YN = #{clctCmptnYn, jdbcType=VARCHAR}
+			 <!-- 110 4.12-14-a — 끝낼 때 그 수집에서 읽은 테이블·컬럼 수 -->
+			 ,OBJ_CNT = #{objCnt, jdbcType=INTEGER}
+			 ,ATTR_CNT = #{attrCnt, jdbcType=INTEGER}
 	</insert>
 
 	<!-- ATTR UPSERT (MERGE): 수집 시 기존 행 갱신, 신규 행 삽입 -->
@@ -763,6 +603,8 @@
 			,ATTR_ORD
 			,TERMS_STND_YN
 			,DOMAIN_STND_YN
+			,WORD_LST
+			,WORD_STND_LST
 			,USE_YN
 			<!-- 88번 거버넌스 -->
 			,APRV_STATUS
@@ -801,6 +643,9 @@
 			,#{attrOrder, jdbcType=SMALLINT}
 			,COALESCE(#{termsStndYn, jdbcType=VARCHAR}, 'N')
 			,COALESCE(#{domainStndYn, jdbcType=VARCHAR}, 'N')
+			<!-- 110 4.12-41-d — 수집·저장 때 계산한 단어 목록 -->
+			,#{wordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
+			,#{wordStndLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
 			,'Y'
 			,COALESCE(#{aprvStatus, jdbcType=VARCHAR}, 'APPROVED')
 			,#{requesterUserId, jdbcType=VARCHAR}
@@ -817,12 +662,21 @@
 			DATA_DECIMAL_LEN = EXCLUDED.DATA_DECIMAL_LEN,
 			NULLABLE_YN = EXCLUDED.NULLABLE_YN,
 			PK_YN = EXCLUDED.PK_YN,
-			FK_YN = EXCLUDED.FK_YN,
-			FK_PARENT_OBJ_NM = EXCLUDED.FK_PARENT_OBJ_NM,
-			FK_PARENT_OBJ_OWNER = EXCLUDED.FK_PARENT_OBJ_OWNER,
-			FK_PARENT_ATTR_NM = EXCLUDED.FK_PARENT_ATTR_NM,
+			<!-- 110 4.12-41-c — 수집은 FK 부모를 읽지 않는다. 들어온 값에 부모가 없으면 화면에서 만든 FK(부모·표시)를 그대로 둔다 -->
+			FK_YN = CASE WHEN EXCLUDED.FK_PARENT_OBJ_NM IS NULL AND TB_DATA_MODEL_ATTR.FK_PARENT_OBJ_NM IS NOT NULL
+			             THEN TB_DATA_MODEL_ATTR.FK_YN ELSE EXCLUDED.FK_YN END,
+			FK_PARENT_OBJ_NM = COALESCE(EXCLUDED.FK_PARENT_OBJ_NM, TB_DATA_MODEL_ATTR.FK_PARENT_OBJ_NM),
+			FK_PARENT_OBJ_OWNER = CASE WHEN EXCLUDED.FK_PARENT_OBJ_NM IS NULL THEN TB_DATA_MODEL_ATTR.FK_PARENT_OBJ_OWNER
+			                           ELSE EXCLUDED.FK_PARENT_OBJ_OWNER END,
+			FK_PARENT_ATTR_NM = CASE WHEN EXCLUDED.FK_PARENT_OBJ_NM IS NULL THEN TB_DATA_MODEL_ATTR.FK_PARENT_ATTR_NM
+			                         ELSE EXCLUDED.FK_PARENT_ATTR_NM END,
 			DEFAULT_VAL = EXCLUDED.DEFAULT_VAL,
 			ATTR_ORD = EXCLUDED.ATTR_ORD,
+			<!-- 110 4.12-41-a — 표준 여부·단어 목록은 들어온 값(수집이면 지금 DB 타입·길이로 다시 판정한 값)으로. 한글명은 그대로 둔다 -->
+			TERMS_STND_YN = EXCLUDED.TERMS_STND_YN,
+			DOMAIN_STND_YN = EXCLUDED.DOMAIN_STND_YN,
+			WORD_LST = COALESCE(EXCLUDED.WORD_LST, TB_DATA_MODEL_ATTR.WORD_LST),
+			WORD_STND_LST = COALESCE(EXCLUDED.WORD_STND_LST, TB_DATA_MODEL_ATTR.WORD_STND_LST),
 			USE_YN = 'Y',
 			DELETED_DT = NULL,
 			<!-- 88번 거버넌스 — UPSERT 시 거버넌스 필드도 갱신 (수집 시 APPROVED 유지, 사용자 변경 시 DRAFT 등) -->
@@ -1028,10 +882,12 @@
 		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
 		WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '') AND OBJ_NM = #{objNm} AND USE_YN = 'Y'
 	</select>
-	<!-- 모델 내 테이블 총건수 (TMP_TBL_N 순번 생성용) -->
-	<select id="countDataModelObjByDm" parameterType="String" resultType="int">
-		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
-		WHERE DM_ID = #{dataModelId}
+	<!-- 110 4.12-18 — TMP_TBL_N 자동 명명용. 모델 안 기존 TMP_TBL_숫자 의 최대 N (행 수+1 이면 기존 이름과 겹쳤다) -->
+	<select id="selectMaxTmpTblSuffix" parameterType="String" resultType="int">
+		SELECT COALESCE(MAX(CAST(SUBSTRING(OBJ_NM FROM 9) AS INTEGER)), 0)
+		  FROM TB_DATA_MODEL_OBJ
+		 WHERE DM_ID = #{dataModelId}
+		   AND OBJ_NM ~ '^TMP_TBL_[0-9]+$'
 	</select>
 
 	<!-- 컬럼(ATTR) 존재 여부 확인 -->
@@ -1136,6 +992,8 @@
 	  현재 키(curr*) 로 행을 찾고, 이력에 남은 예전 값으로 덮는다.
 	  BEFORE_JSON 에 없는 필드는 건드리지 않는다 (COALESCE 로 현재값 유지).
 	-->
+	<!-- 110 5.8-13 — 행의 승인 상태는 건드리지 않는다. 수정은 행 상태를 바꾸지 않으므로(승인 대기 추가 행 위의 수정도 있다)
+	     반려 원복도 값만 되돌린다. 예전에는 APPROVED 로 둔 직후 상태 동기화가 REJECTED 로 덮어 원래 승인 컬럼이 사라졌다 -->
 	<update id="restoreAttrFromBefore" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_ATTR
 		   SET ATTR_NM          = COALESCE(#{attrNm, jdbcType=VARCHAR}, ATTR_NM)
@@ -1145,7 +1003,6 @@
 		      ,DATA_DECIMAL_LEN = COALESCE(#{dataDecimalLen, jdbcType=SMALLINT}, DATA_DECIMAL_LEN)
 		      ,NULLABLE_YN      = COALESCE(#{nullableYn, jdbcType=VARCHAR}, NULLABLE_YN)
 		      ,ATTR_COMMENT     = COALESCE(#{attrComment, jdbcType=VARCHAR}, ATTR_COMMENT)
-		      ,APRV_STATUS      = 'APPROVED'
 		 WHERE DM_ID = #{dataModelId}
 		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{currObjOwner, jdbcType=VARCHAR},''),'')
 		   AND OBJ_NM  = #{currObjNm}
@@ -1156,7 +1013,6 @@
 		UPDATE TB_DATA_MODEL_OBJ
 		   SET OBJ_NM      = COALESCE(#{objNm, jdbcType=VARCHAR}, OBJ_NM)
 		      ,OBJ_OWNER   = COALESCE(#{objOwner, jdbcType=VARCHAR}, OBJ_OWNER)
-		      ,APRV_STATUS = 'APPROVED'
 		 WHERE DM_ID = #{dataModelId}
 		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{currObjOwner, jdbcType=VARCHAR},''),'')
 		   AND OBJ_NM = #{currObjNm}
@@ -1175,10 +1031,11 @@
 		   AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
 	</update>
 
+	<!-- 110 5.8-15 — 대기 삭제 반려 복구(아래 세 문장)는 USE_YN·DELETED_DT 만 되돌린다. 승인 상태는 그대로
+	     (예전에는 APPROVED 로 덮어, 추가 신청 중인 컬럼·테이블이 승인 없이 확정됐다) -->
 	<update id="restoreAttrPendingDelete" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_ATTR
-		   SET USE_YN = 'Y', DELETED_DT = NULL,
-		       APRV_STATUS = 'APPROVED'
+		   SET USE_YN = 'Y', DELETED_DT = NULL
 		 WHERE DM_ID = #{dmId}
 		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
 		   AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
@@ -1203,8 +1060,7 @@
 
 	<update id="restoreObjPendingDelete" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_OBJ
-		   SET USE_YN = 'Y', DELETED_DT = NULL,
-		       APRV_STATUS = 'APPROVED'
+		   SET USE_YN = 'Y', DELETED_DT = NULL
 		 WHERE DM_ID = #{dmId}
 		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
 		   AND OBJ_NM = #{objNm}
@@ -1213,8 +1069,7 @@
 
 	<update id="restoreAttrsByObjPendingDelete" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_ATTR
-		   SET USE_YN = 'Y', DELETED_DT = NULL,
-		       APRV_STATUS = 'APPROVED'
+		   SET USE_YN = 'Y', DELETED_DT = NULL
 		 WHERE DM_ID = #{dmId}
 		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
 		   AND OBJ_NM = #{objNm}
@@ -1268,7 +1123,7 @@
 	<select id="selectDataModelObjOne" parameterType="java.util.Map" resultType="com.ndata.quality.model.std.StdDataModelObjVo">
 		SELECT O.OBJ_OWNER AS objOwner, O.OBJ_NM AS objNm, O.OBJ_NM_KR AS objNmKr, O.OBJ_DESC AS objDesc, O.OBJ_COMMENT AS objComment,
 		       O.OBJ_ATTR_CNT AS objAttrCnt, O.TABLESPACE_NM AS tablespaceNm, O.BIZ_AREA_ID AS bizAreaId, O.SUBJ_AREA_ID AS subjAreaId,
-		       (SELECT biz_area_nm FROM tb_biz_area WHERE biz_area_id = O.BIZ_AREA_ID) AS bizAreaNm,
+		       (SELECT biz_area_nm FROM tb_biz_area WHERE biz_area_id = O.BIZ_AREA_ID AND use_yn = 'Y') AS bizAreaNm,
 		       (SELECT subj_area_nm FROM tb_subj_area WHERE subj_area_id = O.SUBJ_AREA_ID) AS subjAreaNm
 		  FROM TB_DATA_MODEL_OBJ O
 		 WHERE O.DM_ID = #{dataModelId} AND O.OBJ_OWNER = #{objOwner} AND O.OBJ_NM = #{objNm}
@@ -1655,34 +1510,60 @@
 		  AND FK_PARENT_ATTR_NM = #{origAttrNm}
 	</update>
 
-	<update id="updateDataModelAttrKey" parameterType="java.util.Map">
-		UPDATE TB_DATA_MODEL_ATTR SET
-			 ATTR_NM          = #{attrNm, jdbcType=VARCHAR}
-			,ATTR_NM_KR       = #{attrNmKr, jdbcType=VARCHAR}
-			,DATA_TYPE        = #{dataType, jdbcType=VARCHAR}
-			,DATA_LEN         = #{dataLen, jdbcType=BIGINT}
-			,DATA_DECIMAL_LEN = #{dataDecimalLen, jdbcType=SMALLINT}
-			,TERMS_STND_YN    = #{termsStndYn, jdbcType=VARCHAR}
-			,DOMAIN_STND_YN   = #{domainStndYn, jdbcType=VARCHAR}
-			,WORD_LST         = #{wordLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
-			,WORD_STND_LST    = #{wordStndLst, typeHandler=com.ndata.common.handler.ArrayTypeHandler}
-		WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '') AND OBJ_NM = #{objNm} AND ATTR_NM = #{origAttrNm}
-	</update>
-
 	<!-- 컬럼 삭제 -->
 	<delete id="deleteDataModelAttr" parameterType="java.util.Map">
 		DELETE FROM TB_DATA_MODEL_ATTR
 		WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER, '') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR}, ''), '') AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
 	</delete>
 
-	<!-- 테이블 컬럼 개수 동기화 (INSERT/DELETE 후 호출) -->
+	<!-- 테이블 컬럼 개수 동기화 (INSERT/DELETE 후 호출)
+	     110 4.12-31 — 삭제 대기(USE_YN='N')·반려된 컬럼은 세지 않는다 -->
 	<update id="syncDataModelObjAttrCnt" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_OBJ O SET OBJ_ATTR_CNT = (
 			SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR A
 			WHERE A.DM_ID = O.DM_ID AND A.OBJ_OWNER = O.OBJ_OWNER AND A.OBJ_NM = O.OBJ_NM
+			  AND A.USE_YN = 'Y' AND COALESCE(A.APRV_STATUS, 'APPROVED') &lt;&gt; 'REJECTED'
 		)
 		WHERE O.DM_ID = #{dataModelId} AND O.OBJ_NM = #{objNm}
 	</update>
+
+	<!-- 110 5.8-20 — 모델 변경 승인·반려·롤백 뒤 그 모델 테이블의 컬럼 개수를 다시 센다 (물리 삭제·복구·반려로 바뀐다) -->
+	<update id="syncObjAttrCntByDm" parameterType="String">
+		UPDATE TB_DATA_MODEL_OBJ O SET OBJ_ATTR_CNT = C.CNT
+		  FROM (SELECT O2.DM_ID, O2.OBJ_OWNER, O2.OBJ_NM,
+		               (SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR A
+		                 WHERE A.DM_ID = O2.DM_ID AND A.OBJ_OWNER = O2.OBJ_OWNER AND A.OBJ_NM = O2.OBJ_NM
+		                   AND A.USE_YN = 'Y' AND COALESCE(A.APRV_STATUS, 'APPROVED') &lt;&gt; 'REJECTED') AS CNT
+		          FROM TB_DATA_MODEL_OBJ O2 WHERE O2.DM_ID = #{value}) C
+		 WHERE O.DM_ID = C.DM_ID AND O.OBJ_OWNER = C.OBJ_OWNER AND O.OBJ_NM = C.OBJ_NM
+		   AND O.OBJ_ATTR_CNT IS DISTINCT FROM C.CNT
+	</update>
+
+	<!-- 110 5.8-17 — 본인 DRAFT 롤백: 반려와 같이 원복한 뒤, 그 신청으로 생긴(지금 반려 상태인) 테이블·컬럼 행을 지운다 -->
+	<delete id="deleteRejectedAttr" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dataModelId}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+		   AND APRV_STATUS = 'REJECTED'
+	</delete>
+	<delete id="deleteRejectedAttrsByObj" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dataModelId}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND OBJ_NM = #{objNm}
+		   AND APRV_STATUS = 'REJECTED'
+	</delete>
+	<delete id="deleteRejectedObj" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_OBJ
+		 WHERE DM_ID = #{dataModelId}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND OBJ_NM = #{objNm}
+		   AND APRV_STATUS = 'REJECTED'
+		   AND NOT EXISTS (SELECT 1 FROM TB_DATA_MODEL_ATTR A
+		                    WHERE A.DM_ID = TB_DATA_MODEL_OBJ.DM_ID AND A.OBJ_OWNER = TB_DATA_MODEL_OBJ.OBJ_OWNER
+		                      AND A.OBJ_NM = TB_DATA_MODEL_OBJ.OBJ_NM)
+	</delete>
 
 	<!-- ATTR_ORD 최댓값 조회 (새 컬럼 추가 시 다음 순번 산정) -->
 	<select id="selectMaxAttrOrd" parameterType="java.util.Map" resultType="short">
@@ -1819,6 +1700,8 @@
 		  FROM TB_DATA_MODEL_CLCT
 		 WHERE DM_ID = #{dmId}
 		   AND COALESCE(CLCT_CMPTN_YN, 'N') != 'Y'
+		   <!-- 110 4.12-38 — 실패한 수집은 끝난 시각을 남긴다 (진행 중 = 끝난 시각 없음) -->
+		   AND CLCT_END_DT IS NULL
 		   AND CLCT_START_DT &gt; to_char(now() - interval '6 hours', 'YYYYMMDDHH24MISS')
 	</select>
 

@@ -5,7 +5,7 @@
       <v-row :style="{ alignItems: 'center', margin: '0', flexWrap: 'wrap', gap: '6px' }">
         <span class="filterLabel">데이터 모델명</span>
         <v-autocomplete v-model="selectedModel" :items="filteredModelList"
-          item-text="dataModelNm" item-value="dataModelNm"
+          item-text="dataModelNm" item-value="dataModelId"
           clearable dense outlined hide-details
           class="filterInput" :style="{ width: '220px' }" color="ndColor" placeholder="모델 선택"
           :disabled="filteredModelList.length === 0">
@@ -212,9 +212,10 @@ export default {
       if (this.searchFrom) _from = this.searchFrom.replace(/-/g, '') + '000000';
       if (this.searchTo)   _to   = this.searchTo.replace(/-/g, '')   + '235959';
 
+      // 110 4.12-14-b — 모델은 DM_ID 로 (모델명 부분 일치로 이름이 포함 관계인 다른 모델 이력이 섞였다)
       axios.post(this.$APIURL.base + 'api/dm/getDataModelHistoryList', {
         schSysNm: this.selectedSystem || null,
-        schNm:    this.selectedModel  || null,
+        schId:    this.selectedModel  || null,
         from:     _from,
         to:       _to,
       }).then((res) => {

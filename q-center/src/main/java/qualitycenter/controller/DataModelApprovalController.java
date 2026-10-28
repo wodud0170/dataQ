@@ -66,7 +66,12 @@ public class DataModelApprovalController {
 		return sqlSessionTemplate.selectList("dmChangeHistory.selectMyDrafts", p);
 	}
 
-	/** 사용자 — 선택한 DRAFT 들을 SUBMITTED 로 일괄 신청 */
+	/**
+	 * 사용자 — 선택한 DRAFT 들을 SUBMITTED 로 일괄 신청.
+	 * 110 5.8-27 — 고른 건이 여러 모델이면 모델마다 신청(SUBMISSION_ID)·결재 문서를 따로 만든다.
+	 * 결재 문서는 모델로 결재선을 정하는데, 예전에는 첫 건의 모델 하나로 만들고 승인 화면 카드에도 모델 하나만 보였다.
+	 * 응답 contents = {submitted, submissionId(첫 신청), submissionIds, aprvMsg}
+	 */
 	@PostMapping("/submit")
 	@SuppressWarnings("unchecked")
 	public Mono<Response> submit(@RequestBody Map<String, Object> body) {
@@ -75,29 +80,39 @@ public class DataModelApprovalController {
 			List<Object> seqList = (List<Object>) body.get("changeSeqList");
 			if (seqList == null || seqList.isEmpty())
 				throw new IllegalArgumentException("changeSeqList 필수");
-			String submissionId = UUID.randomUUID().toString();
-			Map<String, Object> p = new HashMap<>();
-			p.put("currentUserId", changeHistory.safeUserId());
-			p.put("changeSeqList", seqList);
-			p.put("submissionId",  submissionId);
-			int n = sqlSessionTemplate.update("dmChangeHistory.submitDrafts", p);
-			// 104번 WP1 — 데이터 모델 변경에 결재선이 있으면 이 신청으로 결재 문서를 만든다
-			String aprvMsg = null;
-			if (n > 0) {
-				Map<String, Object> first = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seqList.get(0));
-				String dmId = first == null ? null : (String) first.get("dm_id");
-				Map<String, Object> model = dmId == null ? null : sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dmId);
+			Map<String, List<Object>> byDm = new java.util.LinkedHashMap<>();
+			for (Object seq : seqList) {
+				Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+				if (h != null) byDm.computeIfAbsent((String) h.get("dm_id"), k -> new ArrayList<>()).add(seq);
+			}
+			int total = 0;
+			List<String> submissionIds = new ArrayList<>();
+			List<String> aprvMsgs = new ArrayList<>();
+			for (Map.Entry<String, List<Object>> e : byDm.entrySet()) {
+				String submissionId = UUID.randomUUID().toString();
+				Map<String, Object> p = new HashMap<>();
+				p.put("currentUserId", changeHistory.safeUserId());
+				p.put("changeSeqList", e.getValue());
+				p.put("submissionId",  submissionId);
+				int n = sqlSessionTemplate.update("dmChangeHistory.submitDrafts", p);
+				if (n == 0) continue;
+				total += n;
+				submissionIds.add(submissionId);
+				// 104번 WP1 — 데이터 모델 변경에 결재선이 있으면 이 신청으로 결재 문서를 만든다
+				String dmId = e.getKey();
+				Map<String, Object> model = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dmId);
 				String dmNm = model == null ? dmId : String.valueOf(model.get("dataModelNm"));
 				com.ndata.quality.service.AprvService.Result r = aprvService.open("DM_CHANGE", submissionId, dmNm + " 변경 " + n + "건", dmId, null, changeHistory.safeUserId());
 				if (r != null) {
 					websocketService.sendUserNotis(r.notis);
-					aprvMsg = r.message;
+					if (r.message != null) aprvMsgs.add(r.message);
 				}
 			}
 			Map<String, Object> out = new java.util.LinkedHashMap<>();
-			out.put("submitted", n);
-			out.put("submissionId", submissionId);
-			out.put("aprvMsg", aprvMsg);
+			out.put("submitted", total);
+			out.put("submissionId", submissionIds.isEmpty() ? null : submissionIds.get(0));
+			out.put("submissionIds", submissionIds);
+			out.put("aprvMsg", aprvMsgs.isEmpty() ? null : String.join(" / ", aprvMsgs));
 			res.setResultInfo(RestResult.CODE_200);
 			res.setContents(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(out));
 		} catch (Exception e) {
@@ -107,17 +122,62 @@ public class DataModelApprovalController {
 		return Mono.just(res);
 	}
 
-	/** 사용자 — DRAFT 단건 롤백 (DB row 삭제 + 본 변경에 따른 실제 모델 row 도 정리 필요 — V2 검토) */
+	/**
+	 * 사용자 — 본인 DRAFT 롤백. changeSeqList(여러 건) 또는 changeSeq(한 건).
+	 * 110 5.8-17 — 예전에는 이력 행만 지워, 추가된 행·감춘 행·바뀐 값이 이력 없이 남았다(다시 신청·승인할 수 없고 수정은 승인 없이 확정).
+	 * 지금은 한 트랜잭션으로, 나중 변경부터 반려와 같은 원복(수정 값 되돌림·대기 삭제 복구·PK/FK 되돌림·의존 대기 건 전파 반려)을 하고
+	 * 그 신청으로 생긴 테이블·컬럼 행과 이력 행을 지운다. 앞 건의 전파로 이미 반려된 고른 건은 정리만 한다.
+	 * 추가(ADD_OBJ·ADD_ATTR)를 되돌리는데 같은 테이블에 고르지 않은 대기 PK·FK·테이블 변경이 있으면 그 건부터 롤백하라고 거부한다.
+	 * 응답 contents = {deleted: 지운 이력 수}
+	 */
 	@PostMapping("/rollbackDraft")
+	@SuppressWarnings("unchecked")
 	public Mono<Response> rollbackDraft(@RequestBody Map<String, Object> body) {
 		Response res = new Response();
 		try {
-			Object seq = body.get("changeSeq");
-			if (seq == null) throw new IllegalArgumentException("changeSeq 필수");
-			Map<String, Object> p = new HashMap<>();
-			p.put("changeSeq",     seq);
-			p.put("currentUserId", changeHistory.safeUserId());
-			int n = sqlSessionTemplate.delete("dmChangeHistory.deleteDraft", p);
+			List<Object> raw = body.get("changeSeqList") instanceof List ? (List<Object>) body.get("changeSeqList")
+					: body.get("changeSeq") == null ? null : java.util.Collections.singletonList(body.get("changeSeq"));
+			if (raw == null || raw.isEmpty()) throw new IllegalArgumentException("changeSeq 필수");
+			List<Long> seqs = new ArrayList<>();
+			for (Object s : raw) seqs.add(Long.valueOf(String.valueOf(s)));
+			seqs.sort(java.util.Comparator.reverseOrder());
+			String userId = changeHistory.safeUserId();
+			String now = LocalDateTime.now().format(DT_FMT);
+			java.util.Set<String> dmIds = new java.util.HashSet<>();
+			int n = new TransactionTemplate(txManager).execute(tx -> {
+				for (Long seq : seqs) {
+					Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+					if (h == null || !userId.equals(h.get("change_user_id")) || !"DRAFT".equals(h.get("aprv_status")))
+						throw new IllegalStateException("본인의 DRAFT 만 롤백할 수 있습니다 (change_seq=" + seq + ")");
+					String type = (String) h.get("change_type");
+					if ("ADD_OBJ".equals(type) || "ADD_ATTR".equals(type)) {
+						Map<String, Object> q = new HashMap<>();
+						q.put("dmId", h.get("dm_id"));
+						q.put("objOwner", h.get("obj_owner"));
+						q.put("objNm", h.get("obj_nm"));
+						q.put("attrNm", "ADD_ATTR".equals(type) ? h.get("attr_nm") : null);
+						q.put("excludeSeqs", seqs);
+						int others = sqlSessionTemplate.selectOne("dmChangeHistory.countPendingOtherOnObj", q);
+						if (others > 0)
+							throw new IllegalStateException(h.get("obj_nm") + ("ADD_ATTR".equals(type) ? "." + h.get("attr_nm") : "")
+									+ " 에 기대는, 고르지 않은 대기 변경(PK·FK·테이블)이 " + others
+									+ "건 있습니다 — 그 건부터 롤백하세요 (change_seq=" + seq + ")");
+					}
+				}
+				int cnt = 0;
+				for (Long seq : seqs) {
+					Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+					dmIds.add((String) h.get("dm_id"));
+					if ("DRAFT".equals(h.get("aprv_status"))) applyApprovalStatus(seq, "REJECTED", userId, now, "본인 롤백");
+					removeRolledBackRows(h);
+					Map<String, Object> p = new HashMap<>();
+					p.put("changeSeq",     seq);
+					p.put("currentUserId", userId);
+					cnt += sqlSessionTemplate.delete("dmChangeHistory.deleteRolledBack", p);
+				}
+				for (String dmId : dmIds) sqlSessionTemplate.update("datamodel.syncObjAttrCntByDm", dmId);
+				return cnt;
+			});
 			res.setResultInfo(RestResult.CODE_200);
 			res.setContents("{\"deleted\":" + n + "}");
 		} catch (Exception e) {
@@ -205,9 +265,11 @@ public class DataModelApprovalController {
 				// 신청별로 나눈다 — 결재 문서가 있는 신청은 문서 단위로 한 번만 처리
 				List<Object> plain = new ArrayList<>();
 				java.util.Set<String> pendingAtStart = new java.util.HashSet<>();
+				java.util.Set<String> dmIds = new java.util.HashSet<>();
 				Map<String, Map<String, Object>> docBySub = new java.util.LinkedHashMap<>();
 				for (Object seq : seqList) {
 					Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+					if (h != null) dmIds.add((String) h.get("dm_id"));
 					if (h != null && isPending(h)) pendingAtStart.add(String.valueOf(seq));
 					String sub = h == null ? null : (String) h.get("submission_id");
 					Map<String, Object> d = sub == null ? null : aprvService.openDoc("DM_CHANGE", sub);
@@ -237,6 +299,8 @@ public class DataModelApprovalController {
 						if ("SUBMITTED".equals(h.get("aprv_status"))) cnt += applyApprovalStatus(i.getChangeSeq(), status, userId, now, comment);
 					}
 				}
+				// 110 5.8-20 — 승인(물리 삭제)·반려(복구·반려)로 컬럼 개수가 바뀐다
+				for (String dmId : dmIds) sqlSessionTemplate.update("datamodel.syncObjAttrCntByDm", dmId);
 				return cnt;
 			});
 			websocketService.sendUserNotis(notis);
@@ -254,6 +318,26 @@ public class DataModelApprovalController {
 
 	private static boolean isPending(Map<String, Object> hist) {
 		return hist != null && ("DRAFT".equals(hist.get("aprv_status")) || "SUBMITTED".equals(hist.get("aprv_status")));
+	}
+
+	/** 110 5.8-17 — 롤백한 추가(ADD_OBJ·ADD_ATTR)로 생긴 행(반려 처리로 지금 REJECTED)을 지운다. 다른 유형은 반려 원복으로 끝난다 */
+	private void removeRolledBackRows(Map<String, Object> h) {
+		String type = (String) h.get("change_type");
+		Map<String, Object> k = new HashMap<>();
+		k.put("dataModelId", h.get("dm_id"));
+		k.put("objOwner",    h.get("obj_owner") == null ? "" : h.get("obj_owner"));
+		k.put("objNm",       h.get("obj_nm"));
+		if ("ADD_ATTR".equals(type)) {
+			k.put("attrNm", h.get("attr_nm"));
+			sqlSessionTemplate.delete("datamodel.deleteRejectedAttr", k);
+		} else if ("ADD_OBJ".equals(type)) {
+			sqlSessionTemplate.delete("datamodel.deleteRejectedAttrsByObj", k);
+			if (sqlSessionTemplate.delete("datamodel.deleteRejectedObj", k) > 0) {
+				sqlSessionTemplate.delete("udp.deleteObjVals",          k);
+				sqlSessionTemplate.delete("datamodel.deleteIndexByObj", k);
+				sqlSessionTemplate.delete("datamodel.deleteConstraintByObj", k);
+			}
+		}
 	}
 
 	/**
@@ -294,13 +378,11 @@ public class DataModelApprovalController {
 			sp.put("aprvStatus",  status);
 			sp.put("aprvUserId",  adminId);
 			sp.put("aprvDt",      now);
-			// DEF-04 — 수정 반려 시 변경 전 값으로 되돌린다.
-			// 그동안 모델 row 는 이미 바뀐 채였고 반려는 상태만 REJECTED 로 만들어,
-			// 반려된 값이 그대로 살아 있었다.
-			// 테이블 수정(MODIFY_OBJ)은 아래 테이블 반려 전파가 지금(바뀐) 이름으로 돈 뒤에 되돌린다 (109번 #14)
-			if ("REJECTED".equals(status) && "MODIFY_ATTR".equals(changeType)) {
-				restoreFromBeforeJson(hist, changeType, dmId, objOwner, objNm, attrNm);
-			}
+			// DEF-04 — 수정 반려 시 변경 전 값으로 되돌린다 (그동안 모델 row 는 이미 바뀐 채였다).
+			// 컬럼·테이블 수정(MODIFY_ATTR·MODIFY_OBJ)은 아래 반려 전파가 지금(바뀐) 이름으로 돈 뒤에 되돌린다 (109번 #14, 110 5.8-14).
+			// 110 5.8-13 — 수정은 행의 승인 상태를 바꾸지 않으므로(추가 신청 중인 행 위의 수정도 있다) 승인·반려 모두 행 상태를 동기화하지 않는다.
+			// 예전에는 타입·길이만 바꾼 수정을 반려하면 원복 직후 같은 키로 REJECTED 를 덮어 원래 승인 컬럼이 목록·진단에서 사라졌다.
+			boolean modify = "MODIFY_ATTR".equals(changeType) || "MODIFY_OBJ".equals(changeType);
 
 			// WP0 — PK/FK 변경 (createPk·deletePk·createFk·deleteFk). 승인은 확정, 반려는 신청 전 상태로.
 			if (CONSTRAINT_CHANGE_TYPES.contains(changeType)) {
@@ -353,14 +435,18 @@ public class DataModelApprovalController {
 				}
 			}
 
+			// 110 5.8-16 — 전파로 반려한 대기 이력. 전파를 모두 지금 이름으로 돈 뒤 유형별로 원복한다 (예전에는 상태만 REJECTED 였다)
+			List<Long> cascaded = new ArrayList<>();
 			if (changeType != null && changeType.contains("_ATTR") && attrNm != null) {
-				sqlSessionTemplate.update("dmChangeHistory.syncAttrAprvStatus", sp);
+				if (!modify) sqlSessionTemplate.update("dmChangeHistory.syncAttrAprvStatus", sp);
 				if ("REJECTED".equals(status)) {
 					cascadeRejectFrom(dmId, objOwner, objNm, attrNm, adminId, now,
-					                  "부모 컬럼 반려에 의한 cascade");
+					                  "부모 컬럼 반려에 의한 cascade", cascaded);
+					revertCascaded(cascaded);
+					if (modify) restoreFromBeforeJson(hist, changeType, dmId, objOwner, objNm, attrNm);
 				}
 			} else if (changeType != null && changeType.contains("_OBJ")) {
-				sqlSessionTemplate.update("dmChangeHistory.syncObjAprvStatus", sp);
+				if (!modify) sqlSessionTemplate.update("dmChangeHistory.syncObjAprvStatus", sp);
 				// 테이블 반려 → 그 테이블의 PENDING 컬럼들, 그리고 그 컬럼을 참조하는 것들까지
 				if ("REJECTED".equals(status)) {
 					Map<String, Object> casc = new HashMap<>();
@@ -371,6 +457,7 @@ public class DataModelApprovalController {
 					casc.put("aprvUserId", adminId);
 					casc.put("aprvDt",     now);
 					casc.put("aprvComment", "부모 테이블 반려에 의한 cascade");
+					cascaded.addAll(sqlSessionTemplate.<Long>selectList("dmChangeHistory.selectPendingAttrHistoryInObj", casc));
 					int cnt  = sqlSessionTemplate.update("dmChangeHistory.cascadeRejectAttrsInObj",   casc);
 					int hcnt = sqlSessionTemplate.update("dmChangeHistory.cascadeRejectHistoryInObj", casc);
 					if (cnt > 0) log.info(">> reject cascade (obj→attrs): {} attrs, {} history", cnt, hcnt);
@@ -378,8 +465,9 @@ public class DataModelApprovalController {
 					for (Map<String, Object> k : rejectedAttrKeys(dmId, now)) {
 						cascadeRejectFrom(dmId, (String) k.get("objOwner"), (String) k.get("objNm"),
 						                  (String) k.get("attrNm"), adminId, now,
-						                  "상위 반려에 의한 cascade");
+						                  "상위 반려에 의한 cascade", cascaded);
 					}
+					revertCascaded(cascaded);
 					if ("MODIFY_OBJ".equals(changeType)) {
 						restoreFromBeforeJson(hist, changeType, dmId, objOwner, objNm, attrNm);
 					}
@@ -501,6 +589,20 @@ public class DataModelApprovalController {
 				before.put("currObjNm",    objNm);
 				before.put("currAttrNm",   attrNm);
 				int r = sqlSessionTemplate.update("datamodel.restoreAttrFromBefore", before);
+				// 110 5.8-14 — 영문명 변경 때(saveAttrs) 함께 바꾼 인덱스·제약조건·참조 제약조건·FK 부모 이름도 변경 전 이름으로
+				String oldAttr = (String) before.get("attrNm");
+				if (r > 0 && oldAttr != null && !oldAttr.equals(attrNm)) {
+					Map<String, Object> ren = new HashMap<>();
+					ren.put("dataModelId", dmId);
+					ren.put("objOwner",    objOwner == null ? "" : objOwner);
+					ren.put("objNm",       objNm);
+					ren.put("origAttrNm",  attrNm);
+					ren.put("newAttrNm",   oldAttr);
+					sqlSessionTemplate.update("datamodel.renameAttrInIndex",         ren);
+					sqlSessionTemplate.update("datamodel.renameAttrInConstraint",    ren);
+					sqlSessionTemplate.update("datamodel.renameAttrInConstraintRef", ren);
+					sqlSessionTemplate.update("datamodel.renameAttrInFkParent",      ren);
+				}
 				log.info(">> MODIFY_ATTR 반려 — {}건 원복 {}.{}.{}", r, objOwner, objNm, attrNm);
 			} else if ("MODIFY_OBJ".equals(changeType)) {
 				// 109번 #14 — 이름·소유자 변경 때(updateObj) 함께 바꾼 컬럼·인덱스·제약조건·참조 제약조건·FK 부모·사용자 정의 속성 값도
@@ -566,13 +668,16 @@ public class DataModelApprovalController {
 	 * 이미 REJECTED 라 매칭되지 않으므로 멈춘다.
 	 */
 	private void cascadeRejectFrom(String dmId, String objOwner, String objNm, String attrNm,
-	                               String adminId, String now, String reason) {
+	                               String adminId, String now, String reason, List<Long> cascaded) {
+		// 110 5.8-29 — 상한 50 은 FK 사슬의 깊이다. 예전에는 큐에서 꺼낸 노드 수라 자식이 50개를 넘으면 나머지의 하위 전파를 하지 않았다
 		java.util.Deque<String[]> queue = new java.util.ArrayDeque<>();
+		java.util.Deque<Integer> depths = new java.util.ArrayDeque<>();
 		queue.add(new String[]{ objOwner, objNm, attrNm });
+		depths.add(0);
 		java.util.Set<String> visited = new java.util.HashSet<>();
-		int depth = 0;
-		while (!queue.isEmpty() && depth++ < 50) {
+		while (!queue.isEmpty()) {
 			String[] cur = queue.poll();
+			int depth = depths.poll();
 			String key = cur[0] + "|" + cur[1] + "|" + cur[2];
 			if (!visited.add(key)) continue;
 
@@ -589,16 +694,50 @@ public class DataModelApprovalController {
 			// 자식을 찾아둔 뒤 반려해야 한다. 반려 후에는 상태가 바뀌어 목록에서 빠진다.
 			List<Map<String, Object>> children =
 				sqlSessionTemplate.selectList("dmChangeHistory.selectPendingChildrenOfAttr", casc);
+			// 110 5.8-16 — 전파로 반려할 대기 이력(이 컬럼을 FK 부모로 둔 컬럼의 수정·삭제 포함). 원복은 호출자가 전파를 마친 뒤
+			cascaded.addAll(sqlSessionTemplate.<Long>selectList("dmChangeHistory.selectPendingHistoryByFkParent", casc));
 			int cnt  = sqlSessionTemplate.update("dmChangeHistory.cascadeRejectDependents",    casc);
 			int hcnt = sqlSessionTemplate.update("dmChangeHistory.cascadeRejectHistoryByAttr", casc);
 			if (cnt > 0 || hcnt > 0)
 				log.info(">> reject cascade {}.{}.{} → {} attrs, {} history",
 				         cur[0], cur[1], cur[2], cnt, hcnt);
 
+			if (depth >= 50) continue;
 			for (Map<String, Object> c : children) {
 				queue.add(new String[]{ (String) c.get("objOwner"),
 				                        (String) c.get("objNm"),
 				                        (String) c.get("attrNm") });
+				depths.add(depth + 1);
+			}
+		}
+	}
+
+	/**
+	 * 110 5.8-16 — 전파로 반려한 대기 이력의 값 원복. 나중 변경부터, 유형별로 직접 반려와 같게:
+	 * MODIFY_ATTR 는 변경 전 값(영문명이 바뀌었으면 인덱스·제약조건·FK 참조 이름까지), DEL_ATTR 는 감춘 컬럼을 되살린다.
+	 * ADD_ATTR 는 행이 이미 반려 상태다(cascadeRejectDependents·cascadeRejectAttrsInObj).
+	 */
+	private void revertCascaded(List<Long> seqs) {
+		List<Long> sorted = new ArrayList<>(new java.util.TreeSet<>(seqs));
+		java.util.Collections.reverse(sorted);
+		seqs.clear();
+		for (Long seq : sorted) {
+			Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
+			if (h == null) continue;
+			String type = (String) h.get("change_type");
+			String dmId = (String) h.get("dm_id");
+			String owner = (String) h.get("obj_owner");
+			String obj = (String) h.get("obj_nm");
+			String attr = (String) h.get("attr_nm");
+			if ("MODIFY_ATTR".equals(type)) {
+				restoreFromBeforeJson(h, type, dmId, owner, obj, attr);
+			} else if ("DEL_ATTR".equals(type)) {
+				Map<String, Object> sp = new HashMap<>();
+				sp.put("dmId", dmId);
+				sp.put("objOwner", owner);
+				sp.put("objNm", obj);
+				sp.put("attrNm", attr);
+				sqlSessionTemplate.update("datamodel.restoreAttrPendingDelete", sp);
 			}
 		}
 	}

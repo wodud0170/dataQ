@@ -144,11 +144,16 @@ public class DataModelController {
 			u2.put("attrNm", b.get("attrNm")); u2.put("attrOrder", ordA.shortValue());
 			sqlSessionTemplate.update("datamodel.updateAttrOrdByName", u2);
 
-			// 이력 기록 (Tier 1.5, 즉시 APPROVED)
+			// 이력 기록 (Tier 1.5, 즉시 APPROVED). 110 5.8-28 — {컬럼: 순서} JSON (예전 문자열은 JSON 이 아니라 상세에 원문으로 보였다)
+			Map<String, Object> ordBefore = new LinkedHashMap<>();
+			ordBefore.put(String.valueOf(a.get("attrNm")), ordA);
+			ordBefore.put(String.valueOf(b.get("attrNm")), ordB);
+			Map<String, Object> ordAfter = new LinkedHashMap<>();
+			ordAfter.put(String.valueOf(a.get("attrNm")), ordB);
+			ordAfter.put(String.valueOf(b.get("attrNm")), ordA);
 			changeHistory.record(null, dataModelId, "SWAP_ATTR_ORD", "TIER1_5",
 					objOwner, objNm, attrNm, null, null,
-					"{\"a\":\"" + a.get("attrNm") + "\":" + ordA + ",\"b\":\"" + b.get("attrNm") + "\":" + ordB + "}",
-					"{\"a\":\"" + a.get("attrNm") + "\":" + ordB + ",\"b\":\"" + b.get("attrNm") + "\":" + ordA + "}",
+					toJsonSafe(ordBefore), toJsonSafe(ordAfter),
 					null, "APPROVED");
 			res.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -200,6 +205,12 @@ public class DataModelController {
 		log.info(">> createDataModel : {}", dataVo);
 
 		Response result = new Response();
+		// 110 4.12-13-a — 이름을 지운 뒤 남은 빈칸·공백도 거부 (화면은 null 만 막았다)
+		if (isBlankStr(dataVo.getDataModelNm())) {
+			result.setResultInfo(RestResult.CODE_500.getCode(), "데이터 모델명은 필수 입력값입니다.");
+			return Mono.just(result);
+		}
+		dataVo.setDataModelNm(dataVo.getDataModelNm().trim());
 		// 109번 #2 — 시스템·데이터소스 지정은 모델 직접 반영 권한(DM_MANAGE). DB 반영 권한(DDL_EXEC)이 시스템 단위라
 		// 모델의 시스템·데이터소스를 아무나 바꾸면 그 권한 범위를 넘어 다른 시스템 DB 에 실행할 수 있었다
 		if ((!isBlankStr(dataVo.getDataModelSysCd()) || !isBlankStr(dataVo.getDataModelDsId()))
@@ -239,6 +250,11 @@ public class DataModelController {
 		log.info(">> updateDataModel : {}", dataVo);
 
 		Response result = new Response();
+		if (isBlankStr(dataVo.getDataModelNm())) {   // 110 4.12-13-a
+			result.setResultInfo(RestResult.CODE_500.getCode(), "데이터 모델명은 필수 입력값입니다.");
+			return Mono.just(result);
+		}
+		dataVo.setDataModelNm(dataVo.getDataModelNm().trim());
 
 		try {
 			// 109번 #2 — 시스템·데이터소스를 바꾸는 것은 모델 직접 반영 권한(DM_MANAGE)
@@ -363,7 +379,7 @@ public class DataModelController {
 				resolvedDbType = ds == null ? null : (String) ds.get("dbmsTp");
 			}
 
-			String ddl = ddlGenerator.generate(dataModelId, resolvedDbType);
+			String ddl = ddlGenerator.generate(dataModelId, resolvedDbType, sessionService.getUserId());
 
 			String safeName = (dmNm == null ? dataModelId : dmNm).replaceAll("[\\\\/:*?\"<>|]", "_");
 			String ts = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
@@ -382,17 +398,6 @@ public class DataModelController {
 	}
 
 	/**
-	 * 수집 ID 기준 데이터모델 현황 정보 조회
-	 *
-	 * @param clctId 수집 ID
-	 * @return 해당 수집건의 데이터모델 현황 정보
-	 */
-	@RequestMapping(value = "/getDataModelStatsByClctId", method = RequestMethod.GET)
-	public StdDataModelVo getDataModelStatsByClctId(String clctId) {
-		return sqlSessionTemplate.selectOne("datamodel.selectDataModelStatsByClctId", clctId);
-	}
-
-	/**
 	 * 데이터모델 목록 조회 (수집 정보 포함)
 	 *
 	 * @param retCond 검색 조건 (모델명, 시스템명 등)
@@ -401,17 +406,6 @@ public class DataModelController {
 	@RequestMapping(value = "/getDataModelList", method = { RequestMethod.GET, RequestMethod.POST })
 	public List<StdDataModelCollectVo> getDataModelList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
 		return sqlSessionTemplate.selectList("datamodel.selectDataModelList", retCond);
-	}
-
-	/**
-	 * 데이터모델 수집 목록 조회 (모델ID, 모델명, 시스템명 기준)
-	 *
-	 * @param retCond 검색 조건
-	 * @return 수집 이력 목록
-	 */
-	@RequestMapping(value = "/getDataModelClctList", method = { RequestMethod.GET, RequestMethod.POST })
-	public List<StdDataModelCollectVo> getDataModelClctList(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
-		return sqlSessionTemplate.selectList("datamodel.selectDataModelClctList", retCond);
 	}
 
 	/**
@@ -427,21 +421,16 @@ public class DataModelController {
 		// 테이블 메뉴에 노출 안 됨 — 승인 화면에서만 본다.
 		String currentUser = sessionService.getUserId();
 		return all.stream()
-			.filter(o -> o.getAprvStatus() == null
-					|| "APPROVED".equals(o.getAprvStatus())
-					|| (currentUser != null && currentUser.equals(o.getRequesterUserId())))
+			.filter(o -> visibleTo(o.getAprvStatus(), o.getRequesterUserId(), currentUser))
 			.collect(java.util.stream.Collectors.toList());
 	}
 
 	/**
-	 * 데이터모델 객체(테이블) 이름으로 검색
-	 *
-	 * @param retCond 검색 조건 (테이블명 등)
-	 * @return 매칭되는 테이블 속성 목록
+	 * 88번 거버넌스 — 화면·내려받기에 보이는 모델 행: 승인됐거나(상태 없음 포함) 본인이 요청한 행.
+	 * 110 4.12-11 — DDL·엑셀·XMI 내려받기도 같은 기준 (예전에는 다른 사용자의 미승인 행까지 담았다)
 	 */
-	@RequestMapping(value = "/getDataModelObjListByObjNm", method = { RequestMethod.GET, RequestMethod.POST })
-	public List<StdDataModelAttrVo> getDataModelObjListByObjNm(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
-		return sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByObjNm", retCond);
+	public static boolean visibleTo(String aprvStatus, String requesterUserId, String userId) {
+		return aprvStatus == null || "APPROVED".equals(aprvStatus) || (userId != null && userId.equals(requesterUserId));
 	}
 
 	/**
@@ -456,7 +445,7 @@ public class DataModelController {
 		log.info(">> download  data model objects excel started : {}", clctId);
 
 		try {
-			excelDownloadService.getDMObjsExcel(clctId, request, response);
+			excelDownloadService.getDMObjsExcel(clctId, sessionService.getUserId(), request, response);
 		} catch (Exception e) {
 			log.error(">> download data model objects excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -476,9 +465,7 @@ public class DataModelController {
 		// 컬럼 메뉴에 노출 안 됨 — 승인 화면에서만 본다.
 		String currentUser = sessionService.getUserId();
 		return all.stream()
-			.filter(a -> a.getAprvStatus() == null
-					|| "APPROVED".equals(a.getAprvStatus())
-					|| (currentUser != null && currentUser.equals(a.getRequesterUserId())))
+			.filter(a -> visibleTo(a.getAprvStatus(), a.getRequesterUserId(), currentUser))
 			.collect(java.util.stream.Collectors.toList());
 	}
 
@@ -495,17 +482,6 @@ public class DataModelController {
 	}
 
 	/**
-	 * 데이터모델 속성(컬럼) 검색 - 조건별 조회
-	 *
-	 * @param retCond 검색 조건 (컬럼명, 테이블명 등)
-	 * @return 매칭되는 컬럼 목록
-	 */
-	@RequestMapping(value = "/getDataModelAttrListByRetreiveCond", method = { RequestMethod.GET, RequestMethod.POST })
-	public List<StdDataModelAttrVo> getDataModelAttrListByRetreiveCond(@RequestBody(required = false) NDQualityRetrieveCond retCond) {
-		return sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByRetreiveCond", retCond);
-	}
-
-	/**
 	 * 데이터모델 속성(컬럼) 목록 Excel 다운로드
 	 *
 	 * @param request  HTTP 요청
@@ -517,7 +493,7 @@ public class DataModelController {
 		log.info(">> download  data model attributes excel started : {}", clctId);
 
 		try {
-			excelDownloadService.getDMAttrsExcel(clctId, request, response);
+			excelDownloadService.getDMAttrsExcel(clctId, sessionService.getUserId(), request, response);
 		} catch (Exception e) {
 			log.error(">> download data model attributes excel failed : {}", e.getMessage());
 			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -701,6 +677,14 @@ public class DataModelController {
 			busy.setResultInfo(409, "이미 진행 중인 수집이 있습니다.");
 			return Mono.just(busy);
 		}
+		// 110 4.12-36-b — 수집 쿼리가 없는 DBMS(Altibase·Goldilocks·Custom)는 q-executor 에서 실패하므로 요청 때 안내한다
+		Map<String, Object> mds = ddlDialects.modelDs(dataVo.getDataModelId());
+		String dbms = mds == null ? null : (String) mds.get("dbmsTp");
+		if (dbms != null && !COLLECT_DBMS.contains(dbms)) {
+			Response no = new Response();
+			no.setResultInfo(400, dbms + " 데이터 소스는 수집을 지원하지 않습니다 (지원: " + String.join("·", COLLECT_DBMS) + ")");
+			return Mono.just(no);
+		}
 
 		WebClientHandler webClientHandler = new WebClientHandler(
 				NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/dm/collectDataModel");
@@ -710,6 +694,10 @@ public class DataModelController {
 		log.info(">> finished collect data model : {}", dataVo);
 		return mResponse;
 	}
+
+	/** 110 4.12-36-b — q-executor 수집 쿼리(dm-collect.xml 의 {DBMS}GetObjs·GetAttrs)가 있는 DBMS */
+	private static final List<String> COLLECT_DBMS =
+			java.util.Arrays.asList("Oracle", "Tibero", "PostgreSQL", "MariaDB", "Cubrid", "SQLServer");
 
 	// ======== ERwin XML 임포트 ========
 
@@ -793,6 +781,8 @@ public class DataModelController {
 				StdDataModelAttrVo attrVo = new StdDataModelAttrVo();
 				attrVo.setClctId(clctId);
 				attrVo.setDataModelId(dataModelId);
+				// 110 4.12-33-a — 테이블과 같은 소유자. 비우면 같은 이름 테이블 중 아무 소유자에 붙었다
+				attrVo.setObjOwner("ERWIN");
 				attrVo.setObjNm((String) col.get("objNm"));
 				attrVo.setAttrNm((String) col.get("attrNm"));
 				attrVo.setAttrNmKr((String) col.get("attrNmKr"));
@@ -809,9 +799,11 @@ public class DataModelController {
 				session.insert("datamodel.insertDataModelAttr", attrVo);
 			}
 
-			// 4) 수집 이력 완료 업데이트
+			// 4) 수집 이력 완료 업데이트 (110 4.12-14-a — 가져온 테이블·컬럼 수)
 			clctVo.setClctEndDt(now);
 			clctVo.setClctCmptnYn("Y");
+			clctVo.setObjCnt(tables.size());
+			clctVo.setAttrCnt(columns.size());
 			session.insert("datamodel.updateDataModelCollect", clctVo);
 
 			session.commit();
@@ -913,12 +905,16 @@ public class DataModelController {
 				StdDataModelAttrVo attrVo = new StdDataModelAttrVo();
 				attrVo.setClctId(clctId);
 				attrVo.setDataModelId(dataModelId);
+				attrVo.setObjOwner("XMI");   // 110 4.12-33-a — 테이블과 같은 소유자
 				attrVo.setObjNm((String) col.get("objNm"));
 				attrVo.setAttrNm((String) col.get("attrNm"));
 				attrVo.setAttrNmKr((String) col.get("attrNmKr"));
 				attrVo.setDataType((String) col.get("dataType"));
 				Object dataLenObj = col.get("dataLen");
 				attrVo.setDataLen(dataLenObj instanceof Number ? ((Number) dataLenObj).longValue() : 0L);
+				// 110 4.12-34 — DataQ 가 내보낸 XMI 는 소수점 자리도 싣는다
+				Object decObj = col.get("dataDecimalLen");
+				if (decObj instanceof Number) attrVo.setDataDecimalLen(((Number) decObj).shortValue());
 				attrVo.setNullableYn((String) col.get("nullableYn"));
 				attrVo.setPkYn((String) col.get("pkYn"));
 				// 85번 — XMI 관계 매핑: FK + 부모
@@ -926,8 +922,8 @@ public class DataModelController {
 				attrVo.setFkYn(fk != null ? fk : "N");
 				attrVo.setFkParentObjNm((String) col.get("fkParentObjNm"));
 				// XMI/ERwin 에는 스키마 개념이 없다. 임포트 모델은 단일 소유자이므로
-				// 부모 소유자는 자기 자신과 같다고 본다.
-				attrVo.setFkParentObjOwner(attrVo.getObjOwner());
+				// 부모 소유자는 자기 자신과 같다고 본다. (110 4.12-33-b — 예전에는 아직 비어 있는 컬럼 소유자를 넣어 NULL 이었다)
+				attrVo.setFkParentObjOwner(attrVo.getFkParentObjNm() == null ? null : attrVo.getObjOwner());
 				attrVo.setFkParentAttrNm((String) col.get("fkParentAttrNm"));
 				attrVo.setTermsStndYn("N");
 				attrVo.setDomainStndYn("N");
@@ -938,6 +934,8 @@ public class DataModelController {
 
 			clctVo.setClctEndDt(now);
 			clctVo.setClctCmptnYn("Y");
+			clctVo.setObjCnt(tables.size());     // 110 4.12-14-a
+			clctVo.setAttrCnt(columns.size());
 			session.insert("datamodel.updateDataModelCollect", clctVo);
 
 			session.commit();
@@ -974,28 +972,35 @@ public class DataModelController {
 			String modelName = dm != null && dm.get("dataModelNm") != null
 					? dm.get("dataModelNm").toString() : ("model-" + dataModelId);
 
-			// ATTR raw list 조회 → OBJ list 는 distinct 로 도출
-			List<Map<String, Object>> columns = sqlSessionTemplate.selectList(
-					"datamodel.selectDataModelAttrListByClctIdRaw", dataModelId);
-			java.util.Map<String, Map<String, Object>> objMap = new java.util.LinkedHashMap<>();
-			for (Map<String, Object> c : columns) {
-				Object oN = c.get("tableNm") != null ? c.get("tableNm") : c.get("objNm");
-				if (oN == null) continue;
-				String objNm = oN.toString();
-				if (!objMap.containsKey(objNm)) {
-					Map<String, Object> t = new HashMap<>();
-					t.put("objNm", objNm);
-					t.put("objNmKr", objNm);
-					objMap.put(objNm, t);
-				}
+			// 110 4.12-34 — 테이블 목록 기준(컬럼 없는 테이블 포함)으로, 한글명·길이·소수점까지 싣는다.
+			// 110 4.12-11 — 화면에 보이는 행만 (승인됐거나 본인이 요청한 행)
+			String userId = sessionService.getUserId();
+			List<Map<String, Object>> tables = new ArrayList<>();
+			for (StdDataModelObjVo o : sqlSessionTemplate.<StdDataModelObjVo>selectList("datamodel.selectDataModelObjListByClctId", dataModelId)) {
+				if (!visibleTo(o.getAprvStatus(), o.getRequesterUserId(), userId)) continue;
+				Map<String, Object> t = new HashMap<>();
+				t.put("objOwner", o.getObjOwner() == null ? "" : o.getObjOwner());
+				t.put("objNm", o.getObjNm());
+				t.put("objNmKr", o.getObjNmKr());
+				tables.add(t);
 			}
-			List<Map<String, Object>> tables = new java.util.ArrayList<>(objMap.values());
-			// columns 의 키를 objNm/attrNm 기준으로 정규화 (alias 가 tableNm/columnNm 인 경우 보정)
-			for (Map<String, Object> c : columns) {
-				if (c.get("objNm") == null && c.get("tableNm") != null)
-					c.put("objNm", c.get("tableNm"));
-				if (c.get("attrNm") == null && c.get("columnNm") != null)
-					c.put("attrNm", c.get("columnNm"));
+			List<Map<String, Object>> columns = new ArrayList<>();
+			for (StdDataModelAttrVo a : sqlSessionTemplate.<StdDataModelAttrVo>selectList("datamodel.selectDataModelAttrListByClctId", dataModelId)) {
+				if (!visibleTo(a.getAprvStatus(), a.getRequesterUserId(), userId)) continue;
+				Map<String, Object> c = new HashMap<>();
+				c.put("objOwner", a.getObjOwner() == null ? "" : a.getObjOwner());
+				c.put("objNm", a.getObjNm());
+				c.put("attrNm", a.getAttrNm());
+				c.put("attrNmKr", a.getAttrNmKr());
+				c.put("dataType", a.getDataType());
+				c.put("dataLen", a.getDataLen());
+				c.put("dataDecimalLen", a.getDataDecimalLen());
+				c.put("nullableYn", a.getNullableYn());
+				c.put("pkYn", a.getPkYn());
+				c.put("fkYn", a.getFkYn());
+				c.put("fkParentObjNm", a.getFkParentObjNm());
+				c.put("attrOrder", a.getAttrOrder());
+				columns.add(c);
 			}
 
 			String xml = XmiExporter.export(modelName, tables, columns);
@@ -1037,10 +1042,10 @@ public class DataModelController {
 			}
 
 			// 물리명이 비어있으면 TMP_TBL_N 자동 생성 (한글명만 입력된 논리 모델 케이스)
+			// 110 4.12-18 — 기존 TMP_TBL_N 의 최대 N + 1 (예전에는 테이블 행 수+1 이라 기존 이름과 겹쳐 거부됐다)
 			if (objVo.getObjNm() == null || objVo.getObjNm().trim().isEmpty()) {
-				Integer cnt = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDm", objVo.getDataModelId());
-				int seq = (cnt == null ? 0 : cnt) + 1;
-				objVo.setObjNm("TMP_TBL_" + seq);
+				int maxTmp = sqlSessionTemplate.selectOne("datamodel.selectMaxTmpTblSuffix", objVo.getDataModelId());
+				objVo.setObjNm("TMP_TBL_" + (maxTmp + 1));
 			}
 
 			// 86번 #11 — OBJ_OWNER 정규화 (PK 일부, NULL 비허용)
@@ -1647,20 +1652,6 @@ public class DataModelController {
 	}
 
 	/**
-	 * 테이블 단위 제약조건 목록 (PK/FK) — 컬럼 그리드 칩 표시용
-	 */
-	@GetMapping("/getConstraintsByTable")
-	public List<Map<String, Object>> getConstraintsByTable(@RequestParam String dataModelId,
-	                                                        @RequestParam(required = false) String objOwner,
-	                                                        @RequestParam String objNm) {
-		Map<String, Object> p = new HashMap<>();
-		p.put("dataModelId", dataModelId);
-		p.put("objOwner",    objOwner == null ? "" : objOwner);
-		p.put("objNm",       objNm);
-		return sqlSessionTemplate.selectList("datamodel.selectConstraintsByTable", p);
-	}
-
-	/**
 	 * 모델 단위 제약조건 일괄 — 컬럼 그리드 칩 매핑 (N+1 회피)
 	 */
 	@GetMapping("/getConstraintsByDmId")
@@ -1679,10 +1670,13 @@ public class DataModelController {
 	 */
 	@GetMapping(value = "/previewObjRename")
 	public Map<String, Object> previewObjRename(@RequestParam("dataModelId") String dataModelId,
+	                                            @RequestParam(value = "objOwner", required = false) String objOwner,
 	                                            @RequestParam("origObjNm") String origObjNm,
 	                                            @RequestParam("newObjNm") String newObjNm) {
 		Map<String, Object> q = new HashMap<>();
 		q.put("dataModelId", dataModelId);
+		// 110 4.12-17 — 테이블의 소유자로 센다 (예전에는 소유자 '' 로만 세어 소유자가 있는 테이블은 0건·충돌 없음이었다)
+		q.put("objOwner", objOwner == null ? "" : objOwner);
 
 		Map<String, Object> result = new HashMap<>();
 		q.put("objNm", origObjNm);
@@ -1850,10 +1844,9 @@ public class DataModelController {
 				session.update("udp.renameObjVals", rv);
 			}
 			if (udpVals != null) udpService.save(session, dataModelId, objOwner, finalObjNm, udpVals, changeHistory.safeUserId());
-			// 여기까지 전부 성공해야 커밋. 이력 기록은 커밋 이후 별도 트랜잭션.
-			session.commit();
 
 			// 88번 거버넌스 — updateObj 이력 (Tier 1 if owner/rename, else Tier 2)
+			// 110 4.12-19 — 같은 트랜잭션으로 (예전에는 커밋 뒤 따로 넣어, 이력이 실패하면 변경은 반영됐는데 500 이었다)
 			String updObjTier = (rename || ownerChange) ? "TIER1" : "TIER2";
 			String updObjAprvStatus = "TIER1".equals(updObjTier)
 					? changeHistory.resolveAprvStatusForUserChange()
@@ -1866,13 +1859,15 @@ public class DataModelController {
 			afterObj.put("objOwner", objOwner);
 			afterObj.put("objNm",    newObjNm != null ? newObjNm : origObjNm);
 			// 104번 WP3 — 이름·소유자가 바뀐 경우(TIER1)만 조각
-			changeHistory.record(null, dataModelId, "MODIFY_OBJ", updObjTier,
+			changeHistory.record(session, dataModelId, "MODIFY_OBJ", updObjTier,
 					objOwner, newObjNm != null ? newObjNm : origObjNm, null, null, null,
 					toJsonSafe(beforeObj), toJsonSafe(afterObj),
 					"TIER1".equals(updObjTier)
 							? changeHistory.generateModifyObjSnippet(dataModelId, origOwner, origObjNm, objOwner, newObjNm != null ? newObjNm : origObjNm)
 							: null,
 					updObjAprvStatus);
+			// 여기까지(이력 포함) 전부 성공해야 커밋
+			session.commit();
 
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -2244,19 +2239,11 @@ public class DataModelController {
 		found.put(id, m);
 	}
 
-	@RequestMapping(value = "/resolveStandard", method = RequestMethod.GET)
-	public Map<String, Object> resolveStandard(@RequestParam String termsNm,
-			@RequestParam(required = false) String dmId,
-			@RequestParam(required = false) String dictId) {
-		// 98번 — 대상 모델이 오면 그 모델의 사전으로, 아니면 요청의 사전 / 기본 사전.
-		return resolveTermsInternal(termsNm, dictService.resolve(dictId, dmId));
-	}
-
 	/**
-	 * 비표준 컬럼(TERMS_STND_YN='N') 일괄/선택 표준 변환.
-	 * attrs 미지정 → dataModelId의 모든 비표준 컬럼.
-	 * attrs 지정 → {objNm, attrNm} 키로 지정된 컬럼만.
-	 * 건별 독립 처리 — 한 건 실패가 전체를 롤백하지 않음.
+	 * 한글명 기준 표준 후보 (컬럼 화면 [선택 컬럼 물리모델 변환]).
+	 * attrs 지정 → 화면이 보낸 값(그리드에서 고치는 중인 한글명) 그대로, attrs 미지정 → dataModelId 의 모든 비표준 컬럼.
+	 * 모델을 바꾸지 않고 건마다 후보(새 영문명·한글명·타입·길이)만 돌려준다 — 화면이 그리드에 채운 뒤 [저장](saveAttrs)으로 반영한다.
+	 * 110 4.12-1·8-g — 바로 반영하는 경로(dryRun 이 아닌 호출)는 화면이 쓰지 않고 이력이 빠져 지웠다. dryRun 값은 보지 않는다.
 	 */
 	@SuppressWarnings("unchecked")
 	@PostMapping(value = "/resolveAttrs")
@@ -2276,10 +2263,9 @@ public class DataModelController {
 		}
 
 		List<Map<String, String>> attrs = (List<Map<String, String>>) req.get("attrs");
-		boolean dryRun = Boolean.TRUE.equals(req.get("dryRun"));
 		List<StdDataModelAttrVo> targets;
-		if (dryRun && attrs != null && !attrs.isEmpty()) {
-			// dryRun: 사용자가 그리드에서 dirty 입력 중인 값 그대로 사용 (DB lookup 우회)
+		if (attrs != null && !attrs.isEmpty()) {
+			// 사용자가 그리드에서 dirty 입력 중인 값 그대로 사용 (DB lookup 우회)
 			targets = new ArrayList<>();
 			for (Map<String, String> a : attrs) {
 				StdDataModelAttrVo vo = new StdDataModelAttrVo();
@@ -2290,25 +2276,15 @@ public class DataModelController {
 				vo.setAttrNmKr(a.get("attrNmKr"));
 				targets.add(vo);
 			}
-		} else if (attrs == null || attrs.isEmpty()) {
-			targets = sqlSessionTemplate.selectList("datamodel.selectNonStandardAttrs", dataModelId);
 		} else {
-			Map<String, Object> p = new HashMap<>();
-			p.put("dataModelId", dataModelId);
-			p.put("attrs", attrs);
-			targets = sqlSessionTemplate.selectList("datamodel.selectAttrListByKeys", p);
+			targets = sqlSessionTemplate.selectList("datamodel.selectNonStandardAttrs", dataModelId);
 		}
 
 		List<Map<String, Object>> items = new ArrayList<>();
 		for (StdDataModelAttrVo attr : targets) {
 			tried++;
 			try {
-				if (dryRun) {
-					Map<String, Object> resolved = lookupForKr(attr);
-					items.add(resolved);
-				} else {
-					applyResolvedToAttr(attr);
-				}
+				items.add(lookupForKr(attr));
 				succeeded++;
 			} catch (Exception e) {
 				failed++;
@@ -2331,9 +2307,10 @@ public class DataModelController {
 	}
 
 	/**
-	 * 영문명(ATTR_NM) 기준 컬럼 표준화.
-	 * TB_TERMS.TERMS_ENG_ABRV_NM 으로 용어 조회 → 한글명/데이터타입/길이/소수점 채움.
-	 * 영문명은 그대로 유지.
+	 * 영문명(ATTR_NM) 기준 컬럼 표준 후보 (컬럼 화면 [선택 컬럼 한글명 변환]).
+	 * TB_TERMS.TERMS_ENG_ABRV_NM 으로 용어 조회 → 한글명/데이터타입/길이/소수점 후보. 영문명은 그대로.
+	 * 모델은 바꾸지 않는다 — 화면이 그리드에 채운 뒤 [저장](saveAttrs)으로 반영한다.
+	 * 110 4.12-1·8-g — 바로 반영하는 경로(이력 없음)는 화면이 쓰지 않아 지웠다. dryRun 값은 보지 않는다.
 	 */
 	@SuppressWarnings("unchecked")
 	@PostMapping(value = "/resolveAttrsByEng")
@@ -2353,8 +2330,6 @@ public class DataModelController {
 		}
 
 		List<Map<String, String>> attrs = (List<Map<String, String>>) req.get("attrs");
-		boolean dryRunByEng = Boolean.TRUE.equals(req.get("dryRun"));
-		List<StdDataModelAttrVo> targets;
 		if (attrs == null || attrs.isEmpty()) {
 			result.put("tried", 0);
 			result.put("succeeded", 0);
@@ -2363,34 +2338,22 @@ public class DataModelController {
 			result.put("message", "선택된 컬럼이 없습니다.");
 			return result;
 		}
-		if (dryRunByEng) {
-			// dryRun: 사용자가 그리드에서 dirty 입력 중인 영문명 그대로 사용
-			targets = new ArrayList<>();
-			for (Map<String, String> a : attrs) {
-				StdDataModelAttrVo vo = new StdDataModelAttrVo();
-				vo.setDataModelId(dataModelId);
-				vo.setObjOwner(a.get("objOwner"));
-				vo.setObjNm(a.get("objNm"));
-				vo.setAttrNm(a.get("attrNm"));
-				vo.setAttrNmKr(a.get("attrNmKr"));
-				targets.add(vo);
-			}
-		} else {
-			Map<String, Object> p = new HashMap<>();
-			p.put("dataModelId", dataModelId);
-			p.put("attrs", attrs);
-			targets = sqlSessionTemplate.selectList("datamodel.selectAttrListByKeys", p);
+		// 사용자가 그리드에서 dirty 입력 중인 영문명 그대로 사용
+		List<StdDataModelAttrVo> targets = new ArrayList<>();
+		for (Map<String, String> a : attrs) {
+			StdDataModelAttrVo vo = new StdDataModelAttrVo();
+			vo.setDataModelId(dataModelId);
+			vo.setObjOwner(a.get("objOwner"));
+			vo.setObjNm(a.get("objNm"));
+			vo.setAttrNm(a.get("attrNm"));
+			vo.setAttrNmKr(a.get("attrNmKr"));
+			targets.add(vo);
 		}
 		List<Map<String, Object>> itemsByEng = new ArrayList<>();
 		for (StdDataModelAttrVo attr : targets) {
 			tried++;
 			try {
-				if (dryRunByEng) {
-					Map<String, Object> resolved = lookupForEng(attr);
-					itemsByEng.add(resolved);
-				} else {
-					applyResolvedToAttrByEng(attr);
-				}
+				itemsByEng.add(lookupForEng(attr));
 				succeeded++;
 			} catch (Exception e) {
 				failed++;
@@ -2469,214 +2432,6 @@ public class DataModelController {
 		item.put("newDataLen", (long) terms.getDataLen());
 		item.put("newDataDecimalLen", (short) terms.getDataDecimalLen());
 		return item;
-	}
-
-	/**
-	 * 컬럼(ATTR) 추가 — 표준 검증 후 INSERT.
-	 * WP0 — saveAttrs 의 ADD 와 같이 변경 이력(ADD_ATTR)·승인을 거친다:
-	 * 관리자=APPROVED 즉시, 일반 사용자=DRAFT (승인 전에는 본인에게만 보이고 집계·진단에서 빠진다).
-	 */
-	@RequestMapping(value = "/addAttr", method = RequestMethod.POST)
-	public Mono<Response> addAttr(@RequestBody StdDataModelAttrVo attrVo) {
-		Response result = new Response();
-		SqlSession session = sqlSessionFactory.openSession();
-		try {
-			if (attrVo.getObjNm() == null || attrVo.getObjNm().trim().isEmpty())
-				throw new IllegalArgumentException("소속 테이블은 필수입니다.");
-			if (attrVo.getAttrNmKr() == null || attrVo.getAttrNmKr().trim().isEmpty())
-				throw new IllegalArgumentException("컬럼 한글명은 필수입니다.");
-			// 영문명 UPPER 강제 (Oracle 기준 — 다른 DBMS 차후 분기)
-			if (attrVo.getAttrNm() != null && !attrVo.getAttrNm().trim().isEmpty()) {
-				attrVo.setAttrNm(attrVo.getAttrNm().trim().toUpperCase());
-			}
-
-			// 86번 #11 — OBJ_OWNER 미지정 시 부모 OBJ 에서 lookup
-			if (attrVo.getObjOwner() == null || attrVo.getObjOwner().isEmpty()) {
-				List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByDmId", attrVo.getDataModelId());
-				for (StdDataModelObjVo o : objs) {
-					if (attrVo.getObjNm().equals(o.getObjNm())) {
-						attrVo.setObjOwner(o.getObjOwner() == null ? "" : o.getObjOwner());
-						break;
-					}
-				}
-				if (attrVo.getObjOwner() == null) attrVo.setObjOwner("");
-			}
-
-			boolean isStandard = !"N".equals(attrVo.getTermsStndYn());
-			// 109번 #9 — 표준 준수 필수 모델에는 비표준(termsStndYn=N, 표준 검사 생략)으로 추가하지 못한다. 이 API 에는 예외 신청 경로가 없다
-			if (!isStandard && "Y".equals(sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", attrVo.getDataModelId())))
-				throw new IllegalStateException(STND_REQ_MSG + attrVo.getObjNm() + "." + attrVo.getAttrNm() + " — 비표준 컬럼으로 추가할 수 없습니다");
-			// 표준 컬럼: 물리명/타입 필수 + 표준 검증
-			// 비표준 컬럼: 물리명 자동 생성(TMP_COL_{순번}) + 타입 기본값(VARCHAR(255))
-			Map<String, Object> ordParam = new HashMap<>();
-			ordParam.put("dataModelId", attrVo.getDataModelId());
-			ordParam.put("objOwner",    attrVo.getObjOwner());
-			ordParam.put("objNm",       attrVo.getObjNm());
-			Short maxOrd = sqlSessionTemplate.selectOne("datamodel.selectMaxAttrOrd", ordParam);
-			short nextOrd = (short) ((maxOrd == null ? 0 : maxOrd) + 1);
-			attrVo.setAttrOrder(nextOrd);
-
-			if (isStandard) {
-				if (attrVo.getAttrNm() == null || attrVo.getAttrNm().trim().isEmpty())
-					throw new IllegalArgumentException("표준 변환된 물리명이 필요합니다.");
-				validateAttrStandards(attrVo);
-				applyStandardFlags(attrVo);
-			} else {
-				// 비표준 저장: 물리명 자동 생성
-				if (attrVo.getAttrNm() == null || attrVo.getAttrNm().trim().isEmpty()) {
-					attrVo.setAttrNm("TMP_COL_" + nextOrd);
-				}
-				if (attrVo.getDataType() == null || attrVo.getDataType().trim().isEmpty()) {
-					attrVo.setDataType("VARCHAR");
-					if (attrVo.getDataLen() == 0) attrVo.setDataLen(255);
-				}
-				attrVo.setTermsStndYn("N");
-				attrVo.setDomainStndYn("N");
-			}
-			checkAttrInput(attrVo, null);   // 109번 #3
-
-			Map<String, Object> dupParam = new HashMap<>();
-			dupParam.put("dataModelId", attrVo.getDataModelId());
-			dupParam.put("objOwner",    attrVo.getObjOwner());  // 86번 #11
-			dupParam.put("objNm",       attrVo.getObjNm());
-			dupParam.put("attrNm",      attrVo.getAttrNm());
-			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelAttr", dupParam);
-			if (dup > 0) throw new IllegalStateException("이미 존재하는 컬럼입니다: " + attrVo.getAttrNm());
-
-			// WP0 — 88번 거버넌스. 관리자=APPROVED 즉시, 사용자=DRAFT (saveAttrs ADD 와 같은 처리)
-			String addAprvStatus = changeHistory.resolveAprvStatusForUserChange();
-			attrVo.setAprvStatus(addAprvStatus);
-			attrVo.setRequesterUserId(changeHistory.safeUserId());
-			attrVo.setReqDt(changeHistory.currentDt());
-			if ("APPROVED".equals(addAprvStatus)) {
-				attrVo.setAprvUserId(attrVo.getRequesterUserId());
-				attrVo.setAprvDt(attrVo.getReqDt());
-			}
-			session.insert("datamodel.insertDataModelAttr", attrVo);
-			session.update("datamodel.syncDataModelObjAttrCnt", dupParam);
-			changeHistory.record(session, attrVo.getDataModelId(), "ADD_ATTR", "TIER1",
-					attrVo.getObjOwner(), attrVo.getObjNm(), attrVo.getAttrNm(), null, null,
-					null, toJsonSafe(attrVo),
-					changeHistory.generateDdlSnippet(attrVo.getDataModelId(), "ADD_ATTR", attrVo.getObjOwner(), attrVo.getObjNm(),
-							attrVo.getAttrNm(), attrVo, null),
-					addAprvStatus);
-			session.commit();
-			setChangeResult(result, addAprvStatus);
-		} catch (Exception e) {
-			session.rollback();
-			log.error(">> addAttr failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
-		} finally {
-			session.close();
-		}
-		return Mono.just(result);
-	}
-
-	/**
-	 * 컬럼(ATTR) 수정 — 변경 이력·승인 없이 모델에 바로 쓴다(화면은 saveAttrs 를 쓴다).
-	 * 109번 #5 — 그래서 모델 직접 반영 권한(DM_MANAGE)만, 승인 상태(aprvStatus 등)는 요청값을 받지 않는다.
-	 */
-	@RequestMapping(value = "/updateAttr", method = RequestMethod.POST)
-	public Mono<Response> updateAttr(@RequestBody StdDataModelAttrVo attrVo) {
-		Response result = new Response();
-		if (!sessionService.hasPerm(com.ndata.quality.common.PermCode.DM_MANAGE)) {
-			result.setResultInfo(403, "권한이 없습니다 (모델 직접 반영 권한 필요)");
-			return Mono.just(result);
-		}
-		attrVo.setAprvStatus(null);
-		try {
-			// 109번 #3 — 바뀐 타입·길이·기본값 검사
-			Map<String, Object> sel = new HashMap<>();
-			sel.put("dataModelId", attrVo.getDataModelId());
-			sel.put("objOwner",    attrVo.getObjOwner());
-			sel.put("objNm",       attrVo.getObjNm());
-			sel.put("attrNm",      attrVo.getAttrNm());
-			StdDataModelAttrVo existing = sqlSessionTemplate.selectOne("datamodel.selectDataModelAttrOne", sel);
-			if (existing != null) checkAttrInput(attrVo, existing);
-			// 저장 시 표준 재평가 — 단어/용어/도메인 매칭이 끊긴 경우 자동 강등 (Y → N).
-			// 사용자 시나리오: 이전에 표준이었던 컬럼의 데이터 타입/길이를 변경해 도메인 불일치가 발생한 경우.
-			// 109번 #9 — 표준 준수 필수 모델이면 강등하지 않고 거부한다 (이 API 에는 예외 신청 경로가 없다)
-			boolean stndReq = "Y".equals(sqlSessionTemplate.selectOne("datamodel.selectStndReqYn", attrVo.getDataModelId()));
-			try {
-				validateAttrStandards(attrVo);
-				applyStandardFlags(attrVo);
-			} catch (Exception stdErr) {
-				stndReqCheck(stndReq, new HashMap<>(), attrVo.getObjNm(), attrVo.getAttrNm(), stdErr);
-				attrVo.setTermsStndYn("N");
-				attrVo.setDomainStndYn("N");
-				log.info(">> updateAttr standard re-check downgraded: {}", stdErr.getMessage());
-			}
-			// PK 는 (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM). objOwner 가 안 맞으면 0건 갱신인데
-			// 예전엔 그대로 200 을 돌려줘 "저장됐다"고 오인됐다 → 갱신 건수 검사.
-			int attrUpdated = sqlSessionTemplate.update("datamodel.updateDataModelAttr", attrVo);
-			if (attrUpdated == 0) {
-				result.setResultInfo(RestResult.CODE_500.getCode(),
-					"수정 대상 컬럼을 찾지 못했습니다. (dmId=" + attrVo.getDataModelId()
-					+ ", owner=" + attrVo.getObjOwner() + ", obj=" + attrVo.getObjNm()
-					+ ", attr=" + attrVo.getAttrNm() + ")");
-				return Mono.just(result);
-			}
-			result.setResultInfo(RestResult.CODE_200);
-		} catch (Exception e) {
-			log.error(">> updateAttr failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
-		}
-		return Mono.just(result);
-	}
-
-	/**
-	 * 컬럼(ATTR) 삭제 — 87-3: PK/FK CONSTRAINT, INDEX, 외부 FK 참조까지 cascade
-	 */
-	@RequestMapping(value = "/deleteAttr", method = RequestMethod.POST)
-	public Mono<Response> deleteAttr(@RequestBody StdDataModelAttrVo attrVo) {
-		Response result = new Response();
-		SqlSession session = sqlSessionFactory.openSession();
-		try {
-			Map<String, Object> param = new HashMap<>();
-			param.put("dataModelId", attrVo.getDataModelId());
-			param.put("objOwner",    attrVo.getObjOwner() == null ? "" : attrVo.getObjOwner());
-			param.put("objNm",       attrVo.getObjNm());
-			param.put("attrNm",      attrVo.getAttrNm());
-			// 104번 WP9-55 — 결재 화면에서 무엇이 지워지는지 값으로 보이게 지우기 전 행을 남긴다
-			String delAttrBefore = toJsonSafe(session.selectOne("datamodel.selectDataModelAttrOne", param));
-			// DEF-05 — 승인이 필요한 사용자면 물리 삭제하지 않는다. 반려 시 되돌려야 한다.
-			String delAttrStatus = changeHistory.resolveAprvStatusForUserChange();
-			int attrDeleted;
-			if ("APPROVED".equals(delAttrStatus)) {
-				cascadeDeleteAttrRefs(session, param);
-				// PK 는 (DM_ID, OBJ_OWNER, OBJ_NM, ATTR_NM). 0건이면 삭제된 게 없는데 200 이 나가던 문제.
-				attrDeleted = session.delete("datamodel.deleteDataModelAttr", param);
-			} else {
-				param.put("deletedDt", changeHistory.currentDt());
-				attrDeleted = session.update("datamodel.softDeleteAttrPending", param);
-			}
-			if (attrDeleted == 0) {
-				session.rollback();
-				result.setResultInfo(RestResult.CODE_500.getCode(),
-					"삭제 대상 컬럼을 찾지 못했습니다. (dmId=" + attrVo.getDataModelId()
-					+ ", owner=" + param.get("objOwner") + ", obj=" + attrVo.getObjNm()
-					+ ", attr=" + attrVo.getAttrNm() + ")");
-				return Mono.just(result);
-			}
-			session.update("datamodel.syncDataModelObjAttrCnt", param);
-			// 단건 삭제도 이력을 남긴다. 그동안 그리드 배치 삭제만 기록돼,
-			// 이 경로로 지운 컬럼은 승인 화면에도 변경 이력에도 나타나지 않았다.
-			changeHistory.record(session, attrVo.getDataModelId(), "DEL_ATTR", "TIER1",
-					(String) param.get("objOwner"), attrVo.getObjNm(), attrVo.getAttrNm(), null, null,
-					delAttrBefore, null,
-					changeHistory.generateDdlSnippet(attrVo.getDataModelId(), "DEL_ATTR", (String) param.get("objOwner"),
-							attrVo.getObjNm(), attrVo.getAttrNm(), null, null),
-					delAttrStatus);
-			session.commit();
-			result.setResultInfo(RestResult.CODE_200);
-		} catch (Exception e) {
-			session.rollback();
-			log.error(">> deleteAttr failed : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
-		} finally {
-			session.close();
-		}
-		return Mono.just(result);
 	}
 
 	/**
@@ -2821,6 +2576,20 @@ public class DataModelController {
 							tmpColSuffix++;
 							addAttrNm = "TMP_COL_" + tmpColSuffix;
 						}
+						// 110 4.12-24 — 화면에 안 보이는 같은 이름 컬럼(다른 사용자의 승인 대기 행, 삭제 대기 행)을 덮어쓰지 않는다.
+						// 반려된 행만 지우고 새로 넣는다 (반려 뒤 다시 추가)
+						Map<String, Object> sameKey = new HashMap<>();
+						sameKey.put("dataModelId", dataModelId);
+						sameKey.put("objOwner",    objOwner);
+						sameKey.put("objNm",       objNm);
+						sameKey.put("attrNm",      addAttrNm);
+						StdDataModelAttrVo same = session.selectOne("datamodel.selectDataModelAttrOne", sameKey);
+						if (same != null) {
+							if (!"REJECTED".equals(same.getAprvStatus()))
+								throw new IllegalArgumentException("이미 있는 컬럼입니다: " + objNm + "." + addAttrNm
+										+ " (승인 대기·삭제 대기 중인 같은 이름 컬럼 포함)");
+							session.delete("datamodel.deleteDataModelAttr", sameKey);
+						}
 						// 사용자 입력 attrOrder 우선, 없으면 max+1
 						Integer addOrdIn = parseIntSafe(row.get("attrOrder"));
 						short useOrd;
@@ -2907,6 +2676,9 @@ public class DataModelController {
 						if (newAttrNm == null || newAttrNm.trim().isEmpty())
 							newAttrNm = origAttrNm;
 						newAttrNm = keepNmCase ? newAttrNm.trim() : newAttrNm.trim().toUpperCase();
+						// 110 4.12-23 — 대소문자만 다르면 이름 변경이 아니다. 수집한 실제 이름(PostgreSQL 소문자 등)은 그대로 둔다
+						// (예전에는 한글명만 고쳐도 영문명이 대문자로 바뀌어 이름 변경(TIER1)으로 기록됐다)
+						if (newAttrNm.equalsIgnoreCase(origAttrNm)) newAttrNm = origAttrNm;
 
 						Map<String, Object> sel = new HashMap<>();
 						sel.put("dataModelId", dataModelId);
@@ -3079,7 +2851,9 @@ public class DataModelController {
 						String attrNm = str(row.get("attrNm"));
 						if (attrNm == null || attrNm.trim().isEmpty())
 							throw new IllegalArgumentException("attrNm 누락");
-						attrNm = keepNmCase ? attrNm.trim() : attrNm.trim().toUpperCase();
+						// 110 4.12-23 — 저장된 이름 그대로 찾는다. 예전에는 대문자로 바꿔 소문자 컬럼(PostgreSQL 수집분 등)은
+						// 0건 삭제인데 성공·삭제 이력으로 처리됐다
+						attrNm = attrNm.trim();
 						Map<String, Object> p = new HashMap<>();
 						p.put("dataModelId", dataModelId);
 						p.put("objOwner",    objOwner);  // 86번 #11
@@ -3088,13 +2862,15 @@ public class DataModelController {
 						String delBefore = toJsonSafe(session.selectOne("datamodel.selectDataModelAttrOne", p));   // 104번 WP9-55
 						// DEF-05 — 승인 대기 삭제는 물리 삭제하지 않는다 (반려 시 복구 대상)
 						String delAprvStatus = changeHistory.resolveAprvStatusForUserChange();
+						int delCnt;
 						if ("APPROVED".equals(delAprvStatus)) {
 							cascadeDeleteAttrRefs(session, p);  // 87-3 — CONSTRAINT/INDEX/외부FK/FK_PARENT cascade
-							session.delete("datamodel.deleteDataModelAttr", p);
+							delCnt = session.delete("datamodel.deleteDataModelAttr", p);
 						} else {
 							p.put("deletedDt", changeHistory.currentDt());
-							session.update("datamodel.softDeleteAttrPending", p);
+							delCnt = session.update("datamodel.softDeleteAttrPending", p);
 						}
+						if (delCnt == 0) throw new IllegalArgumentException("삭제 대상 컬럼을 찾지 못했습니다: " + objNm + "." + attrNm);
 						deleted++;
 						changeHistory.record(session, dataModelId, "DEL_ATTR", "TIER1",
 								objOwner, objNm, attrNm, null, null,
@@ -3256,7 +3032,7 @@ public class DataModelController {
 	}
 
 	/**
-	 * 한글명 → 용어/도메인 조회 공통 로직. /resolveStandard 와 /resolveAttrs 가 공유.
+	 * 한글명 → 용어/도메인 조회 (/resolveAttrs 의 후보).
 	 * 반환: {found, termsId, termsNm, termsEngAbrvNm, domainNm, domainId, dataType, dataLen, dataDecimalLen, domainMissing, message}
 	 */
 	private Map<String, Object> resolveTermsInternal(String termsNm, String dictId) {
@@ -3308,188 +3084,6 @@ public class DataModelController {
 			result.put("message", e.getMessage());
 		}
 		return result;
-	}
-
-	/**
-	 * 단일 비표준 컬럼을 표준 컬럼으로 변환(rename + 타입/도메인/플래그 갱신).
-	 * 실패 시 IllegalStateException 을 던짐 — 호출자는 catch 하여 failedList 로 수집.
-	 */
-	private void applyResolvedToAttr(StdDataModelAttrVo attr) {
-		String attrNmKr = attr.getAttrNmKr();
-		if (attrNmKr == null || attrNmKr.trim().isEmpty())
-			throw new IllegalStateException("한글명 없음");
-
-		// 98번 — 이 컬럼이 속한 모델의 사전으로 용어를 찾는다.
-		Map<String, Object> resolved = resolveTermsInternal(attrNmKr,
-				dictService.resolve(null, attr.getDataModelId()));
-		Boolean found = (Boolean) resolved.get("found");
-		if (found == null || !found)
-			throw new IllegalStateException((String) resolved.getOrDefault("message", "용어 미등록"));
-		if (Boolean.TRUE.equals(resolved.get("domainMissing")))
-			throw new IllegalStateException("도메인 미등록");
-
-		String newAttrNm = (String) resolved.get("termsEngAbrvNm");
-		if (newAttrNm == null || newAttrNm.trim().isEmpty())
-			throw new IllegalStateException("용어 영문약어명 누락");
-		// 109번 #3 — 컬럼 이름·타입은 DDL 에 들어간다
-		DdlSafety.ident("컬럼", newAttrNm);
-		DdlSafety.dataType((String) resolved.get("dataType"));
-
-		if (!newAttrNm.equals(attr.getAttrNm())) {
-			Map<String, Object> dupParam = new HashMap<>();
-			dupParam.put("dataModelId", attr.getDataModelId());
-			dupParam.put("objOwner", attr.getObjOwner() == null ? "" : attr.getObjOwner());
-			dupParam.put("objNm", attr.getObjNm());
-			dupParam.put("attrNm", newAttrNm);
-			int dup = sqlSessionTemplate.selectOne("datamodel.countDataModelAttr", dupParam);
-			if (dup > 0) throw new IllegalStateException("이미 존재하는 컬럼: " + newAttrNm);
-		}
-
-		StdDataModelAttrVo flagsVo = new StdDataModelAttrVo();
-		flagsVo.setDataModelId(attr.getDataModelId());   // 98번 — 모델의 사전으로 검증
-		flagsVo.setAttrNm(newAttrNm);
-		flagsVo.setDataType((String) resolved.get("dataType"));
-		validateAttrStandards(flagsVo);
-		applyStandardFlags(flagsVo);
-
-		long dataLen = 0L;
-		Object dl = resolved.get("dataLen");
-		if (dl instanceof Number) dataLen = ((Number) dl).longValue();
-		short dataDecimalLen = 0;
-		Object ddl = resolved.get("dataDecimalLen");
-		if (ddl instanceof Number) dataDecimalLen = ((Number) ddl).shortValue();
-
-		Map<String, Object> updateMap = new HashMap<>();
-		updateMap.put("dataModelId", attr.getDataModelId());
-		updateMap.put("objOwner", attr.getObjOwner() == null ? "" : attr.getObjOwner());
-		updateMap.put("objNm", attr.getObjNm());
-		updateMap.put("origAttrNm", attr.getAttrNm());
-		updateMap.put("attrNm", newAttrNm);
-		// 104번 WP7-8 — 유사어(이음동의어)로 맞았으면 한글명도 표준 용어명으로
-		updateMap.put("attrNmKr", resolved.get("termsNm") != null ? resolved.get("termsNm") : attrNmKr);
-		updateMap.put("dataType", resolved.get("dataType"));
-		updateMap.put("dataLen", dataLen);
-		updateMap.put("dataDecimalLen", dataDecimalLen);
-		updateMap.put("termsStndYn", "Y");
-		updateMap.put("domainStndYn", "Y");
-		updateMap.put("wordLst", flagsVo.getWordLst());
-		updateMap.put("wordStndLst", flagsVo.getWordStndLst());
-		int updated = sqlSessionTemplate.update("datamodel.updateDataModelAttrKey", updateMap);
-		if (updated == 0) {
-			throw new IllegalStateException("UPDATE 매칭 실패 (owner='" + updateMap.get("objOwner")
-				+ "', obj='" + attr.getObjNm() + "', attr='" + attr.getAttrNm() + "')");
-		}
-		// DEF-11 — 영문명이 바뀌면 그 이름을 참조하는 인덱스·제약조건·FK 도 따라가야 한다.
-		// saveAttrs 는 이 cascade 를 호출하는데 이 경로만 빠져 있어,
-		// 한글명 기준 표준화로 컬럼명을 바꾸면 참조가 옛 이름에 남았다.
-		if (!newAttrNm.equals(attr.getAttrNm())) {
-			Map<String, Object> ren = new HashMap<>();
-			ren.put("dataModelId", attr.getDataModelId());
-			ren.put("objOwner",    updateMap.get("objOwner"));
-			ren.put("objNm",       attr.getObjNm());
-			ren.put("origAttrNm",  attr.getAttrNm());
-			ren.put("newAttrNm",   newAttrNm);
-			sqlSessionTemplate.update("datamodel.renameAttrInIndex",         ren);
-			sqlSessionTemplate.update("datamodel.renameAttrInConstraint",    ren);
-			sqlSessionTemplate.update("datamodel.renameAttrInConstraintRef", ren);
-			sqlSessionTemplate.update("datamodel.renameAttrInFkParent",      ren);
-
-			// 거버넌스 이력도 남긴다. 그동안 이 경로는 컬럼 물리명을 바꾸면서도
-			// 변경 이력에 나타나지 않아 승인 대상에서 통째로 빠졌다.
-			Map<String, Object> beforeAttr = new HashMap<>();
-			beforeAttr.put("objOwner", updateMap.get("objOwner"));
-			beforeAttr.put("objNm",    attr.getObjNm());
-			beforeAttr.put("attrNm",   attr.getAttrNm());
-			beforeAttr.put("attrNmKr", attr.getAttrNmKr());
-			changeHistory.record(null, attr.getDataModelId(), "MODIFY_ATTR", "TIER1",
-					(String) updateMap.get("objOwner"), attr.getObjNm(), newAttrNm, null, null,
-					toJsonSafe(beforeAttr), toJsonSafe(updateMap), null,
-					changeHistory.resolveAprvStatusForUserChange());
-		}
-		// 88번 §16 — 변환 이력 기록 (사용자가 입력했던 한글 → 표준 매핑)
-		recordResolveHistory(attr.getDataModelId(), attr.getObjOwner(), attr.getObjNm(),
-				newAttrNm, attrNmKr, (String) updateMap.get("attrNmKr"), newAttrNm,
-				(String) resolved.get("termsId"), (String) resolved.get("dataType"), dataLen,
-				"한글명 기준 표준화 성공");
-	}
-
-	/** 88번 §16 — 변환 이력 기록 헬퍼 */
-	private void recordResolveHistory(String dmId, String objOwner, String objNm, String attrNm,
-	                                   String inputKr, String resolvedKr, String resolvedEn,
-	                                   String termsId, String dataType, long dataLen, String reason) {
-		try {
-			Map<String, Object> r = new HashMap<>();
-			r.put("dmId", dmId);
-			r.put("objOwner", objOwner == null ? "" : objOwner);
-			r.put("objNm", objNm);
-			r.put("attrNm", attrNm);
-			r.put("inputKrNm", inputKr);
-			r.put("resolvedKrNm", resolvedKr);
-			r.put("resolvedEnNm", resolvedEn);
-			r.put("resolvedTermsId", termsId);
-			r.put("resolvedDataType", dataType);
-			r.put("resolvedDataLen", dataLen);
-			r.put("resolveReason", reason);
-			r.put("changeUserId", changeHistory.safeUserId());
-			r.put("changeDt", changeHistory.currentDt());
-			sqlSessionTemplate.insert("termResolve.insert", r);
-		} catch (Exception e) {
-			log.warn(">> recordResolveHistory failed: {}", e.getMessage());
-		}
-	}
-
-	/**
-	 * 영문명(ATTR_NM) 기준으로 표준 용어 조회해 한글명/데이터타입/길이/소수점 채움.
-	 * 영문명은 그대로 유지.
-	 */
-	private void applyResolvedToAttrByEng(StdDataModelAttrVo attr) {
-		String engNm = attr.getAttrNm();
-		if (engNm == null || engNm.trim().isEmpty())
-			throw new IllegalStateException("영문명 없음");
-
-		// 98번 — 이 컬럼이 속한 모델의 사전에서 찾는다.
-		com.ndata.quality.model.std.StdTermsVo terms = approvedTermByEng(dictService.resolve(null, attr.getDataModelId()), engNm.trim());
-		if (terms == null)
-			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
-
-		String newAttrNmKr = terms.getTermsNm();
-		String dataType    = terms.getDataType();
-		long dataLen       = terms.getDataLen();
-		short dataDecimalLen = (short) terms.getDataDecimalLen();
-
-		// 영문명은 유지하면서 표준 검증 통과 여부 평가 (단어 분리)
-		StdDataModelAttrVo flagsVo = new StdDataModelAttrVo();
-		flagsVo.setDataModelId(attr.getDataModelId());   // 98번 — 모델의 사전으로 검증
-		flagsVo.setAttrNm(engNm);
-		flagsVo.setDataType(dataType);
-		validateAttrStandards(flagsVo);
-		applyStandardFlags(flagsVo);
-
-		Map<String, Object> updateMap = new HashMap<>();
-		updateMap.put("dataModelId", attr.getDataModelId());
-		updateMap.put("objOwner", attr.getObjOwner() == null ? "" : attr.getObjOwner());
-		updateMap.put("objNm", attr.getObjNm());
-		updateMap.put("origAttrNm", engNm);
-		updateMap.put("attrNm", engNm);   // 영문명 유지
-		updateMap.put("attrNmKr", newAttrNmKr);
-		updateMap.put("dataType", dataType);
-		updateMap.put("dataLen", dataLen);
-		updateMap.put("dataDecimalLen", dataDecimalLen);
-		updateMap.put("termsStndYn", "Y");
-		updateMap.put("domainStndYn", "Y");
-		updateMap.put("wordLst", flagsVo.getWordLst());
-		updateMap.put("wordStndLst", flagsVo.getWordStndLst());
-		int updated = sqlSessionTemplate.update("datamodel.updateDataModelAttrKey", updateMap);
-		if (updated == 0) {
-			throw new IllegalStateException("UPDATE 매칭 실패 (owner='" + updateMap.get("objOwner")
-				+ "', obj='" + attr.getObjNm() + "', attr='" + engNm + "')");
-		}
-		// 88번 §16 — 변환 이력 기록 (영문명 기준 표준화 — 한글이 채워진 케이스)
-		String origKr = attr.getAttrNmKr() == null ? "" : attr.getAttrNmKr();
-		recordResolveHistory(attr.getDataModelId(), attr.getObjOwner(), attr.getObjNm(),
-				engNm, origKr, newAttrNmKr, engNm,
-				terms.getId(), dataType, dataLen,
-				"영문명 기준 표준화 성공");
 	}
 
 	/**
@@ -3657,8 +3251,7 @@ public class DataModelController {
 			if ("commit".equalsIgnoreCase(mode) && errors.isEmpty()) {
 				SqlSession session = sqlSessionFactory.openSession();
 				try {
-					Integer cnt = sqlSessionTemplate.selectOne("datamodel.countDataModelObjByDm", dataModelId);
-					int seq = cnt == null ? 0 : cnt;
+					int seq = sqlSessionTemplate.selectOne("datamodel.selectMaxTmpTblSuffix", dataModelId);   // 110 4.12-18
 					for (Map<String, Object> r : rows) {
 						if (!"INSERT".equals(r.get("_action"))) continue;
 						StdDataModelObjVo vo = new StdDataModelObjVo();
@@ -3760,21 +3353,34 @@ public class DataModelController {
 				SqlSession session = sqlSessionFactory.openSession();
 				try {
 					// Pass 1: ATTR insert
-					// 대상 테이블별로 현재 최대 ATTR_ORD 조회 후 증분
-					Map<String, Short> ordMap = new HashMap<>();
+					// 파일의 "컬럼 순서" 가 있으면 그 값(미리보기에서 겹침 검사), 없으면 테이블별 (지금 최대 순서와 파일에 적힌 순서 중 큰 값)+1 부터.
+					// 110 4.12-21-a — 테이블은 (소유자, 테이블명) 으로 센다 (예전에는 소유자 없이 세어 소유자가 있는 테이블은 1부터 다시 매겼다)
+					Map<String, Integer> fileMaxOrd = new HashMap<>();   // (소유자|테이블) → 파일에 적힌 최대 순서
 					for (Map<String, Object> r : rows) {
 						if (!"INSERT".equals(r.get("_action"))) continue;
-						String objNm = str(r.get("objNm"));
-						Short cur = ordMap.get(objNm);
-						if (cur == null) {
+						Integer fileOrd = parseIntSafe(r.get("attrOrder"));
+						if (fileOrd != null) fileMaxOrd.merge(str(r.get("objOwner")) + "|" + str(r.get("objNm")), fileOrd, Math::max);
+					}
+					Map<String, Short> ordMap = new HashMap<>();         // (소유자|테이블) → 마지막으로 매긴 순서
+					for (Map<String, Object> r : rows) {
+						if (!"INSERT".equals(r.get("_action"))) continue;
+						String key = str(r.get("objOwner")) + "|" + str(r.get("objNm"));
+						if (!ordMap.containsKey(key)) {
 							Map<String, Object> p = new HashMap<>();
 							p.put("dataModelId", dataModelId);
-							p.put("objNm", objNm);
+							p.put("objOwner", str(r.get("objOwner")));
+							p.put("objNm", str(r.get("objNm")));
 							Short maxOrd = sqlSessionTemplate.selectOne("datamodel.selectMaxAttrOrd", p);
-							cur = maxOrd == null ? (short) 0 : maxOrd;
+							ordMap.put(key, (short) Math.max(maxOrd == null ? 0 : maxOrd, fileMaxOrd.getOrDefault(key, 0)));
 						}
-						cur = (short) (cur + 1);
-						ordMap.put(objNm, cur);
+						Integer fileOrd = parseIntSafe(r.get("attrOrder"));
+						short cur;
+						if (fileOrd != null) {
+							cur = fileOrd.shortValue();   // 110 4.12-21-b — 파일의 "컬럼 순서"
+						} else {
+							cur = (short) (ordMap.get(key) + 1);
+							ordMap.put(key, cur);
+						}
 
 						StdDataModelAttrVo vo = uploadAttrVo(dataModelId, r, cur);
 						// 104번 WP7-25 — 화면 저장처럼 표준 여부를 평가해 둔다
@@ -3788,21 +3394,62 @@ public class DataModelController {
 						session.insert("datamodel.insertDataModelAttr", vo);
 						r.put("attrNm", vo.getAttrNm());
 					}
-					// Pass 2: FK 제약 — 한글 참조를 물리명으로 매핑. 현 버전은 FK_YN 플래그만 저장하고
-					// CONSTRAINT 테이블 INSERT 는 추후(§6-6 후속)로 연기. REF 매핑 검증만 수행해 오류 시 롤백.
+					// Pass 2: FK — 한글 참조를 물리명으로 바꿔 제약조건(R) 행과 컬럼의 FK 부모를 넣는다.
+					// 110 4.12-21-c — 예전에는 해석만 하고 저장하지 않았고 해석 실패도 통과시켰다(미리보기가 이제 오류로 막는다).
+					// 업로드한 컬럼과 같이 승인 상태로 넣는다(업로드는 승인 흐름을 타지 않는다).
+					String requester = changeHistory.safeUserId();
+					String reqDt = changeHistory.currentDt();
 					List<Map<String, Object>> fkRefs = new ArrayList<>();
 					for (Map<String, Object> r : rows) {
 						if (!"INSERT".equals(r.get("_action"))) continue;
 						if (!"Y".equals(r.get("fkYn"))) continue;
-						String refTbl = resolveObjNmByKr(session, dataModelId, str(r.get("refObjOwner")), str(r.get("refObjNmKr")));
-						String refCol = null;
-						if (refTbl != null) {
-							refCol = resolveAttrNmByKr(session, dataModelId, refTbl, str(r.get("refAttrNmKr")));
+						String owner = str(r.get("objOwner"));
+						String objNm = str(r.get("objNm"));
+						String refTbl = resolveObjNmByKr(session, dataModelId, owner, str(r.get("refObjNmKr")));
+						String refCol = refTbl == null ? null : resolveAttrNmByKr(session, dataModelId, owner, refTbl, str(r.get("refAttrNmKr")));
+						if (refCol == null)
+							throw new IllegalArgumentException(r.get("row") + "행: 참조 테이블·컬럼을 찾지 못했습니다 ("
+									+ r.get("refObjNmKr") + "." + r.get("refAttrNmKr") + ")");
+						String base = "FK_" + objNm.toUpperCase() + "_" + refTbl.toUpperCase();
+						String fkName = base;
+						Map<String, Object> chk = new HashMap<>();
+						chk.put("dataModelId", dataModelId);
+						for (int suffix = 2; ; suffix++) {
+							chk.put("constraintNm", fkName);
+							if ((int) session.selectOne("datamodel.countConstraintByName", chk) == 0) break;
+							fkName = base + "_" + suffix;
 						}
+						DdlSafety.ident("FK", fkName);
+						Map<String, Object> cr = new HashMap<>();
+						cr.put("dataModelId",    dataModelId);
+						cr.put("objOwner",       owner);
+						cr.put("objNm",          objNm);
+						cr.put("constraintNm",   fkName);
+						cr.put("constraintType", "R");
+						cr.put("columnNm",       r.get("attrNm"));
+						cr.put("columnPos",      1);
+						cr.put("refOwner",       owner);
+						cr.put("refTableNm",     refTbl);
+						cr.put("refColumnNm",    refCol);
+						cr.put("deleteRule",     r.get("deleteRule"));
+						cr.put("status",         "ENABLED");
+						putAprvColumns(cr, "APPROVED", requester, reqDt);
+						session.insert("datamodel.insertConstraintRow", cr);
+						Map<String, Object> ap = new HashMap<>();
+						ap.put("dataModelId",      dataModelId);
+						ap.put("objOwner",         owner);
+						ap.put("objNm",            objNm);
+						ap.put("attrNm",           r.get("attrNm"));
+						ap.put("fkYn",             "Y");
+						ap.put("fkParentObjNm",    refTbl);
+						ap.put("fkParentObjOwner", owner);
+						ap.put("fkParentAttrNm",   refCol);
+						session.update("datamodel.updateAttrFk", ap);
 						Map<String, Object> ref = new HashMap<>();
 						ref.put("row", r.get("row"));
-						ref.put("objNm", r.get("objNm"));
+						ref.put("objNm", objNm);
 						ref.put("attrNm", r.get("attrNm"));
+						ref.put("constraintNm", fkName);
 						ref.put("refTableNm", refTbl);
 						ref.put("refColumnNm", refCol);
 						ref.put("deleteRule", r.get("deleteRule"));
@@ -4085,6 +3732,7 @@ public class DataModelController {
 				String refTbl = getStr(row, hIdx.get("참조 테이블(한글)"));
 				String refCol = getStr(row, hIdx.get("참조 컬럼(한글)"));
 				String delRule = getStr(row, hIdx.get("삭제 규칙"));
+				String ordStr = getStr(row, hIdx.get("컬럼 순서"));   // 110 4.12-21-b
 
 				Map<String, Object> m = new HashMap<>();
 				m.put("row", r + 1);
@@ -4095,6 +3743,7 @@ public class DataModelController {
 				m.put("dataType", dataType);
 				m.put("dataLen", parseIntSafe(dataLenStr));
 				m.put("dataDecimalLen", parseIntSafe(dataDecStr));
+				m.put("attrOrder", parseIntSafe(ordStr));
 				m.put("nullableYn", "N".equalsIgnoreCase(nullable) ? "N" : "Y");
 				m.put("pkYn", "Y".equalsIgnoreCase(pk) ? "Y" : "N");
 				m.put("fkYn", "Y".equalsIgnoreCase(fk) ? "Y" : "N");
@@ -4195,9 +3844,51 @@ public class DataModelController {
 					rows.add(m);
 					continue;
 				}
+				Integer ordIn = parseIntSafe(ordStr);
+				if (ordStr != null && (ordIn == null || ordIn <= 0 || ordIn > Short.MAX_VALUE)) {
+					m.put("_action", "ERROR");
+					m.put("_msg", "컬럼 순서는 1 이상의 정수여야 합니다: " + ordStr);
+					errors.add(errRow(r + 1, "컬럼 순서는 1 이상의 정수여야 합니다: " + ordStr));
+					rows.add(m);
+					continue;
+				}
 
 				m.put("_action", "INSERT");
 				rows.add(m);
+			}
+		}
+
+		// 110 4.12-21-b — 파일의 "컬럼 순서" 가 그 테이블의 다른 컬럼(모델에 있거나 파일 안)과 겹치면 오류
+		// 110 4.12-21-c — FK 의 참조 테이블·컬럼(한글명)이 모델이나 이 파일에 없으면 오류 (예전에는 통과하고 FK 정보가 비었다)
+		Map<String, String> ordUsed = loadExistingAttrOrds(dataModelId);
+		Set<String> fileAttrKr = new HashSet<>();
+		for (Map<String, Object> m : rows) {
+			if ("INSERT".equals(m.get("_action")) && m.get("attrNmKr") != null)
+				fileAttrKr.add(m.get("objOwner") + "|" + m.get("objNm") + "|" + m.get("attrNmKr"));
+		}
+		for (Map<String, Object> m : rows) {
+			if (!"INSERT".equals(m.get("_action"))) continue;
+			int rowNo = (Integer) m.get("row");
+			String owner = str(m.get("objOwner"));
+			String msgErr = null;
+			Integer ord = parseIntSafe(m.get("attrOrder"));
+			if (ord != null) {
+				String k = owner + "|" + m.get("objNm") + "|" + ord;
+				String by = ordUsed.get(k);
+				if (by != null) msgErr = "순서 " + ord + " 는 이미 '" + by + "' 가 사용 중입니다 (" + m.get("objNm") + ")";
+				else ordUsed.put(k, str(m.get("attrNm") != null ? m.get("attrNm") : m.get("attrNmKr")));
+			}
+			if (msgErr == null && "Y".equals(m.get("fkYn"))) {
+				String refObj = objKrToNm.get(owner + "|" + m.get("refObjNmKr"));
+				String refKey = owner + "|" + refObj + "|" + m.get("refAttrNmKr");
+				if (refObj == null) msgErr = "참조 테이블이 모델에 없습니다(한글): " + m.get("refObjNmKr");
+				else if (!existingAttrKr.contains(refKey) && !fileAttrKr.contains(refKey))
+					msgErr = "참조 컬럼이 모델·파일에 없습니다(한글): " + m.get("refObjNmKr") + "." + m.get("refAttrNmKr");
+			}
+			if (msgErr != null) {
+				m.put("_action", "ERROR");
+				m.put("_msg", msgErr);
+				errors.add(errRow(rowNo, msgErr));
 			}
 		}
 
@@ -4399,13 +4090,21 @@ public class DataModelController {
 		return null;
 	}
 
-	private String resolveAttrNmByKr(SqlSession session, String dataModelId, String objNm, String attrKr) {
+	private String resolveAttrNmByKr(SqlSession session, String dataModelId, String owner, String objNm, String attrKr) {
 		if (isBlank(attrKr)) return null;
 		List<StdDataModelAttrVo> attrs = session.selectList("datamodel.selectDataModelAttrListByClctId", dataModelId);
-		if (attrs == null) return null;
 		for (StdDataModelAttrVo a : attrs) {
-			if (objNm.equals(a.getObjNm()) && attrKr.equals(a.getAttrNmKr())) return a.getAttrNm();
+			if (objNm.equals(a.getObjNm()) && owner.equals(a.getObjOwner()) && attrKr.equals(a.getAttrNmKr())) return a.getAttrNm();
 		}
 		return null;
+	}
+
+	/** 110 4.12-21-b — 컬럼 업로드의 순서 겹침 검사용: 소유자|테이블|순서 → 그 순서를 쓰는 컬럼 (사용 중 행) */
+	private Map<String, String> loadExistingAttrOrds(String dataModelId) {
+		Map<String, String> out = new HashMap<>();
+		for (StdDataModelAttrVo a : sqlSessionTemplate.<StdDataModelAttrVo>selectList("datamodel.selectDataModelAttrListByClctId", dataModelId)) {
+			out.put((a.getObjOwner() == null ? "" : a.getObjOwner()) + "|" + a.getObjNm() + "|" + a.getAttrOrder(), a.getAttrNm());
+		}
+		return out;
 	}
 }

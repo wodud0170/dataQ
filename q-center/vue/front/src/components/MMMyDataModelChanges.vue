@@ -114,14 +114,13 @@ export default {
       axios.post(this.$APIURL.base + 'api/dmApproval/myDrafts', {}).then(res => {
         this.drafts = res.data || [];
       }).catch(() => { this.drafts = []; });
-      // 본인의 SUBMITTED / REJECTED — history endpoint 호출 후 클라이언트에서 분류.
+      // 본인의 SUBMITTED / REJECTED — 상태별로 따로 조회한다.
       // 104번 WP1 — 모델 승인 권한이 있으면 history 가 모든 사용자 건을 주므로 본인 ID 로 거른다
+      // 110 5.8-26-b — history 는 최근 500건까지라 상태를 서버 조건으로 넘긴다 (한 번에 받아 나누면 오래된 대기 건이 빠질 수 있었다)
       const login = JSON.parse(sessionStorage.getItem('loginStatus') || '{}');
-      axios.post(this.$APIURL.base + 'api/dmApproval/history', { dmId: '', changeUserId: login.id || '' }).then(res => {
-        const all = res.data || [];
-        this.submitted = all.filter(r => r.aprvStatus === 'SUBMITTED');
-        this.rejected  = all.filter(r => r.aprvStatus === 'REJECTED');
-      }).catch(() => { this.submitted = []; this.rejected = []; });
+      const hist = st => axios.post(this.$APIURL.base + 'api/dmApproval/history', { dmId: '', changeUserId: login.id || '', aprvStatus: st });
+      hist('SUBMITTED').then(res => { this.submitted = res.data || []; }).catch(() => { this.submitted = []; });
+      hist('REJECTED').then(res => { this.rejected = res.data || []; }).catch(() => { this.rejected = []; });
     },
     pathOf(item) {
       // PK/FK 변경은 컬럼 대신 제약조건 이름을 붙인다
@@ -151,19 +150,17 @@ export default {
     },
     rollbackSelected() {
       const seqList = this.checkedDrafts.map(d => d.changeSeq);
+      // 110 5.8-17 — 롤백은 모델 변경도 되돌린다 (한 요청·한 트랜잭션, 나중 변경부터)
       this.$swal.fire({
         title: `${seqList.length}건 롤백`,
-        text: '선택한 DRAFT 가 삭제됩니다 (모델 변경은 그대로). 진행?',
+        text: '선택한 DRAFT 를 지우고 그 변경(추가·수정·삭제)도 모델에서 되돌립니다. 진행?',
         icon: 'warning', showCancelButton: true,
         confirmButtonText: '롤백', cancelButtonText: '취소',
       }).then(r => {
         if (!r.isConfirmed) return;
-        Promise.all(seqList.map(seq =>
-          axios.post(this.$APIURL.base + 'api/dmApproval/rollbackDraft', { changeSeq: seq })
-        )).then(results => {
-          const failed = results.filter(res => res.data.resultCode !== 200);
-          if (failed.length > 0) {
-            this.$swal.fire({ title: `롤백 실패 ${failed.length}건`, text: failed[0].data.resultMessage || '', icon: 'error' });
+        axios.post(this.$APIURL.base + 'api/dmApproval/rollbackDraft', { changeSeqList: seqList }).then(res => {
+          if (res.data.resultCode !== 200) {
+            this.$swal.fire({ title: '롤백 실패', text: res.data.resultMessage || '', icon: 'error' });
           } else {
             this.$swal.fire({ title: '롤백 완료', icon: 'success', timer: 1200, showConfirmButton: false });
           }

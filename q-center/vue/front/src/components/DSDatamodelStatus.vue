@@ -120,8 +120,6 @@
                     </v-menu>
                   </div>
                 </template>
-                <!-- 일반 아이템 -->
-                <!-- <span v-else :style="{ margin: '0px 16px' }">{{ c }}</span> -->
               </td>
             </tr>
           </template>
@@ -139,98 +137,29 @@
         <v-sheet class="split_bottom_wrap">
           <!-- 페이지네이션 -->
           <div class="text-center px-4 pt-4 pb-4 pagination_wrap">
-            <!-- <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="pageCount > 1"> -->
             <v-pagination v-model="page" :length="pageCount" prev-icon="mdi-menu-left" next-icon="mdi-menu-right"
               color="ndColor" :total-visible="10"></v-pagination>
           </div>
         </v-sheet>
       </SplitArea>
     </Split>
-
-    <!-- 하단 상세 제거됨: 테이블/컬럼 상세는 별도 메뉴에서 확인 가능 -->
-
-
-    <!-- term data Modal -->
-    <v-dialog max-width="800" v-model="termDataModalShow">
-      <NdModal @hide="hideModal('termData')" :footer-submit="false" header-title="용어 상세 정보" footer-hide-title="확인">
-        <template v-slot:body>
-          <v-container fluid>
-            <v-data-table id="term_detail_table" :items="getTermDetailItem" :loading="cl_td_loadTable" hide-default-footer
-              class="px-4 pb-3">
-              <template v-slot:body="{ items }" v-if="getTermDetailItem.length !== 0">
-                <tbody>
-                  <!-- 상세 테이블 왼쪽  -->
-                  <tr v-for="header in termDetaileHeaders" :key="header.value">
-                    <td :style="{ backgroundColor: 'rgba(63, 81, 181, 0.08)', width: '25%' }">
-                      {{ header.text }}
-                    </td>
-                    <!-- 상세 테이블 오른쪽  -->
-                    <td v-for="item in items" :key="item.termNm">
-                      <div v-if="Array.isArray(item[header.value])">
-                        <!-- 값이 배열이라면 줄바꿈으로 표시 -->
-                        <div v-for="item2 in item[header.value]" :key="item2">
-                          {{ item2 }}
-                        </div>
-                      </div>
-                      <div v-else>
-                        <!-- 값이 배열이 아닌 문자열이라면 한 줄로 표시 -->
-                        {{ item[header.value] }}
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </template>
-              <!-- 데이터 없음 -->
-              <template #top>
-                <v-progress-linear v-show="cl_td_loadTable" color="indigo darken-2" indeterminate />
-              </template>
-              <template #no-data>
-                <v-alert v-show="!cl_td_loadTable">
-                  데이터가 존재하지 않습니다.
-                </v-alert>
-                <span v-show="cl_td_loadTable">잠시만 기다려주세요.</span>
-              </template>
-            </v-data-table>
-          </v-container>
-        </template>
-      </NdModal>
-    </v-dialog>
+    <!-- 110 4.12-2·6-b — 하단 테이블·컬럼 상세, 수집이력 선택, 용어 상세 정보 모달은 진입이 없어 지웠다
+         (테이블·컬럼은 데이터 모델 > 테이블·컬럼 메뉴, 수집이력은 데이터 모델 수집이력 메뉴) -->
   </v-main>
 </template>
 <script>
 import axios from 'axios';
-import NdModal from "./../views/modal/NdModal.vue"
-import _ from "lodash"
 
 export default {
   name: 'DSDatamodelStatus',
   props: ['isMobile'],
-  components: {
-    NdModal,
-  },
   watch: {
     dmStatusItems() {
       this.setListPage();
     },
-    dmTableItems() {
-      this.tb_setListPage();
-    },
-    dmColumnItems() {
-      this.cl_setListPage();
-    },
     itemsPerPage() {
       this.setListPage();
     },
-    tb_itemsPerPage() {
-      this.tb_setListPage();
-    },
-    cl_itemsPerPage() {
-      this.cl_setListPage();
-    },
-    dmCdl_itemsPerPage() {
-      this.dmCdl_setListPage();
-    },
-
   },
   data: () => ({
     // 104번 WP3 — DDL 규칙이 있는 DBMS (값은 데이터소스 DBMS 유형)
@@ -241,68 +170,17 @@ export default {
       { value: 'MariaDB', text: 'MariaDB', icon: 'mdi-database' },
       { value: 'SQLServer', text: 'SQL Server', icon: 'mdi-database' },
     ],
-    //
     dmStatusItems: [],
-    // 데이터 모델 테이블 리스트
-    dmTableItems: [],
-    // 데이터 모델 컬럼 리스트
-    dmColumnItems: [],
-    // 데이터 모델 수집 조회 리스트
-    dmCdlListItems: [],
-    // 데이터 모델명 클릭했을 때 표시할 데이터 모델명
-    detailDataModelName: '',
-    // 승인 요청 아이템의 상세 항목
-    getTermDetailItem: [],
-    // 수집 조회날짜 메뉴 피커 열고 닫기
-    dmCdlPicker: false,
-    // 선택 날짜
-    dmCdlDate: [],
-    // 시스템명 검색어
-    searchSystem: '',
     // 모델명 검색어
     searchModel: '',
-    // 테이블명 검색어
-    searchTable: '',
-    // 컬럼명 검색어
-    searchColumn: '',
-    // 선택된 아이템
-    selectedItem: [],
     // 테이블 로딩
     loadTable: true,
-    // 테이블 로딩
-    tb_loadTable: true,
-    // 테이블 로딩
-    cl_loadTable: true,
-    // 테이블 로딩
-    cl_td_loadTable: true,
     // 페이지 시작
     page: 1,
-    // 테이블 탭 페이지 시작
-    tb_page: 1,
-    // 컬럼 탭 페이지 시작
-    cl_page: 1,
-    // 수집일시 모달 테이블 페이지 시작
-    dmCdl_page: 1,
     // 총 페이지 수
     pageCount: null,
-    // 테이블 탭 총 페이지 수
-    tb_pageCount: null,
-    // 컬럼 탭 총 페이지 수
-    cl_pageCount: null,
-    // 수집일시 모달 테이블 총 페이지 수
-    dmCdl_pageCount: null,
     // 한 페이지에 보여지는 아이템의 수
     itemsPerPage: 10,
-    // 테이블 탭 한 페이지에 보여지는 아이템의 수
-    tb_itemsPerPage: 10,
-    // 컬럼 탭 한 페이지에 보여지는 아이템의 수
-    cl_itemsPerPage: 10,
-    // 수집일수 모달 테이블 한 페이지에 보여지는 아이템의 수
-    dmCdl_itemsPerPage: 10,
-    // 데이터모델 수집일시 - 수집 목록 모달
-    showDmCltDateModal: false,
-    // 데이터모델 용어 정보 모달
-    termDataModalShow: false,
     // 상단 테이블 헤더
     dataModelHeaders: [
       { text: '데이터 모델명', align: 'center', sortable: false, value: 'dataModelNm' },
@@ -316,110 +194,9 @@ export default {
       { text: '구조진단\n일치율', sortable: false, align: 'center', value: 'structDiagRate' },
       { text: 'DDL', sortable: false, align: 'center', value: 'ddl' },
     ],
-    // 탭 활성화
-    activeDetailTab: 'tab1',
-    // 디테일 메뉴 탭
-    detailTab: [
-      { title: '테이블', name: 'tab1', index: 0 },
-      { title: '컬럼', name: 'tab2', index: 1 }
-    ],
-    // 하단 테이블 탭 헤더
-    dmTabledetaileHeaders: [
-      { text: '테이블 영문명 (물리)', align: 'start', sortable: false, value: 'objNm' },
-      { text: '테이블 한글명 (논리)', sortable: false, align: 'start', value: 'objNmKr' },
-      { text: '소유자', sortable: false, align: 'start', value: 'objOwner' },
-      { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
-      { text: '테이블 설명', sortable: false, align: 'start', value: 'objDesc' },
-    ],
-    // 하단 컬럼 탭 헤더
-    dmColumnDetaileHeaders: [
-      { text: '테이블 영문명 (물리)', align: 'center', sortable: false, value: 'objNm' },
-      { text: '테이블 한글명 (논리)', sortable: false, align: 'center', value: 'objNmKr' },
-      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'attrNm' },
-      { text: '컬럼 한글명\n(논리)', sortable: false, align: 'center', value: 'attrNmKr' },
-      { text: '데이터\n타입', sortable: false, align: 'center', value: 'dataType' },
-      { text: '데이터\n길이', sortable: false, align: 'center', value: 'dataLen' },
-      { text: '데이터\n소수점\n길이', sortable: false, align: 'center', value: 'dataDecimalLen' },
-      { text: 'NULL\n여부', sortable: false, align: 'center', value: 'nullableYn' },
-      // [숨김] 수집 시 표준검사 제거에 따라 표준여부 헤더 비활성화 — 원복 시 주석 해제
-      // {
-      //   text: '표준 여부', sortable: false, align: 'center', value: 'termsStndYn', divider: true,
-      //   children: [
-      //     { text: '용어', align: 'center', value: 'termsStndYn', sortable: false },
-      //     { text: '도메인', align: 'center', value: 'domainStndYn', sortable: false },
-      //     { text: '단어', align: 'center', value: 'wordLst', sortable: false }
-      //   ]
-      // },
-      { text: 'PK 여부', sortable: false, align: 'center', value: 'pkYn' },
-      { text: 'FK 여부', sortable: false, align: 'center', value: 'fkYn' },
-      { text: '디폴트 값', sortable: false, align: 'center', value: 'defaultVal' },
-    ],
-    // 수집일시 선택 모달 리스트 내부 테이블 헤더
-    dmCdlListHeaders: [
-      { text: '데이터모델명', align: 'center', sortable: false, value: 'dataModelNm' },
-      { text: '수집 시작 시간', align: 'center', sortable: false, value: 'clctStartDt' },
-      { text: '수집 완료 시간', align: 'center', sortable: false, value: 'clctEndDt' },
-      { text: '완료 여부', align: 'center', sortable: false, value: 'clctCmptnYn' },
-    ],
-    // 용어 상세보기 헤더
-    termDetaileHeaders: [
-      { text: '용어명', align: 'center', sortable: false, value: 'termsNm', width: '15%' },
-      { text: '용어영문약어명', sortable: false, align: 'center', value: 'termsEngAbrvNm', width: '15%' },
-      { text: '용어설명', sortable: false, align: 'center', value: 'termsDesc' },
-      { text: '도메인명', sortable: false, align: 'center', value: 'domainNm' },
-      { text: '이음동의어목록', sortable: false, align: 'center', value: 'allophSynmLst' },
-      { text: '코드그룹', sortable: false, align: 'center', value: 'codeGrp', width: '15%' },
-      { text: '담당기관명', sortable: false, align: 'center', value: 'chrgOrg', width: '15%' },
-      { text: '공통표준여부', sortable: false, align: 'center', value: 'commStndYn', width: '15%' },
-      { text: '제정차수', sortable: false, align: 'center', value: 'magntdOrd', width: '15%' },
-      { text: '승인여부', sortable: false, align: 'center', value: 'aprvYn', width: '15%' },
-      { text: '승인상태수정일시', sortable: false, align: 'center', value: 'aprvStatUpdtDt', width: '15%' },
-      { text: '생성일시', sortable: false, align: 'center', value: 'cretDt', width: '15%' },
-      { text: '생성사용자ID', sortable: false, align: 'center', value: 'cretUserId', width: '15%' },
-      { text: '수정일시', sortable: false, align: 'center', value: 'updtDt', width: '15%' },
-      { text: '수정사용자ID', sortable: false, align: 'center', value: 'updtUserId', width: '15%' },
-    ],
     // 테이블 편의성 관련
     tableViewLengthList: [10, 20, 30, 40, 50],
-    // 데이터모델 수집 목록 선택 시 사용
-    selectedDmCdl: null,
-    // 데이터모델 수집 목록 선택 시 아이템 저장
-    dmCdlListSelected: [],
-    // 컬럼 탭 체크 박스
-    statusListArray: ['Y', 'N'],
-    // 논리/물리 모델 전환
-    modelViewMode: 'physical',
-    // 논리 모델용 테이블 헤더 (한글명 먼저)
-    dmTableLogicalHeaders: [
-      { text: '테이블 한글명 (논리)', align: 'start', sortable: false, value: 'objNmKr' },
-      { text: '테이블 영문명 (물리)', sortable: false, align: 'start', value: 'objNm' },
-      { text: '소유자', sortable: false, align: 'start', value: 'objOwner' },
-      { text: '컬럼개수', sortable: false, align: 'center', value: 'objAttrCnt' },
-      { text: '테이블 설명', sortable: false, align: 'start', value: 'objDesc' },
-    ],
-    // 논리 모델용 컬럼 헤더 (한글명 먼저)
-    dmColumnLogicalHeaders: [
-      { text: '테이블 한글명 (논리)', sortable: false, align: 'center', value: 'objNmKr' },
-      { text: '테이블 영문명 (물리)', align: 'center', sortable: false, value: 'objNm' },
-      { text: '컬럼 한글명\n(논리)', sortable: false, align: 'center', value: 'attrNmKr' },
-      { text: '컬럼 영문명 (물리)', sortable: false, align: 'center', value: 'attrNm' },
-      { text: '데이터\n타입', sortable: false, align: 'center', value: 'dataType' },
-      { text: '데이터\n길이', sortable: false, align: 'center', value: 'dataLen' },
-      { text: '데이터\n소수점\n길이', sortable: false, align: 'center', value: 'dataDecimalLen' },
-      { text: 'NULL\n여부', sortable: false, align: 'center', value: 'nullableYn' },
-      { text: 'PK 여부', sortable: false, align: 'center', value: 'pkYn' },
-      { text: 'FK 여부', sortable: false, align: 'center', value: 'fkYn' },
-      { text: '디폴트 값', sortable: false, align: 'center', value: 'defaultVal' },
-    ],
   }),
-  computed: {
-    currentTableHeaders() {
-      return this.modelViewMode === 'logical' ? this.dmTableLogicalHeaders : this.dmTabledetaileHeaders;
-    },
-    currentColumnHeaders() {
-      return this.modelViewMode === 'logical' ? this.dmColumnLogicalHeaders : this.dmColumnDetaileHeaders;
-    },
-  },
   methods: {
     setListPage() {
       // 페이지네이션 버튼 개수
@@ -437,195 +214,12 @@ export default {
       a.click();
       document.body.removeChild(a);
     },
-    tb_setListPage() {
-      // 페이지네이션 버튼 개수
-      this.tb_pageCount = Math.ceil(this.dmTableItems.length / this.tb_itemsPerPage);
-      if (this.tb_page > this.tb_pageCount) this.tb_page = Math.max(1, this.tb_pageCount);
-    },
-    cl_setListPage() {
-      // 페이지네이션 버튼 개수
-      this.cl_pageCount = Math.ceil(this.dmColumnItems.length / this.cl_itemsPerPage);
-      if (this.cl_page > this.cl_pageCount) this.cl_page = Math.max(1, this.cl_pageCount);
-    },
-    dmCdl_setListPage() {
-      // 페이지네이션 버튼 개수
-      this.dmCdl_pageCount = Math.ceil(this.dmCdlListItems.length / this.dmCdl_itemsPerPage);
-      if (this.dmCdl_page > this.dmCdl_pageCount) this.dmCdl_page = Math.max(1, this.dmCdl_pageCount);
-    },
-    addActiveDetail(name, index) {
-      this.activeDetailTab = name;
-    },
     clearMessage() {
       // 검색어 지워주기
       this.searchModel = ''
     },
-    clearSystemMessage() {
-      // 검색어 지워주기
-      this.searchSystem = ''
-    },
     resetSearch() {
-      this.searchSystem = '';
       this.searchModel = '';
-    },
-    clearScTableMessage() {
-      // 검색어 지워주기
-      this.searchTable = ''
-    },
-    clearScColumnMessage() {
-      // 검색어 지워주기
-      this.searchColumn = ''
-    },
-    getDataTable(clctId) {
-      this.tb_loadTable = false;
-
-      // console.log(clctId)
-
-      try {
-        let _url = this.$APIURL.base + "api/dm/getDataModelObjListByClctId";
-
-        axios.get(_url, {
-          params: {
-            'clctId': clctId
-          }
-        }).then((res) => {
-          // console.log(res.data)
-
-          let _data = res.data;
-
-          this.dmTableItems = _data;
-          this.tb_loadTable = false;
-
-          // console 표시
-          console.log("📃 Data Model Table LIST ↓↓↓")
-          console.log(res.data)
-        })
-      } catch (error) {
-        console.error(error);
-        this.tb_loadTable = false;
-      }
-    },
-    getDataColumn(clctId) {
-      this.cl_loadTable = false;
-
-      try {
-        let _url = this.$APIURL.base + "api/dm/getDataModelAttrListByClctId";
-
-        axios.get(_url, {
-          params: {
-            'clctId': clctId
-          }
-        }).then((res) => {
-          // console.log(res.data)
-
-          let _data = res.data;
-
-          // 데이터를 테이블에 맞게 수정해야 함. 순서 꼭 지킬 것.
-          let _newArr = [];
-
-          for (let i = 0; i < _data.length; i++) {
-            let _obj = {};
-
-            _obj.objNm = _data[i].objNm;
-            _obj.objNmKr = _data[i].objNmKr;
-            _obj.attrNm = _data[i].attrNm;
-            _obj.attrNmKr = _data[i].attrNmKr;
-            _obj.dataType = _data[i].dataType;
-            _obj.dataLen = _data[i].dataLen;
-            _obj.dataDecimalLen = _data[i].dataDecimalLen;
-            _obj.nullableYn = _data[i].nullableYn;
-            _obj.termsStndYn = _data[i].termsStndYn;
-            _obj.domainStndYn = _data[i].domainStndYn;
-            // 단어는 리스트로 새로 생성해야 함. wordLst와 wordStndLst를 순서대로 받아서 생성.
-            let _wordLst = [];
-            for (let n = 0; n < _data[i].wordLst.length; n++) {
-              _wordLst.push(_data[i].wordLst[n] + " : " + _data[i].wordStndLst[n]);
-            }
-
-            _obj.wordLst = _wordLst;
-            _obj.pkYn = _data[i].pkYn;
-            _obj.fkYn = _data[i].fkYn;
-            _obj.defaultVal = _data[i].defaultVal;
-            _obj.clctId = _data[i].clctId;
-            _obj.dataModelId = _data[i].dataModelId;
-
-            _newArr.push(_obj);
-          }
-
-
-
-          this.dmColumnItems = _newArr;
-          this.cl_loadTable = false;
-
-          // console 표시
-          console.log("📃 Data Model Column LIST ↓↓↓")
-          console.log(res.data)
-        })
-      } catch (error) {
-        console.error(error);
-        this.cl_loadTable = false;
-      }
-    },
-    showDetail(item) {
-      // console.log(item);
-
-      // 아이템명 클릭 시 보여지는 하단 리스트
-      this.selectedItem = [item];
-      // remove item에 단독으로 넣어주기
-      this.removeItems = [item];
-      // 하단 탭 영역에 선택한 데이터 모델명 보여주기
-      this.detailDataModelName = item.dataModelNm;
-      // 테이블 데이터 테이블 불러오기
-      this.getDataTable(item.clctId);
-      // 컬럼 데이터 테이블 불러오기
-      this.getDataColumn(item.clctId);
-
-    },
-    showModal(value) {
-      // 모달 보여주기
-      if (value === 'dmCdl') {
-        this.showDmCltDateModal = true;
-        // !! - 나중에 바꿔야 함
-        this.dmCdl_setListPage();
-      } else if (value === 'termData') {
-        this.termDataModalShow = true;
-      }
-    },
-    hideModal(value) {
-      // 모달 보여주기
-      if (value === 'dmCdl') {
-        this.showDmCltDateModal = false;
-        this.setDmCdlDate();
-      } else if (value === 'termData') {
-        this.termDataModalShow = false;
-      }
-    },
-    submitDialog(value) {
-      if (value === 'dmCdl') {
-        let dmCdlData = this.dmCdlListSelected;
-
-        if (dmCdlData.length === 0) {
-          this.$swal.fire({
-            title: '데이터 모델을 선택해주세요.',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-          return;
-        }
-
-        this.refreshRowItem(dmCdlData);
-        this.showDmCltDateModal = false;
-      } else if (value === 'termData') {
-        this.termDataModalShow = false;
-      }
-    },
-    resetDetail() {
-      // 선택한 코드 정보를 리셋
-      this.selectedItem = [];
-      this.removeItems = [];
-      this.dmTableItems = [];
-      this.dmColumnItems = [];
-      this.detailDataModelName = '';
-      this.dmCdlListSelected = [];
     },
     getSubHeader(headers) {
       let result = [];
@@ -636,16 +230,6 @@ export default {
         });
       return result;
     },
-    clTb_getSubHeader(headers) {
-      let result = [];
-      headers
-        .filter((i) => i.children)
-        .forEach((v) => {
-          result = result.concat(v.children);
-        });
-
-      return result;
-    },
     getRows(rows) {
       const keyOrder = ['dataModelNm', 'dataModelDsNm', 'objCnt', 'attrCnt', 'clctDt', 'diagDt', 'structDiagDt', 'diagStndRate', 'structDiagRate', 'ddl'];
       const result = {};
@@ -653,166 +237,6 @@ export default {
         result[key] = rows[key] != null ? rows[key] : '';
       });
       return result;
-    },
-    clTb_getRows(rows) {
-      const result = {};
-      _.forEach(rows, (i, key) => {
-        // value가 null인경우 오류 발생. ''로 변경
-        if (i === null) {
-          i = '';
-        }
-        if (i.children) {
-          _.forEach(i.children, (i1, key1) => {
-            result["c" + key1] = i1;
-          });
-        } else {
-          // 테이블 헤더에 있는 값만 가져오기
-          if (key === 'objNm' || key === 'objNmKr' || key === 'attrNm' || key === 'attrNmKr' || key === 'dataType' || key === 'dataLen' ||
-            key === 'dataDecimalLen' || key === 'nullableYn' || /* key === 'termsStndYn' || key === 'domainStndYn' || key === 'wordLst' || */ key === 'pkYn' || key === 'fkYn' || key === 'defaultVal') {
-            result[key] = i
-          } else {
-            return;
-          }
-        };
-      });
-      return result;
-    },
-    showCltList(item) {
-      // console.log(item.dataModelId);
-      this.showModal('dmCdl');
-
-      this.selectedDmCdl = item.dataModelId;
-
-      let _from = this.dmCdlDate[0].replace(/-/gi, '') + '000000';
-      let _to = this.dmCdlDate[1].replace(/-/gi, '') + '595959';
-
-      try {
-
-        let _url = this.$APIURL.base + "api/dm/getDataModelClctList";
-
-        axios.post(_url, {
-          'schId': item.dataModelId,
-          'from': _from,
-          'to': _to
-        }).then((res) => {
-          // console.log(res.data)
-
-          // 테이블 key를 위해 index를 추가한다.
-          res.data.forEach((item, index) => {
-            item.index = index;
-          });
-
-          this.dmCdlListItems = res.data;
-
-          // console 표시
-          console.log("📃 Data Model Collection LIST ↓↓↓")
-          console.log(res.data);
-
-        }).catch((err) => {
-          this.$swal.fire({
-            title: '데이터모델 수집 목록 바인드 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-        })
-
-      } catch (error) {
-        console.error(error);
-      }
-    },
-    searchDataModelClctList() {
-      let _from = '';
-      let _to = '';
-
-      if (this.dmCdlDate.length === 2) {
-        _from = this.dmCdlDate[0].replace(/-/gi, '') + '000000';
-        _to = this.dmCdlDate[1].replace(/-/gi, '') + '595959';
-
-        if (_from > _to) {
-          this.$swal.fire({
-            title: '시작일자가 종료일자보다 클 수 없습니다.',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-          return;
-        }
-
-      } else if (this.dmCdlDate.length === 1) {
-        _from = this.dmCdlDate[0].replace(/-/gi, '') + '000000';
-        _to = this.dmCdlDate[0].replace(/-/gi, '') + '595959';
-      } else {
-        this.$swal.fire({
-          title: '수집기간을 선택해주세요.',
-          confirmButtonText: '확인',
-          icon: 'error',
-        });
-      }
-
-      try {
-        let _url = this.$APIURL.base + "api/dm/getDataModelClctList";
-
-        axios.post(_url, {
-          'schId': this.selectedDmCdl,
-          'from': _from,
-          'to': _to
-        }).then((res) => {
-          // console.log(res.data)
-
-          // 테이블 key를 위해 index를 추가한다.
-          res.data.forEach((item, index) => {
-            item.index = index;
-          });
-
-          this.dmCdlListItems = res.data;
-
-          // console 표시
-          console.log("📃 Data Model Collection LIST ↓↓↓")
-          console.log(res.data);
-
-        }).catch((err) => {
-          this.$swal.fire({
-            title: '데이터모델 수집 목록 바인드 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-        })
-
-      } catch (error) {
-        console.error(error);
-      }
-    },
-    showTermData(item) {
-      this.cl_td_loadTable = true;
-      try {
-        // item에서 검색에 필요한 용어명을 가져와서 용어 정보를 모달로 보여준다.
-        let _url = this.$APIURL.base + "api/std/getTermsInfoByNm";
-
-        // console.log(item.attrNmKr)
-
-        axios.get(_url, {
-          params: {
-            'termsNm': item.attrNmKr,
-          }
-        }).then((res) => {
-          // console.log(res.data)
-          this.getTermDetailItem = res.data;
-
-          // console.log(this.getTermDetailItem);
-
-          this.showModal('termData');
-          this.cl_td_loadTable = false;
-        }).catch((err) => {
-          this.$swal.fire({
-            title: '용어 검색 목록 바인드 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-          this.cl_td_loadTable = false;
-        })
-
-      } catch (error) {
-        console.log(error);
-      }
     },
     getDataModelStatsList() {
       this.loadTable = false;
@@ -829,8 +253,6 @@ export default {
         axios.post(_url, {
           'schNm': schNm
         }).then((res) => {
-          console.log(res.data)
-
           let _data = res.data;
 
           // 데이터를 테이블에 맞게 수정해야 함. 순서 꼭 지킬 것.
@@ -855,16 +277,6 @@ export default {
 
           this.dmStatusItems = _newArr;
           this.loadTable = false;
-
-          // console 표시
-          console.log("📃 DataModel Status LIST ↓↓↓")
-          console.log(_data);
-          console.log("📃 Create DataModel Status LIST ↓↓↓")
-          console.log(_newArr);
-
-          // 리셋
-          this.resetDetail();
-
         }).catch((err) => {
           this.$swal.fire({
             title: '용어 목록 바인드 실패 - API 확인 필요',
@@ -878,230 +290,6 @@ export default {
         this.loadTable = false;
       }
     },
-    isValidDateFormat(dateString) {
-      // YYYY-MM-DD 형식의 유효성을 확인하는 함수를 작성합니다.
-      // 실제로 유효한 날짜인지 검증하는 추가 로직이 필요할 수 있습니다.
-      const pattern = /^\d{4}-\d{2}-\d{2}$/;
-      return pattern.test(dateString);
-    },
-    setDmCdlDate() {
-      // 수집일시 최근 일주일 날짜로 설정하기
-      this.dmCdlDate = [
-        new Date(new Date() - 7 * 24 * 60 * 60 * 1000).toISOString().substr(0, 10),
-        new Date().toISOString().substr(0, 10)
-      ];
-    },
-    tableDataDownload() {
-      const _clctId = this.selectedItem[0].clctId;
-      // console.log(_clctId)
-
-      try {
-        axios.get(this.$APIURL.base + "api/dm/downloadDataModelObjs",
-          {
-            params: {
-              'clctId': _clctId,
-            },
-            responseType: 'blob',
-            headers: { "Accept": "application/vnd.ms-excel" }
-          }).then(response => {
-            // console.log(response)
-            const url = window.URL.createObjectURL(
-              new Blob([response.data], { type: "application/csv" })
-            );
-            const link = document.createElement("a");
-            link.href = url;
-
-            let _today = this.$getToday();
-
-            link.setAttribute("download", `데이터모델_테이블정보_${_today}.xlsx`);
-
-            document.body.appendChild(link);
-            link.click();
-            window.URL.revokeObjectURL(url);
-            link.remove();
-          }).catch(error => {
-            this.$swal.fire({
-              title: '테이블 정보 다운로드 실패 - API 확인 필요',
-              confirmButtonText: '확인',
-              icon: 'error',
-            });
-          })
-      } catch (error) {
-        console.log('테이블 정보 다운로드 실패 :', error);
-      }
-    },
-    columnDataDownload() {
-      const _clctId = this.selectedItem[0].clctId;
-      // console.log(_clctId)
-      try {
-        axios.get(this.$APIURL.base + "api/dm/downloadDataModelAttrs",
-          {
-            params: {
-              'clctId': _clctId
-            },
-            responseType: 'blob',
-            headers: { "Accept": "application/vnd.ms-excel" }
-          }).then(response => {
-            // console.log(response)
-            const url = window.URL.createObjectURL(
-              new Blob([response.data], { type: "application/csv" })
-            );
-            const link = document.createElement("a");
-            link.href = url;
-
-            let _today = this.$getToday();
-
-            link.setAttribute("download", `데이터모델_컬럼정보_${_today}.xlsx`);
-
-            document.body.appendChild(link);
-            link.click();
-            window.URL.revokeObjectURL(url);
-            link.remove();
-          }).catch(error => {
-            this.$swal.fire({
-              title: '컬럼 정보 다운로드 실패 - API 확인 필요',
-              confirmButtonText: '확인',
-              icon: 'error',
-            });
-          })
-      } catch (error) {
-        console.log('컬럼 정보 다운로드 실패 :', error);
-      }
-    },
-    refreshRowItem(item) {
-      // console.log(item)
-      try {
-        let _url = this.$APIURL.base + "api/dm/getDataModelStatsByClctId";
-
-        // console.log(item[0].clctId)
-
-        axios.get(_url, {
-          params: {
-            'clctId': item[0].clctId,
-          }
-        }).then((res) => {
-          let _data = res.data;
-
-          // _data의 dataModelId와 dmStatusItems.dataModelId가 같은 것을 찾아서 데이터를 교체
-          // 해당 배열에 있는 모든 데이터를 교체해야하며 교체한 데이터를 dmStatusItems에 다시 넣어줘야함
-          for (let i = 0; i < this.dmStatusItems.length; i++) {
-            if (this.dmStatusItems[i].dataModelId === _data.dataModelId) {
-              this.dmStatusItems[i].dataModelNm = _data.dataModelNm;
-              this.dmStatusItems[i].dataModelDsNm = _data.dataModelDsNm;
-              this.dmStatusItems[i].objCnt = _data.objCnt || 0;
-              this.dmStatusItems[i].attrCnt = _data.attrCnt || 0;
-              this.dmStatusItems[i].clctDt = _data.clctDt || '';
-              this.dmStatusItems[i].dataModelId = _data.dataModelId;
-            }
-          }
-
-          // 초기화
-          this.dmCdlListSelected = [];
-          // 수집일시 최근 일주일 날짜로 설정하기
-          this.setDmCdlDate();
-
-        }).catch((err) => {
-          this.$swal.fire({
-            title: '데이터모델 컬럼 현황 바인드 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-        })
-
-      } catch (error) {
-        console.log(error);
-      }
-    },
-    getDataModelObjListByObjNm() {
-      this.tb_loadTable = false;
-
-      try {
-        let _url = this.$APIURL.base + "api/dm/getDataModelObjListByObjNm";
-
-        axios.post(_url, {
-          'schId': this.selectedItem[0].clctId,
-          'schObjNm': this.searchTable
-        }).then((res) => {
-          console.log(res.data)
-
-          let _data = res.data;
-
-          this.dmTableItems = _data;
-        }).catch((err) => {
-          this.$swal.fire({
-            title: '테이블 탭 테이블 정보 검색 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-          this.tb_loadTable = false;
-        })
-      } catch (error) {
-        console.error(error);
-        this.tb_loadTable = false;
-      }
-    },
-    getDataModelAttrListByRetreiveCond() {
-      this.cl_loadTable = false;
-
-      // 테이블명 검색어
-      let _searchTable = this.searchTable;
-
-      if(_searchTable === null || _searchTable === undefined || _searchTable === '') {
-        _searchTable = null;
-      }
-
-      // 컬럼명 검색어
-      let _searchColumn = this.searchColumn;
-
-      if(_searchColumn === null || _searchColumn === undefined || _searchColumn === '') {
-        _searchColumn = null;
-      }
-
-      // 체크 박스
-      let _schStndYn = this.statusListArray;
-
-      if(_schStndYn.length === 2 || _schStndYn.length === 0) {
-        _schStndYn = null;
-      } else if(_schStndYn[0] === 'Y') {
-        _schStndYn = 'Y';
-      } else if(_schStndYn[0] === 'N') {
-        _schStndYn = 'N';
-      }
-
-      
-      try {
-        let _url = this.$APIURL.base + "api/dm/getDataModelAttrListByRetreiveCond";
-
-        axios.post(_url, {
-          'schId': this.selectedItem[0].clctId,
-          'schObjNm': _searchTable,
-          'schAttrNm': _searchColumn,
-          'schStndYn': _schStndYn
-        }).then((res) => {
-          // console.log(res.data)
-
-          let _data = res.data;
-
-          this.dmColumnItems = _data;
-
-          // console 표시
-          console.log("📃 DataModel Column Tab Search LIST ↓↓↓")
-          console.log(_data);
-
-          this.cl_loadTable = false;
-        }).catch((err) => {
-          this.$swal.fire({
-            title: '컬럼 탭 컬럼 정보 검색 실패 - API 확인 필요',
-            confirmButtonText: '확인',
-            icon: 'error',
-          });
-          this.cl_loadTable = false;
-        })
-      } catch (error) {
-        console.error(error);
-        this.cl_loadTable = false;
-      }
-    },
   },
   created() {
     this.getDataModelStatsList();
@@ -1109,26 +297,10 @@ export default {
   mounted() {
     // 테이블 셀 가로길이 조절
     this.$resizableGrid();
-    // 수집일시 최근 일주일 날짜로 설정하기
-    this.setDmCdlDate();
-  },
-  computed: {
-    dateRangeText() {
-      return this.dmCdlDate.join(' ~ ')
-    },
   },
 }
 </script>
 
-<style>
-/* unscoped: 테이블 탭 데이터 좌측정렬 */
-#dmTable_table td {
-  text-align: left !important;
-}
-#dmTable_table td:nth-child(4) {
-  text-align: center !important;
-}
-</style>
 <style scoped>
 .splitTopWrapper {
   display: flex;
@@ -1136,29 +308,6 @@ export default {
   align-items: center;
   background: #ffffff;
   border-bottom: 1px solid #E8EAF6;
-}
-
-.splitBottomWrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #ffffff;
-}
-
-.splitBottomSpanWrapper {
-  display: flex;
-  font-size: 1.2rem;
-}
-
-.split_bottom {
-  overflow: hidden;
-  position: relative;
-  height: 100%;
-  background: #ffffff;
-}
-
-.splitBottomSpan {
-  display: inline-block;
 }
 
 .split_bottom_wrap {
@@ -1173,36 +322,6 @@ export default {
 .pagination_wrap {
   position: relative;
   width: 100%;
-}
-
-.tabsStyle {
-  position: relative;
-  width: 100% !important;
-}
-
-.tabsStyle .v-tab {
-  border-top-right-radius: 10px !important;
-  border-top-left-radius: 10px !important;
-  color: #455A64;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.tabsStyle .v-tab--active {
-  color: #283593 !important;
-}
-
-.tabContentsWrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.tabContents {
-  height: calc(100% - 130px);
-  overflow-y: overlay;
-  overflow-x: hidden;
 }
 
 #dmStatus_table {
@@ -1221,58 +340,5 @@ pre {
   align-items: center;
   padding: 10px 20px;
   background: #FAFBFF;
-}
-
-#dmcltPicker button {
-  height: 32px !important;
-}
-
-#dmTable_table,
-#clTable_table {
-  height: calc(100% - 76px);
-  overflow-y: overlay;
-  overflow-x: hidden;
-}
-
-.dmCdlList_table_wrap {
-  position: absolute;
-  top: 72px;
-  left: 0;
-  width: 100%;
-  height: calc(100% - 148px);
-  overflow: auto;
-}
-
-#dmCdlList_table {
-  overflow-y: overlay;
-  overflow-x: hidden;
-}
-
-.dmTable_table_wrap {
-  position: absolute;
-  width: 100%;
-  max-height: 76px;
-  bottom: 48px;
-  border-top: 1px solid #E8EAF6;
-}
-
-.pagination_wrapper {
-  position: absolute;
-  width: 100%;
-  max-height: 76px;
-  bottom: 0px;
-  min-height: 76px;
-  border-top: 1px solid #E8EAF6;
-  background: #FAFBFF;
-}
-
-#term_detail_table tbody tr:nth-child(1) td {
-  border-top: thin solid rgba(0, 0, 0, 0.08);
-}
-
-.checkboxStyle {
-  margin-top: 0px;
-  padding-top: 0px;
-  margin-right: 15px;
 }
 </style>

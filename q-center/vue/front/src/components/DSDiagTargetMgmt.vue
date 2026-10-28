@@ -12,12 +12,10 @@
           <v-chip small label outlined>테이블 {{ stats.totalobj }}</v-chip>
           <v-chip small label color="error" outlined>표준 OFF {{ stats.objstndoff }}</v-chip>
           <v-chip small label color="error" outlined>구조 OFF {{ stats.objstructoff }}</v-chip>
-          <v-chip small label color="error" outlined>품질 OFF {{ stats.objqualoff }}</v-chip>
           <v-divider vertical />
           <v-chip small label outlined>컬럼 {{ stats.totalattr }}</v-chip>
           <v-chip small label color="error" outlined>표준 OFF {{ stats.attrstndoff }}</v-chip>
           <v-chip small label color="error" outlined>구조 OFF {{ stats.attrstructoff }}</v-chip>
-          <v-chip small label color="error" outlined>품질 OFF {{ stats.attrqualoff }}</v-chip>
         </template>
       </v-sheet>
 
@@ -41,10 +39,6 @@
             <span class="text-caption grey--text mr-1">구조</span>
             <v-btn small outlined color="red" @click="bulkObjToggle('STRUCT','N')" title="선택 행 구조진단 OFF">제외</v-btn>
             <v-btn small outlined color="green" @click="bulkObjToggle('STRUCT','Y')" title="선택 행 구조진단 ON">대상</v-btn>
-            <v-divider vertical class="mx-1" />
-            <span class="text-caption grey--text mr-1">품질</span>
-            <v-btn small outlined color="red" @click="bulkObjToggle('QUAL','N')" title="선택 행 품질진단 OFF">제외</v-btn>
-            <v-btn small outlined color="green" @click="bulkObjToggle('QUAL','Y')" title="선택 행 품질진단 ON">대상</v-btn>
           </v-sheet>
           <v-data-table class="px-3 pb-3" :headers="objHeaders" :items="filteredObjs" item-key="_rowKey"
             v-model="selectedObjs" show-select dense hide-default-footer :items-per-page="-1">
@@ -58,12 +52,6 @@
               <v-icon small :color="item.structDiagTargetYn==='Y' ? 'green' : 'red'"
                 @click="toggleObj(item, 'STRUCT')" style="cursor:pointer">
                 {{ item.structDiagTargetYn==='Y' ? 'check_box' : 'check_box_outline_blank' }}
-              </v-icon>
-            </template>
-            <template v-slot:[`item.qualDiagTargetYn`]="{ item }">
-              <v-icon small :color="item.qualDiagTargetYn==='Y' ? 'green' : 'red'"
-                @click="toggleObj(item, 'QUAL')" style="cursor:pointer">
-                {{ item.qualDiagTargetYn==='Y' ? 'check_box' : 'check_box_outline_blank' }}
               </v-icon>
             </template>
             <template v-slot:[`item.detail`]="{ item }">
@@ -88,10 +76,6 @@
             <span class="text-caption grey--text mr-1">구조</span>
             <v-btn small outlined color="red" @click="bulkAttrToggle('STRUCT','N')" :disabled="!selObj">제외</v-btn>
             <v-btn small outlined color="green" @click="bulkAttrToggle('STRUCT','Y')" :disabled="!selObj">대상</v-btn>
-            <v-divider vertical class="mx-1" />
-            <span class="text-caption grey--text mr-1">품질</span>
-            <v-btn small outlined color="red" @click="bulkAttrToggle('QUAL','N')" :disabled="!selObj">제외</v-btn>
-            <v-btn small outlined color="green" @click="bulkAttrToggle('QUAL','Y')" :disabled="!selObj">대상</v-btn>
           </v-sheet>
           <v-data-table class="px-3 pb-3" :headers="attrHeaders" :items="filteredAttrs" item-key="_rowKey"
             v-model="selectedAttrs" show-select dense hide-default-footer :items-per-page="-1">
@@ -105,12 +89,6 @@
               <v-icon small :color="item.structDiagTargetYn==='Y' ? 'green' : 'red'"
                 @click="toggleAttr(item, 'STRUCT')" style="cursor:pointer">
                 {{ item.structDiagTargetYn==='Y' ? 'check_box' : 'check_box_outline_blank' }}
-              </v-icon>
-            </template>
-            <template v-slot:[`item.qualDiagTargetYn`]="{ item }">
-              <v-icon small :color="item.qualDiagTargetYn==='Y' ? 'green' : 'red'"
-                @click="toggleAttr(item, 'QUAL')" style="cursor:pointer">
-                {{ item.qualDiagTargetYn==='Y' ? 'check_box' : 'check_box_outline_blank' }}
               </v-icon>
             </template>
           </v-data-table>
@@ -154,14 +132,6 @@
               사유: {{ detailData.structDiagTargetReason || '(없음)' }}
             </div>
           </div>
-          <div class="mb-2"><strong>품질 진단 대상:</strong>
-            <v-chip x-small :color="detailData.qualDiagTargetYn==='Y'?'green':'red'" dark>
-              {{ detailData.qualDiagTargetYn==='Y' ? 'Y (대상)' : 'N (제외)' }}
-            </v-chip>
-            <div v-if="detailData.qualDiagTargetYn==='N'" class="text-caption">
-              사유: {{ detailData.qualDiagTargetReason || '(없음)' }}
-            </div>
-          </div>
           <v-divider class="my-2"></v-divider>
           <div class="text-caption">
             마지막 변경: {{ detailData.diagTargetUpdtDt || '-' }} / {{ detailData.diagTargetUpdtUserId || '-' }}
@@ -190,7 +160,6 @@ export default {
       { text: '컬럼수', value: 'objAttrCnt', width: '8%' },
       { text: '표준대상', value: 'stndDiagTargetYn', width: '10%', sortable: false, align: 'center' },
       { text: '구조대상', value: 'structDiagTargetYn', width: '10%', sortable: false, align: 'center' },
-      { text: '품질대상', value: 'qualDiagTargetYn', width: '10%', sortable: false, align: 'center' },
       { text: '상세', value: 'detail', width: '7%', sortable: false, align: 'center' },
     ],
     attrHeaders: [
@@ -201,7 +170,6 @@ export default {
       { text: '타입', value: 'dataType', width: '10%' },
       { text: '표준대상', value: 'stndDiagTargetYn', width: '10%', sortable: false, align: 'center' },
       { text: '구조대상', value: 'structDiagTargetYn', width: '10%', sortable: false, align: 'center' },
-      { text: '품질대상', value: 'qualDiagTargetYn', width: '10%', sortable: false, align: 'center' },
     ],
     reasonDialog: false, reasonTitle: '', reasonText: '', _pendingApply: null,
     detailDialog: false, detailData: null,
@@ -399,11 +367,9 @@ export default {
         .then(r => { this.detailData = r.data || {}; this.detailDialog = true; });
     },
     _getYn(item, diagType) {
-      if (diagType === 'STND') return item.stndDiagTargetYn;
-      if (diagType === 'STRUCT') return item.structDiagTargetYn;
-      return item.qualDiagTargetYn;
+      return diagType === 'STND' ? item.stndDiagTargetYn : item.structDiagTargetYn;
     },
-    _typeLabel(t) { return { STND:'표준', STRUCT:'구조', QUAL:'품질' }[t] || t; }
+    _typeLabel(t) { return { STND:'표준', STRUCT:'구조' }[t] || t; }
   }
 };
 </script>

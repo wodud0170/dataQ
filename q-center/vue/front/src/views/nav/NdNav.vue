@@ -110,14 +110,6 @@
                         <v-list-item-title>공통표준 가져오기</v-list-item-title>
                     </v-list-item>
 
-                    <!-- <v-list-item link id="nav_datamodel" href="#tab_datamodel" active-class="ndColor--text" title="데이터 모델"
-                        v-on:click.stop="addTabItem('데이터 모델', 'datamodel');">
-                        <v-list-item-icon>
-                            <v-icon></v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-title>데이터 모델</v-list-item-title>
-                    </v-list-item> -->
-
                 </v-list-group>
 
                 <!-- 데이터 모델 -->

@@ -1169,11 +1169,11 @@ def test_data_model(session):
                 ok = isinstance(objs, list)
                 add_result("9-2", "모델 → 테이블/컬럼 상세", ok, f"오브젝트 {len(objs)}건")
             else:
-                # Try via collection list
-                r2 = session.post(f"{BASE}/api/dm/getDataModelClctList", json={})
+                # Try via collection history (110 2묶음 — 호출 화면이 없던 getDataModelClctList 를 지워 수집이력 화면 API 로)
+                r2 = session.post(f"{BASE}/api/dm/getDataModelHistoryList", json={})
                 clct_list = r2.json()
                 if clct_list:
-                    cid = clct_list[0].get("dmClctId", clct_list[0].get("dataModelClctId", clct_list[0].get("id", "")))
+                    cid = clct_list[0].get("dataModelId", "")
                     r3 = session.get(f"{BASE}/api/dm/getDataModelObjListByClctId", params={"clctId": cid})
                     objs = r3.json()
                     ok = isinstance(objs, list)
@@ -1187,8 +1187,8 @@ def test_data_model(session):
 
     # 9-3 논리/물리 모델 전환 (UI test)
     try:
-        # Just verify both endpoints work
-        r = session.post(f"{BASE}/api/dm/getDataModelObjListByObjNm", json={"sortType": "logical"})
+        # Just verify both endpoints work (110 2묶음 — getDataModelObjListByObjNm 을 지워 테이블 화면 API 로)
+        r = session.get(f"{BASE}/api/dm/getDataModelObjListByClctId", params={"clctId": dm_id})
         ok = r.status_code == 200
         add_result("9-3", "논리/물리 모델 전환", ok, "API 정상 응답")
     except Exception as e:
@@ -1222,7 +1222,7 @@ def test_diag(session):
 
     # 10-2 수집 일시 선택
     try:
-        r = session.post(f"{BASE}/api/dm/getDataModelClctList", json={})
+        r = session.post(f"{BASE}/api/dm/getDataModelHistoryList", json={})   # 110 2묶음 — getDataModelClctList 지움
         clct_list = r.json()
         ok = isinstance(clct_list, list)
         add_result("10-2", "수집 일시 선택", ok, f"수집 이력 {len(clct_list)}건")

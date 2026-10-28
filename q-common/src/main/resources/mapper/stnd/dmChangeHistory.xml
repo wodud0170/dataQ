@@ -87,16 +87,16 @@
 		LIMIT 500
 	</select>
 
-	<!-- 신청 묶음 단위 — 관리자 승인 화면용 -->
+	<!-- 신청 묶음 단위 — 관리자 승인 화면용.
+	     110 5.8-27 — 신청은 모델별로 나뉘지만(submit), 예전 신청은 여러 모델이 섞였을 수 있어 모델 이름을 모두 싣는다 -->
 	<select id="selectSubmissions" parameterType="java.util.Map" resultType="java.util.Map">
 		SELECT H.SUBMISSION_ID               as "submissionId",
 		       MAX(H.CHANGE_USER_ID)         as "changeUserId",
 		       MIN(H.CHANGE_DT)              as "firstDt",
 		       MAX(H.CHANGE_DT)              as "lastDt",
 		       COUNT(*)                      as "itemCnt",
-		       MIN(H.APRV_STATUS)            as "oldestStatus",
 		       MAX(H.DM_ID)                  as "dmId",
-		       MAX(M.DM_NM)                  as "dmNm"
+		       STRING_AGG(DISTINCT M.DM_NM, ', ') as "dmNm"
 		  FROM TB_DATA_MODEL_CHANGE_HISTORY H
 		  LEFT JOIN TB_DATA_MODEL M ON M.DM_ID = H.DM_ID
 		 WHERE H.SUBMISSION_ID IS NOT NULL
@@ -185,13 +185,38 @@
 		   AND CHANGE_TYPE IN ('ADD_ATTR', 'MODIFY_ATTR', 'DEL_ATTR', 'ADD_PK', 'DEL_PK', 'ADD_FK', 'DEL_FK')
 	</update>
 
-	<!-- DRAFT 삭제 (사용자 본인의 롤백) -->
-	<delete id="deleteDraft" parameterType="java.util.Map">
+	<!-- 사용자 본인의 롤백 — 110 5.8-17: 반려와 같은 원복(상태 REJECTED) 뒤 그 이력 행을 지운다 -->
+	<delete id="deleteRolledBack" parameterType="java.util.Map">
 		DELETE FROM TB_DATA_MODEL_CHANGE_HISTORY
 		 WHERE CHANGE_SEQ      = #{changeSeq}
 		   AND CHANGE_USER_ID  = #{currentUserId}
-		   AND APRV_STATUS     = 'DRAFT'
+		   AND APRV_STATUS     = 'REJECTED'
 	</delete>
+
+	<!-- 110 5.8-17 — 롤백할 추가 건에 기대는, 함께 고르지 않은 대기(DRAFT·SUBMITTED) 변경 건수.
+	     테이블 추가(attrNm 없음): 그 테이블의 테이블 수정·삭제, 그 테이블에 있거나 그 테이블을 참조하는 PK·FK 변경.
+	     컬럼 추가(attrNm 있음): 그 컬럼을 쓰거나 참조하는 PK·FK 변경. (컬럼 변경은 반려 전파가 처리한다) -->
+	<select id="countPendingOtherOnObj" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*)
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY h
+		 WHERE h.DM_ID = #{dmId}
+		   AND h.APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+		   AND h.CHANGE_SEQ NOT IN <foreach collection="excludeSeqs" item="s" open="(" separator="," close=")">#{s}</foreach>
+		   AND (
+		   <if test="attrNm == null">
+		       (COALESCE(h.OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'') AND h.OBJ_NM = #{objNm}
+		        AND h.CHANGE_TYPE IN ('MODIFY_OBJ', 'DEL_OBJ')) OR
+		   </if>
+		       (h.CHANGE_TYPE IN ('ADD_PK', 'DEL_PK', 'ADD_FK', 'DEL_FK') AND EXISTS (
+		           SELECT 1 FROM TB_DATA_MODEL_CONSTRAINT c
+		            WHERE c.DM_ID = h.DM_ID AND c.CONSTRAINT_NM = h.CONSTRAINT_NM
+		              AND COALESCE(c.OBJ_OWNER,'') = COALESCE(h.OBJ_OWNER,'') AND c.TABLE_NM = h.OBJ_NM
+		              AND ((COALESCE(c.OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'') AND c.TABLE_NM = #{objNm}
+		                    <if test="attrNm != null">AND c.COLUMN_NM = #{attrNm}</if>)
+		                OR (COALESCE(c.REF_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'') AND c.REF_TABLE_NM = #{objNm}
+		                    <if test="attrNm != null">AND c.REF_COLUMN_NM = #{attrNm}</if>))))
+		   )
+	</select>
 
 	<!-- 88번 — change_seq 단건 조회 (승인 처리 시 change_type/dmId/objOwner 등 lookup) -->
 	<select id="selectByChangeSeq" resultType="java.util.Map">
@@ -240,6 +265,33 @@
 	  승인 화면에 이미 반려된 항목이 계속 대기 중으로 보였다. 이력도 함께 반려한다.
 	  반환값(갱신 건수)은 DEF-06 의 반복 전파 종료 판정에 쓴다.
 	-->
+	<!-- 110 5.8-16 — 아래 두 전파 반려가 바꿀 대기 이력. 반려 전에 읽어 유형별 원복(수정 값·대기 삭제)을 먼저 한다 -->
+	<select id="selectPendingAttrHistoryInObj" parameterType="java.util.Map" resultType="long">
+		SELECT CHANGE_SEQ FROM TB_DATA_MODEL_CHANGE_HISTORY
+		 WHERE DM_ID = #{dmId}
+		   AND OBJ_NM = #{objNm}
+		   AND COALESCE(OBJ_OWNER,'') = COALESCE(NULLIF(#{objOwner, jdbcType=VARCHAR},''),'')
+		   AND CHANGE_TYPE LIKE '%\_ATTR' ESCAPE '\'
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+		 ORDER BY CHANGE_SEQ DESC
+	</select>
+	<select id="selectPendingHistoryByFkParent" parameterType="java.util.Map" resultType="long">
+		SELECT h.CHANGE_SEQ FROM TB_DATA_MODEL_CHANGE_HISTORY h
+		 WHERE h.DM_ID = #{dmId}
+		   AND h.APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+		   AND EXISTS (
+		       SELECT 1 FROM TB_DATA_MODEL_ATTR a
+		        WHERE a.DM_ID = h.DM_ID
+		          AND a.OBJ_NM = h.OBJ_NM
+		          AND a.ATTR_NM = h.ATTR_NM
+		          AND COALESCE(a.OBJ_OWNER,'') = COALESCE(h.OBJ_OWNER,'')
+		          AND a.FK_PARENT_OBJ_NM  = #{parentObjNm}
+		          AND a.FK_PARENT_ATTR_NM = #{parentAttrNm}
+		          AND COALESCE(a.FK_PARENT_OBJ_OWNER,'') = COALESCE(NULLIF(#{parentObjOwner, jdbcType=VARCHAR},''),'')
+		   )
+		 ORDER BY h.CHANGE_SEQ DESC
+	</select>
+
 	<update id="cascadeRejectHistoryInObj" parameterType="java.util.Map">
 		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
 		   SET APRV_STATUS  = #{aprvStatus},

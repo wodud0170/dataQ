@@ -541,16 +541,16 @@ def s5(sa, su):
     step("S5-1. 승인 대기 컬럼 수정이 있는 테이블은 생성 반영 거부, 수정을 승인하면 승인된 값으로 CREATE TABLE", _pending_edit)
 
     def _update_attr():
+        # 110 2묶음(4.12-1) — 호출 화면이 없던 /updateAttr 를 지웠다. 승인 상태를 요청값으로 바꿀 길이 없는지만 본다
         dm, nm = st["dm"], st["owner"]
         assert code(save_attrs(su, dm, nm, "ZZ_T5", [{"mode": "ADD", "attrNm": "C2", "attrNmKr": "이", "dataType": "VARCHAR", "dataLen": 10}])) == 200
         body = {"dataModelId": dm, "objOwner": nm, "objNm": "ZZ_T5", "attrNm": "C2", "attrNmKr": "이", "dataType": "VARCHAR",
                 "dataLen": 20, "nullableYn": "Y", "pkYn": "N", "fkYn": "N", "aprvStatus": "APPROVED", "aprvUserId": "jyjang"}
-        r1 = post(su, "/api/dm/updateAttr", body)
-        r2 = post(sa, "/api/dm/updateAttr", body)
+        r2 = sa.post(BASE + "/api/dm/updateAttr", json=body, timeout=30)
         now = psql(f"select aprv_status||'|'||data_len from quality.tb_data_model_attr where dm_id='{dm}' and obj_nm='ZZ_T5' and attr_nm='C2'")
-        print(f"  일반 사용자={code(r1)} {r1.get('resultMessage')} / 관리자={code(r2)} / 컬럼={now}")
-        assert code(r1) == 403 and code(r2) == 200 and now == "DRAFT|20"
-    step("S5-2. /updateAttr — 일반 사용자 403, 관리자도 aprvStatus 요청값은 무시(DRAFT 그대로)", _update_attr)
+        print(f"  /updateAttr HTTP={r2.status_code} / 컬럼={now}")
+        assert r2.status_code in (404, 405) and now == "DRAFT|10"
+    step("S5-2. /updateAttr 없음(110 2묶음에서 지움) — 승인 상태·값 그대로", _update_attr)
 
 
 # ---------------------------------------------------------------- S9
@@ -573,10 +573,11 @@ def s9(sa, su):
 
     def _paths():
         dm = st["dm"]
-        r1 = post(sa, "/api/dm/addAttr", {"dataModelId": dm, "objOwner": "", "objNm": "ZZ_T9", "attrNm": "ZZ_ADD", "attrNmKr": "추가",
-                                          "dataType": "VARCHAR", "dataLen": 10, "termsStndYn": "N"})
-        r2 = post(sa, "/api/dm/updateAttr", {"dataModelId": dm, "objOwner": "", "objNm": "ZZ_T9", "attrNm": "ZZ_NOSTD", "attrNmKr": "비표준",
-                                             "dataType": "VARCHAR", "dataLen": 30, "nullableYn": "Y", "pkYn": "N", "fkYn": "N"})
+        # 110 2묶음(4.12-1) — 호출 화면이 없던 /addAttr·/updateAttr 를 지웠다 (우회 경로 자체가 없음)
+        r1 = sa.post(BASE + "/api/dm/addAttr", json={"dataModelId": dm, "objOwner": "", "objNm": "ZZ_T9", "attrNm": "ZZ_ADD", "attrNmKr": "추가",
+                                                     "dataType": "VARCHAR", "dataLen": 10, "termsStndYn": "N"}, timeout=30)
+        r2 = sa.post(BASE + "/api/dm/updateAttr", json={"dataModelId": dm, "objOwner": "", "objNm": "ZZ_T9", "attrNm": "ZZ_NOSTD", "attrNmKr": "비표준",
+                                                        "dataType": "VARCHAR", "dataLen": 30, "nullableYn": "Y", "pkYn": "N", "fkYn": "N"}, timeout=30)
         imp = {"dataModelId": dm, "tables": [{"objNm": "ZZ_IMP", "objNmKr": "가져오기", "objAttrCnt": 1}],
                "columns": [{"objNm": "ZZ_IMP", "attrNm": "ZZ_IMPCOL", "attrNmKr": "가져온컬럼", "dataType": "VARCHAR", "dataLen": 10,
                             "nullableYn": "Y", "pkYn": "N", "fkYn": "N", "attrOrder": 1}]}
@@ -584,10 +585,9 @@ def s9(sa, su):
         r4 = post(sa, "/api/dm/importErwinModel", imp)
         cols = psql(f"select string_agg(attr_nm||':'||data_len, ',' order by attr_nm) from quality.tb_data_model_attr where dm_id='{dm}'")
         objs = psql(f"select string_agg(obj_nm, ',' order by obj_nm) from quality.tb_data_model_obj where dm_id='{dm}'")
-        print(f"  addAttr N={code(r1)} {str(r1.get('resultMessage'))[:90]}\n  updateAttr={code(r2)} {str(r2.get('resultMessage'))[:90]}"
+        print(f"  addAttr HTTP={r1.status_code} / updateAttr HTTP={r2.status_code}"
               f"\n  XMI={r3.get('success')} {str(r3.get('message'))[:90]}\n  ERwin={r4.get('success')}\n  컬럼={cols} 테이블={objs}")
-        assert code(r1) == 500 and r1.get("resultMessage").startswith("표준 준수 필수 모델입니다")
-        assert code(r2) == 500 and r2.get("resultMessage").startswith("표준 준수 필수 모델입니다")
+        assert r1.status_code in (404, 405) and r2.status_code in (404, 405)
         assert r3.get("success") is False and r3.get("message").startswith("표준 준수 필수 모델입니다") and r4.get("success") is False
         assert cols == "ZZ_NOSTD:10" and objs == "ZZ_T9"
         # 필수가 아닌 모델은 지금처럼
@@ -596,7 +596,7 @@ def s9(sa, su):
         r5 = post(sa, "/api/dm/importXmiModel", imp)
         print(f"  필수 아닌 모델 XMI={r5.get('success')}")
         assert r5.get("success") is True
-    step("S9-2. 필수 모델 — addAttr(termsStndYn N)·updateAttr·XMI·ERwin 가져오기의 비표준 컬럼 거부, 필수 아닌 모델은 그대로", _paths)
+    step("S9-2. 필수 모델 — XMI·ERwin 가져오기의 비표준 컬럼 거부(addAttr·updateAttr 는 110 2묶음에서 지움), 필수 아닌 모델은 그대로", _paths)
 
 
 # ---------------------------------------------------------------- S6

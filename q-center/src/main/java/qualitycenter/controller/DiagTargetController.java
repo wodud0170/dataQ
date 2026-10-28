@@ -7,6 +7,9 @@ import java.util.Map;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,8 +42,26 @@ public class DiagTargetController {
 	/** 관리자 검증 (운영 안전성) */
 	private void requireAdmin() {
 		if (!sessionService.hasPerm(com.ndata.quality.common.PermCode.DIAG_TARGET_ADMIN)) {
-			throw new RuntimeException("진단 대상을 변경할 권한이 없습니다 (진단 제외 관리 권한 필요).");
+			throw new Denied("진단 대상을 변경할 권한이 없습니다 (진단 제외 관리 권한 필요).");
 		}
+	}
+
+	/** 권한 없음 — 403 */
+	private static class Denied extends RuntimeException {
+		Denied(String msg) { super(msg); }
+	}
+
+	/**
+	 * 110 5.8-32 — 이 컨트롤러가 던진 오류의 사유를 화면이 받도록 본문 {success:false, message} 로 돌려준다
+	 * (권한 없음 403, 그 밖 400). 예전에는 Spring 기본 오류 응답이라 메시지가 빠지고 화면에 "Request failed…" 만 보였다.
+	 */
+	@ExceptionHandler(RuntimeException.class)
+	public ResponseEntity<Map<String, Object>> onError(RuntimeException e) {
+		log.warn(">> diagTarget 거부: {}", e.getMessage());
+		Map<String, Object> body = new HashMap<>();
+		body.put("success", false);
+		body.put("message", e.getMessage());
+		return ResponseEntity.status(e instanceof Denied ? HttpStatus.FORBIDDEN : HttpStatus.BAD_REQUEST).body(body);
 	}
 
 	/** OBJ 단건 토글 — 86번 #11 OBJ_OWNER 명시 (같은 OBJ_NM 다른 OWNER 분리) */
@@ -171,10 +192,13 @@ public class DiagTargetController {
 		return result == null ? new HashMap<>() : result;
 	}
 
-	/** 통계 */
+	/** 통계 — 110 5.8-30: 목록과 같이 승인됐거나 내가 요청한 테이블·컬럼만 센다 */
 	@GetMapping("/diagTargetStats")
 	public Map<String, Object> diagTargetStats(@RequestParam("dmId") String dmId) {
-		Map<String, Object> result = sqlSessionTemplate.selectOne("diagTarget.selectDiagTargetStats", dmId);
+		Map<String, Object> p = new HashMap<>();
+		p.put("dmId", dmId);
+		p.put("userId", sessionService.getUserId());
+		Map<String, Object> result = sqlSessionTemplate.selectOne("diagTarget.selectDiagTargetStats", p);
 		return result == null ? new HashMap<>() : result;
 	}
 

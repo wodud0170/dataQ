@@ -153,56 +153,38 @@ def main():
     }, timeout=15).json()
     assert rj.get("success") is True, "import 실패 — 후속 테스트 진행 불가"
 
-    # B-1. /updateAttr API 호출 — dataType 변경
+    # 110 2묶음(4.12-1) — 호출 화면이 없던 /updateAttr·/deleteAttr 를 지워 화면 경로(saveAttrs)로 수정·삭제한다
+    def save_attr(row):
+        return admin.post(BASE + "/api/dm/saveAttrs", json={
+            "dataModelId": edit_id, "objOwner": "XMI",   # importXmiModel 이 OBJ_OWNER='XMI' 로 넣음. PK 일부라 필수.
+            "objNm": "EMPLOYEE", "attrs": [row]}, timeout=10).json()
+
+    # B-1. saveAttrs UPDATE — dataType 변경
     def _b1():
-        body = {
-            "dataModelId": edit_id,
-            "objOwner": "XMI",   # importXmiModel 이 OBJ_OWNER='XMI' 로 넣음. PK 일부라 필수.
-            "objNm": "EMPLOYEE",
-            "attrNm": "EMP_NAME",
-            "attrNmKr": "직원명",
-            "dataType": "VARCHAR",
-            "dataLen": 100,
-            "nullableYn": "N",
-            "pkYn": "N",
-            "fkYn": "N",
-            "termsStndYn": "N"
-        }
-        r = admin.post(BASE + "/api/dm/updateAttr", json=body, timeout=10)
-        rj2 = r.json()
+        rj2 = save_attr({"mode": "UPDATE", "origAttrNm": "EMP_NAME", "attrNm": "EMP_NAME", "attrNmKr": "직원명",
+                         "dataType": "VARCHAR", "dataLen": 100, "nullableYn": "N", "pkYn": "N", "fkYn": "N", "defaultVal": ""})
         rc = rj2.get("resultCode")
-        assert rc == 200, f"updateAttr 200 기대, {rc}"
+        assert rc == 200, f"saveAttrs UPDATE 200 기대, {rc}"
         # DB 재조회 — dataType / dataLen 갱신 확인
         out = docker_psql(
             f"SELECT DATA_TYPE || '|' || DATA_LEN FROM TB_DATA_MODEL_ATTR "
             f"WHERE DM_ID='{edit_id}' AND OBJ_NM='EMPLOYEE' AND ATTR_NM='EMP_NAME';"
         )
         assert out == "VARCHAR|100", f"DB 갱신 안됨: {out}"
-    step("B-1. /updateAttr — dataType/dataLen 변경 + DB 반영", _b1)
+    step("B-1. saveAttrs UPDATE — dataType/dataLen 변경 + DB 반영", _b1)
 
-    # B-2. /updateAttr — nullable 토글
+    # B-2. saveAttrs UPDATE — nullable 토글
     def _b2():
-        body = {
-            "dataModelId": edit_id,
-            "objOwner": "XMI",   # importXmiModel 이 OBJ_OWNER='XMI' 로 넣음. PK 일부라 필수.
-            "objNm": "EMPLOYEE",
-            "attrNm": "EMAIL",
-            "attrNmKr": "이메일",
-            "dataType": "VARCHAR",
-            "dataLen": 200,
-            "nullableYn": "N",  # 기존 Y → N
-            "pkYn": "N",
-            "fkYn": "N",
-            "termsStndYn": "N"
-        }
-        r = admin.post(BASE + "/api/dm/updateAttr", json=body, timeout=10)
-        assert r.json().get("resultCode") == 200
+        rj2 = save_attr({"mode": "UPDATE", "origAttrNm": "EMAIL", "attrNm": "EMAIL", "attrNmKr": "이메일",
+                         "dataType": "VARCHAR", "dataLen": 200, "nullableYn": "N",  # 기존 Y → N
+                         "pkYn": "N", "fkYn": "N", "defaultVal": ""})
+        assert rj2.get("resultCode") == 200
         out = docker_psql(
             f"SELECT NULLABLE_YN FROM TB_DATA_MODEL_ATTR "
             f"WHERE DM_ID='{edit_id}' AND OBJ_NM='EMPLOYEE' AND ATTR_NM='EMAIL';"
         )
         assert out == "N", f"nullable N 기대, {out}"
-    step("B-2. /updateAttr — nullable 토글 반영", _b2)
+    step("B-2. saveAttrs UPDATE — nullable 토글 반영", _b2)
 
     # B-3. /updateObj API — 테이블 메타 변경
     def _b3():
@@ -224,24 +206,17 @@ def main():
         assert out == "직원테이블", f"OBJ_NM_KR 변경 미반영, {out}"
     step("B-3. /updateObj — 테이블 한글명 변경 + DB 반영", _b3)
 
-    # B-4. /deleteAttr API — 컬럼 삭제 (USE_YN=N 또는 실 DELETE)
+    # B-4. saveAttrs DELETE — 컬럼 삭제 (USE_YN=N 또는 실 DELETE)
     def _b4():
-        body = {
-            "dataModelId": edit_id,
-            "objOwner": "XMI",   # importXmiModel 이 OBJ_OWNER='XMI' 로 넣음. PK 일부라 필수.
-            "objNm": "EMPLOYEE",
-            "attrNm": "EMAIL"
-        }
-        r = admin.post(BASE + "/api/dm/deleteAttr", json=body, timeout=10)
-        rc = r.json().get("resultCode")
-        assert rc == 200, f"deleteAttr 200 기대, {rc}"
+        rc = save_attr({"mode": "DELETE", "attrNm": "EMAIL"}).get("resultCode")
+        assert rc == 200, f"saveAttrs DELETE 200 기대, {rc}"
         # 삭제 후 active 컬럼 0건
         out = docker_psql(
             f"SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR "
             f"WHERE DM_ID='{edit_id}' AND OBJ_NM='EMPLOYEE' AND ATTR_NM='EMAIL' AND USE_YN='Y';"
         )
-        assert int(out) == 0, f"deleteAttr 후 active row 0 기대, {out}"
-    step("B-4. /deleteAttr — 컬럼 삭제 + DB 반영", _b4)
+        assert int(out) == 0, f"삭제 후 active row 0 기대, {out}"
+    step("B-4. saveAttrs DELETE — 컬럼 삭제 + DB 반영", _b4)
 
     # ============================================================
     # C. import 트랜잭션 rollback
