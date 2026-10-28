@@ -1631,6 +1631,80 @@
 		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
 	</delete>
 
+	<!-- 110 4.12-41-b (권고 채택 10-28) — 재수집 자동 반려: 수집이 덮지 않는 칸의 미승인 수정은 신청 전 값으로.
+	     컬럼은 수정(saveAttrs)이 바꾸는 칸 중 한글명만 수집이 덮지 않는다. 신청 전 값 그대로(비어 있었으면 비운다) -->
+	<update id="restoreAttrNmKr" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR SET ATTR_NM_KR = #{attrNmKr, jdbcType=VARCHAR}
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+	</update>
+	<!-- 테이블 수정(updateObj)이 이름·소유자와 함께 바꾸는 칸 — 신청 전 값(변경 이력 BEFORE_JSON)으로 -->
+	<update id="restoreObjUncollected" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ
+		   SET OBJ_NM_KR = #{objNmKr, jdbcType=VARCHAR}, OBJ_DESC = #{objDesc, jdbcType=VARCHAR}, TABLESPACE_NM = #{tablespaceNm, jdbcType=VARCHAR},
+		       BIZ_AREA_ID = #{bizAreaId, jdbcType=VARCHAR}, SUBJ_AREA_ID = #{subjAreaId, jdbcType=VARCHAR}
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{curObjOwner} AND OBJ_NM = #{curObjNm}
+	</update>
+	<!-- 이름 변경 대기로 생긴 사본(from)의 수집이 덮지 않는 칸을 수집이 새로 넣은 처음 이름 행(to)으로 옮긴다(사본은 이어서 지운다).
+	     toAttrNm 이 없으면 두 테이블의 같은 이름 컬럼끼리. FK 표시·부모는 수집 MERGE 와 같이 to 에 부모가 없을 때만 -->
+	<update id="copyUncollectedAttrCols" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR O
+		   SET ATTR_NM_KR = P.ATTR_NM_KR,
+		       STND_DIAG_TARGET_YN = P.STND_DIAG_TARGET_YN, STND_DIAG_TARGET_REASON = P.STND_DIAG_TARGET_REASON,
+		       STRUCT_DIAG_TARGET_YN = P.STRUCT_DIAG_TARGET_YN, STRUCT_DIAG_TARGET_REASON = P.STRUCT_DIAG_TARGET_REASON,
+		       QUAL_DIAG_TARGET_YN = P.QUAL_DIAG_TARGET_YN, QUAL_DIAG_TARGET_REASON = P.QUAL_DIAG_TARGET_REASON,
+		       DIAG_TARGET_UPDT_USER_ID = P.DIAG_TARGET_UPDT_USER_ID, DIAG_TARGET_UPDT_DT = P.DIAG_TARGET_UPDT_DT,
+		       PRIV_YN = P.PRIV_YN, ENCR_YN = P.ENCR_YN, OPEN_TP = P.OPEN_TP, OPEN_LIMIT_REASON = P.OPEN_LIMIT_REASON, CNSTR_DESC = P.CNSTR_DESC,
+		       FK_YN = CASE WHEN O.FK_PARENT_OBJ_NM IS NULL AND P.FK_PARENT_OBJ_NM IS NOT NULL THEN P.FK_YN ELSE O.FK_YN END,
+		       FK_PARENT_OBJ_NM = COALESCE(O.FK_PARENT_OBJ_NM, P.FK_PARENT_OBJ_NM),
+		       FK_PARENT_OBJ_OWNER = CASE WHEN O.FK_PARENT_OBJ_NM IS NULL THEN P.FK_PARENT_OBJ_OWNER ELSE O.FK_PARENT_OBJ_OWNER END,
+		       FK_PARENT_ATTR_NM = CASE WHEN O.FK_PARENT_OBJ_NM IS NULL THEN P.FK_PARENT_ATTR_NM ELSE O.FK_PARENT_ATTR_NM END
+		  FROM TB_DATA_MODEL_ATTR P
+		 WHERE O.DM_ID = #{dataModelId} AND P.DM_ID = O.DM_ID
+		   AND O.OBJ_OWNER = #{toOwner} AND O.OBJ_NM = #{toObjNm} AND P.OBJ_OWNER = #{fromOwner} AND P.OBJ_NM = #{fromObjNm}
+		<choose>
+			<when test="toAttrNm != null">AND O.ATTR_NM = #{toAttrNm} AND P.ATTR_NM = #{fromAttrNm}</when>
+			<otherwise>AND O.ATTR_NM = P.ATTR_NM</otherwise>
+		</choose>
+	</update>
+	<update id="copyUncollectedObjCols" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ O
+		   SET OBJ_NM_KR = P.OBJ_NM_KR, OBJ_DESC = P.OBJ_DESC, TABLESPACE_NM = P.TABLESPACE_NM, BIZ_AREA_ID = P.BIZ_AREA_ID, SUBJ_AREA_ID = P.SUBJ_AREA_ID,
+		       STND_DIAG_TARGET_YN = P.STND_DIAG_TARGET_YN, STND_DIAG_TARGET_REASON = P.STND_DIAG_TARGET_REASON,
+		       STRUCT_DIAG_TARGET_YN = P.STRUCT_DIAG_TARGET_YN, STRUCT_DIAG_TARGET_REASON = P.STRUCT_DIAG_TARGET_REASON,
+		       QUAL_DIAG_TARGET_YN = P.QUAL_DIAG_TARGET_YN, QUAL_DIAG_TARGET_REASON = P.QUAL_DIAG_TARGET_REASON,
+		       DIAG_TARGET_UPDT_USER_ID = P.DIAG_TARGET_UPDT_USER_ID, DIAG_TARGET_UPDT_DT = P.DIAG_TARGET_UPDT_DT,
+		       GOV_SEND_YN = P.GOV_SEND_YN, TBL_TP = P.TBL_TP, OCCR_CYCLE = P.OCCR_CYCLE, OPEN_TP = P.OPEN_TP,
+		       OPEN_LIMIT_REASON = P.OPEN_LIMIT_REASON, OPEN_LIMIT_BASIS = P.OPEN_LIMIT_BASIS, OPEN_DATA_LST_NM = P.OPEN_DATA_LST_NM
+		  FROM TB_DATA_MODEL_OBJ P
+		 WHERE O.DM_ID = #{dataModelId} AND P.DM_ID = O.DM_ID
+		   AND O.OBJ_OWNER = #{toOwner} AND O.OBJ_NM = #{toObjNm} AND P.OBJ_OWNER = #{fromOwner} AND P.OBJ_NM = #{fromObjNm}
+	</update>
+	<!-- 대기 삭제로 감춘(USE_YN='N') 행이 있는지 — 이번 수집에 없으면 물리 삭제한다 -->
+	<select id="countHiddenAttr" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm} AND USE_YN = 'N'
+	</select>
+	<select id="countHiddenObj" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND OBJ_NM = #{objNm} AND USE_YN = 'N'
+	</select>
+	<delete id="deleteHiddenConstraint" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_CONSTRAINT
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND TABLE_NM = #{objNm} AND CONSTRAINT_NM = #{constraintNm} AND USE_YN = 'N'
+	</delete>
+	<delete id="deleteHiddenIndex" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_INDEX
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND TABLE_NM = #{objNm} AND INDEX_NM = #{indexNm} AND USE_YN = 'N'
+	</delete>
+	<select id="countAttrByKey" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_ATTR
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND OBJ_NM = #{objNm} AND ATTR_NM = #{attrNm}
+	</select>
+	<select id="countObjByKey" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND OBJ_NM = #{objNm}
+	</select>
+
 	<!-- ATTR_ORD 최댓값 조회 (새 컬럼 추가 시 다음 순번 산정) -->
 	<select id="selectMaxAttrOrd" parameterType="java.util.Map" resultType="short">
 		SELECT COALESCE(MAX(ATTR_ORD), 0) FROM TB_DATA_MODEL_ATTR

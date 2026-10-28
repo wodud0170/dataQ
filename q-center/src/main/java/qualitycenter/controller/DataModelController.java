@@ -1745,6 +1745,13 @@ public class DataModelController {
 			curKey.put("objOwner", origOwner);
 			curKey.put("objNm", origObjNm != null ? origObjNm : newObjNm);
 			StdDataModelObjVo curObj = sqlSessionTemplate.selectOne("ddlRule.selectObj", curKey);
+			// 110 4.12-41-b (권고 채택 10-28) — 이름·소유자와 함께 바뀌는 한글명·설명·테이블스페이스·업무영역·주제영역의 변경 전 값.
+			// 재수집 자동 반려가 수집이 덮지 않는 이 칸들을 신청 전 값으로 되돌린다 (이력 BEFORE_JSON)
+			Map<String, Object> beforeKey = new HashMap<>();
+			beforeKey.put("dataModelId", dataModelId);
+			beforeKey.put("objOwner",    origOwner);
+			beforeKey.put("objNm",       origObjNm != null ? origObjNm : newObjNm);
+			StdDataModelObjVo beforeVo = sqlSessionTemplate.selectOne("datamodel.selectDataModelObjOne", beforeKey);
 			String newTs = blankToNull(body.get("tablespaceNm"));
 			if (newTs != null && (curObj == null || !newTs.equals(blankToNull(curObj.getTablespaceNm()))))
 				DdlSafety.ident("테이블스페이스", newTs);
@@ -1858,6 +1865,19 @@ public class DataModelController {
 			Map<String, Object> afterObj = new HashMap<>();
 			afterObj.put("objOwner", objOwner);
 			afterObj.put("objNm",    newObjNm != null ? newObjNm : origObjNm);
+			// 110 4.12-41-b (권고 채택 10-28) — 함께 바뀐 칸의 전·후 값 (반려 원복 restoreObjFromBefore 는 이름·소유자만 쓴다)
+			Map<String, Object> afterKey = new HashMap<>();
+			afterKey.put("dataModelId", dataModelId);
+			afterKey.put("objOwner",    objOwner);
+			afterKey.put("objNm",       finalObjNm);
+			StdDataModelObjVo afterVo = session.selectOne("datamodel.selectDataModelObjOne", afterKey);
+			for (Object[] f : new Object[][] {
+					{ "objNmKr", beforeVo.getObjNmKr(), afterVo.getObjNmKr() }, { "objDesc", beforeVo.getObjDesc(), afterVo.getObjDesc() },
+					{ "tablespaceNm", beforeVo.getTablespaceNm(), afterVo.getTablespaceNm() },
+					{ "bizAreaId", beforeVo.getBizAreaId(), afterVo.getBizAreaId() }, { "subjAreaId", beforeVo.getSubjAreaId(), afterVo.getSubjAreaId() } }) {
+				beforeObj.put((String) f[0], f[1]);
+				afterObj.put((String) f[0], f[2]);
+			}
 			// 104번 WP3 — 이름·소유자가 바뀐 경우(TIER1)만 조각
 			changeHistory.record(session, dataModelId, "MODIFY_OBJ", updObjTier,
 					objOwner, newObjNm != null ? newObjNm : origObjNm, null, null, null,

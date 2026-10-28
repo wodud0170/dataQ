@@ -169,6 +169,7 @@ public class DataModelService implements Runnable {
 			int totalObjCnt = 0;
 			// 110 4.12-41-b — 이번 수집이 읽은 키. 끝에 승인되지 않은 변경을 자동 반려할 때 수집이 덮지 않은 대기 흔적을 가린다
 			RecollectRejectService.Collected readKeys = new RecollectRejectService.Collected();
+			for (String schemaNm : schemas) readKeys.schema(schemaNm);
 			for (String schemaNm : schemas) {
 				NamedParamStatement pstmt = dbHandler.namedParamStatement(objQuery);
 				pstmt.setString("owner", StringUtils.upperCase(schemaNm));
@@ -298,6 +299,7 @@ public class DataModelService implements Runnable {
 					}
 					// 86번 #11 — soft-delete 제거 (수집은 MERGE 전용)
 					session.commit();
+					readKeys.indexesRead();
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "인덱스 정보 수집 완료 (" + totalIndexCnt + "개)");
 				}
 			} catch (Exception e) {
@@ -345,6 +347,7 @@ public class DataModelService implements Runnable {
 					}
 					// 86번 #11 — soft-delete 제거 (수집은 MERGE 전용)
 					session.commit();
+					readKeys.constraintsRead();
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 완료 (" + totalConstraintCnt + "개)");
 				}
 			} catch (Exception e) {
