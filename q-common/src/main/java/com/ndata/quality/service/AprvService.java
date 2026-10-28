@@ -40,6 +40,10 @@ public class AprvService {
 
 	private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
+	/** 110 4.12-41-b — 사람이 아닌 처리(재수집 자동 반려)의 처리자. 반려 이력 APRV_USER_ID·결재 단계 ACT_USER_ID 에 남는다 */
+	public static final String SYSTEM_USER_ID = "system";
+	public static final String SYSTEM_USER_NM = "시스템";
+
 	@Autowired
 	private SqlSessionFactory sqlSessionFactory;
 
@@ -187,13 +191,14 @@ public class AprvService {
 		return new ArrayList<>(out);
 	}
 
+	/** 알림 한 건. docId 가 없으면(결재 문서 없이 반려된 건) 누르면 열 문서가 없다 */
 	private Noti noti(SqlSession s, String userId, String notiTp, String title, String msg, String docId, String now) {
 		Map<String, Object> p = new HashMap<>();
 		p.put("userId", userId);
 		p.put("notiTp", notiTp);
 		p.put("title", title.length() > 200 ? title.substring(0, 200) : title);
 		p.put("msg", msg);
-		p.put("linkTp", "APRV_DOC");
+		p.put("linkTp", docId == null ? null : "APRV_DOC");
 		p.put("linkId", docId);
 		p.put("now", now);
 		s.insert("aprv.insertNoti", p);
@@ -268,31 +273,17 @@ public class AprvService {
 		for (Map<String, Object> r : curRows) {
 			if (!"WAIT".equals(r.get("actStat"))) continue;
 			if (mine != null && r != mine) continue;
-			Map<String, Object> u = new HashMap<>();
-			u.put("docId", docId);
-			u.put("stepNo", cur);
-			u.put("aprvrUserId", r.get("aprvrUserId"));
-			u.put("actStat", actStat);
-			u.put("actCmnt", comment);
-			u.put("actUserId", userId);
-			u.put("now", now);
-			s.update("aprv.updateStepAct", u);
+			updateStepAct(s, docId, cur, r.get("aprvrUserId"), actStat, comment, userId, now);
 		}
 
 		String reqTp = (String) doc.get("reqTp");
 		String targetNm = (String) doc.get("targetNm");
 		String reqUserId = (String) doc.get("reqUserId");
 		String actorNm = s.selectOne("aprv.selectUserNm", userId);
-		String stepNm = curRows.isEmpty() ? null : (String) curRows.get(0).get("stepNm");
-		String stepLabel = cur + "/" + stepCnt + " 단계" + (stepNm == null ? "" : " (" + stepNm + ")");
+		String stepLabel = stepLabel(cur, stepCnt, curRows);
 		List<Noti> notis = new ArrayList<>();
 
-		if (!approve) {
-			updateDoc(s, docId, "REJECTED", cur, now);
-			notis.add(noti(s, reqUserId, "APRV_REJECT", "반려: " + reqTpNm(reqTp) + " " + targetNm,
-					stepLabel + " " + actorNm + " — " + comment, docId, now));
-			return new Result(docId, true, false, stepLabel + " 반려", notis);
-		}
+		if (!approve) return rejected(s, doc, cur, stepLabel, actorNm, comment, now);
 
 		boolean agree = !curRows.isEmpty() && "Y".equals(curRows.get(0).get("agreeYn"));
 		List<Map<String, Object>> after = stepRows(s, docId, cur);
@@ -318,6 +309,61 @@ public class AprvService {
 		notis.add(noti(s, reqUserId, "APRV_STEP", "단계 승인: " + reqTpNm(reqTp) + " " + targetNm,
 				stepLabel + " " + actorNm + " 승인 — 다음 " + (cur + 1) + "/" + stepCnt + " 단계", docId, now));
 		return new Result(docId, false, true, stepLabel + " 승인 — 다음 " + (cur + 1) + "/" + stepCnt + " 단계로", notis);
+	}
+
+	/**
+	 * 110 4.12-41-b — 시스템 반려. 재수집 자동 반려처럼 사람이 아닌 처리가 대상 건을 반려했을 때 진행 중 문서를 반려로 닫는다.
+	 * 현재 단계의 대기 결재자 전원 몫을 반려(ACT_USER_ID = {@link #SYSTEM_USER_ID}, 의견 = comment)로 기록하고, 요청자에게
+	 * {@link #act} 의 반려와 같은 알림을 남긴다. act 와 같이 호출한 쪽의 세션 s 에서 돌고 커밋하지 않는다. 진행 중 문서가 아니면 null.
+	 */
+	public Result rejectBySystem(SqlSession s, String docId, String comment) {
+		s.selectOne("aprv.lockDoc", docId);
+		Map<String, Object> doc = s.selectOne("aprv.selectDoc", docId);
+		if (doc == null || !"PROGRESS".equals(doc.get("docStat"))) return null;
+		int cur = ((Number) doc.get("curStepNo")).intValue();
+		int stepCnt = ((Number) doc.get("stepCnt")).intValue();
+		String now = now();
+		List<Map<String, Object>> curRows = stepRows(s, docId, cur);
+		for (Map<String, Object> r : curRows) {
+			if ("WAIT".equals(r.get("actStat"))) updateStepAct(s, docId, cur, r.get("aprvrUserId"), "REJECTED", comment, SYSTEM_USER_ID, now);
+		}
+		return rejected(s, doc, cur, stepLabel(cur, stepCnt, curRows), SYSTEM_USER_NM, comment, now);
+	}
+
+	/**
+	 * 110 4.12-41-b — 결재 문서 없이 반려된 건(신청 전 DRAFT, 결재선 없는 신청)의 요청자 알림. 유형·제목은 문서 반려 알림과 같고
+	 * 누르면 열 문서는 없다. 호출한 쪽의 세션 s 에서 넣고 커밋하지 않는다.
+	 */
+	public Noti rejectNoti(SqlSession s, String userId, String reqTp, String targetNm, String msg) {
+		return noti(s, userId, "APRV_REJECT", "반려: " + reqTpNm(reqTp) + " " + targetNm, msg, null, now());
+	}
+
+	/** 반려로 문서를 끝내고 요청자에게 알린다 (act 반려·시스템 반려) */
+	private Result rejected(SqlSession s, Map<String, Object> doc, int cur, String stepLabel, String actorNm, String comment, String now) {
+		String docId = (String) doc.get("docId");
+		updateDoc(s, docId, "REJECTED", cur, now);
+		List<Noti> notis = new ArrayList<>();
+		notis.add(noti(s, (String) doc.get("reqUserId"), "APRV_REJECT", "반려: " + reqTpNm((String) doc.get("reqTp")) + " " + doc.get("targetNm"),
+				stepLabel + " " + actorNm + " — " + comment, docId, now));
+		return new Result(docId, true, false, stepLabel + " 반려", notis);
+	}
+
+	private static String stepLabel(int cur, int stepCnt, List<Map<String, Object>> curRows) {
+		String stepNm = curRows.isEmpty() ? null : (String) curRows.get(0).get("stepNm");
+		return cur + "/" + stepCnt + " 단계" + (stepNm == null ? "" : " (" + stepNm + ")");
+	}
+
+	private static void updateStepAct(SqlSession s, String docId, int stepNo, Object aprvrUserId, String actStat, String comment,
+			String actUserId, String now) {
+		Map<String, Object> u = new HashMap<>();
+		u.put("docId", docId);
+		u.put("stepNo", stepNo);
+		u.put("aprvrUserId", aprvrUserId);
+		u.put("actStat", actStat);
+		u.put("actCmnt", comment);
+		u.put("actUserId", actUserId);
+		u.put("now", now);
+		s.update("aprv.updateStepAct", u);
 	}
 
 	/** 문서의 한 단계 결재자 행 */

@@ -152,6 +152,8 @@
 				,to_char(to_timestamp(T.CLCT_START_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as clctStartDt
 				,to_char(to_timestamp(T.CLCT_END_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS')   as clctEndDt
 				,T.CLCT_CMPTN_YN     as clctCmptnYn
+				<!-- 110 4.12-41-b — 최신 수집이 자동 반려한 승인되지 않은 변경 수 -->
+				,T.AUTO_REJECT_CNT   as autoRejectCnt
 			from TB_DATA_MODEL M LEFT OUTER JOIN TB_DATA_MODEL_CLCT T on M.DM_ID = T.DM_ID
 			    and CLCT_END_DT = (select max(CLCT_END_DT) from TB_DATA_MODEL_CLCT where DM_ID = M.DM_ID)
 			where M.USE_YN = 'Y'
@@ -442,6 +444,8 @@
 			<!-- 110 4.12-14-a — 그 수집(가져오기)에서 읽은 테이블·컬럼 수. 이 칸이 생기기 전 이력은 비어 있다 -->
 			,T.OBJ_CNT       as objCnt
 			,T.ATTR_CNT      as attrCnt
+			<!-- 110 4.12-41-b — 그 수집이 자동 반려한 승인되지 않은 변경 수. 이 칸이 생기기 전 이력·가져오기·실패한 수집은 비어 있다 -->
+			,T.AUTO_REJECT_CNT as autoRejectCnt
 			,0 as stndRate
 			,0 as nonStndCnt
 			,0 as noTermsCnt
@@ -578,6 +582,8 @@
 			 <!-- 110 4.12-14-a — 끝낼 때 그 수집에서 읽은 테이블·컬럼 수 -->
 			 ,OBJ_CNT = #{objCnt, jdbcType=INTEGER}
 			 ,ATTR_CNT = #{attrCnt, jdbcType=INTEGER}
+			 <!-- 110 4.12-41-b — 재수집 때 자동 반려한 승인되지 않은 변경 수 (가져오기·실패한 수집은 NULL) -->
+			 ,AUTO_REJECT_CNT = #{autoRejectCnt, jdbcType=INTEGER}
 	</insert>
 
 	<!-- ATTR UPSERT (MERGE): 수집 시 기존 행 갱신, 신규 행 삽입 -->
@@ -1563,6 +1569,66 @@
 		   AND NOT EXISTS (SELECT 1 FROM TB_DATA_MODEL_ATTR A
 		                    WHERE A.DM_ID = TB_DATA_MODEL_OBJ.DM_ID AND A.OBJ_OWNER = TB_DATA_MODEL_OBJ.OBJ_OWNER
 		                      AND A.OBJ_NM = TB_DATA_MODEL_OBJ.OBJ_NM)
+	</delete>
+
+	<!-- 110 4.12-41-b — 재수집 자동 반려 뒤 아직 대기(DRAFT·SUBMITTED) 상태인 모델 행 정리.
+	     컬럼은 수집 MERGE 가 읽은 행을 APPROVED 로 덮으므로 남은 대기 행 = 실제 DB 에 없는 추가 대기 행 → 반려(화면 반려와 같이 행은 남김).
+	     테이블·제약조건·인덱스 MERGE 는 승인 상태를 건드리지 않으므로, 이번 수집이 읽은 것은 수집 행과 같이 APPROVED(요청자·승인 칸 비움),
+	     읽지 않은 것은 반려 — 테이블은 REJECTED, 제약조건·인덱스(PK·FK 추가 대기)는 화면 반려와 같이 지운다 -->
+	<update id="rejectPendingAttrsByDm" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_ATTR
+		   SET APRV_STATUS = 'REJECTED', APRV_USER_ID = #{aprvUserId}, APRV_DT = #{aprvDt}, APRV_COMMENT = #{aprvComment}
+		 WHERE DM_ID = #{dmId}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</update>
+	<select id="selectPendingObjsByDm" parameterType="String" resultType="java.util.Map">
+		SELECT COALESCE(OBJ_OWNER,'') as "objOwner", OBJ_NM as "objNm"
+		  FROM TB_DATA_MODEL_OBJ
+		 WHERE DM_ID = #{value} AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</select>
+	<update id="approveCollectedPendingObj" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ
+		   SET APRV_STATUS = 'APPROVED', REQUESTER_USER_ID = NULL, REQ_DT = NULL, APRV_USER_ID = NULL, APRV_DT = NULL, SUBMISSION_ID = NULL
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND OBJ_NM = #{objNm}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</update>
+	<update id="rejectPendingObj" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_OBJ
+		   SET APRV_STATUS = 'REJECTED', APRV_USER_ID = #{aprvUserId}, APRV_DT = #{aprvDt}, APRV_COMMENT = #{aprvComment}
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND OBJ_NM = #{objNm}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</update>
+	<select id="selectPendingConstraintsByDm" parameterType="String" resultType="java.util.Map">
+		SELECT DISTINCT COALESCE(OBJ_OWNER,'') as "objOwner", TABLE_NM as "objNm", CONSTRAINT_NM as "constraintNm"
+		  FROM TB_DATA_MODEL_CONSTRAINT
+		 WHERE DM_ID = #{value} AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</select>
+	<update id="approveCollectedPendingConstraint" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CONSTRAINT
+		   SET APRV_STATUS = 'APPROVED', REQUESTER_USER_ID = NULL, REQ_DT = NULL, APRV_USER_ID = NULL, APRV_DT = NULL, SUBMISSION_ID = NULL
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND TABLE_NM = #{objNm} AND CONSTRAINT_NM = #{constraintNm}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</update>
+	<delete id="deletePendingConstraint" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_CONSTRAINT
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND TABLE_NM = #{objNm} AND CONSTRAINT_NM = #{constraintNm}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</delete>
+	<select id="selectPendingIndexesByDm" parameterType="String" resultType="java.util.Map">
+		SELECT DISTINCT COALESCE(OBJ_OWNER,'') as "objOwner", TABLE_NM as "objNm", INDEX_NM as "indexNm"
+		  FROM TB_DATA_MODEL_INDEX
+		 WHERE DM_ID = #{value} AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</select>
+	<update id="approveCollectedPendingIndex" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_INDEX
+		   SET APRV_STATUS = 'APPROVED', REQUESTER_USER_ID = NULL, REQ_DT = NULL, APRV_USER_ID = NULL, APRV_DT = NULL, SUBMISSION_ID = NULL
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND TABLE_NM = #{objNm} AND INDEX_NM = #{indexNm}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+	</update>
+	<delete id="deletePendingIndex" parameterType="java.util.Map">
+		DELETE FROM TB_DATA_MODEL_INDEX
+		 WHERE DM_ID = #{dataModelId} AND COALESCE(OBJ_OWNER,'') = #{objOwner} AND TABLE_NM = #{objNm} AND INDEX_NM = #{indexNm}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
 	</delete>
 
 	<!-- ATTR_ORD 최댓값 조회 (새 컬럼 추가 시 다음 순번 산정) -->

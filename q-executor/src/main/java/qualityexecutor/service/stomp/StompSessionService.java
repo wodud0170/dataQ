@@ -22,7 +22,8 @@ public class StompSessionService {
     private final StompSessionManager stompSessionManager;
     private final String DEST_WINDOW = "/exchange/amq.direct/message.window-user";
     private final String DEST_MESSAGE = "/topic/onMessage";
-    
+    private final String DEST_USER = "/exchange/amq.direct/message.user-user";
+
     public StompSessionService(StompSessionManager stompSessionManager) {
         this.stompSessionManager = stompSessionManager;
     }
@@ -86,6 +87,22 @@ public class StompSessionService {
             sendMessage(vo);
         } else {
             this.stompSession.send(this.DEST_WINDOW + ssId, new Gson().toJson(vo, WsVo.class));
+        }
+    }
+
+    /**
+     * 110 4.12-41-b — 로그인 사용자별 알림(헤더 종). q-center WebSocketService.sendUserNotis 와 같은 목적지·본문이다
+     * (화면은 /user/exchange/amq.direct/message.user 를 구독하고 q-center 가 사용자 목적지로 바꾼다). 알림 행은 호출한 쪽이 커밋한 뒤에 보낸다.
+     */
+    public void sendUserNotis(java.util.List<com.ndata.quality.service.AprvService.Noti> notis) {
+        for (com.ndata.quality.service.AprvService.Noti n : notis) {
+            java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("type", "NOTI");
+            m.put("notiTp", n.notiTp);
+            m.put("title", n.title);
+            m.put("msg", n.msg);
+            m.put("docId", n.docId);
+            this.stompSession.send(this.DEST_USER + n.userId, new Gson().toJson(m));
         }
     }
 

@@ -117,7 +117,8 @@ export default {
             axios.get(self.$APIURL.base + 'api/login/isAdmin', { params: { user: loginData.id } })
                 .then(function(res) { self.loginIsAdmin = res.data === true; });
         }
-        // 104번 WP1 — 알림: 실시간(WebSocket) + 1분마다 개수 (q-executor 가 만든 알림은 실시간 전송이 없다)
+        // 104번 WP1 — 알림: 실시간(WebSocket) + 1분마다 개수 (q-executor 엑셀 일괄등록이 만든 알림은 실시간 전송이 없다.
+        // 110 4.12-41-b 재수집 자동 반려 알림은 q-executor 가 커밋 뒤 같은 사용자 목적지로 보낸다)
         this.loadUnread();
         this.notiTimer = setInterval(this.loadUnread, 60000);
         eventBus.$on('USER_NOTI', this.onUserNoti);

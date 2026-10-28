@@ -452,6 +452,8 @@ export default {
       { text: '수집 시작일시', align: 'center', sortable: false, value: 'clctStartDt' },
       { text: '수집 완료일시', align: 'center', sortable: false, value: 'clctEndDt' },
       { text: '완료 여부', align: 'center', sortable: false, value: 'clctCmptnYn' },
+      // 110 4.12-41-b — 최신 수집이 자동 반려한 승인되지 않은 변경 수
+      { text: '자동 반려 건수', align: 'center', sortable: false, value: 'autoRejectCnt' },
     ],
     // 하단 테이블 헤더
     detaileHeaders: [
@@ -462,6 +464,7 @@ export default {
       { text: '수집 시작일시', align: 'center', sortable: false, value: 'clctStartDt' },
       { text: '수집 완료일시', align: 'center', sortable: false, value: 'clctEndDt' },
       { text: '완료 여부', align: 'center', sortable: false, value: 'clctCmptnYn' },
+      { text: '자동 반려 건수', align: 'center', sortable: false, value: 'autoRejectCnt' },
     ],
     // 테이블 편의성 관련
     tableViewLengthList: [10, 20, 30, 40, 50],
@@ -654,6 +657,7 @@ export default {
             <li>이미 등록된 테이블/컬럼 중 <b>물리명이 동일</b>한 행은 DB 메타데이터로 <b>덮어쓰기</b> 됩니다 (타입/길이/NULL/PK/FK/기본값/코멘트, 표준 여부는 다시 판정)</li>
             <li>한글명은 바꾸지 않습니다 — DB 코멘트는 코멘트 칸에만 들어갑니다</li>
             <li>이번 수집에 포함되지 않은 기존 행은 <b>그대로 보존</b>됩니다 (자동 삭제 없음)</li>
+            <li>이 모델의 승인되지 않은 변경(신청 전·신청 중)은 <b>자동 반려</b>됩니다 — 수집 결과가 그대로 모델이 됩니다</li>
           </ul>
         </div>`,
         icon: 'warning',

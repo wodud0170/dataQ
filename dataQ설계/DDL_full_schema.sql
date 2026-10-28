@@ -906,7 +906,8 @@ CREATE TABLE quality.tb_data_model_clct (
     deleted_cnt integer DEFAULT 0,
     modified_cnt integer DEFAULT 0,
     obj_cnt integer,
-    attr_cnt integer
+    attr_cnt integer,
+    auto_reject_cnt integer
 );
 
 
@@ -957,6 +958,13 @@ COMMENT ON COLUMN quality.tb_data_model_clct.obj_cnt IS '이 수집(가져오기
 --
 
 COMMENT ON COLUMN quality.tb_data_model_clct.attr_cnt IS '이 수집(가져오기)에서 읽은 컬럼 수 (110번 4.12-14-a, 이전 이력은 NULL)';
+
+
+--
+-- Name: COLUMN tb_data_model_clct.auto_reject_cnt; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_data_model_clct.auto_reject_cnt IS '이 수집이 자동 반려한 승인되지 않은 변경 수 (110번 4.12-41-b, 가져오기·실패·이전 이력은 NULL)';
 
 
 --

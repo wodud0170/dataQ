@@ -64,6 +64,9 @@ public class DataModelService implements Runnable {
 	@Autowired
 	private StompSessionService stompSessionService;
 
+	@Autowired
+	private RecollectRejectService recollectReject;
+
 	public DataModelService(String jobType, String userId, String ssId, StdDataModelVo dataVo) {
 		this.jobType = jobType;
 		this.userId = userId;
@@ -164,8 +167,8 @@ public class DataModelService implements Runnable {
 			String objQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetObjs");
 			stdDataModelObjVo.setClctId(clctId);
 			int totalObjCnt = 0;
-			java.util.List<String> collectedObjNames = new java.util.ArrayList<>();
-			java.util.List<String> collectedAttrNames = new java.util.ArrayList<>();
+			// 110 4.12-41-b — 이번 수집이 읽은 키. 끝에 승인되지 않은 변경을 자동 반려할 때 수집이 덮지 않은 대기 흔적을 가린다
+			RecollectRejectService.Collected readKeys = new RecollectRejectService.Collected();
 			for (String schemaNm : schemas) {
 				NamedParamStatement pstmt = dbHandler.namedParamStatement(objQuery);
 				pstmt.setString("owner", StringUtils.upperCase(schemaNm));
@@ -183,7 +186,7 @@ public class DataModelService implements Runnable {
 					stdDataModelObjVo.setObjUpdtDt(rs.getString("objUpdtDt"));
 					stdDataModelObjVo.setTablespaceNm(rs.getString("tablespaceNm"));
 					session.insert("datamodel.insertDataModelObj", stdDataModelObjVo);
-					collectedObjNames.add(stdDataModelObjVo.getObjNm());
+					readKeys.obj(stdDataModelObjVo.getObjOwner(), stdDataModelObjVo.getObjNm());
 					totalObjCnt++;
 				}
 				pstmt.close();
@@ -252,7 +255,7 @@ public class DataModelService implements Runnable {
 					stdDataModelAttrVo.setWordLst(wordLst.toArray(new String[0]));
 					stdDataModelAttrVo.setWordStndLst(wordStndLst.toArray(new String[0]));
 					session.insert("datamodel.insertDataModelAttr", stdDataModelAttrVo);
-					collectedAttrNames.add(stdDataModelAttrVo.getObjNm() + "." + stdDataModelAttrVo.getAttrNm());
+					readKeys.attr(schemaNm, stdDataModelAttrVo.getObjNm(), stdDataModelAttrVo.getAttrNm());
 					totalAttrCnt++;
 				}
 				pstmt.close();
@@ -270,7 +273,6 @@ public class DataModelService implements Runnable {
 				String indexQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetIndexes");
 				if (indexQuery != null) {
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "인덱스 정보 수집 중...");
-					java.util.List<String> collectedIndexKeys = new java.util.ArrayList<>();
 					for (String schemaNm : schemas) {
 						NamedParamStatement pstmt = dbHandler.namedParamStatement(indexQuery);
 						pstmt.setString("owner", StringUtils.upperCase(schemaNm));
@@ -288,7 +290,7 @@ public class DataModelService implements Runnable {
 							param.put("sortOrder", rs.getString("sortOrder"));
 							param.put("tablespaceNm", rs.getString("tablespaceNm"));
 							session.insert("datamodel.insertDataModelIndex", param);
-							collectedIndexKeys.add(schemaNm + "|" + rs.getString("tableNm") + "|" + rs.getString("indexNm") + "|" + rs.getInt("columnPos"));
+							readKeys.index(schemaNm, rs.getString("tableNm"), rs.getString("indexNm"));
 							totalIndexCnt++;
 						}
 						pstmt.close();
@@ -307,7 +309,6 @@ public class DataModelService implements Runnable {
 				String constraintQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetConstraints");
 				if (constraintQuery != null) {
 					stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "제약조건 정보 수집 중...");
-					java.util.List<String> collectedConstraintKeys = new java.util.ArrayList<>();
 					// 104번 WP4 보완 — 쿼리가 FK 참조 칸을 비워 두는 DBMS(Cubrid)는 JDBC 메타데이터로 채운다
 					java.sql.Connection fkConn = dbHandler.getConnection(true);
 					FkRefFiller fkRefs = new FkRefFiller(fkConn);
@@ -333,7 +334,7 @@ public class DataModelService implements Runnable {
 							try { param.put("searchCondition", rs.getString("searchCondition")); } catch (Exception ignore) {}
 							fkRefs.fill(schemaNm, param);
 							session.insert("datamodel.insertDataModelConstraint", param);
-							collectedConstraintKeys.add(schemaNm + "|" + rs.getString("tableNm") + "|" + rs.getString("constraintNm") + "|" + rs.getInt("columnPos"));
+							readKeys.constraint(schemaNm, rs.getString("tableNm"), rs.getString("constraintNm"));
 							totalConstraintCnt++;
 						}
 						pstmt.close();
@@ -349,13 +350,20 @@ public class DataModelService implements Runnable {
 			} catch (Exception e) {
 				log.warn(">> constraint collect skipped: {}", e.getMessage());
 			}
-			// 4. 데이터 모델 수집 완료 처리 (110 4.12-14-a — 이 수집에서 읽은 테이블·컬럼 수)
+			// 110 4.12-41-b·5.8-18 (사용자 결정 10-28) — 다시 수집하면 이 모델의 승인되지 않은 변경(DRAFT·SUBMITTED)은 자동 반려한다.
+			// 수집 결과가 그대로 모델이 된다(화면 반려의 원복 없음). 수집 완료 기록과 같은 트랜잭션 — 수집이 실패하면 반려하지 않는다
+			RecollectRejectService.Outcome autoRejected = recollectReject.reject(session, dataModelId, readKeys);
+			// 4. 데이터 모델 수집 완료 처리 (110 4.12-14-a — 이 수집에서 읽은 테이블·컬럼 수, 4.12-41-b — 자동 반려 수)
 			stdDataModelCollectVo.setClctEndDt(DateUtils.dateToStr(new Date(), "yyyyMMddHHmmss"));
 			stdDataModelCollectVo.setClctCmptnYn("Y");
 			stdDataModelCollectVo.setObjCnt(totalObjCnt);
 			stdDataModelCollectVo.setAttrCnt(totalAttrCnt);
+			stdDataModelCollectVo.setAutoRejectCnt(autoRejected.rejected);
 			session.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
 			session.commit();
+			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO,
+					"승인되지 않은 변경 자동 반려 " + autoRejected.rejected + "건 (" + RecollectRejectService.REASON + ")");
+			stompSessionService.sendUserNotis(autoRejected.notis);
 			stompSessionService.sendMessage(ssId, WsNoticeLevel.INFO, "수집 완료!");
 			collected = true;
 		} catch (Exception e) {
@@ -366,6 +374,8 @@ public class DataModelService implements Runnable {
 			if (clctId != null) {
 				stdDataModelCollectVo.setClctEndDt(DateUtils.dateToStr(new Date(), "yyyyMMddHHmmss"));
 				stdDataModelCollectVo.setClctCmptnYn("N");
+				// 110 4.12-41-b — 롤백했으므로 자동 반려는 없다
+				stdDataModelCollectVo.setAutoRejectCnt(null);
 				sqlSessionTemplate.insert("datamodel.updateDataModelCollect", stdDataModelCollectVo);
 			}
 			// 110 4.12-37-b — 실패 알림은 요청한 창에만 (전체 방송이라 다른 사용자의 진행 창에도 들어갔다)

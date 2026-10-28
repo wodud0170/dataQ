@@ -87,6 +87,8 @@
             <span v-else-if="ci === 'objCnt'" :style="{ margin: '0px 16px' }">{{ c }}</span>
             <!-- 컬럼 개수 -->
             <span v-else-if="ci === 'attrCnt'" :style="{ margin: '0px 16px' }">{{ c }}</span>
+            <!-- 110 4.12-41-b — 그 수집이 자동 반려한 승인되지 않은 변경 수 -->
+            <span v-else-if="ci === 'autoRejectCnt'" :style="{ margin: '0px 16px' }">{{ c }}</span>
           </td>
         </tr>
       </template>
@@ -146,6 +148,7 @@ export default {
       { text: '완료\n여부',     align: 'center', sortable: false, value: 'clctCmptnYn' },
       { text: '테이블\n개수',   align: 'center', sortable: false, value: 'objCnt' },
       { text: '컬럼\n개수',    align: 'center', sortable: false, value: 'attrCnt' },
+      { text: '자동 반려\n건수', align: 'center', sortable: false, value: 'autoRejectCnt' },
     ],
   }),
   computed: {
@@ -198,7 +201,7 @@ export default {
         if (i === null) i = '';
         if (key === 'dataModelNm' || key === 'dataModelDsNm' ||
           key === 'clctStartDt' || key === 'clctEndDt' || key === 'clctCmptnYn' ||
-          key === 'objCnt' || key === 'attrCnt') {
+          key === 'objCnt' || key === 'attrCnt' || key === 'autoRejectCnt') {
           result[key] = i;
         }
       });

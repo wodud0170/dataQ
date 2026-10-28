@@ -389,6 +389,32 @@
 		   AND INDEX_NM = #{indexNm}
 	</update>
 
+	<!-- 110 4.12-41-b — 재수집 자동 반려 대상: 그 모델의 대기(DRAFT·SUBMITTED) 이력 전부. 반려할 때까지 잠가
+	     그사이 화면의 승인·반려가 같은 건을 처리하지 못하게 한다(커밋 뒤에는 출발 상태 가드로 "이미 처리된 항목") -->
+	<select id="selectPendingByDmForUpdate" parameterType="String" resultType="java.util.Map">
+		SELECT CHANGE_SEQ as change_seq, CHANGE_TYPE as change_type,
+		       OBJ_OWNER as obj_owner, OBJ_NM as obj_nm, ATTR_NM as attr_nm, CONSTRAINT_NM as constraint_nm,
+		       APRV_STATUS as aprv_status, CHANGE_USER_ID as change_user_id, SUBMISSION_ID as submission_id,
+		       BEFORE_JSON as before_json, AFTER_JSON as after_json
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY
+		 WHERE DM_ID = #{value}
+		   AND APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+		 ORDER BY CHANGE_SEQ
+		   FOR UPDATE
+	</select>
+
+	<!-- 110 4.12-41-b — 재수집 자동 반려. 반려자·일시·사유는 화면 반려(updateAprvStatus)와 같은 칸 -->
+	<update id="rejectPendingBySeqs" parameterType="java.util.Map">
+		UPDATE TB_DATA_MODEL_CHANGE_HISTORY
+		   SET APRV_STATUS  = 'REJECTED',
+		       APRV_USER_ID = #{aprvUserId},
+		       APRV_DT      = #{aprvDt},
+		       APRV_COMMENT = #{aprvComment}
+		 WHERE APRV_STATUS IN ('DRAFT', 'SUBMITTED')
+		   AND CHANGE_SEQ IN
+		   <foreach collection="changeSeqList" item="seq" open="(" separator="," close=")">#{seq}</foreach>
+	</update>
+
 	<!-- WP0 — 테이블 단위 대기 중(DRAFT·SUBMITTED) 변경 건수. PK 삭제가 대기 중인 테이블에 새 PK 를 받지 않는 데 쓴다
 	     (반려되면 기존 PK 가 되살아나 PK 가 둘이 된다). -->
 	<select id="countPendingByObj" parameterType="java.util.Map" resultType="int">
