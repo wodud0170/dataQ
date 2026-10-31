@@ -36,7 +36,7 @@ MENUS = [
     "nav_datamodelHistory", "nav_diagTargetMgmt", "nav_erwinImport", "nav_datamodelVisualization",
     "nav_dm_history", "nav_dataDiag", "nav_dataDiagResult",
     "nav_structDiag", "nav_structDiagResult",
-    "nav_termRecommend", "nav_termResolveHistory",
+    "nav_termRecommend", "nav_termResolveHistory", "nav_sysTermCand",
     "nav_boardNotice", "nav_boardQna",
     "nav_scheduleManage", "nav_scheduleLog",
     "nav_myProfile", "nav_myRequest", "nav_my_dm_changes",

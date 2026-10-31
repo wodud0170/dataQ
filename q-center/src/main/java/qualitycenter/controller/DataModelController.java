@@ -2180,7 +2180,20 @@ public class DataModelController {
 		List<Map<String, Object>> attrs = (List<Map<String, Object>>) body.get("attrs");
 		if (attrs == null) attrs = new ArrayList<>();
 		if (attrs.size() > 2000) throw new IllegalArgumentException("한 번에 2,000개 컬럼까지 찾을 수 있습니다.");
+		Map<String, Object> out = new HashMap<>();
+		out.put("items", suggestItems(dictId, attrs));
+		return out;
+	}
 
+	/**
+	 * 104번 WP7-23 — 사전 하나(상위 사전 포함)로 컬럼들의 용어 후보를 찾는다. 모델 단위 {@link #suggestTerms} 와
+	 * 시스템 단위({@code SysTermCandController}, 108 §4.29 — 같은 사전을 쓰는 모델끼리 묶어 부른다)가 함께 쓴다.
+	 *
+	 * @param dictId 모델 사전 (null 이면 기본 사전부터)
+	 * @param attrs  [{objOwner, objNm, attrNm, attrNmKr}]
+	 * @return attrs 와 같은 순서의 [{objOwner, objNm, attrNm, attrNmKr, candidates}] — 같은 한글명은 후보 목록을 함께 쓴다
+	 */
+	public List<Map<String, Object>> suggestItems(String dictId, List<Map<String, Object>> attrs) {
 		// 한글명마다 단어 분석 한 번 (같은 한글명은 묶는다)
 		java.util.LinkedHashSet<String> names = new java.util.LinkedHashSet<>();
 		for (Map<String, Object> a : attrs) {
@@ -2209,9 +2222,7 @@ public class DataModelController {
 			it.put("candidates", kr.isEmpty() ? new ArrayList<>() : byName.computeIfAbsent(kr, k -> termCandidates(dictId, k, analysis.get(k))));
 			items.add(it);
 		}
-		Map<String, Object> out = new HashMap<>();
-		out.put("items", items);
-		return out;
+		return items;
 	}
 
 	private List<Map<String, Object>> termCandidates(String dictId, String kr, com.ndata.quality.model.std.TermAnalysisResult r) {

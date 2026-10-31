@@ -378,6 +378,14 @@
                         <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
                         <v-list-item-title>한글 변환 이력</v-list-item-title>
                     </v-list-item>
+
+                    <!-- 104번 WP7-23 (108 §4.29) — 시스템 단위 표준 후보 -->
+                    <v-list-item link id="nav_sysTermCand" href="#tab_sysTermCand"
+                        active-class="ndColor--text" title="시스템 단위 표준 후보"
+                        v-on:click.stop="addTabItem('시스템 단위 표준 후보', 'sysTermCand');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>시스템 단위 표준 후보</v-list-item-title>
+                    </v-list-item>
                 </v-list-group>
 
                 <!-- 커뮤니티 -->

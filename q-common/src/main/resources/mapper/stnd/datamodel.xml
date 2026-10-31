@@ -532,6 +532,63 @@
 		   AND USE_YN = 'Y'
 	</update>
 
+	<!-- 104번 WP7-23 (108 §4.29) — 시스템 단위 표준 후보: 시스템(하위 포함)의 사용 중 모델 -->
+	<select id="selectModelsBySys" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		WITH RECURSIVE SYS (SYS_CD, DEPTH) AS (
+			SELECT SYS_CD, 0 FROM TB_SYS_INFO WHERE SYS_CD = #{sysCd}
+			UNION ALL
+			SELECT C.SYS_CD, SYS.DEPTH + 1
+			  FROM TB_SYS_INFO C
+			  JOIN SYS ON C.P_SYS_CD = SYS.SYS_CD
+			 WHERE SYS.DEPTH &lt; 20
+		)
+		SELECT M.DM_ID                       AS "dmId"
+		      ,M.DM_NM                       AS "dmNm"
+		      ,M.DM_SYS_CD                   AS "sysCd"
+		      ,S.SYS_NM                      AS "sysNm"
+		      ,COALESCE(M.STND_REQ_YN, 'N')  AS "stndReqYn"
+		  FROM TB_DATA_MODEL M
+		  LEFT JOIN TB_SYS_INFO S ON S.SYS_CD = M.DM_SYS_CD
+		 WHERE M.USE_YN = 'Y'
+		   AND M.DM_SYS_CD IN (SELECT SYS_CD FROM SYS)
+		 ORDER BY S.SYS_NM, M.DM_NM
+	</select>
+
+	<!-- 104번 WP7-23 (108 §4.29) — 시스템 단위 표준 후보: 모델들의 비표준 컬럼
+	     (표준이 Y 가 아니고 한글명이 있고, 컬럼·테이블이 사용 중이고, 테이블·컬럼 모두 표준 진단 대상). 화면 가시성(visibleTo)은 호출자가 거른다 -->
+	<select id="selectNonStdAttrsByDmIds" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT A.DM_ID                       AS "dmId"
+		      ,M.DM_NM                       AS "dmNm"
+		      ,COALESCE(A.OBJ_OWNER, '')     AS "objOwner"
+		      ,A.OBJ_NM                      AS "objNm"
+		      ,O.OBJ_NM_KR                   AS "objNmKr"
+		      ,A.ATTR_NM                     AS "attrNm"
+		      ,A.ATTR_NM_KR                  AS "attrNmKr"
+		      ,A.DATA_TYPE                   AS "dataType"
+		      ,A.DATA_LEN                    AS "dataLen"
+		      ,A.DATA_DECIMAL_LEN            AS "dataDecimalLen"
+		      ,A.ATTR_ORD                    AS "attrOrd"
+		      ,A.APRV_STATUS                 AS "aprvStatus"
+		      ,A.REQUESTER_USER_ID           AS "requesterUserId"
+		  FROM TB_DATA_MODEL_ATTR A
+		  JOIN TB_DATA_MODEL_OBJ O ON O.DM_ID = A.DM_ID AND O.OBJ_OWNER = A.OBJ_OWNER AND O.OBJ_NM = A.OBJ_NM
+		  JOIN TB_DATA_MODEL M ON M.DM_ID = A.DM_ID
+		 WHERE A.DM_ID IN <foreach collection="dmIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+		   AND A.USE_YN = 'Y'
+		   AND O.USE_YN = 'Y'
+		   AND COALESCE(A.TERMS_STND_YN, 'N') &lt;&gt; 'Y'
+		   AND TRIM(COALESCE(A.ATTR_NM_KR, '')) &lt;&gt; ''
+		   AND COALESCE(A.STND_DIAG_TARGET_YN, 'Y') = 'Y'
+		   AND COALESCE(O.STND_DIAG_TARGET_YN, 'Y') = 'Y'
+		<if test="objNm != null and objNm != ''">
+		   AND (A.OBJ_NM ILIKE '%' || #{objNm} || '%' OR O.OBJ_NM_KR ILIKE '%' || #{objNm} || '%')
+		</if>
+		<if test="attrNm != null and attrNm != ''">
+		   AND (A.ATTR_NM ILIKE '%' || #{attrNm} || '%' OR A.ATTR_NM_KR ILIKE '%' || #{attrNm} || '%')
+		</if>
+		 ORDER BY M.DM_NM, A.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD
+	</select>
+
 	<update id="updateDataModel" parameterType="com.ndata.quality.model.std.StdDataModelVo">
            UPDATE TB_DATA_MODEL
            SET

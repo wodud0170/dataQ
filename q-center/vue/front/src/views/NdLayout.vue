@@ -400,7 +400,7 @@ export default {
                 } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'datamodelStatusIndex' || tabName === 'datamodelStatusConstraint' || tabName === 'datamodelVisualization' || tabName === 'erwinImport' || tabName === 'privColumn' || tabName === 'daSystemStat' || tabName === 'diagTargetMgmt' || tabName === 'myDmChanges' || tabName === 'dmHistory') {
                     this._activateGroup("dmGroup");
 
-                } else if (tabName === 'termRecommend' || tabName === 'termResolveHistory') {
+                } else if (tabName === 'termRecommend' || tabName === 'termResolveHistory' || tabName === 'sysTermCand') {
                     this._activateGroup("autoStdGroup");
                 } else if (tabName === 'scheduleManage' || tabName === 'scheduleLog') {
                     this._activateGroup("scheduleGroup");
@@ -615,7 +615,7 @@ export default {
             } else if (tabitem === 'myRequest' || tabitem === 'myProfile' || tabitem === 'aprvBox') {
                 this.navMyPageGroup = true;
                 return;
-            } else if (tabitem === 'termRecommend' || tabitem === 'termResolveHistory') {
+            } else if (tabitem === 'termRecommend' || tabitem === 'termResolveHistory' || tabitem === 'sysTermCand') {
                 this.navAutoStdGroup = true;
                 return;
             } else if (tabitem === 'scheduleManage' || tabitem === 'scheduleLog') {

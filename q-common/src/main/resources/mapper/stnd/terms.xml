@@ -656,6 +656,12 @@
 		 LIMIT 1
 	</select>
 
+	<!-- 104번 WP7-23 (108 §4.29) — 시스템 단위 표준 후보 적용: 고른 용어를 모델 사전(dictIds — 상위 사전 포함) 범위의 승인 용어에서 다시 읽는다 -->
+	<select id="selectTermCandById" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		<include refid="termWithDomainCols"/>
+		   AND T.TERMS_ID = #{termsId}
+	</select>
+
 	<!-- 후보 — 단어 분석 영문약어와 같은 용어 -->
 	<select id="selectTermCandByEng" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
 		<include refid="termWithDomainCols"/>

@@ -327,6 +327,13 @@
                     <termResolveHistory :key="termResolveHistoryKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 104번 WP7-23 (108 §4.29) — 시스템 단위 표준 후보 -->
+            <div v-if="this.activeContent === 'sysTermCand'" id="tab_sysTermCand" class="tab_contents"
+                :class="{ active: this.activeContent === 'sysTermCand' }">
+                <keep-alive>
+                    <sysTermCand :key="sysTermCandKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'datasource'" id="tab_datasource" class="tab_contents"
                 :class="{ active: this.activeContent === 'datasource' }">
                 <keep-alive>
@@ -528,6 +535,7 @@ import MMDataModelChangeHistory from "./../../components/MMDataModelChangeHistor
 import MMBizSubjArea from "./../../components/MMBizSubjArea.vue"
 import MMStdDict from "./../../components/MMStdDict.vue"
 import DSTermResolveHistory from "./../../components/DSTermResolveHistory.vue"
+import DSSysTermCand from "./../../components/DSSysTermCand.vue"
 import MMDatasource from "./../../components/MMDatasource.vue"
 import DSScheduleManage from "./../../components/DSScheduleManage.vue"
 import DSQualDomainRule   from "./../../components/DSQualDomainRule.vue"   // 83번 신규
@@ -631,6 +639,7 @@ export default {
             areaMgmtKey: this.createUUID(),
             stdDictKey: this.createUUID(),
             termResolveHistoryKey: this.createUUID(),
+            sysTermCandKey: this.createUUID(),
             datasourceKey: this.createUUID(),
             scheduleManageKey: this.createUUID(),
             scheduleLogKey: this.createUUID(),
@@ -705,6 +714,7 @@ export default {
         "areaMgmt": MMBizSubjArea,
         "stdDict": MMStdDict,
         "termResolveHistory": DSTermResolveHistory,
+        "sysTermCand": DSSysTermCand,
         "datasource": MMDatasource,
         "scheduleManage": DSScheduleManage,
         "scheduleLog": DSScheduleLog,
@@ -878,6 +888,9 @@ export default {
                     break;
                 case "termResolveHistory":
                     this.termResolveHistoryKey = this.createUUID();
+                    break;
+                case "sysTermCand":
+                    this.sysTermCandKey = this.createUUID();
                     break;
                 case "datasource":
                     this.datasourceKey = this.createUUID();

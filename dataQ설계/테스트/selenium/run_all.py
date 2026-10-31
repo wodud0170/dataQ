@@ -95,6 +95,7 @@ GROUPS = [
         "test_w10_collect_dbms.py",  # 104 WP4 보완 — MariaDB·SQL Server·Cubrid 화면 수집 (시험 DB 컨테이너·W10_TESTDB_PW 필요)
         "test_w10_erwin_export.py",  # 104 WP8-40 (108 §4.23-3) — ERwin XML 내보내기·되읽기·미리보기 소유자/FK 열
         "test_w10_attr_udp.py",      # 104 WP8-75 (108 §4.23-4) — 컬럼 대상 사용자 정의 속성: 관리 화면 대상·컬럼 그리드 속성 열·저장·엑셀
+        "test_w10_sys_term_cand.py", # 104 WP7-23 (108 §4.23-5) — 시스템 단위 표준 후보: 조회·겹침·두 모델 적용·일부 실패·컬럼 화면 이동·일반 사용자 결재
         "test_crud_std_dict.py",
     ]),
     ("표준 사전 (단어/용어/도메인)", [
