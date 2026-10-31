@@ -10,6 +10,8 @@
         <result property="diagType"          column="DIAG_TYPE"/>
         <result property="dataModelId"       column="DATA_MODEL_ID"/>
         <result property="dataModelNm"       column="DATA_MODEL_NM"/>
+        <result property="dictId"            column="DICT_ID"/>
+        <result property="dictNm"            column="DICT_NM"/>
         <result property="scheduleType"      column="SCHEDULE_TYPE"/>
         <result property="repeatCycle"       column="REPEAT_CYCLE"/>
         <result property="repeatTime"        column="REPEAT_TIME"/>
@@ -48,6 +50,7 @@
     <select id="selectScheduleList" parameterType="map" resultMap="diagScheduleMap">
         SELECT S.SCHEDULE_ID, S.SCHEDULE_NM, S.DIAG_TYPE, S.DATA_MODEL_ID,
                DM.DM_NM AS DATA_MODEL_NM,
+               S.DICT_ID, (SELECT DICT_NM FROM TB_STD_DICT WHERE DICT_ID = S.DICT_ID) AS DICT_NM,
                S.SCHEDULE_TYPE, S.REPEAT_CYCLE, S.REPEAT_TIME,
                S.REPEAT_DAY_OF_WEEK, S.REPEAT_DAY_OF_MONTH, S.CRON_EXPR,
                S.USE_YN, S.LAST_EXEC_DT, S.LAST_EXEC_STATUS, S.LAST_EXEC_LOG_ID,
@@ -71,6 +74,7 @@
     <select id="selectScheduleById" parameterType="String" resultMap="diagScheduleMap">
         SELECT S.SCHEDULE_ID, S.SCHEDULE_NM, S.DIAG_TYPE, S.DATA_MODEL_ID,
                DM.DM_NM AS DATA_MODEL_NM,
+               S.DICT_ID, (SELECT DICT_NM FROM TB_STD_DICT WHERE DICT_ID = S.DICT_ID) AS DICT_NM,
                S.SCHEDULE_TYPE, S.REPEAT_CYCLE, S.REPEAT_TIME,
                S.REPEAT_DAY_OF_WEEK, S.REPEAT_DAY_OF_MONTH, S.CRON_EXPR,
                S.USE_YN, S.LAST_EXEC_DT, S.LAST_EXEC_STATUS, S.LAST_EXEC_LOG_ID,
@@ -80,24 +84,26 @@
          WHERE S.SCHEDULE_ID = #{scheduleId}
     </select>
 
-    <!-- 스케줄러가 매 주기마다 호출: 활성 스케줄 전량 -->
+    <!-- 스케줄러가 매 주기마다 호출: 활성 스케줄 전량
+         110 6.10-2·6.10-13a — 사전(DICT_ID)과 등록자(CRET_USER_ID)도 읽어 런처가 진단 사전·실행자로 쓴다 -->
     <select id="selectActiveSchedules" resultMap="diagScheduleMap">
-        SELECT SCHEDULE_ID, SCHEDULE_NM, DIAG_TYPE, DATA_MODEL_ID,
+        SELECT SCHEDULE_ID, SCHEDULE_NM, DIAG_TYPE, DATA_MODEL_ID, DICT_ID,
                SCHEDULE_TYPE, REPEAT_CYCLE, REPEAT_TIME,
                REPEAT_DAY_OF_WEEK, REPEAT_DAY_OF_MONTH, CRON_EXPR,
-               USE_YN, LAST_EXEC_DT, LAST_EXEC_STATUS, LAST_EXEC_LOG_ID
+               USE_YN, LAST_EXEC_DT, LAST_EXEC_STATUS, LAST_EXEC_LOG_ID,
+               CRET_USER_ID
           FROM TB_DIAG_SCHEDULE
          WHERE USE_YN = 'Y'
     </select>
 
     <insert id="insertSchedule" parameterType="com.ndata.quality.model.std.DiagScheduleVo">
         INSERT INTO TB_DIAG_SCHEDULE (
-            SCHEDULE_ID, SCHEDULE_NM, DIAG_TYPE, DATA_MODEL_ID,
+            SCHEDULE_ID, SCHEDULE_NM, DIAG_TYPE, DATA_MODEL_ID, DICT_ID,
             SCHEDULE_TYPE, REPEAT_CYCLE, REPEAT_TIME,
             REPEAT_DAY_OF_WEEK, REPEAT_DAY_OF_MONTH, CRON_EXPR,
             USE_YN, CRET_USER_ID, CRET_DT
         ) VALUES (
-            #{scheduleId}, #{scheduleNm}, #{diagType}, #{dataModelId},
+            #{scheduleId}, #{scheduleNm}, #{diagType}, #{dataModelId}, #{dictId,jdbcType=VARCHAR},
             #{scheduleType}, #{repeatCycle}, #{repeatTime},
             #{repeatDayOfWeek}, #{repeatDayOfMonth}, #{cronExpr},
             COALESCE(#{useYn}, 'Y'), #{cretUserId}, CURRENT_TIMESTAMP
@@ -109,6 +115,7 @@
            SET SCHEDULE_NM         = #{scheduleNm},
                DIAG_TYPE           = #{diagType},
                DATA_MODEL_ID       = #{dataModelId},
+               DICT_ID             = #{dictId,jdbcType=VARCHAR},
                SCHEDULE_TYPE       = #{scheduleType},
                REPEAT_CYCLE        = #{repeatCycle},
                REPEAT_TIME         = #{repeatTime},
@@ -137,16 +144,28 @@
          WHERE SCHEDULE_ID = #{scheduleId}
     </update>
 
+    <!-- 110 6.10-9 — 건너뛴(SKIPPED) 슬롯을 소비한다 (CRON 은 LAST_EXEC_DT 다음 시각으로 도래를 판단하므로, 안 바꾸면 분마다 SKIPPED 가 쌓였다).
+         이 스케줄 자신의 실행이 진행 중(RUNNING)이면 상태·로그 ID 는 그 실행 것을 그대로 두고,
+         아니면(다른 스케줄·화면 진단 때문에 건너뜀) SKIPPED 와 건너뛴 LOG 로 바꾼다 — '최종 실행' 에 지난 실행 상태가 건너뛴 시각과 섞이지 않게 -->
+    <update id="updateScheduleLastExecSkipped" parameterType="map">
+        UPDATE TB_DIAG_SCHEDULE
+           SET LAST_EXEC_DT     = CURRENT_TIMESTAMP,
+               LAST_EXEC_STATUS = CASE WHEN LAST_EXEC_STATUS = 'RUNNING' THEN LAST_EXEC_STATUS ELSE 'SKIPPED' END,
+               LAST_EXEC_LOG_ID = CASE WHEN LAST_EXEC_STATUS = 'RUNNING' THEN LAST_EXEC_LOG_ID ELSE #{logId} END
+         WHERE SCHEDULE_ID = #{scheduleId}
+    </update>
+
     <delete id="deleteSchedule" parameterType="String">
         DELETE FROM TB_DIAG_SCHEDULE WHERE SCHEDULE_ID = #{scheduleId}
     </delete>
 
-    <!-- 동시 실행 방지용 중복 체크 (같은 모델+진단유형, RUNNING 상태) -->
+    <!-- 동시 실행 방지용 중복 체크 (같은 모델, 겹치는 진단 유형, RUNNING 상태)
+         110 6.10-12b — diagTypes: DiagSchedulerRunner 가 겹치는 유형 목록을 넘긴다 (STANDARD 는 STANDARD·BOTH 등) -->
     <select id="countRunningByModelAndType" parameterType="map" resultType="int">
         SELECT COUNT(1) FROM TB_DIAG_SCHEDULE_LOG L
           JOIN TB_DIAG_SCHEDULE S ON S.SCHEDULE_ID = L.SCHEDULE_ID
          WHERE S.DATA_MODEL_ID = #{dataModelId}
-           AND L.DIAG_TYPE     = #{diagType}
+           AND L.DIAG_TYPE IN <foreach collection="diagTypes" item="t" open="(" separator="," close=")">#{t}</foreach>
            AND L.EXEC_STATUS   = 'RUNNING'
     </select>
 
@@ -174,15 +193,6 @@
          </where>
          ORDER BY L.EXEC_DT DESC
          LIMIT COALESCE(#{limit}, 200)
-    </select>
-
-    <select id="selectLogById" parameterType="String" resultMap="diagScheduleLogMap">
-        SELECT LOG_ID, SCHEDULE_ID, SCHEDULE_NM_SNAPSHOT,
-               EXEC_DT, EXEC_END_DT, EXEC_STATUS, TRIGGER_TYPE,
-               DIAG_TYPE, DIAG_JOB_ID, STRUCT_DIAG_ID, GOV_META_SEND_ID, BATCH_RUN_ID,
-               ERROR_MSG, EXEC_DURATION_SEC
-          FROM TB_DIAG_SCHEDULE_LOG
-         WHERE LOG_ID = #{logId}
     </select>
 
     <insert id="insertLog" parameterType="com.ndata.quality.model.std.DiagScheduleLogVo">
@@ -232,17 +242,47 @@
                DIAG_JOB_ID      = COALESCE(#{diagJobId},    DIAG_JOB_ID),
                STRUCT_DIAG_ID   = COALESCE(#{structDiagId}, STRUCT_DIAG_ID)
          WHERE LOG_ID = #{logId}
+         <!-- 110 6.10-7a — 즉시 실행 실패 마감: launcher 가 이미 마감한 LOG 는 덮지 않는다 -->
+         <if test="onlyRunning != null">
+           AND EXEC_STATUS = 'RUNNING'
+         </if>
     </update>
 
-    <!-- 타임아웃 감시: 너무 오래 RUNNING 인 이력을 EXPIRED 로 마감 -->
-    <update id="expireStaleRunningLogs" parameterType="map">
-        UPDATE TB_DIAG_SCHEDULE_LOG
-           SET EXEC_STATUS      = 'ERROR',
-               ERROR_MSG        = '[TIMEOUT] 진단 실행이 비정상 종료됨 (타임아웃 초과)',
-               EXEC_END_DT      = CURRENT_TIMESTAMP,
-               EXEC_DURATION_SEC= EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - EXEC_DT))::INTEGER
-         WHERE EXEC_STATUS = 'RUNNING'
-           AND EXEC_DT &lt; (CURRENT_TIMESTAMP - (#{minutes} || ' minutes')::interval)
+    <!-- 타임아웃 감시: 너무 오래 RUNNING 인 이력 (DiagSchedulerRunner.expireStale 이 한 건씩 ERROR 로 마감하고 스케줄 LAST_EXEC_* 도 갱신)
+         110 6.10-8a·8b — 기저 작업(진단 Job·구조 진단·범정부 메타 검증·배치)이 아직 진행 중이면 빼고,
+         그 LOG 는 기저 작업이 끝날 때 pollCompletion 이 DONE/ERROR 로 마감한다.
+         executor 가 죽어 남은 기저 작업은 기동 때 DiagSchedulerRunner.cleanupOrphanDiags 가 ERROR 로 바꾼다 -->
+    <select id="selectStaleRunningLogs" parameterType="map" resultMap="diagScheduleLogMap">
+        SELECT L.LOG_ID, L.SCHEDULE_ID, L.SCHEDULE_NM_SNAPSHOT,
+               L.EXEC_DT, L.EXEC_END_DT, L.EXEC_STATUS, L.TRIGGER_TYPE,
+               L.DIAG_TYPE, L.DIAG_JOB_ID, L.STRUCT_DIAG_ID, L.GOV_META_SEND_ID, L.BATCH_RUN_ID,
+               L.ERROR_MSG, L.EXEC_DURATION_SEC
+          FROM TB_DIAG_SCHEDULE_LOG L
+         WHERE L.EXEC_STATUS = 'RUNNING'
+           AND L.EXEC_DT &lt; (CURRENT_TIMESTAMP - (#{minutes} || ' minutes')::interval)
+           AND NOT EXISTS (SELECT 1 FROM TB_DIAG_JOB J
+                            WHERE J.DIAG_JOB_ID = L.DIAG_JOB_ID AND J.STATUS IN ('READY', 'RUNNING'))
+           AND NOT EXISTS (SELECT 1 FROM TB_STRUCT_DIAG_HISTORY H
+                            WHERE H.DIAG_ID = L.STRUCT_DIAG_ID AND H.STATUS IN ('READY', 'RUNNING'))
+           AND NOT EXISTS (SELECT 1 FROM TB_GOV_META_SEND G
+                            WHERE G.SEND_ID = L.GOV_META_SEND_ID AND G.STATUS = 'RUNNING')
+           AND NOT EXISTS (SELECT 1 FROM TB_BATCH_RUN B
+                            WHERE B.RUN_ID = L.BATCH_RUN_ID AND B.STATUS = 'RUNNING')
+    </select>
+
+    <!-- 110 6.10-6·6.10-8b — executor 기동 때: 예약 실행이 띄운 범정부 메타 검증·배치가 RUNNING 으로 남았으면
+         (실행하던 executor 가 죽은 것) ERROR 로. 둘 다 executor 안에서만 돈다 (화면 검증은 TRIGGER_TYPE='MANUAL', center 에서 동기 실행) -->
+    <update id="updateOrphanGovMetaSends">
+        UPDATE TB_GOV_META_SEND
+           SET STATUS = 'ERROR', END_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+         WHERE STATUS = 'RUNNING' AND TRIGGER_TYPE = 'SCHEDULE'
+    </update>
+
+    <update id="updateOrphanBatchRuns">
+        UPDATE TB_BATCH_RUN
+           SET STATUS = 'ERROR', END_DT = to_char(now(), 'YYYYMMDDHH24MISS'),
+               ERROR_MSG = 'q-executor 재기동으로 중단됨'
+         WHERE STATUS = 'RUNNING'
     </update>
 
     <!-- 스케줄러 완료 감지 폴링용: RUNNING 이력 전부 조회 -->

@@ -1,5 +1,6 @@
 package qualitycenter.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,6 @@ import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityConstant;
 import com.ndata.quality.common.NDQualityRetrieveCond;
 import com.ndata.quality.model.std.StdDiagJobVo;
-import com.ndata.quality.model.std.StdDiagResultVo;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -68,22 +68,25 @@ public class DiagController {
         return sqlSessionTemplate.selectOne("diag.selectDiagJobById", diagJobId);
     }
 
-    /** 진단 결과 목록 조회 (컬럼 상세) */
-    @GetMapping("/getDiagResultList")
-    public List<StdDiagResultVo> getDiagResultList(@RequestParam String diagJobId) {
-        return sqlSessionTemplate.selectList("diag.selectDiagResultList", diagJobId);
-    }
-
     /** 진단 결과 요약 조회 (테이블 집계) */
     @GetMapping("/getDiagResultSummary")
     public List<Map<String, Object>> getDiagResultSummary(@RequestParam String diagJobId) {
         return sqlSessionTemplate.selectList("diag.selectDiagResultSummary", diagJobId);
     }
 
-    /** 진단 결과 상세 조회 (컬럼 1행 기준, 용어/도메인 JOIN) */
+    /**
+     * 진단 결과 상세 조회 (컬럼 1행 기준, 용어/도메인 JOIN)
+     *
+     * <p>110 6.10-15 — 표준 용어·도메인은 이 진단을 잰 사전(Job 사전, 없으면 모델 사전)과 그 상위 사전에서만 찾는다.
+     * 가까운 사전이 이긴다 (진단 executor 의 terms.selectAllTermsForDiag 와 같은 기준).</p>
+     */
     @GetMapping("/getDiagResultDetail")
     public List<Map<String, Object>> getDiagResultDetail(@RequestParam String diagJobId) {
-        return sqlSessionTemplate.selectList("diag.selectDiagResultDetail", diagJobId);
+        StdDiagJobVo job = sqlSessionTemplate.selectOne("diag.selectDiagJobById", diagJobId);
+        if (job == null) return new ArrayList<>();
+        Map<String, Object> param = dictService.lineageParam(dictService.resolve(job.getDictId(), job.getDataModelId()));
+        param.put("diagJobId", diagJobId);
+        return sqlSessionTemplate.selectList("diag.selectDiagResultDetail", param);
     }
 
     /** 진단 시작: Job 생성 후 q-executor에 실행 요청 */
@@ -110,6 +113,9 @@ public class DiagController {
             }
             jobVo.setDictId(diagDictId);
 
+            // 110 6.10-20a — 진단 때 모델의 최근 완료 수집 (수집일시 열). 수집 이력 없는 논리 모델은 비어 '-'
+            jobVo.setClctId(sqlSessionTemplate.selectOne("datamodel.selectLatestDoneClctIdByDmId", jobVo.getDataModelId()));
+
             // Job 레코드 생성 (READY 상태)
             jobVo.setDiagJobId(StringUtils.getUUID());
             jobVo.setCretUserId(sessionService.getUserId());
@@ -130,16 +136,18 @@ public class DiagController {
                     Objects.toString(request.getSession().getAttribute("SSID"), null),
                     params)
                 .map(res -> {
+                    // 110 6.10-5b — executor 가 기동을 거부하면 Job 을 ERROR 로 (READY 로 남으면 다음 진단이 늘 409)
+                    if (res.getResultCode() != RestResult.CODE_200.getCode()) {
+                        markDiagJobError(jobVo.getDiagJobId());
+                        return res;
+                    }
                     res.setContents(jobVo.getDiagJobId());
                     return res;
                 })
                 .onErrorResume(e -> {
                     // executor 호출 실패 시 READY 좀비 방지: Job 상태를 ERROR로 변경
                     log.error(">> executor 호출 실패, Job을 ERROR로 변경: {}", jobVo.getDiagJobId(), e);
-                    StdDiagJobVo errorJob = new StdDiagJobVo();
-                    errorJob.setDiagJobId(jobVo.getDiagJobId());
-                    errorJob.setStatus("ERROR");
-                    sqlSessionTemplate.update("diag.updateDiagJobStatus", errorJob);
+                    markDiagJobError(jobVo.getDiagJobId());
                     result.setResultInfo(RestResult.CODE_500.getCode(), "진단 서버 연결 실패: " + e.getMessage());
                     return Mono.just(result);
                 });
@@ -148,6 +156,13 @@ public class DiagController {
             result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
             return Mono.just(result);
         }
+    }
+
+    private void markDiagJobError(String diagJobId) {
+        StdDiagJobVo errorJob = new StdDiagJobVo();
+        errorJob.setDiagJobId(diagJobId);
+        errorJob.setStatus("ERROR");
+        sqlSessionTemplate.update("diag.updateDiagJobStatus", errorJob);
     }
 
     /** 진단 중지: q-executor에 중지 요청 */

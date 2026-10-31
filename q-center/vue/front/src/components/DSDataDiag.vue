@@ -41,7 +41,7 @@
         </span>
       </v-chip>
 
-      <v-btn small color="primary" :disabled="!selectedModel || isRunning || starting" :loading="starting" @click="startDiag">
+      <v-btn small color="primary" :disabled="!selectedModel || selectedModelBusy || starting" :loading="starting" @click="startDiag">
         진단 시작
       </v-btn>
       <v-btn small color="error" :disabled="!isRunning" @click="stopDiag">
@@ -152,6 +152,11 @@ export default {
     isRunning() {
       return this.currentJob && this.currentJob.status === 'RUNNING';
     },
+    // 110 6.10-22b — '진단 시작' 은 고른 모델에 대기·진행 중 Job 이 있을 때만 막는다 (추적 Job 과 무관)
+    selectedModelBusy() {
+      return this.jobList.some(j => j.dataModelId === this.selectedModel
+        && (j.status === 'READY' || j.status === 'RUNNING'));
+    },
     progressValue() {
       if (!this.currentJob || !this.currentJob.totalCnt) return 0;
       return Math.round((this.currentJob.processCnt / this.currentJob.totalCnt) * 100);
@@ -171,9 +176,11 @@ export default {
   methods: {
     loadDataModelList() {
       axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', { schNm: null, schSysNm: null }).then(res => {
+        // 110 6.10-21 — dictId 를 담아야 onModelChange 가 모델 사전을 기본값으로 고른다
         this.dataModelList = (res.data || []).map(item => ({
           dataModelId: item.dataModelId,
           dataModelNm: item.dataModelNm,
+          dictId: item.dictId,
         }));
       });
     },
@@ -190,13 +197,14 @@ export default {
         .catch(e => console.error('사전 목록 조회 실패', e));
     },
     loadJobList() {
-      axios.post(this.$APIURL.base + 'api/diag/getDiagJobList').then(res => {
+      return axios.post(this.$APIURL.base + 'api/diag/getDiagJobList').then(res => {
         this.jobList = res.data || [];
-        // 실행 중인 Job이 있으면 폴링 시작
-        const running = this.jobList.find(j => j.status === 'RUNNING');
-        if (running) {
-          this.currentJob = running;
-          this.startPoll(running.diagJobId);
+        // 110 6.10-22b — 추적 중인 Job 이 없을 때만 대기·진행 중 Job 하나를 추적한다 (추적 중이면 바꾸지 않는다)
+        if (this.pollTimer) return;
+        const busy = this.jobList.find(j => j.status === 'READY' || j.status === 'RUNNING');
+        if (busy) {
+          this.currentJob = busy;
+          this.startPoll(busy.diagJobId);
         }
       });
     },
@@ -211,12 +219,13 @@ export default {
         if (res.data && res.data.resultCode === 200) {
           const diagJobId = res.data.contents;
           this.showSnackbar('진단을 시작했습니다.', 'success');
-          this.loadJobList();
-          this.pollJob(diagJobId);
+          // 110 6.10-22b — 다른 모델 Job 이 진행 중이어도 시작할 수 있다. 방금 시작한 Job 으로 추적을 바꾸고
+          // (앞서 추적하던 Job 은 pollJob 이 목록을 다시 읽어 맞춘다) 목록을 읽은 뒤에 버튼을 푼다
           this.startPoll(diagJobId);
-        } else {
-          this.showSnackbar('진단 시작 실패: ' + (res.data && res.data.resultMessage), 'error');
+          this.pollJob(diagJobId);
+          return this.loadJobList();
         }
+        this.showSnackbar('진단 시작 실패: ' + (res.data && res.data.resultMessage), 'error');
       }).catch(() => this.showSnackbar('서버 오류', 'error'))
         .finally(() => { this.starting = false; });
     },
@@ -246,14 +255,22 @@ export default {
         if (idx >= 0) this.$set(this.jobList, idx, job);
         else this.jobList.unshift(job);
 
-        if (job.status !== 'RUNNING') {
+        // 110 6.10-22a — 막 시작한 Job 은 첫 조회에서 READY 일 수 있다. READY·RUNNING 이 아닐 때만 끝낸다
+        if (job.status !== 'READY' && job.status !== 'RUNNING') {
           this.stopPoll();
           if (job.status === 'DONE') {
             this.showSnackbar(`진단 완료 - 이슈 ${job.resultCnt}건 발견`, 'success');
           } else if (job.status === 'STOPPED') {
             this.showSnackbar('진단이 중지되었습니다.', 'warning');
-            this.loadJobList();
+          } else if (job.status === 'ERROR') {
+            this.showSnackbar('진단 오류 발생', 'error');
           }
+          // 110 6.10-22b — 목록을 다시 읽어 다른 Job 상태를 맞추고, 남은 대기·진행 중 Job 이 있으면 그것을 추적한다
+          this.loadJobList();
+        } else if (this.jobList.some(j => j.diagJobId !== diagJobId && (j.status === 'READY' || j.status === 'RUNNING'))) {
+          // 110 6.10-22b — 추적하지 않는 대기·진행 중 Job 이 있으면 목록을 다시 읽어 끝났는지 맞춘다
+          // ('진단 시작' 을 막는 selectedModelBusy 가 이 목록을 본다)
+          this.loadJobList();
         }
       });
     },

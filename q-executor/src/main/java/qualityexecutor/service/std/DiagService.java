@@ -59,10 +59,6 @@ public class DiagService implements Runnable {
     @Autowired
     private com.ndata.quality.service.StdDictService dictService;
 
-    public DiagService(String diagJobId, String clctId, String dataModelId, String userId) {
-        this(diagJobId, clctId, dataModelId, userId, null);
-    }
-
     public DiagService(String diagJobId, String clctId, String dataModelId, String userId, String dictId) {
         this.diagJobId    = diagJobId;
         this.clctId       = clctId;
@@ -92,7 +88,7 @@ public class DiagService implements Runnable {
      *   <li>전체 용어를 메모리에 로드 (영문명 기준 Map)</li>
      *   <li>진단 대상 컬럼 목록 로드</li>
      *   <li>컬럼별 진단: 용어 존재 → 한글명 일치 → 도메인(타입/길이) 검증</li>
-     *   <li>50건마다 배치 인서트 + 진행 상황 업데이트</li>
+     *   <li>이슈 50건마다 배치 인서트, 컬럼 100개마다 진행 상황 업데이트</li>
      *   <li>완료/중지/에러 상태 갱신</li>
      * </ol>
      */
@@ -185,9 +181,12 @@ public class DiagService implements Runnable {
 
                 processCnt++;
 
-                // 50건마다 배치 인서트 및 진행 상황 업데이트
+                // 이슈 50건마다 배치 인서트
                 if (batch.size() >= 50) {
                     flushBatch(batch);
+                }
+                // 110 6.10-23 — 진행 상황은 컬럼 100개마다 (이슈가 적으면 진행 표시가 멈춰 보였다)
+                if (processCnt % 100 == 0) {
                     updateProgress(total, processCnt, resultCnt);
                 }
             }

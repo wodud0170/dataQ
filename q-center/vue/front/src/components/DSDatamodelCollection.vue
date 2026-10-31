@@ -320,11 +320,12 @@
               </v-col>
               <v-col cols="8">
                 <!-- 109번 #2 — 데이터 소스 변경은 모델 직접 반영 권한 -->
-                <v-select dense clearable color="ndColor" v-model="update_dataSource" :items="dataSourceList"
+                <!-- 114 권고 채택(10-31) — 시스템을 바꿔 데이터 소스를 비웠으면 그 안내를 hint 로, 데이터 소스를 다시 고르면 지운다 -->
+                <v-select id="updateDataModelDs" dense clearable color="ndColor" v-model="update_dataSource" :items="dataSourceList"
                   item-text="dsn" name="update_dataSource" item-value="id" ref="update_dataSource" :placeholder="'선택 (논리모델이면 비워두기)'"
                   no-data-text="데이터 소스가 없습니다." :disabled="!canSetDs"
-                  :hint="canSetDs ? '' : '데이터 소스 변경은 모델 직접 반영 권한이 필요합니다'" :persistent-hint="!canSetDs"
-                  :menu-props="{ top: false, offsetY: true }" v-on:click="getDataSourceList()"></v-select>
+                  :hint="canSetDs ? update_dsNotice : '데이터 소스 변경은 모델 직접 반영 권한이 필요합니다'" :persistent-hint="!canSetDs || !!update_dsNotice"
+                  :menu-props="{ top: false, offsetY: true }" v-on:click="getDataSourceList()" v-on:change="update_dsNotice = ''"></v-select>
               </v-col>
             </v-row>
             <!-- 98번 — 이 모델을 진단할 때 쓸 표준사전 -->
@@ -388,8 +389,25 @@ export default {
       const sys = (this.dataModelSysDataList || []).find(s => s.sysCd === sysCd);
       if (sys && sys.dictId) this.add_dictId = sys.dictId;
     },
-    update_dataModelSysCd() {
-      this.resetDataSourceItems();
+    // 114 권고 채택(10-31) — 수정 창에서 시스템을 바꾸면 고른 데이터 소스가 새 시스템에 속할 때만 유지하고, 아니면 비우고 안내한다.
+    // 시스템을 비우면 데이터 소스는 그대로. 창을 열 때(updateDataModelInit 이 값을 넣을 때)는 사용자 변경이 아니라 건너뛴다
+    async update_dataModelSysCd(sysCd) {
+      if (this.updateSysInit || !sysCd || !this.update_dataSource) return;
+      try {
+        const res = await axios.get(this.$APIURL.base + "api/sysinfo/getDataSourceListBySysCd", { params: { 'sysCd': sysCd } });
+        // 응답을 기다리는 사이 시스템을 또 바꿨으면 이 응답은 버린다
+        if (sysCd !== this.update_dataModelSysCd) return;
+        if ((res.data || []).some(ds => ds.id === this.update_dataSource)) return;
+        this.update_dataSource = null;
+        this.update_dsNotice = '선택한 시스템에 속하지 않는 데이터 소스라 비웠습니다.';
+      } catch (error) {
+        console.log(error);
+        this.$swal.fire({
+          title: '데이터 소스 목록 조회 실패 - API 확인 필요',
+          confirmButtonText: '확인',
+          icon: 'error',
+        });
+      }
     },
     addDataModelModal(val) {
       if (!val) {
@@ -472,6 +490,9 @@ export default {
     update_ver: null,
     update_dataModelSysCd: null,
     update_dataSource: null,
+    // 114 권고 채택(10-31) — 창을 여는 중(시스템 값을 넣는 중) 표시, 시스템을 바꿔 데이터 소스를 비웠을 때의 안내
+    updateSysInit: false,
+    update_dsNotice: '',
     // 데이터모델 테이블 헤더
     dataModelHeaders: [
       { text: '데이터 모델명', align: 'center', sortable: false, value: 'dataModelNm' },
@@ -1083,6 +1104,8 @@ export default {
 
       console.log(this.selectedItem[0])
 
+      // 114 권고 채택(10-31) — 여기서 넣는 시스템 값은 watch update_dataModelSysCd 가 건너뛴다 (watch 는 다음 tick 에 돌아서 그 뒤에 푼다)
+      this.updateSysInit = true;
       this.update_dataModelId = this.selectedItem[0].dataModelId;
       this.update_dataModelNm = this.selectedItem[0].dataModelNm;
       this.update_dataModelSysCd = this.selectedItem[0].dataModelSysCd;
@@ -1090,6 +1113,7 @@ export default {
       this.update_dataSource = this.selectedItem[0].dataModelDsId;
       this.update_dictId = this.selectedItem[0].dictId;
       this.update_stndReqYn = this.selectedItem[0].stndReqYn || 'N';
+      this.$nextTick(() => { this.updateSysInit = false; });
     },
     updateDataModel() {
       try {
@@ -1224,6 +1248,7 @@ export default {
       this.update_ver = null;
       this.update_dataModelSysCd = null;
       this.update_dataSource = null;
+      this.update_dsNotice = '';
     },
   },
   created() {

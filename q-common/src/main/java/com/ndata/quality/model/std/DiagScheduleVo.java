@@ -12,6 +12,8 @@ public class DiagScheduleVo {
     private String diagType;           // STANDARD | STRUCT | BOTH
     private String dataModelId;
     private String dataModelNm;        // joined
+    private String dictId;             // 110 6.10-2 — 표준화 진단(STANDARD·BOTH)에 쓸 표준사전. NULL 이면 모델의 사전
+    private String dictNm;             // joined
 
     private String scheduleType;       // SIMPLE | CRON
     private String repeatCycle;        // DAILY | WEEKLY | MONTHLY

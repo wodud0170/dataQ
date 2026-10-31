@@ -396,11 +396,12 @@ def test_dashboard_ui(driver):
 
     # 2-10 빠른 액션 — 구조 진단
     try:
-        res = open_tab(driver, "구조 진단", "schemaCompare")
+        # 110 6.10-31b — 메뉴 없던 schemaCompare 분기를 지워 구조 진단 실행 화면(structDiag)으로
+        res = open_tab(driver, "구조 진단", "structDiag")
         time.sleep(1)
-        screenshot(driver, "2-10_schema_compare")
-        # The tab name shows in page, or the JS returned ok, or the page has schema-related content
-        ok = res == "ok" or "구조" in driver.page_source or "schema" in driver.page_source.lower() or "schemaCompare" in driver.page_source
+        screenshot(driver, "2-10_struct_diag")
+        # The tab name shows in page, or the JS returned ok
+        ok = res == "ok" or "구조" in driver.page_source
         add_result("2-10", "빠른 액션 — 구조 진단", ok, f"결과: {res}")
     except Exception as e:
         add_result("2-10", "빠른 액션 — 구조 진단", False, str(e))
@@ -1238,15 +1239,17 @@ def test_diag(session):
     except Exception as e:
         add_result("10-3", "진단 시작", False, str(e))
 
-    # 10-4 진단 결과
+    # 10-4 진단 결과 (110 6.10-29 — 호출 화면이 없던 getDiagResultList 를 지워 결과 화면이 쓰는 테이블 요약으로)
     try:
-        r = session.get(f"{BASE}/api/diag/getDiagResultList")
-        if r.status_code == 200:
+        r = session.post(f"{BASE}/api/diag/getDiagJobList", json={})
+        done = [j for j in r.json() if j.get("status") == "DONE"]
+        if done:
+            r = session.get(f"{BASE}/api/diag/getDiagResultSummary", params={"diagJobId": done[0]["diagJobId"]})
             data = r.json()
-            ok = isinstance(data, list)
-            add_result("10-4", "진단 결과 로드", ok, f"{len(data)}건")
+            ok = r.status_code == 200 and isinstance(data, list)
+            add_result("10-4", "진단 결과 로드", ok, f"테이블 {len(data)}건")
         else:
-            add_result("10-4", "진단 결과 로드", True, f"HTTP {r.status_code} (파라미터 필요할 수 있음)")
+            add_skip("10-4", "진단 결과 로드", "완료된 진단 Job 없음")
     except Exception as e:
         add_result("10-4", "진단 결과 로드", False, str(e))
 

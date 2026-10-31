@@ -9,7 +9,7 @@ Phase 2 — 스케줄러 실제 실행 통합 테스트 (65번 문서 §10 작�
 전제:
   - q-center 28091 + q-executor 28098 기동
   - TB_DATA_MODEL 에 1건 이상
-  - STANDARD 진단은 수집 이력(TB_DATA_MODEL_CLCT) 필요. 없으면 [DATA_NOT_FOUND] ERROR 로 마감되는 것을 검증
+  - STANDARD 진단은 모델 컬럼(DM_ID) 기준이라 수집 이력이 없어도 돈다 (110 6.10-10). 수집 이력은 수집일시 표시에만 쓴다
 """
 import base64
 import sys
@@ -69,9 +69,8 @@ def main():
         r.raise_for_status()
         arr = r.json() or []
         assert arr, "데이터모델 없음"
-        # 수집 이력(TB_DATA_MODEL_CLCT)이 없는 모델을 고르면 runNow 가 [DATA_NOT_FOUND] 로
-        # 즉시 ERROR 마감돼 이후 STEP 6/7(LOG 마감·LAST_EXEC 갱신) 검증이 의미를 잃는다.
-        # objCnt > 0 만으로는 부족 — CLCT row 유무를 반영하는 clctDt 로 거른다.
+        # 컬럼이 있는 실제 진단이 되도록 수집 이력 있는 모델을 고른다 (110 6.10-10 부터 수집 이력이 없어도
+        # [DATA_NOT_FOUND] 로 끝나지 않지만, 컬럼 0개 모델이면 진단 결과 검증이 의미를 잃는다).
         withClct = [m for m in arr if m.get("clctDt")]
         assert withClct, "수집 이력 있는 데이터모델이 없음 — 데이터모델 수집을 먼저 수행할 것"
         picked = withClct[0]
@@ -110,10 +109,11 @@ def main():
         deadline = time.time() + POLL_MAX_SEC
         last_status = None
         while time.time() < deadline:
-            r = admin.get(BASE + f"/api/diag/schedule/logs/{state['logId']}",
-                          params={"logId": state["logId"]}, timeout=10)
+            # 110 6.10-29 — /logs/{logId} 를 지워 이력 목록(scheduleId)에서 logId 행을 찾는다
+            r = admin.get(BASE + "/api/diag/schedule/logs",
+                          params={"scheduleId": state["scheduleId"]}, timeout=10)
             r.raise_for_status()
-            body = r.json() or {}
+            body = next((l for l in (r.json() or []) if l.get("logId") == state["logId"]), {})
             last_status = body.get("execStatus")
             print(f"  poll: execStatus={last_status}  diagJobId={body.get('diagJobId')}  "
                   f"durSec={body.get('execDurationSec')}")
@@ -128,7 +128,7 @@ def main():
         final = state["logFinal"]
         assert final.get("execStatus") in ("DONE", "ERROR"), \
             f"expected DONE/ERROR, got {final.get('execStatus')}"
-        # ERROR 면 메시지 prefix 검증 (예: [DATA_NOT_FOUND] / [DIAG])
+        # ERROR 면 메시지 prefix 검증 (예: [DIAG] / [TIMEOUT])
         if final.get("execStatus") == "ERROR":
             msg = final.get("errorMsg") or ""
             assert msg.startswith("["), f"error msg prefix 누락: {msg}"
@@ -141,9 +141,9 @@ def main():
     if not step("6. LOG 가 DONE/ERROR 로 마감 + errorMsg prefix + duration", _verify_finish): return
 
     def _verify_schedule_last_exec():
-        r = admin.get(BASE + f"/api/diag/schedule/{state['scheduleId']}",
-                      params={"scheduleId": state["scheduleId"]}, timeout=10)
-        sc = r.json() or {}
+        # 110 6.10-29 — /{scheduleId} 를 지워 스케줄 목록에서 scheduleId 행을 찾는다
+        r = admin.get(BASE + "/api/diag/schedule/list", timeout=10)
+        sc = next((s for s in (r.json() or []) if s.get("scheduleId") == state["scheduleId"]), {})
         assert sc.get("lastExecStatus") in ("DONE", "ERROR"), \
             f"schedule.lastExecStatus 갱신 안 됨: {sc.get('lastExecStatus')}"
         assert sc.get("lastExecLogId") == state["logId"]

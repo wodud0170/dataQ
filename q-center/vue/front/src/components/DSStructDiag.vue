@@ -128,8 +128,11 @@ export default {
           self._diagId = data.contents;
           self.pollDiag();
         } else {
+          // 110 6.10-28 — 서버가 준 사유(진행 중 409·논리 모델 400·진단 서버 연결 실패)를 그대로 보여 준다.
+          // 진단 서버가 거부하면 이력이 ERROR 로 남으므로 목록도 다시 읽는다.
           self.executing = false;
-          self.showSnackbar('진단 요청 실패', 'error');
+          self.showSnackbar('진단 요청 실패: ' + (data && data.resultMessage), 'error');
+          self.loadHistory();
         }
       }).catch(function() {
         self.executing = false;

@@ -879,6 +879,14 @@
 		LIMIT 1
 	</select>
 
+	<!-- 110 6.10-20a — 모델의 최근 완료 수집 (실패 수집 CLCT_CMPTN_YN='N' 제외). 표준 진단 Job 의 수집일시 -->
+	<select id="selectLatestDoneClctIdByDmId" parameterType="String" resultType="String">
+		SELECT DM_CLCT_ID FROM TB_DATA_MODEL_CLCT
+		WHERE DM_ID = #{dataModelId} AND CLCT_CMPTN_YN = 'Y'
+		ORDER BY CLCT_END_DT DESC
+		LIMIT 1
+	</select>
+
 	<!-- 테이블(OBJ) 존재 여부 확인 -->
 	<select id="countDataModelObj" parameterType="java.util.Map" resultType="int">
 		SELECT COUNT(*) FROM TB_DATA_MODEL_OBJ

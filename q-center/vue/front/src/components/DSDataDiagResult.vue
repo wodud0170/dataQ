@@ -443,7 +443,8 @@
     </v-tabs-items>
 
     <!-- ===== 용어 빠른 등록 모달 ===== -->
-    <v-dialog v-model="termRegDialog" max-width="720" persistent>
+    <!-- 110 6.10-17 — 형식단어 줄이 더해져 단어가 3개 넘으면 1366x768 에서 아래 [용어 등록] 이 잘렸다(전역 CSS 가 창 스크롤을 막음). 본문만 스크롤 -->
+    <v-dialog v-model="termRegDialog" max-width="720" persistent scrollable>
       <v-card>
         <v-card-title class="subtitle-1 font-weight-bold pb-1">
           용어 빠른 등록
@@ -475,7 +476,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(w, idx) in termRegWords" :key="idx">
+              <template v-for="(w, idx) in termRegWords">
+              <tr :key="'w' + idx">
                 <td><code>{{ w.abrv }}</code></td>
                 <td>
                   <span v-if="w.exists">{{ w.wordNm }}</span>
@@ -498,6 +500,21 @@
                   <span v-else class="caption green--text">OK</span>
                 </td>
               </tr>
+              <!-- 110 6.10-17 — 마지막 단어가 미등록이면 형식단어로 등록할 수 있게 (사전이 "용어 마지막 단어는 형식단어" 를 강제하면 기본 체크) -->
+              <tr v-if="idx === termRegWords.length - 1 && !w.exists" :key="'c' + idx">
+                <td colspan="5">
+                  <div class="d-flex align-center" style="gap:12px;">
+                    <v-checkbox v-model="w.wordClsfYn" true-value="Y" false-value="N" label="형식단어"
+                      dense hide-details class="mt-0 pt-0" @change="onTermRegWordClsfChange(w)" />
+                    <template v-if="w.wordClsfYn === 'Y'">
+                      <span class="filterLabel">도메인 분류명</span>
+                      <v-autocomplete v-model="w.domainClsfNm" :items="termRegDomainClsfItems" placeholder="선택 (필수)"
+                        dense outlined hide-details style="max-width:220px; font-size:.8rem;" />
+                    </template>
+                  </div>
+                </td>
+              </tr>
+              </template>
             </tbody>
           </v-simple-table>
 
@@ -802,6 +819,9 @@ export default {
       termRegCodeList: [],       // 코드 목록
       termRegTermsNm: '',        // 용어 한글명
       termRegTermsDesc: '',      // 용어 설명
+      // 110 6.10-17 — 사전 속성(용어 마지막 단어 형식단어 강제)을 보려고 한 번 읽는 사전 목록, 형식단어 등록용 도메인 분류명 목록
+      termRegDictList: [],
+      termRegDomainClsfItems: [],
       // 단어 인라인 등록
       wordRegIdx: -1,            // 현재 편집중인 단어 인덱스 (-1이면 없음)
       // 코맨트 변경 모달
@@ -859,14 +879,21 @@ export default {
     termRegDictId() {
       return this.selectedJobInfo.dictId || null;
     },
+    /** 110 6.10-17 — 이 진단의 사전이 "용어 마지막 단어는 형식단어" 를 강제하는가 */
+    termRegLastWordForced() {
+      const d = this.termRegDictList.find(x => x.dictId === this.termRegDictId);
+      return !!(d && d.termLastWordClsfYn === 'Y');
+    },
     /** 진단 결과 요약 통계 */
     overviewStats() {
       const detail = this.detailList;
       const summary = this.summaryList;
-      const totalColCnt = detail.length;
-      const issueColCnt = detail.filter(d => d.diagTypeList && d.diagTypeList.length > 0).length;
+      // 110 6.10-14 — 컬럼 수·준수율은 이 Job 의 값(TOTAL_CNT·ISSUE_COL_CNT)으로, 모델 목록(datamodel.xml
+      // DIAG_STND_RATE)과 같은 식·소수 1자리. 조회 시점 컬럼으로 세면 진단 뒤 모델이 바뀐 만큼 어긋났다.
+      const totalColCnt = this.selectedJobInfo.totalCnt || 0;
+      const issueColCnt = this.selectedJobInfo.issueColCnt || 0;
       const okColCnt = totalColCnt - issueColCnt;
-      const complianceRate = totalColCnt > 0 ? Math.round((okColCnt / totalColCnt) * 100) : 0;
+      const complianceRate = totalColCnt > 0 ? Math.round(okColCnt * 1000 / totalColCnt) / 10 : 0;
       // 테이블 식별 키는 소유자(스키마)+이름이다. 이름만으로 세면 다른 스키마의
       // 같은 이름 테이블이 하나로 합쳐져, 소유자 단위로 세는 issueTableCnt 보다
       // 작아진다 (실제로 "전체 19 / 이슈 22" 로 표시되던 원인).
@@ -980,6 +1007,7 @@ export default {
   mounted() {
     this.checkPendingJob();
     this.loadJobList();
+    this.loadTermRegDictList();
   },
   /**
    * keep-alive 캐시에서 복원될 때 호출 (두 번째 이후 진입)
@@ -1030,7 +1058,8 @@ export default {
       axios.post(this.$APIURL.base + 'api/diag/getDiagJobList').then(res => {
         this.jobList = (res.data || []).map(job => ({
           ...job,
-          jobDisplayText: `[${job.dataModelNm}] ${job.clctDt || ''} - ${this.statusLabel(job.status)} (이슈 ${job.resultCnt}건)`,
+          // 110 6.10-20b — 같은 모델의 Job 을 구분하도록 Job 마다 다른 시작일시(시작 전이면 생성일시)
+          jobDisplayText: `[${job.dataModelNm}] ${job.startDt || job.cretDt} - ${this.statusLabel(job.status)} (이슈 ${job.resultCnt}건)`,
         }));
         if (this.pendingJobId) {
           this.selectJob(this.pendingJobId);
@@ -1149,7 +1178,8 @@ export default {
       var column = item.attrNm;
       var stdType = item.stdDataType || item.actualDataType || 'VARCHAR2';
       var stdLen = item.stdDataLen;
-      var typeSpec = stdLen ? stdType + '(' + stdLen + ')' : stdType;
+      // 110 6.10-19c — 소수 자릿수까지 (openAlterModal 과 같은 표기)
+      var typeSpec = stdType + (stdLen ? '(' + stdLen + (item.stdDataDecimalLen ? ',' + item.stdDataDecimalLen : '') + ')' : '');
 
       var script = '';
       if (dbmsTp.indexOf('oracle') >= 0) {
@@ -1158,6 +1188,9 @@ export default {
         script = 'ALTER TABLE ' + table + ' MODIFY COLUMN ' + column + ' ' + typeSpec + ';';
       } else if (dbmsTp.indexOf('mssql') >= 0 || dbmsTp.indexOf('sqlserver') >= 0) {
         script = 'ALTER TABLE ' + table + ' ALTER COLUMN ' + column + ' ' + typeSpec + ';';
+      } else if (dbmsTp.indexOf('cubrid') >= 0) {
+        // 110 6.10-19b — CUBRID (표준화 스크립트 openAlterModal 과 같은 문법)
+        script = 'ALTER TABLE ' + table + ' MODIFY ' + column + ' ' + typeSpec + ';';
       } else {
         // PostgreSQL
         script = 'ALTER TABLE ' + table + ' ALTER COLUMN ' + column + ' TYPE ' + typeSpec + ';';
@@ -1263,7 +1296,8 @@ export default {
     /** 코맨트 변경 스크립트 모달 열기 */
     openCommentDialog(item) {
       var dbmsTp = (this.selectedJobInfo.dbmsTp || '').toLowerCase();
-      var schema = item.objSchema || '';
+      // 110 6.10-18 — 상세 행에는 objSchema 가 없고 objOwner 만 온다
+      var schema = item.objOwner || '';
       var table = item.objNm;
       var column = item.attrNm;
       var stdNm = item.stdTermsNm || '';
@@ -1273,10 +1307,14 @@ export default {
         var target = schema ? schema + '.' + table + '.' + column : table + '.' + column;
         script = 'COMMENT ON COLUMN ' + target + " IS '" + stdNm + "';";
       } else if (dbmsTp.indexOf('mysql') >= 0 || dbmsTp.indexOf('maria') >= 0) {
-        var colType = (item.actualDataType || 'VARCHAR') + '(' + (item.actualDataLen || 255) + ')';
+        // 110 6.10-19d — 실제 타입 그대로 (길이 없는 타입은 괄호 없이, 소수 자릿수 포함)
+        var colType = item.actualDataType + (item.actualDataLen ? '(' + item.actualDataLen + (item.actualDataDecimalLen ? ',' + item.actualDataDecimalLen : '') + ')' : '');
         script = 'ALTER TABLE ' + table + ' MODIFY COLUMN ' + column + ' ' + colType + " COMMENT '" + stdNm + "';";
       } else if (dbmsTp.indexOf('mssql') >= 0 || dbmsTp.indexOf('sqlserver') >= 0) {
         script = "EXEC sp_addextendedproperty\n  @name = N'MS_Description',\n  @value = N'" + stdNm + "',\n  @level0type = N'SCHEMA', @level0name = N'" + (schema || 'dbo') + "',\n  @level1type = N'TABLE',  @level1name = N'" + table + "',\n  @level2type = N'COLUMN', @level2name = N'" + column + "';";
+      } else if (dbmsTp.indexOf('cubrid') >= 0) {
+        // 110 6.10-19b — CUBRID 는 표준화 스크립트(openAlterModal)와 같은 안내만 (PostgreSQL 문법을 내보내지 않음)
+        script = '-- CUBRID: COMMENT 는 ALTER 문에 직접 지원하지 않음. 카탈로그 별도 갱신 필요. (' + table + '.' + column + " = '" + stdNm + "')";
       } else {
         // PostgreSQL (기본)
         var pgTarget = schema ? schema + '.' + table + '.' + column : table + '.' + column;
@@ -1310,12 +1348,15 @@ export default {
       this.analyzeWords(item.attrNm);
       this.loadDomainCandidates(item.actualDataType, item.actualDataLen);
       this.loadCodeList();
+      this.loadTermRegDomainClsfItems();
     },
     /** 컬럼 영문명을 _ 로 분리하여 단어 존재 여부 일괄 확인 */
     analyzeWords(attrNm) {
       const parts = attrNm.split('_').filter(p => p);
-      this.termRegWords = parts.map(p => ({
+      // 110 6.10-17 — 마지막 단어는 사전이 형식단어를 강제하면 형식단어로 기본 체크
+      this.termRegWords = parts.map((p, i) => ({
         abrv: p, wordNm: '', wordEngNm: '', wordDesc: '', exists: false, wordId: null, domainClsfNm: '', saving: false,
+        wordClsfYn: (i === parts.length - 1 && this.termRegLastWordForced) ? 'Y' : 'N',
       }));
       // 일괄 조회 — 98번: 이 진단에 쓴 사전에서 (본문이 배열이라 사전은 쿼리로)
       axios.post(this.$APIURL.base + 'api/std/getWordsByEngAbrvNms', parts, {
@@ -1352,6 +1393,22 @@ export default {
         unregistered[0].wordNm = remaining.trim();
       }
     },
+    /** 110 6.10-17 — 형식단어 체크를 풀면 도메인 분류명도 비운다 (DSWord 와 같게) */
+    onTermRegWordClsfChange(w) {
+      if (w.wordClsfYn !== 'Y') w.domainClsfNm = '';
+    },
+    /** 110 6.10-17 — 사전 목록 (사전 속성 termLastWordClsfYn 확인용, 화면 진입 때 한 번) */
+    loadTermRegDictList() {
+      axios.post(this.$APIURL.base + 'api/dict/list', {}).then(res => {
+        this.termRegDictList = res.data || [];
+      });
+    },
+    /** 110 6.10-17 — 이 진단 사전의 도메인 분류명 목록 (형식단어 등록용) */
+    loadTermRegDomainClsfItems() {
+      axios.get(this.$APIURL.base + 'api/std/getDomainClassificationList', { params: { dictId: this.termRegDictId } }).then(res => {
+        this.termRegDomainClsfItems = (res.data || []).map(d => d.domainClsfNm);
+      });
+    },
     /** 타입+길이 기반으로 도메인 후보 조회 */
     loadDomainCandidates(dataType, dataLen) {
       axios.post(this.$APIURL.base + 'api/std/getDomainList', {
@@ -1386,6 +1443,8 @@ export default {
     registerWord(idx) {
       const w = this.termRegWords[idx];
       if (!w.wordNm) { this.$swal.fire({ icon: 'warning', title: '입력 필요', text: '한글명을 입력해주세요.', confirmButtonText: '확인' }); return; }
+      // 110 6.10-17 — 서버(createWord)와 같은 규칙
+      if (w.wordClsfYn === 'Y' && !w.domainClsfNm) { this.$swal.fire({ icon: 'warning', title: '입력 필요', text: '형식 단어는 도메인 분류명이 필수입니다.', confirmButtonText: '확인' }); return; }
       w.saving = true;
       this.$set(this.termRegWords, idx, { ...w });
       axios.post(this.$APIURL.base + 'api/std/createWord', {
@@ -1393,8 +1452,8 @@ export default {
         wordEngAbrvNm: w.abrv,
         wordEngNm: w.wordEngNm || '',
         wordDesc: w.wordNm,
-        wordClsfYn: 'N',
-        domainClsfNm: '',
+        wordClsfYn: w.wordClsfYn,
+        domainClsfNm: w.domainClsfNm,
         allophSynmLst: [],
         forbdnWordLst: [],
         commStndYn: 'N',
@@ -1583,7 +1642,8 @@ export default {
     /** 단일 항목에 대한 COMMENT 스크립트 생성 (문자열 반환) */
     generateCommentScript(item) {
       var dbmsTp = (this.selectedJobInfo.dbmsTp || '').toLowerCase();
-      var schema = item.objSchema || '';
+      // 110 6.10-18 — 상세 행에는 objSchema 가 없고 objOwner 만 온다
+      var schema = item.objOwner || '';
       var table = item.objNm;
       var column = item.attrNm;
       var stdNm = item.stdTermsNm || item.attrNmKr || '';
@@ -1593,10 +1653,14 @@ export default {
         var target = schema ? schema + '.' + table + '.' + column : table + '.' + column;
         return 'COMMENT ON COLUMN ' + target + " IS '" + stdNm + "';";
       } else if (dbmsTp.indexOf('mysql') >= 0 || dbmsTp.indexOf('maria') >= 0) {
-        var colType = (item.actualDataType || 'VARCHAR') + '(' + (item.actualDataLen || 255) + ')';
+        // 110 6.10-19d — 실제 타입 그대로 (길이 없는 타입은 괄호 없이, 소수 자릿수 포함)
+        var colType = item.actualDataType + (item.actualDataLen ? '(' + item.actualDataLen + (item.actualDataDecimalLen ? ',' + item.actualDataDecimalLen : '') + ')' : '');
         return 'ALTER TABLE ' + table + ' MODIFY COLUMN ' + column + ' ' + colType + " COMMENT '" + stdNm + "';";
       } else if (dbmsTp.indexOf('mssql') >= 0 || dbmsTp.indexOf('sqlserver') >= 0) {
         return "EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'" + stdNm + "', @level0type = N'SCHEMA', @level0name = N'" + (schema || 'dbo') + "', @level1type = N'TABLE', @level1name = N'" + table + "', @level2type = N'COLUMN', @level2name = N'" + column + "';";
+      } else if (dbmsTp.indexOf('cubrid') >= 0) {
+        // 110 6.10-19b — CUBRID 는 표준화 스크립트(openAlterModal)와 같은 안내만 (PostgreSQL 문법을 내보내지 않음)
+        return '-- CUBRID: COMMENT 는 ALTER 문에 직접 지원하지 않음. 카탈로그 별도 갱신 필요. (' + table + '.' + column + " = '" + stdNm + "')";
       } else {
         var pgTarget = schema ? schema + '.' + table + '.' + column : table + '.' + column;
         return 'COMMENT ON COLUMN ' + pgTarget + " IS '" + stdNm + "';";

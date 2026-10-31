@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,8 +28,8 @@ import lombok.extern.slf4j.Slf4j;
  * 추가/삭제/변경된 테이블 및 컬럼을 감지한다.</p>
  * <ul>
  *   <li>run(): 비동기 진단 실행 → 결과를 TB_STRUCT_DIAG_HISTORY/DETAIL에 저장</li>
- *   <li>compareSchema(): 동기 비교 → 결과를 직접 반환 (DB 미저장)</li>
  * </ul>
+ * <p>110 6.10-27a·27c — 메뉴 없는 스키마 비교 화면 전용 compareSchema() 와 쓰지 않던 수집건(clctId) 인자를 지웠다.</p>
  */
 @Slf4j
 @NoArgsConstructor
@@ -39,7 +38,6 @@ public class StructDiagService implements Runnable {
     private String diagId;
     private String dataModelId;
     private String userId;
-    private String clctId; // 선택적: null이면 최신 수집건 사용
 
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
@@ -47,11 +45,10 @@ public class StructDiagService implements Runnable {
     @Autowired
     private DataSourceUtils dataSourceUtils;
 
-    public StructDiagService(String diagId, String dataModelId, String userId, String clctId) {
+    public StructDiagService(String diagId, String dataModelId, String userId) {
         this.diagId = diagId;
         this.dataModelId = dataModelId;
         this.userId = userId;
-        this.clctId = clctId;
     }
 
     /**
@@ -102,11 +99,12 @@ public class StructDiagService implements Runnable {
             List<Map<String, Object>> offRows = sqlSessionTemplate.selectList(
                     "datamodel.selectStructDiagOffSet", dataModelId);
             // 110 5.8-25 — 소유자까지 구분 (다중 소유자 모델에서 한 소유자의 테이블을 끄면 다른 소유자의 같은 이름 테이블까지 빠졌다)
-            Set<String> offObjs = new HashSet<>();    // owner|tableNm
-            Set<String> offAttrs = new HashSet<>();   // owner|tableNm|columnNm
+            // 110 6.10-25a — 소유자는 대문자로 맞춘다 (모델 OBJ_OWNER 와 모델 스키마 목록의 대소문자가 다르면 제외가 안 먹었다)
+            Set<String> offObjs = new HashSet<>();    // OWNER|tableNm
+            Set<String> offAttrs = new HashSet<>();   // OWNER|tableNm|columnNm
             for (Map<String, Object> r : offRows) {
                 String kind = String.valueOf(r.get("kind"));
-                String tbl  = r.get("owner") + "|" + r.get("tableNm");
+                String tbl  = upperOwner(r.get("owner")) + "|" + r.get("tableNm");
                 if ("OBJ".equals(kind)) {
                     offObjs.add(tbl);
                 } else {
@@ -150,7 +148,7 @@ public class StructDiagService implements Runnable {
                     String tbl = rs.getString("objNm");
                     String col = rs.getString("attrNm");
                     // 79번 진단 제외: OFF 된 OBJ/ATTR 는 curr 에도 포함 안 함 → 결과에서 완전 제외
-                    String offKey = schema + "|" + tbl;
+                    String offKey = upperOwner(schema) + "|" + tbl;
                     if (offObjs.contains(offKey) || offAttrs.contains(offKey + "|" + col)) continue;
                     Map<String, Object> attr = new HashMap<>();
                     attr.put("owner", schema);
@@ -270,28 +268,26 @@ public class StructDiagService implements Runnable {
             List<Map<String, Object>> prevIndexes = sqlSessionTemplate.selectList(
                     "datamodel.selectDataModelIndexListByDmId", dataModelId);
             if (prevIndexes != null && !prevIndexes.isEmpty()) {
-                // 실제 DB 인덱스 읽기
+                // 실제 DB 인덱스 읽기 (110 6.10-24b — getQueryString 은 없는 이름이면 예외. 지원 DBMS 는 모두 GetIndexes 가 있다)
                 String indexQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetIndexes");
                 List<Map<String, Object>> currIndexRows = new ArrayList<>();
-                if (indexQuery != null) {
-                    for (String schema : schemas) {
-                        NamedParamStatement ipstmt = dbHandler.namedParamStatement(indexQuery);
-                        ipstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
-                        ResultSet irs = dbHandler.executeSql(ipstmt);
-                        while (irs.next()) {
-                            Map<String, Object> row = new HashMap<>();
-                            row.put("owner", schema);
-                            row.put("tableNm", irs.getString("tableNm"));
-                            row.put("indexNm", irs.getString("indexNm"));
-                            row.put("indexType", irs.getString("indexType"));
-                            row.put("uniqueness", irs.getString("uniqueness"));
-                            row.put("columnNm", irs.getString("columnNm"));
-                            row.put("columnPos", irs.getInt("columnPos"));
-                            row.put("sortOrder", irs.getString("sortOrder"));
-                            currIndexRows.add(row);
-                        }
-                        ipstmt.close(); irs.close();
+                for (String schema : schemas) {
+                    NamedParamStatement ipstmt = dbHandler.namedParamStatement(indexQuery);
+                    ipstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
+                    ResultSet irs = dbHandler.executeSql(ipstmt);
+                    while (irs.next()) {
+                        Map<String, Object> row = new HashMap<>();
+                        row.put("owner", schema);
+                        row.put("tableNm", irs.getString("tableNm"));
+                        row.put("indexNm", irs.getString("indexNm"));
+                        row.put("indexType", irs.getString("indexType"));
+                        row.put("uniqueness", irs.getString("uniqueness"));
+                        row.put("columnNm", irs.getString("columnNm"));
+                        row.put("columnPos", irs.getInt("columnPos"));
+                        row.put("sortOrder", irs.getString("sortOrder"));
+                        currIndexRows.add(row);
                     }
+                    ipstmt.close(); irs.close();
                 }
                 // 인덱스를 owner|tableNm|indexNm 키로 그룹핑 → columnsStr 생성
                 Map<String, Map<String, Object>> prevIdxMap = toIndexMap(prevIndexes);
@@ -347,13 +343,13 @@ public class StructDiagService implements Runnable {
             List<Map<String, Object>> prevConstraints = sqlSessionTemplate.selectList(
                     "datamodel.selectDataModelConstraintListByDmId", dataModelId);
             if (prevConstraints != null && !prevConstraints.isEmpty()) {
+                // 110 6.10-24b — getQueryString 은 없는 이름이면 예외. 지원 DBMS 는 모두 GetConstraints 가 있다
                 String constraintQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetConstraints");
                 List<Map<String, Object>> currConstraintRows = new ArrayList<>();
-                if (constraintQuery != null) {
-                    // 104번 WP4 보완 — 수집과 같은 방식으로 FK 참조 칸을 채운다 (Cubrid)
-                    java.sql.Connection fkConn = dbHandler.getConnection(true);
-                    FkRefFiller fkRefs = new FkRefFiller(fkConn);
-                    try {
+                // 104번 WP4 보완 — 수집과 같은 방식으로 FK 참조 칸을 채운다 (Cubrid)
+                java.sql.Connection fkConn = dbHandler.getConnection(true);
+                FkRefFiller fkRefs = new FkRefFiller(fkConn);
+                try {
                     for (String schema : schemas) {
                         NamedParamStatement cpstmt = dbHandler.namedParamStatement(constraintQuery);
                         cpstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
@@ -375,9 +371,8 @@ public class StructDiagService implements Runnable {
                         }
                         cpstmt.close(); crs.close();
                     }
-                    } finally {
-                        dbHandler.freeConnection(fkConn);
-                    }
+                } finally {
+                    dbHandler.freeConnection(fkConn);
                 }
                 Map<String, Map<String, Object>> prevCstMap = toConstraintMap(prevConstraints);
                 Map<String, Map<String, Object>> currCstMap = toConstraintMap(currConstraintRows);
@@ -521,8 +516,7 @@ public class StructDiagService implements Runnable {
         Map<String, Map<String, Object>> map = new LinkedHashMap<>();
         for (Map<String, Object> attr : attrs) {
             // owner 는 prev (메타 OBJ_OWNER) 와 curr (실제 DB schema 변수) 케이스가 다를 수 있어 통일
-            String owner = attr.get("owner") != null ? attr.get("owner").toString().toUpperCase() : "";
-            String key = owner + "|" + attr.get("tableNm") + "|" + attr.get("columnNm");
+            String key = upperOwner(attr.get("owner")) + "|" + attr.get("tableNm") + "|" + attr.get("columnNm");
             map.put(key, attr);
         }
         return map;
@@ -532,11 +526,10 @@ public class StructDiagService implements Runnable {
      * 인덱스 행들을 owner|tableNm|indexNm 키로 그룹핑하여 columnsStr 생성
      */
     private Map<String, Map<String, Object>> toIndexMap(List<Map<String, Object>> rows) {
-        // 1단계: owner|tableNm|indexNm 기준으로 행 그룹핑
+        // 1단계: OWNER|tableNm|indexNm 기준으로 행 그룹핑 (110 6.10-25a — 소유자는 컬럼 비교처럼 대문자로, 표시값은 그대로)
         Map<String, List<Map<String, Object>>> grouped = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {
-            String owner = row.get("owner") != null ? row.get("owner").toString()
-                    : (row.get("objOwner") != null ? row.get("objOwner").toString() : "");
+            String owner = upperOwner(row.get("owner") != null ? row.get("owner") : row.get("objOwner"));
             String key = owner + "|" + row.get("tableNm") + "|" + row.get("indexNm");
             if (!grouped.containsKey(key)) grouped.put(key, new ArrayList<>());
             grouped.get(key).add(row);
@@ -578,8 +571,8 @@ public class StructDiagService implements Runnable {
     private Map<String, Map<String, Object>> toConstraintMap(List<Map<String, Object>> rows) {
         Map<String, List<Map<String, Object>>> grouped = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {
-            String owner = row.get("owner") != null ? row.get("owner").toString()
-                    : (row.get("objOwner") != null ? row.get("objOwner").toString() : "");
+            // 110 6.10-25a — 소유자는 컬럼 비교처럼 대문자로 (표시값은 그대로)
+            String owner = upperOwner(row.get("owner") != null ? row.get("owner") : row.get("objOwner"));
             String key = owner + "|" + row.get("tableNm") + "|" + row.get("constraintNm");
             if (!grouped.containsKey(key)) grouped.put(key, new ArrayList<>());
             grouped.get(key).add(row);
@@ -620,266 +613,9 @@ public class StructDiagService implements Runnable {
         return result;
     }
 
-    /**
-     * 스키마 비교 (동기 실행, DB 미저장)
-     *
-     * <p>수집 스냅샷과 현재 DBMS 스키마를 테이블/컬럼 단위로 비교하여
-     * 결과를 직접 반환한다. 프론트에서 실시간 비교 화면에 사용.</p>
-     *
-     * @param dataModelId 데이터모델 ID
-     * @param clctId      수집 ID (null이면 최신 수집건 사용)
-     * @return { tables: 테이블별 비교 결과, summary: 요약 통계 }
-     */
-    public Map<String, Object> compareSchema(String dataModelId, String clctId) {
-        Map<String, Object> resultMap = new HashMap<>();
-        DBHandler dbHandler = null;
-
-        try {
-            // 1. 데이터모델 정보 조회
-            Map<String, Object> dmInfo = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataModelId);
-            if (dmInfo == null) {
-                log.error(">> compareSchema: 데이터모델 없음 dataModelId={}", dataModelId);
-                resultMap.put("error", "데이터모델을 찾을 수 없습니다.");
-                return resultMap;
-            }
-            String dsId = (String) dmInfo.get("dataModelDsId");
-
-            // 2. 현재 모델 OBJ/ATTR 로드 (DM_ID 기반)
-            //    79번 진단 제외: STRUCT_DIAG_TARGET_YN='Y' 만 prev 로 (cascade 포함)
-            List<Map<String, Object>> prevAttrs = sqlSessionTemplate.selectList(
-                    "datamodel.selectAttrListForStructDiagRaw", dataModelId);
-
-            // 79번 진단 제외: curr 도 OFF 된 OBJ/ATTR 빼야 결과에서 완전 사라짐
-            List<Map<String, Object>> offRows = sqlSessionTemplate.selectList(
-                    "datamodel.selectStructDiagOffSet", dataModelId);
-            Set<String> offObjs = new HashSet<>();    // owner|tableNm (110 5.8-25)
-            Set<String> offAttrs = new HashSet<>();   // owner|tableNm|columnNm
-            for (Map<String, Object> r : offRows) {
-                String kind = String.valueOf(r.get("kind"));
-                String tbl  = r.get("owner") + "|" + r.get("tableNm");
-                if ("OBJ".equals(kind)) offObjs.add(tbl);
-                else offAttrs.add(tbl + "|" + r.get("columnNm"));
-            }
-
-            // 3. 실제 DBMS 접속하여 현재 스키마 읽기
-            DataSourceVo dataSource = sqlSessionTemplate.selectOne("sysinfo.selectDataSourceById", dsId);
-            dbHandler = dataSourceUtils.getDBHandler(dataSource);
-
-            List<StdDataModelSchemaVo> schemaFilter = sqlSessionTemplate.selectList(
-                    "datamodel.selectDataModelSchemaList", dataModelId);
-            List<String> schemas = new ArrayList<>();
-            for (StdDataModelSchemaVo sf : schemaFilter) {
-                if ("Y".equals(sf.getUseYn())) schemas.add(sf.getSchemaNm());
-            }
-            if (schemas.isEmpty()) schemas.add(dbHandler.getSchema());
-
-            String attrQuery = dataSourceUtils.getQueryString(dataSource.getDbmsTp() + "GetAttrs");
-            List<Map<String, Object>> currAttrs = new ArrayList<>();
-
-            for (String schema : schemas) {
-                NamedParamStatement pstmt = dbHandler.namedParamStatement(attrQuery);
-                pstmt.setString("owner", com.ndata.module.StringUtils.upperCase(schema));
-                ResultSet rs = dbHandler.executeSql(pstmt);
-                while (rs.next()) {
-                    String tbl = rs.getString("objNm");
-                    String col = rs.getString("attrNm");
-                    String offKey = schema + "|" + tbl;
-                    if (offObjs.contains(offKey) || offAttrs.contains(offKey + "|" + col)) continue;
-                    Map<String, Object> attr = new HashMap<>();
-                    attr.put("owner", schema);
-                    attr.put("tableNm", tbl);
-                    attr.put("columnNm", col);
-                    attr.put("dataType", rs.getString("dataType"));
-                    attr.put("dataLen", rs.getLong("dataLen"));
-                    attr.put("nullableYn", rs.getString("nullableYn"));
-                    currAttrs.add(attr);
-                }
-                pstmt.close();
-                rs.close();
-            }
-
-            // 4. 테이블 단위로 그룹핑하여 비교
-            Map<String, List<Map<String, Object>>> prevByTable = groupByTable(prevAttrs);
-            Map<String, List<Map<String, Object>>> currByTable = groupByTable(currAttrs);
-
-            Set<String> allTables = new HashSet<>();
-            allTables.addAll(prevByTable.keySet());
-            allTables.addAll(currByTable.keySet());
-
-            List<Map<String, Object>> tables = new ArrayList<>();
-            int sameTables = 0, modifiedTables = 0, addedTables = 0, deletedTables = 0;
-
-            for (String tableNm : allTables) {
-                Map<String, Object> tableResult = new HashMap<>();
-                tableResult.put("tableNm", tableNm);
-
-                List<Map<String, Object>> prevCols = prevByTable.get(tableNm);
-                List<Map<String, Object>> currCols = currByTable.get(tableNm);
-
-                if (prevCols == null) {
-                    // 테이블 추가
-                    tableResult.put("status", "ADDED");
-                    tableResult.put("columns", buildColumnsForAdded(currCols));
-                    addedTables++;
-                } else if (currCols == null) {
-                    // 테이블 삭제
-                    tableResult.put("status", "DELETED");
-                    tableResult.put("columns", buildColumnsForDeleted(prevCols));
-                    deletedTables++;
-                } else {
-                    // 컬럼별 매칭
-                    List<Map<String, Object>> columnResults = compareColumns(prevCols, currCols);
-                    boolean hasChange = false;
-                    for (Map<String, Object> col : columnResults) {
-                        if (!"SAME".equals(col.get("status"))) {
-                            hasChange = true;
-                            break;
-                        }
-                    }
-                    tableResult.put("status", hasChange ? "MODIFIED" : "SAME");
-                    tableResult.put("columns", columnResults);
-                    if (hasChange) modifiedTables++;
-                    else sameTables++;
-                }
-                tables.add(tableResult);
-            }
-
-            // 정렬: 변경된 것 먼저
-            tables.sort(new java.util.Comparator<Map<String, Object>>() {
-                @Override
-                public int compare(Map<String, Object> a, Map<String, Object> b) {
-                    int oa = statusOrder((String) a.get("status"));
-                    int ob = statusOrder((String) b.get("status"));
-                    if (oa != ob) return oa - ob;
-                    return ((String) a.get("tableNm")).compareTo((String) b.get("tableNm"));
-                }
-                private int statusOrder(String s) {
-                    if ("DELETED".equals(s)) return 0;
-                    if ("MODIFIED".equals(s)) return 1;
-                    if ("ADDED".equals(s)) return 2;
-                    return 3;
-                }
-            });
-
-            resultMap.put("tables", tables);
-            Map<String, Object> summary = new HashMap<>();
-            summary.put("totalTables", allTables.size());
-            summary.put("sameTables", sameTables);
-            summary.put("modifiedTables", modifiedTables);
-            summary.put("addedTables", addedTables);
-            summary.put("deletedTables", deletedTables);
-            resultMap.put("summary", summary);
-
-        } catch (Exception e) {
-            log.error(">> compareSchema error", e);
-            resultMap.put("error", e.getMessage());
-        } finally {
-            if (dbHandler != null) {
-                try { dbHandler.close(); } catch (Exception ignore) {}
-            }
-        }
-        return resultMap;
-    }
-
-    private Map<String, List<Map<String, Object>>> groupByTable(List<Map<String, Object>> attrs) {
-        Map<String, List<Map<String, Object>>> map = new LinkedHashMap<>();
-        for (Map<String, Object> attr : attrs) {
-            String tableNm = (String) attr.get("tableNm");
-            if (!map.containsKey(tableNm)) {
-                map.put(tableNm, new ArrayList<>());
-            }
-            map.get(tableNm).add(attr);
-        }
-        return map;
-    }
-
-    private List<Map<String, Object>> buildColumnsForAdded(List<Map<String, Object>> currCols) {
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map<String, Object> col : currCols) {
-            Map<String, Object> c = new HashMap<>();
-            c.put("columnNm", col.get("columnNm"));
-            c.put("status", "ADDED");
-            c.put("snapshotType", null);
-            c.put("snapshotLen", null);
-            c.put("snapshotNullable", null);
-            c.put("currentType", col.get("dataType"));
-            c.put("currentLen", col.get("dataLen"));
-            c.put("currentNullable", col.get("nullableYn"));
-            result.add(c);
-        }
-        return result;
-    }
-
-    private List<Map<String, Object>> buildColumnsForDeleted(List<Map<String, Object>> prevCols) {
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map<String, Object> col : prevCols) {
-            Map<String, Object> c = new HashMap<>();
-            c.put("columnNm", col.get("columnNm"));
-            c.put("status", "DELETED");
-            c.put("snapshotType", col.get("dataType"));
-            c.put("snapshotLen", col.get("dataLen"));
-            c.put("snapshotNullable", col.get("nullableYn"));
-            c.put("currentType", null);
-            c.put("currentLen", null);
-            c.put("currentNullable", null);
-            result.add(c);
-        }
-        return result;
-    }
-
-    private List<Map<String, Object>> compareColumns(List<Map<String, Object>> prevCols, List<Map<String, Object>> currCols) {
-        Map<String, Map<String, Object>> prevMap = new LinkedHashMap<>();
-        for (Map<String, Object> col : prevCols) {
-            prevMap.put((String) col.get("columnNm"), col);
-        }
-        Map<String, Map<String, Object>> currMap = new LinkedHashMap<>();
-        for (Map<String, Object> col : currCols) {
-            currMap.put((String) col.get("columnNm"), col);
-        }
-
-        Set<String> allCols = new LinkedHashSet<>();
-        allCols.addAll(prevMap.keySet());
-        allCols.addAll(currMap.keySet());
-
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (String colNm : allCols) {
-            Map<String, Object> prev = prevMap.get(colNm);
-            Map<String, Object> curr = currMap.get(colNm);
-            Map<String, Object> c = new HashMap<>();
-            c.put("columnNm", colNm);
-
-            if (prev == null) {
-                c.put("status", "ADDED");
-                c.put("snapshotType", null);
-                c.put("snapshotLen", null);
-                c.put("snapshotNullable", null);
-                c.put("currentType", curr.get("dataType"));
-                c.put("currentLen", curr.get("dataLen"));
-                c.put("currentNullable", curr.get("nullableYn"));
-            } else if (curr == null) {
-                c.put("status", "DELETED");
-                c.put("snapshotType", prev.get("dataType"));
-                c.put("snapshotLen", prev.get("dataLen"));
-                c.put("snapshotNullable", prev.get("nullableYn"));
-                c.put("currentType", null);
-                c.put("currentLen", null);
-                c.put("currentNullable", null);
-            } else {
-                boolean typeChanged = !nullSafeEquals(prev.get("dataType"), curr.get("dataType"));
-                boolean lenChanged = !nullSafeEquals(prev.get("dataLen"), curr.get("dataLen"));
-                boolean nullableChanged = !nullSafeEquals(prev.get("nullableYn"), curr.get("nullableYn"));
-
-                c.put("status", (typeChanged || lenChanged || nullableChanged) ? "MODIFIED" : "SAME");
-                c.put("snapshotType", prev.get("dataType"));
-                c.put("snapshotLen", prev.get("dataLen"));
-                c.put("snapshotNullable", prev.get("nullableYn"));
-                c.put("currentType", curr.get("dataType"));
-                c.put("currentLen", curr.get("dataLen"));
-                c.put("currentNullable", curr.get("nullableYn"));
-            }
-            result.add(c);
-        }
-        return result;
+    /** 비교 키의 소유자 — 모델(OBJ_OWNER)과 실 DB 스키마 이름의 대소문자가 다를 수 있어 대문자로 맞춘다 */
+    private static String upperOwner(Object owner) {
+        return owner == null ? "" : owner.toString().toUpperCase();
     }
 
     private boolean nullSafeEquals(Object a, Object b) {

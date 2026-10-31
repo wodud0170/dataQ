@@ -81,8 +81,7 @@
           <!-- Direct text input -->
           <v-textarea v-model="inputText" outlined auto-grow rows="6"
             placeholder="한글명을 줄바꿈으로 구분하여 입력하세요, 공백은 무시됩니다"
-            label="직접 입력 (줄바꿈 구분)" color="ndColor"
-            @paste="onPaste">
+            label="직접 입력 (줄바꿈 구분)" color="ndColor">
           </v-textarea>
 
           <div class="d-flex justify-space-between align-center mt-2">
@@ -164,8 +163,6 @@
             :headers="visibleHeaders"
             :items="filteredResults"
             item-key="inputNm"
-            show-select
-            v-model="selectedItems"
             hide-default-footer
             :items-per-page="-1"
             class="px-2"
@@ -451,7 +448,6 @@ export default {
 
       // Step 3
       analysisResults: [],
-      selectedItems: [],
       filterStatus: 'all',
 
       // Edit dialog
@@ -655,9 +651,6 @@ export default {
       this.fileName = file.name;
       this.readExcelFile(file);
     },
-    onPaste: function() {
-      // textarea handles paste naturally, parsedNames computed will update
-    },
     readExcelFile: function(file) {
       var self = this;
       if (file.name.endsWith('.csv')) {
@@ -683,6 +676,14 @@ export default {
         }).then(function(res) {
           if (res.data && res.data.length > 0) {
             self.inputText = res.data.join('\n');
+          } else {
+            // 110번 7.5-11 — 읽었는데 컬럼명이 없으면 아무 일도 없던 것처럼 보였다
+            self.$swal.fire({
+              title: '엑셀 파싱 실패',
+              text: '첫 번째 시트 A열에서 컬럼명을 찾지 못했습니다.',
+              icon: 'warning',
+              confirmButtonText: '확인'
+            });
           }
         }).catch(function() {
           self.$swal.fire({
@@ -700,7 +701,6 @@ export default {
       self.isAnalyzing = true;
       self.currentStep = 2;
       self.analysisResults = [];
-      self.selectedItems = [];
 
       axios.post(self.$APIURL.base + 'api/std/analyzeTermsBatch', {
         termNames: self.parsedNames,
@@ -1102,11 +1102,13 @@ export default {
     },
     recalcItemStatus: function(item) {
       if (!item || !item.words) return;
+      // 110번 7.5-10 — 서버 judgeStatus 와 같게 MATCHED 가 아닌 단어(NEW·UNRECOGNIZED)는 모두 미등록으로 센다.
+      // 예전에는 NEW 만 세어 MATCHED+UNRECOGNIZED 가 자동완성(AUTO)으로 보였다
       var hasMatched = false;
       var hasNew = false;
       for (var i = 0; i < item.words.length; i++) {
         if (item.words[i].status === 'MATCHED') hasMatched = true;
-        if (item.words[i].status === 'NEW') hasNew = true;
+        else hasNew = true;
       }
       if (!hasMatched) {
         item.status = 'FAILED';
@@ -1121,7 +1123,7 @@ export default {
         var w = item.words[j];
         if (w.status === 'MATCHED' && w.selected) {
           parts.push(w.selected.wordEngAbrvNm);
-        } else if (w.status === 'NEW' && w.newWord) {
+        } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w.newWord) {
           parts.push(w.newWord.wordEngAbrvNm);
         }
       }
@@ -1177,7 +1179,8 @@ export default {
       }
 
       // 형식단어 검증: 등록할 사전이 강제할 때만 마지막 단어가 형식단어(WORD_CLSF_YN='Y')인지 서버에서 확인
-      if (this.lastWordClsfRequired && words.length >= 2) {
+      // 110번 7.5-5b — 1단어 용어도 마지막(유일) 단어를 본다 (서버 registerTermsBatch 와 같은 기준). 예전에는 2단어 이상만 봐 등록 때 서버에서 실패했다
+      if (this.lastWordClsfRequired) {
         var lastW = words[words.length - 1];
         var lastWordId = null;
         if (lastW.status === 'MATCHED' && lastW.selected) {
@@ -1250,24 +1253,14 @@ export default {
      * 한 row 의 등록 페이로드 빌드 (registerAll/registerOne 공용)
      */
     buildItemPayload: function(r) {
+      // 110번 7.5-6 — 등록 가능 행(isRowRegisterable)은 모든 단어가 MATCHED 라 신규 단어(newWords)는 싣지 않는다
+      // ([단어등록]으로 등록한 단어도 registerSingleWord 가 MATCHED 로 바꾼다)
       var wordIds = [];
-      var newWords = [];
       if (r.words) {
         for (var j = 0; j < r.words.length; j++) {
           var w = r.words[j];
           if (w.status === 'MATCHED' && w.selected) {
             wordIds.push({ wordId: w.selected.wordId, wordOrd: j });
-          } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w._registered && w.selected) {
-            wordIds.push({ wordId: w.selected.wordId, wordOrd: j });
-          } else if ((w.status === 'NEW' || w.status === 'UNRECOGNIZED') && w.newWord) {
-            wordIds.push({ wordId: null, wordOrd: j, newWordIndex: newWords.length });
-            newWords.push({
-              wordNm: w.wordNm,
-              wordEngAbrvNm: w.newWord.wordEngAbrvNm,
-              wordEngNm: w.newWord.wordEngNm,
-              wordDesc: w.wordNm,
-              domainClsfNm: w.newWord.domainClsfNm || ''
-            });
           }
         }
       }
@@ -1277,7 +1270,6 @@ export default {
         termsDesc: r.inputNm,
         domainNm: r.recommendedDomainNm || '',
         words: wordIds,
-        newWords: newWords,
         // 88번 §16 — 변환 이력용: 사용자가 처음 입력한 원본 한글 (단어 교체 전)
         originalInput: r._originalInput || r.inputNm
       };
@@ -1369,15 +1361,6 @@ export default {
         }).finally(function() {
           self.$set(item, '_registering', false);
         });
-    },
-    resetAll: function() {
-      this.currentStep = 1;
-      this.inputText = '';
-      this.fileName = '';
-      this.analysisResults = [];
-      this.selectedItems = [];
-      this.filterStatus = 'all';
-      this.registerResult = null;
     },
   },
   mounted: function() {

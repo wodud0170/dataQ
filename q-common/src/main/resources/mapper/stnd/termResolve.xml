@@ -61,11 +61,14 @@
 		<if test="resolvedEnNm != null and resolvedEnNm != ''">
 		   AND h.resolved_en_nm ILIKE '%' || #{resolvedEnNm} || '%'
 		</if>
+		<!-- 110 7.5-13c — 화면 isChanged 와 같은 기준: 앞뒤 공백을 뺀 B 가 비지 않고 A 와 다르면 변경, 아니면 유지 -->
 		<if test='"Y".equals(nmChangedYn)'>
-		   AND COALESCE(h.resolved_kr_nm,'') != COALESCE(h.input_kr_nm,'')
+		   AND TRIM(COALESCE(h.resolved_kr_nm,'')) &lt;&gt; ''
+		   AND TRIM(COALESCE(h.resolved_kr_nm,'')) &lt;&gt; TRIM(COALESCE(h.input_kr_nm,''))
 		</if>
 		<if test='"N".equals(nmChangedYn)'>
-		   AND COALESCE(h.resolved_kr_nm,'') = COALESCE(h.input_kr_nm,'')
+		   AND (TRIM(COALESCE(h.resolved_kr_nm,'')) = ''
+		        OR TRIM(COALESCE(h.resolved_kr_nm,'')) = TRIM(COALESCE(h.input_kr_nm,'')))
 		</if>
 		<if test="fromDt != null and fromDt != ''">
 		   AND h.change_dt &gt;= #{fromDt}

@@ -24,7 +24,7 @@
             <v-icon small left>mdi-undo</v-icon>선택 롤백
           </v-btn>
         </div>
-        <v-data-table v-if="drafts.length > 0" :headers="headers" :items="drafts"
+        <v-data-table v-if="drafts.length > 0" :headers="headersDraft" :items="drafts"
           item-key="changeSeq" show-select v-model="checkedDrafts"
           :items-per-page="20" hide-default-footer dense>
           <template #item.changeType="{ item }">
@@ -92,6 +92,11 @@ export default {
     rejected: [],
     checkedDrafts: [],
     // 114 권고 채택(10-28) — 신청 시각은 신청(SUBMITTED)한 시각 SUBMIT_DT (예전에는 저장 시각 CHANGE_DT 였다). 신청 전(DRAFT)은 비어 있다
+    // 114 권고 채택(10-31) — 그래서 DRAFT 표는 신청 시각 열을 감춘다 (새 라벨을 만들지 않음)
+    headersDraft: [
+      { text: '유형', value: 'changeType', width: '140px' },
+      { text: '대상', value: 'path' },
+    ],
     headers: [
       { text: '유형', value: 'changeType', width: '140px' },
       { text: '대상', value: 'path' },

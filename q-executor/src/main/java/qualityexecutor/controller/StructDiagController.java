@@ -10,9 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-
 import lombok.extern.slf4j.Slf4j;
 import qualityexecutor.service.std.StructDiagService;
 import reactor.core.publisher.Mono;
@@ -22,50 +19,20 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/api/structDiag")
 public class StructDiagController extends DataControllerBase {
 
-    @Autowired
-    private ApplicationContext appContext;
-
-    /** 구조 진단 실행 (백그라운드) */
+    /** 구조 진단 실행 (백그라운드) — 110 6.10-27c 수집건(clctId) 지정 없음: 모델의 지금 컬럼과 실 DB 를 비교한다 */
     @PostMapping("/run")
     public Mono<Response> runStructDiag(@RequestBody Map<String, String> params) {
         Response result = new Response();
         String diagId       = params.get("diagId");
         String dataModelId  = params.get("dataModelId");
         String userId       = params.get("userId");
-        String clctId       = params.get("clctId"); // 선택적
 
-        log.info(">> runStructDiag: diagId={}, dataModelId={}, clctId={}", diagId, dataModelId, clctId);
+        log.info(">> runStructDiag: diagId={}, dataModelId={}", diagId, dataModelId);
         try {
-            startService(new StructDiagService(diagId, dataModelId, userId, clctId));
+            startService(new StructDiagService(diagId, dataModelId, userId));
             result.setResultInfo(RestResult.CODE_200);
         } catch (Exception e) {
             log.error(">> runStructDiag failed", e);
-            result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
-        }
-        return Mono.just(result);
-    }
-
-    /** 스키마 비교 (동기 실행, 결과 직접 반환) */
-    @PostMapping("/compareSchema")
-    public Mono<Response> compareSchema(@RequestBody Map<String, String> params) {
-        Response result = new Response();
-        String dataModelId = params.get("dataModelId");
-        String clctId      = params.get("clctId");
-
-        log.info(">> compareSchema: dataModelId={}, clctId={}", dataModelId, clctId);
-        try {
-            StructDiagService svc = new StructDiagService(null, dataModelId, null, clctId);
-            // autowire만 하고 run()은 호출하지 않음 (compareSchema만 사용)
-            appContext.getAutowireCapableBeanFactory().autowireBean(svc);
-            Map<String, Object> compareResult = svc.compareSchema(dataModelId, clctId);
-            if (compareResult.containsKey("error")) {
-                result.setResultInfo(RestResult.CODE_500.getCode(), (String) compareResult.get("error"));
-            } else {
-                result.setResultInfo(RestResult.CODE_200);
-                result.setContents(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(compareResult));
-            }
-        } catch (Exception e) {
-            log.error(">> compareSchema failed", e);
             result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
         }
         return Mono.just(result);

@@ -1,6 +1,7 @@
 <template>
   <v-main>
-    <v-sheet class="pa-3" style="display:flex; flex-direction:column; height:100%;">
+    <!-- 110 6.10-33 — 30건씩 페이지가 나뉘면 목록이 화면보다 길어진다. height 로 고정하면 흰 바탕이 목록 중간에서 끊겨 min-height 로 -->
+    <v-sheet class="pa-3" style="display:flex; flex-direction:column; min-height:100%;">
       <!-- 상단: 필터 + 등록 버튼 -->
       <v-sheet class="d-flex align-center pa-2" style="border-bottom:1px solid #E8EAF6; gap:6px;">
         <v-chip small class="mr-1" :color="filterUseYn === '' ? 'primary' : ''"
@@ -18,9 +19,9 @@
         </v-btn>
       </v-sheet>
 
-      <!-- 목록 -->
+      <!-- 목록 (110 6.10-33 — 30건 넘으면 페이지 이동) -->
       <v-data-table :headers="headers" :items="filteredItems" dense hide-default-footer
-        :items-per-page="30" class="elevation-0" :loading="loading">
+        :page.sync="page" :items-per-page="itemsPerPage" class="elevation-0" :loading="loading">
         <template v-slot:item.useYn="{ item }">
           <v-switch v-model="item._useYnBool" inset hide-details dense
             color="green" class="mt-0 ml-2" :ripple="false" :disabled="!canManageSchedule"
@@ -80,6 +81,14 @@
           <span class="grey--text">스케줄이 없습니다.</span>
         </template>
       </v-data-table>
+      <div id="schPager" class="d-flex align-center px-4 pt-2 pb-2">
+        <v-spacer />
+        <v-pagination v-if="pageCount > 1" v-model="page" :length="pageCount" prev-icon="mdi-menu-left" next-icon="mdi-menu-right"
+          color="ndColor" :total-visible="10" />
+        <v-spacer />
+        <v-select v-model="itemsPerPage" :items="[10,20,30,50]" dense outlined hide-details
+          style="max-width:100px; font-size:.75rem;" suffix="건" />
+      </div>
     </v-sheet>
 
     <!-- 등록/수정 다이얼로그 -->
@@ -100,6 +109,16 @@
                 :label="batchType ? '데이터모델 (선택)' : '데이터모델 *'"
                 item-text="dataModelNm" item-value="dataModelId" dense outlined hide-details clearable
                 placeholder="모델 검색"></v-autocomplete>
+            </v-col>
+            <!-- 110 6.10-2 — 표준화 진단에 쓸 표준사전. 비우면 실행 때 모델의 사전 (표준화 진단 화면과 같다) -->
+            <v-col v-if="stdType" cols="6">
+              <v-select id="schDict" v-model="form.dictId" :items="dictList"
+                label="표준사전" placeholder="모델 기본" persistent-placeholder
+                item-text="dictNm" item-value="dictId" dense outlined hide-details clearable
+                no-data-text="사전이 없습니다."></v-select>
+              <div v-if="dictClearedNm && !form.dictId" class="sch-batch-hint mt-1">
+                사용 중지된 표준사전({{ dictClearedNm }})이라 비웠습니다. 저장하면 모델 기본 사전으로 진단합니다.
+              </div>
             </v-col>
             <!-- 104번 WP9-67 -->
             <v-col v-if="batchType" cols="12" class="sch-batch-hint">
@@ -169,7 +188,11 @@ export default {
       saving: false,
       items: [],
       dataModels: [],
+      dictList: [],        // 110 6.10-2
+      dictClearedNm: '',   // 110 6.10-2 — 수정 창을 열 때 사용 중지돼 비운 사전 이름
       filterUseYn: '',     // '', 'Y', 'N'
+      page: 1,             // 110 6.10-33
+      itemsPerPage: 30,
       headers: [
         { text: '스케줄명',    value: 'scheduleNm', sortable: false },
         { text: '진단 유형',   value: 'diagType',   sortable: false, align: 'center', width: 90 },
@@ -209,15 +232,26 @@ export default {
   computed: {
     // 104번 WP9-67 — 모델을 비울 수 있는 유형
     batchType() { return this.form.diagType === 'COMPLIANCE_SNAPSHOT' || this.form.diagType === 'UNUSED_STD'; },
+    // 110 6.10-2 — 표준사전을 쓰는 유형 (표준화 진단이 들어가는 것)
+    stdType() { return this.form.diagType === 'STANDARD' || this.form.diagType === 'BOTH'; },
     // 104번 WP2 — 스케줄 관리 권한(관리자 또는 SCHEDULE_ADMIN)이면 등록·수정·삭제·실행
     canManageSchedule() { return this.$can('SCHEDULE_ADMIN'); },
     filteredItems() {
       if (!this.filterUseYn) return this.items;
       return this.items.filter(s => s.useYn === this.filterUseYn);
     },
+    pageCount() {
+      return Math.ceil(this.filteredItems.length / this.itemsPerPage);
+    },
+  },
+  watch: {
+    filterUseYn() { this.page = 1; },
+    // 삭제·건수 변경으로 페이지가 줄면 마지막 페이지로
+    pageCount(n) { if (this.page > n) this.page = Math.max(1, n); },
   },
   mounted() {
     this.loadModels();
+    this.loadDictList();
     this.loadList();
   },
   methods: {
@@ -227,6 +261,7 @@ export default {
         scheduleNm: '',
         diagType: 'STANDARD',
         dataModelId: null,
+        dictId: null,
         scheduleType: 'SIMPLE',
         repeatCycle: 'DAILY',
         repeatTime: '02:00',
@@ -239,6 +274,10 @@ export default {
     loadModels() {
       axios.post(this.$APIURL.base + 'api/dm/getDataModelStatsList', {})
         .then(res => { this.dataModels = res.data || []; });
+    },
+    loadDictList() {
+      axios.post(this.$APIURL.base + 'api/dict/list', {})
+        .then(res => { this.dictList = res.data || []; });
     },
     loadList() {
       this.loading = true;
@@ -267,16 +306,22 @@ export default {
     openAddDialog() {
       this.editMode = 'add';
       this.form = this.emptyForm();
+      this.dictClearedNm = '';
       this.cronNextRuns = [];
       this.editDialog = true;
     },
     openEditDialog(item) {
       this.editMode = 'edit';
+      // 110 6.10-2 — 저장된 사전이 사용 중지됐으면(사용 중 사전 목록에 없음) 비운다.
+      // 그대로 두면 칸은 '모델 기본' 으로 보이는데 저장하면 그 사전이 다시 저장된다 (서버는 사용 중이 아닌 사전을 거부)
+      const dictInUse = !item.dictId || this.dictList.some(d => d.dictId === item.dictId);
+      this.dictClearedNm = dictInUse ? '' : (item.dictNm || item.dictId);
       this.form = {
         scheduleId: item.scheduleId,
         scheduleNm: item.scheduleNm,
         diagType: item.diagType,
         dataModelId: item.dataModelId,
+        dictId: dictInUse ? (item.dictId || null) : null,
         scheduleType: item.scheduleType || 'SIMPLE',
         repeatCycle: item.repeatCycle || 'DAILY',
         repeatTime: item.repeatTime || '02:00',
@@ -293,8 +338,16 @@ export default {
       const f = this.form;
       if (!f.scheduleNm) { this.$swal.fire({ title: '스케줄명 필수', icon: 'warning' }); return; }
       if (!f.dataModelId && !this.batchType) { this.$swal.fire({ title: '데이터모델 선택 필요', icon: 'warning' }); return; }
-      if (f.scheduleType === 'SIMPLE' && !/^[0-2]\d:[0-5]\d$/.test(f.repeatTime)) {
+      // 110 6.10-11b — 00~23시, 요일 1~7, 일자 1~28 (서버 검사와 같다)
+      if (f.scheduleType === 'SIMPLE' && !/^([01]\d|2[0-3]):[0-5]\d$/.test(f.repeatTime)) {
         this.$swal.fire({ title: '실행 시각 형식 오류 (HH:mm)', icon: 'warning' }); return;
+      }
+      if (f.scheduleType === 'SIMPLE' && f.repeatCycle === 'WEEKLY' && !(f.repeatDayOfWeek >= 1 && f.repeatDayOfWeek <= 7)) {
+        this.$swal.fire({ title: '요일은 1(월)~7(일) 이어야 합니다.', icon: 'warning' }); return;
+      }
+      if (f.scheduleType === 'SIMPLE' && f.repeatCycle === 'MONTHLY'
+          && !(Number.isInteger(f.repeatDayOfMonth) && f.repeatDayOfMonth >= 1 && f.repeatDayOfMonth <= 28)) {
+        this.$swal.fire({ title: '일자는 1~28 이어야 합니다.', icon: 'warning' }); return;
       }
       if (f.scheduleType === 'CRON' && !f.cronExpr) {
         this.$swal.fire({ title: 'Cron 표현식 필수', icon: 'warning' }); return;

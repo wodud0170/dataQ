@@ -59,6 +59,14 @@
 		AND STATUS IN ('READY', 'RUNNING')
 	</select>
 
+	<!-- 110 6.10-6 — executor 기동 때: READY/RUNNING 으로 남은 구조 진단은 실행하던 executor 가 죽은 것 → ERROR.
+	     그대로 두면 같은 모델 구조 진단이 selectActiveStructDiagCount 로 늘 409 였다 (DiagSchedulerRunner.cleanupOrphanDiags) -->
+	<update id="updateOrphanStructDiags">
+		UPDATE TB_STRUCT_DIAG_HISTORY
+		   SET STATUS = 'ERROR'
+		 WHERE STATUS IN ('READY', 'RUNNING')
+	</update>
+
 	<!-- 진단 이력 저장 (READY 상태로 초기 생성) -->
 	<insert id="insertStructDiagHistory" parameterType="java.util.HashMap">
 		INSERT INTO TB_STRUCT_DIAG_HISTORY (
@@ -72,6 +80,7 @@
 	<update id="updateStructDiagResult" parameterType="java.util.HashMap">
 		UPDATE TB_STRUCT_DIAG_HISTORY SET
 			DS_ID = #{dsId},
+			SCHEMA_NM = #{schemaNm},   <!-- 110 6.10-26 — 진단한 스키마 목록 (쉼표로 이음) -->
 			PREV_COLLECT_DT = TO_TIMESTAMP(#{prevCollectDt}, 'YYYYMMDDHH24MISS'),
 			TOTAL_TABLES = #{totalTables},
 			TOTAL_COLUMNS = #{totalColumns},
@@ -206,24 +215,6 @@
 		WHERE h.DATA_MODEL_ID = #{dataModelId}
 		  AND h.STATUS = 'DONE'   <!-- 110번 2.4-8-b — 실행 중·실패한 진단은 빼고 최신 완료 1건 (DA 목표 달성도와 같은 기준) -->
 		ORDER BY h.DIAG_DT DESC
-		LIMIT 1
-	</select>
-
-	<!-- 스키마별 최신 구조 진단 상태 조회 (뱃지용) -->
-	<select id="selectLatestStructDiagStatus" parameterType="java.util.HashMap" resultMap="structDiagHistoryMap">
-		SELECT DIAG_ID, DS_ID, DATA_MODEL_ID, SCHEMA_NM, to_char(DIAG_DT, 'YYYY-MM-DD HH24:MI:SS') AS DIAG_DT, STATUS,
-			ADDED_TABLES + ADDED_COLUMNS + MODIFIED_COLUMNS + DELETED_TABLES + DELETED_COLUMNS
-				+ ADDED_INDEXES + MODIFIED_INDEXES + DELETED_INDEXES
-				+ ADDED_CONSTRAINTS + MODIFIED_CONSTRAINTS + DELETED_CONSTRAINTS AS TOTAL_CHANGES,
-			TOTAL_TABLES, TOTAL_COLUMNS,
-			ADDED_TABLES, ADDED_COLUMNS, MODIFIED_COLUMNS, DELETED_TABLES, DELETED_COLUMNS,
-			CRET_USER_ID
-		FROM TB_STRUCT_DIAG_HISTORY
-		WHERE DS_ID = #{dsId}
-		<if test="schemaNm != null and schemaNm != ''">
-			AND SCHEMA_NM = #{schemaNm}
-		</if>
-		ORDER BY DIAG_DT DESC
 		LIMIT 1
 	</select>
 

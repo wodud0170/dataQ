@@ -4,7 +4,6 @@ Phase 1 — 진단 스케줄러 API 스모크 테스트 (65번 문서 §10 작�
 검증 범위 (Phase 1):
   - POST /api/diag/schedule/create   (관리자)
   - GET  /api/diag/schedule/list
-  - GET  /api/diag/schedule/{id}    (경로는 ?scheduleId=로 호출)
   - POST /api/diag/schedule/update
   - POST /api/diag/schedule/toggle
   - POST /api/diag/schedule/cronPreview
@@ -78,6 +77,13 @@ def get_any_data_model(session):
     return arr[0]
 
 
+def get_schedule(session, schedule_id):
+    """110 6.10-29 — /{scheduleId} 를 지워 스케줄 목록에서 scheduleId 행을 찾는다"""
+    r = session.get(BASE + "/api/diag/schedule/list", timeout=10)
+    r.raise_for_status()
+    return next((s for s in (r.json() or []) if s.get("scheduleId") == schedule_id), {})
+
+
 state = {}
 
 
@@ -142,14 +148,11 @@ def main():
         assert mine.get("dataModelNm") == state["dmNm"], "joined dataModelNm 누락"
     if not step("6. list 에 신규 스케줄 포함 + join 필드", _list_contains): return
 
-    # 7. detail
+    # 7. 단건 (110 6.10-29 — /{scheduleId} 를 지워 목록의 scheduleId 행)
     def _detail():
-        r = admin.get(BASE + f"/api/diag/schedule/{state['scheduleId']}",
-                      params={"scheduleId": state["scheduleId"]}, timeout=10)
-        r.raise_for_status()
-        s = r.json()
+        s = get_schedule(admin, state["scheduleId"])
         assert s.get("scheduleId") == state["scheduleId"]
-    if not step("7. detail 조회", _detail): return
+    if not step("7. 단건 조회 (목록의 scheduleId 행)", _detail): return
 
     # 8. toggle OFF
     def _toggle_off():
@@ -158,9 +161,7 @@ def main():
         r.raise_for_status()
         assert r.json().get("resultCode") == 200
         # 확인
-        r2 = admin.get(BASE + f"/api/diag/schedule/{state['scheduleId']}",
-                       params={"scheduleId": state["scheduleId"]}, timeout=10)
-        assert r2.json().get("useYn") == "N"
+        assert get_schedule(admin, state["scheduleId"]).get("useYn") == "N"
     if not step("8. toggle useYn=N", _toggle_off): return
 
     # 9. update scheduleNm
@@ -175,10 +176,9 @@ def main():
         r.raise_for_status()
         b = r.json()
         assert b.get("resultCode") == 200, f"update failed: {b}"
-        r2 = admin.get(BASE + f"/api/diag/schedule/{state['scheduleId']}",
-                       params={"scheduleId": state["scheduleId"]}, timeout=10)
-        assert r2.json().get("scheduleNm") == new_nm
-        assert r2.json().get("repeatTime") == "03:00"
+        s2 = get_schedule(admin, state["scheduleId"])
+        assert s2.get("scheduleNm") == new_nm
+        assert s2.get("repeatTime") == "03:00"
         state["scheduleNm"] = new_nm
     if not step("9. update scheduleNm + repeatTime", _update): return
 

@@ -3,9 +3,13 @@ package qualityexecutor.service.std;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.annotation.PostConstruct;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +28,8 @@ import lombok.extern.slf4j.Slf4j;
  * <ol>
  *   <li><b>evaluateAndRun()</b> 매 1분: 활성 스케줄 평가 → 트리거 시점 도래한 것만 launch</li>
  *   <li><b>pollCompletion()</b> 매 30초: RUNNING LOG 들의 실제 DiagJob/StructDiagHistory 상태를 조회해 DONE/ERROR 로 마감</li>
- *   <li><b>expireStale()</b> 매 5분: 60분 이상 RUNNING 고착된 LOG 를 타임아웃 처리</li>
+ *   <li><b>expireStale()</b> 매 5분: 60분 이상 RUNNING 고착된 LOG 를 타임아웃 처리 (기저 작업이 아직 진행 중이면 제외)</li>
+ *   <li><b>cleanupOrphanDiags()</b> 기동 때 1회: 죽은 executor 가 남긴 READY/RUNNING 기저 작업을 ERROR 로</li>
  * </ol>
  */
 @Slf4j
@@ -38,6 +43,30 @@ public class DiagSchedulerRunner {
 
     @Autowired
     private ScheduledDiagLauncher launcher;
+
+    // ============ 기동 때 정리 ============
+    /**
+     * 110 6.10-6 — 진단 Job·구조 진단·예약 범정부 메타 검증·배치는 이 executor 의 스레드에서만 돈다.
+     * 기동 때 READY/RUNNING 으로 남은 건 실행하던 executor 가 죽은 것이라 ERROR 로 바꾼다.
+     * 그대로 두면 같은 모델 진단이 진행 중 건수로 늘 409 였고, 연결된 스케줄 LOG 는 타임아웃 마감에서도 빠진다.
+     * 웹 포트가 열리기 전이라 새 요청과 겹치지 않는다 (그 사이 center 가 만든 READY 는 호출 실패로 center 가 이미 ERROR 로 바꾼다).
+     * 연결된 스케줄 LOG 는 pollCompletion 이 기저 ERROR 를 보고 마감한다 (QualLockService.init 의 cleanupStale 와 같은 방식).
+     */
+    @PostConstruct
+    public void cleanupOrphanDiags() {
+        try {
+            int jobs    = sql.update("diag.updateOrphanDiagJobs");
+            int structs = sql.update("structdiag.updateOrphanStructDiags");
+            int govs    = sql.update("diagSchedule.updateOrphanGovMetaSends");
+            int batches = sql.update("diagSchedule.updateOrphanBatchRuns");
+            if (jobs + structs + govs + batches > 0) {
+                log.warn(">> 기동 정리 — 중단된 표준화 진단 Job {} 건, 구조 진단 {} 건, 범정부 메타 검증 {} 건, 배치 {} 건을 ERROR 로",
+                        jobs, structs, govs, batches);
+            }
+        } catch (Exception e) {
+            log.error(">> 기동 정리(cleanupOrphanDiags) 실패", e);
+        }
+    }
 
     // ============ 1분 주기 평가 + 기동 ============
     @Scheduled(fixedRate = 60_000L, initialDelay = 30_000L)
@@ -57,12 +86,14 @@ public class DiagSchedulerRunner {
         for (DiagScheduleVo sc : active) {
             try {
                 if (!shouldTrigger(sc, now)) continue;
-                if (isAlreadyRunningForModel(sc)) {
-                    logSkipped(sc, "동일 모델+유형 RUNNING 존재");
+                String runningReason = runningReasonForModel(sc);
+                if (runningReason != null) {
+                    logSkipped(sc, runningReason);
                     skipped++;
                     continue;
                 }
-                launcher.launch(sc, "AUTO", null);
+                // 110 6.10-13a — 자동 실행의 실행자는 스케줄 등록자 (없으면 런처가 SCHEDULER)
+                launcher.launch(sc, "AUTO", null, sc.getCretUserId());
                 triggered++;
             } catch (Exception e) {
                 log.error(">> 스케줄 {} 평가/기동 중 오류", sc.getScheduleId(), e);
@@ -94,7 +125,7 @@ public class DiagSchedulerRunner {
 
         // SIMPLE
         String time = sc.getRepeatTime();
-        if (time == null || !time.matches("^[0-2]\\d:[0-5]\\d$")) return false;
+        if (time == null || !time.matches("^([01]\\d|2[0-3]):[0-5]\\d$")) return false;   // 110 6.10-11b — 00~23시
         String nowHm = now.format(TIME_FMT);
         if (!time.equals(nowHm)) return false;
 
@@ -135,14 +166,37 @@ public class DiagSchedulerRunner {
         }
     }
 
-    /** 동일 dataModelId + diagType 에 RUNNING 이력이 있으면 true */
-    private boolean isAlreadyRunningForModel(DiagScheduleVo sc) {
+    /**
+     * 같은 모델에 겹치는 실행이 있으면 SKIPPED 사유, 없으면 null.
+     * <ul>
+     *   <li>스케줄 LOG: 같은 모델의 RUNNING 중 진단 유형이 겹치는 것 (110 6.10-12b — STANDARD 는 STANDARD·BOTH,
+     *       STRUCT 는 STRUCT·BOTH, BOTH 는 셋 다, 그 밖 유형은 자기 유형)</li>
+     *   <li>진단 Job·구조 진단 이력: 화면에서 돌린 진단이 진행 중인 것 (110 6.10-12a — 화면 실행의 409 와 같은 기준)</li>
+     * </ul>
+     */
+    private String runningReasonForModel(DiagScheduleVo sc) {
+        String diagType = sc.getDiagType();
+        List<String> overlap;
+        if ("STANDARD".equals(diagType))    overlap = Arrays.asList("STANDARD", "BOTH");
+        else if ("STRUCT".equals(diagType)) overlap = Arrays.asList("STRUCT", "BOTH");
+        else if ("BOTH".equals(diagType))   overlap = Arrays.asList("STANDARD", "STRUCT", "BOTH");
+        else                                overlap = Collections.singletonList(diagType);
         Map<String, Object> p = new HashMap<>();
         p.put("dataModelId", sc.getDataModelId());
-        // BOTH 는 STANDARD 와 STRUCT 두 유형 다 봐야 하지만 1차 구현은 DIAG_TYPE 그대로 비교
-        p.put("diagType",    sc.getDiagType());
-        Integer cnt = sql.selectOne("diagSchedule.countRunningByModelAndType", p);
-        return cnt != null && cnt > 0;
+        p.put("diagTypes",   overlap);
+        int logCnt = sql.selectOne("diagSchedule.countRunningByModelAndType", p);
+        if (logCnt > 0) return "동일 모델+유형 RUNNING 존재";
+
+        int active = 0;
+        if ("STANDARD".equals(diagType) || "BOTH".equals(diagType)) {
+            int jobCnt = sql.selectOne("diag.selectActiveDiagJobCount", sc.getDataModelId());
+            active += jobCnt;
+        }
+        if ("STRUCT".equals(diagType) || "BOTH".equals(diagType)) {
+            int structCnt = sql.selectOne("structdiag.selectActiveStructDiagCount", sc.getDataModelId());
+            active += structCnt;
+        }
+        return active > 0 ? "같은 모델에 진행 중인 진단이 있음" : null;
     }
 
     private void logSkipped(DiagScheduleVo sc, String reason) {
@@ -162,6 +216,12 @@ public class DiagSchedulerRunner {
         p.put("diagJobId",    null);
         p.put("structDiagId", null);
         sql.update("diagSchedule.updateLogFinish", p);
+        // 110 6.10-9 — 이 슬롯을 소비한다 (CRON 은 LAST_EXEC_DT 다음 시각으로 도래를 보므로, 안 바꾸면 분마다 SKIPPED 가 쌓였다).
+        // 자기 실행이 진행 중이 아니면 마지막 실행 상태·로그도 이 SKIPPED 로
+        Map<String, Object> pSc = new HashMap<>();
+        pSc.put("scheduleId", sc.getScheduleId());
+        pSc.put("logId",      log.getLogId());
+        sql.update("diagSchedule.updateScheduleLastExecSkipped", pSc);
     }
 
     // ============ 30초 주기 완료 감지 ============
@@ -271,15 +331,30 @@ public class DiagSchedulerRunner {
     }
 
     // ============ 5분 주기 타임아웃 마감 ============
+    /**
+     * 60분 넘게 RUNNING 인 LOG 를 ERROR 로 마감한다.
+     * 110 6.10-8a — 한 건씩 markFinish 로 닫아 스케줄 LAST_EXEC_* 도 갱신 (예전 일괄 UPDATE 는 LOG 만 바꿨다).
+     * 110 6.10-8b — 기저 작업이 아직 진행 중인 LOG 는 빼서 pollCompletion 이 실제 결과로 마감하게 둔다.
+     */
     @Scheduled(fixedRate = 300_000L, initialDelay = 120_000L)
     public void expireStale() {
+        List<DiagScheduleLogVo> stale;
         try {
             Map<String, Object> p = new HashMap<>();
             p.put("minutes", 60);
-            int n = sql.update("diagSchedule.expireStaleRunningLogs", p);
-            if (n > 0) log.warn(">> 타임아웃 만료된 스케줄 로그 {} 건", n);
+            stale = sql.selectList("diagSchedule.selectStaleRunningLogs", p);
         } catch (Exception e) {
-            log.error(">> expireStale 실패", e);
+            log.error(">> expireStale: 타임아웃 대상 조회 실패", e);
+            return;
         }
+        if (stale.isEmpty()) return;
+        for (DiagScheduleLogVo row : stale) {
+            try {
+                markFinish(row, "ERROR", "[TIMEOUT] 진단 실행이 비정상 종료됨 (타임아웃 초과)");
+            } catch (Exception e) {
+                log.error(">> expireStale: log {} 마감 중 오류", row.getLogId(), e);
+            }
+        }
+        log.warn(">> 타임아웃 만료된 스케줄 로그 {} 건", stale.size());
     }
 }

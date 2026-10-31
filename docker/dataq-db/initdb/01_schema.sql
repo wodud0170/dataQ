@@ -3375,7 +3375,7 @@ CREATE TABLE quality.tb_struct_diag_history (
     diag_id character varying(40) NOT NULL,
     data_model_id character varying(40),
     ds_id character varying(40),
-    schema_nm character varying(100),
+    schema_nm text,
     status character varying(20) DEFAULT 'READY'::character varying,
     diag_dt timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     prev_collect_dt timestamp without time zone,
@@ -3430,7 +3430,7 @@ COMMENT ON COLUMN quality.tb_struct_diag_history.ds_id IS '데이터소스 ID';
 -- Name: COLUMN tb_struct_diag_history.schema_nm; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_struct_diag_history.schema_nm IS '스키마명';
+COMMENT ON COLUMN quality.tb_struct_diag_history.schema_nm IS '진단한 스키마 목록 (쉼표로 이음, 110번 6.10-26, 이전 이력은 NULL)';
 
 
 --

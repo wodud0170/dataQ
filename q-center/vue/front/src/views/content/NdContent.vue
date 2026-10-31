@@ -502,7 +502,6 @@ import DSDatamodelHistory from "../../components/DSDatamodelHistory.vue"
 import DSDataDiag from "../../components/DSDataDiag.vue"
 import DSDataDiagResult from "../../components/DSDataDiagResult.vue"
 import DSTermRecommend from "../../components/DSTermRecommend.vue"
-// DSSchemaCompare는 DSStructDiagResult에 통합됨
 import DSStructDiag from "../../components/DSStructDiag.vue"
 import DSStructDiagResult from "../../components/DSStructDiagResult.vue"
 import DSErwinImport from "../../components/DSErwinImport.vue"
@@ -825,9 +824,6 @@ export default {
                     break;
                 case "termRecommend":
                     this.termRecommendKey = this.createUUID();
-                    break;
-                case "schemaCompare":
-                    this.schemaCompareKey = this.createUUID();
                     break;
                 case "structDiag":
                     this.structDiagKey = this.createUUID();

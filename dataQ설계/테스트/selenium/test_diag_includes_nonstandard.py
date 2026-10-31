@@ -191,37 +191,41 @@ def step4_start_diag(d):
 
 
 def step5_wait_done(d):
-    """진단 완료 대기 — getDiagResultList 가 응답할 때까지 polling.
+    """진단 완료 대기 — Job 이 DONE 이 될 때까지 polling 한 뒤 결과 화면의 컬럼 상세를 읽는다.
+       (110 6.10-29 — 호출 화면이 없던 getDiagResultList 를 지웠다)
        (cams19 모델 ≈ 366 attr 라 즉시 끝남. timeout 60s 면 충분)"""
     timeout_sec = 60
     interval = 2
     elapsed = 0
     while elapsed < timeout_sec:
-        r = requests.get(BASE_URL + "/api/diag/getDiagResultList",
+        r = requests.get(BASE_URL + "/api/diag/getDiagJobById",
                          params={"diagJobId": state["diagJobId"]},
                          cookies=state["cookies"], timeout=10)
-        if r.status_code == 200 and r.text.strip():
-            try:
-                rows = r.json() or []
-            except Exception:
-                rows = []
-            if rows:
-                state["resultRows"] = rows
-                print(f"  [info] 진단 완료 — 결과 row {len(rows)}건 ({elapsed}s 만에)")
-                return
+        status = (r.json() or {}).get("status") if r.status_code == 200 and r.text.strip() else None
+        if status == "ERROR":
+            raise RuntimeError("진단 Job 이 ERROR 로 끝남")
+        if status == "DONE":
+            r = requests.get(BASE_URL + "/api/diag/getDiagResultDetail",
+                             params={"diagJobId": state["diagJobId"]},
+                             cookies=state["cookies"], timeout=30)
+            r.raise_for_status()
+            state["resultRows"] = r.json() or []
+            print(f"  [info] 진단 완료 — 컬럼 상세 row {len(state['resultRows'])}건 ({elapsed}s 만에)")
+            return
         time.sleep(interval); elapsed += interval
-    raise RuntimeError(f"진단 결과 조회 timeout ({timeout_sec}s)")
+    raise RuntimeError(f"진단 완료 대기 timeout ({timeout_sec}s)")
 
 
 def step6_verify_result(d):
-    """진단 결과에 우리 임시 attr 가 포함됐는지 검증"""
+    """진단 결과에 우리 임시 attr 가 이슈 컬럼으로 포함됐는지 검증"""
     rows = state.get("resultRows") or []
-    state["resultRowCnt"] = len(rows)
-    print(f"  [info] 진단 결과 row 수: {state['resultRowCnt']}")
+    issue_rows = [r for r in rows if r.get("diagTypes")]
+    state["resultRowCnt"] = len(issue_rows)
+    print(f"  [info] 진단 결과 이슈 컬럼 수: {state['resultRowCnt']} (전체 {len(rows)})")
     if state["resultRowCnt"] == 0:
         raise RuntimeError("진단 결과 0건 — 가드 제거 동작 안 함 (모든 attr 가 진단 대상이어야)")
     # 우리 임시 attr 가 결과에 있는지
-    matched = [r for r in rows
+    matched = [r for r in issue_rows
                if r.get("attrNm") == state["tempAttrNm"] and r.get("objNm") == state["objNm"]]
     print(f"  [info] 임시 attr({state['tempAttrNm']}) 매칭 결과: {len(matched)}건")
     if not matched:
@@ -229,9 +233,7 @@ def step6_verify_result(d):
             f"임시 비표준 attr '{state['tempAttrNm']}' 가 진단 결과에 없음 — "
             "비표준 컬럼이 진단 대상에 포함되어야 함"
         )
-    sample = matched[0]
-    diag_keys = [k for k in ('diagType', 'diagDvCd', 'resultMsg', 'resultDtl') if sample.get(k)]
-    print(f"  [info] 첫 매칭 row: { {k: sample.get(k) for k in diag_keys} }")
+    print(f"  [info] 첫 매칭 row: diagTypes={matched[0].get('diagTypes')}")
 
 
 def step7_cleanup(d):

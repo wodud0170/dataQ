@@ -220,7 +220,9 @@ public class ExcelDownloadService {
             m.put("HEADER2",  input);
             m.put("HEADER3",  resolvedKr);
             m.put("HEADER4",  r.get("resolvedEnNm"));
-            m.put("HEADER5",  input.equals(resolvedKr) ? "유지" : "변경");
+            // 110 7.5-13c — 화면과 같은 기준: 앞뒤 공백을 뺀 B 가 비지 않고 A 와 다를 때만 변경
+            boolean nmChanged = !resolvedKr.trim().isEmpty() && !resolvedKr.trim().equals(input.trim());
+            m.put("HEADER5",  nmChanged ? "변경" : "유지");
             m.put("HEADER6",  r.get("resolvedDataType"));
             m.put("HEADER7",  r.get("resolvedDataLen"));
             m.put("HEADER8",  r.get("dmId"));

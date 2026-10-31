@@ -4,7 +4,7 @@ Phase 4 커버리지 보강 테스트 (API) — 65번 문서 § 10 작업 8 의 
 커버:
   A. SIMPLE 자동 트리거 — REPEAT_TIME 을 현재 +1분으로 설정 → 최대 90초 내 AUTO 이력 생성
   B. STRUCT 진단 경로 — runNow 시 structDiagId 가 LOG 에 세팅되는지
-  C. STANDARD 실패 prefix — 수집 이력 없는 모델 → [DATA_NOT_FOUND] ERROR
+  C. 수집 이력 없는 모델 STANDARD — 진단이 돌아 DONE (110 6.10-10 이전에는 [DATA_NOT_FOUND] ERROR)
   D. scheduleType 전환 — SIMPLE ↔ CRON update 왕복
   E. (선택) SKIP 정책 — runNow 로 RUNNING 만든 상태에서 자동 트리거 도래 시 SKIPPED 이력 확인
 
@@ -49,17 +49,14 @@ def login(s, user, pw):
 state = {}
 
 
-def poll_log_until(admin, log_id, target_statuses, max_sec=90, interval=3):
+def poll_log_until(admin, schedule_id, log_id, target_statuses, max_sec=90, interval=3):
     deadline = time.time() + max_sec
     last = None
     while time.time() < deadline:
-        r = admin.get(BASE + f"/api/diag/schedule/logs/{log_id}",
-                      params={"logId": log_id}, timeout=10)
-        if r.ok:
-            body = r.json() or {}
-            last = body
-            if body.get("execStatus") in target_statuses:
-                return body
+        body = find_log(admin, schedule_id, log_id)
+        last = body
+        if body.get("execStatus") in target_statuses:
+            return body
         time.sleep(interval)
     raise AssertionError(f"log {log_id} 상태 대기 타임아웃 (target={target_statuses}, last={last})")
 
@@ -69,6 +66,18 @@ def find_logs_by_schedule(admin, schedule_id):
                   params={"scheduleId": schedule_id, "limit": 50}, timeout=10)
     r.raise_for_status()
     return r.json() or []
+
+
+def find_log(admin, schedule_id, log_id):
+    """110 6.10-29 — /logs/{logId} 를 지워 이력 목록(scheduleId)에서 logId 행을 찾는다"""
+    return next((l for l in find_logs_by_schedule(admin, schedule_id) if l.get("logId") == log_id), {})
+
+
+def find_schedule(admin, schedule_id):
+    """110 6.10-29 — /{scheduleId} 를 지워 스케줄 목록에서 scheduleId 행을 찾는다"""
+    r = admin.get(BASE + "/api/diag/schedule/list", timeout=10)
+    r.raise_for_status()
+    return next((s for s in (r.json() or []) if s.get("scheduleId") == schedule_id), {})
 
 
 def create_schedule(admin, **overrides):
@@ -81,7 +90,7 @@ def create_schedule(admin, **overrides):
         "repeatTime":  overrides.get("repeatTime", "23:59"),
         "useYn":       overrides.get("useYn", "Y"),
     }
-    for k in ("repeatDayOfWeek", "repeatDayOfMonth", "cronExpr"):
+    for k in ("repeatDayOfWeek", "repeatDayOfMonth", "cronExpr", "dictId"):
         if k in overrides:
             body[k] = overrides[k]
     r = admin.post(BASE + "/api/diag/schedule/create", json=body, timeout=10)
@@ -165,23 +174,23 @@ def main():
         deadline = time.time() + 30
         struct_id = None
         while time.time() < deadline:
-            r2 = admin.get(BASE + f"/api/diag/schedule/logs/{lid}",
-                           params={"logId": lid}, timeout=10)
-            body = r2.json() or {}
+            body = find_log(admin, sid, lid)
             if body.get("structDiagId"):
                 struct_id = body["structDiagId"]; break
             time.sleep(2)
         assert struct_id, "structDiagId 가 LOG 에 세팅되지 않음 — STRUCT 런처 경로 연결 미흡"
         print(f"  structDiagId={struct_id}")
         # 종료 대기 (최대 120s) — DONE or ERROR 둘 다 허용
-        final = poll_log_until(admin, lid, ("DONE", "ERROR"), max_sec=120, interval=5)
+        final = poll_log_until(admin, sid, lid, ("DONE", "ERROR"), max_sec=120, interval=5)
         print(f"  최종 status={final.get('execStatus')} duration={final.get('execDurationSec')}s")
     if not step("B. STRUCT 진단 경로 (structDiagId 연결 + 마감)", _b_struct_path): pass
 
-    # ======================= C. STANDARD 실패 prefix =======================
+    # ======================= C. 수집 이력 없는 모델 STANDARD =======================
+    # 110 6.10-10 — 예전에는 [DATA_NOT_FOUND] 로 실패했다. 진단 대상은 모델 컬럼(DM_ID)이라 수집 이력 없이도 진단한다 (화면 실행과 같다)
+    # 새로 만든 논리 모델에는 표준사전이 없어 스케줄에 사전을 고른다 (110 6.10-2 — 스케줄 표준사전)
     def _c_data_not_found():
         sid, _ = create_schedule(admin, dataModelId=state["dmIdNoClct"],
-                                 diagType="STANDARD",
+                                 diagType="STANDARD", dictId="DEFAULT",
                                  scheduleNm="cov_nofound_" + datetime.now().strftime("%H%M%S"))
         state["c_sid"] = sid
         r = admin.post(BASE + "/api/diag/schedule/runNow",
@@ -189,12 +198,12 @@ def main():
         r.raise_for_status()
         lid = r.json().get("contents")
         assert lid
-        # ERROR 로 빠르게 마감 예상 (launcher 가 resolveLatestClctId null → throw)
-        final = poll_log_until(admin, lid, ("ERROR",), max_sec=20, interval=2)
-        msg = final.get("errorMsg") or ""
-        assert msg.startswith("[DATA_NOT_FOUND]"), f"prefix 불일치: {msg[:80]}"
-        print(f"  errorMsg prefix OK: {msg[:100]}")
-    if not step("C. STANDARD 실패 — [DATA_NOT_FOUND] prefix 확인", _c_data_not_found): pass
+        final = poll_log_until(admin, sid, lid, ("DONE", "ERROR"), max_sec=90, interval=3)
+        assert final.get("execStatus") == "DONE", f"DONE 기대, got {final.get('execStatus')} msg={final.get('errorMsg')}"
+        job = admin.get(BASE + "/api/diag/getDiagJobById", params={"diagJobId": final.get("diagJobId")}, timeout=10).json()
+        assert job.get("clctId") is None, f"수집 이력 없는 모델의 Job 에 수집 ID: {job.get('clctId')}"
+        print(f"  수집 이력 없는 모델 진단 DONE diagJobId={final.get('diagJobId')} clctId={job.get('clctId')}")
+    if not step("C. 수집 이력 없는 모델 STANDARD — 진단이 돈다 (DONE)", _c_data_not_found): pass
 
     # ======================= D. scheduleType 전환 (SIMPLE ↔ CRON) =======================
     def _d_type_switch():
@@ -212,9 +221,7 @@ def main():
         r = admin.post(BASE + "/api/diag/schedule/update", json=upd, timeout=10)
         r.raise_for_status()
         assert r.json().get("resultCode") == 200, r.json()
-        r2 = admin.get(BASE + f"/api/diag/schedule/{sid}",
-                       params={"scheduleId": sid}, timeout=10)
-        det = r2.json() or {}
+        det = find_schedule(admin, sid)
         assert det.get("scheduleType") == "CRON"
         assert det.get("cronExpr") == "0 0 3 * * MON"
         # CRON → SIMPLE(WEEKLY) 로 되돌리기
@@ -224,9 +231,7 @@ def main():
                 "useYn": "Y"}
         r3 = admin.post(BASE + "/api/diag/schedule/update", json=back, timeout=10)
         r3.raise_for_status()
-        r4 = admin.get(BASE + f"/api/diag/schedule/{sid}",
-                       params={"scheduleId": sid}, timeout=10)
-        det2 = r4.json() or {}
+        det2 = find_schedule(admin, sid)
         assert det2.get("scheduleType") == "SIMPLE"
         assert det2.get("repeatCycle") == "WEEKLY"
         assert det2.get("repeatDayOfWeek") == 3
@@ -249,9 +254,7 @@ def main():
         deadline = time.time() + 30
         both_set = False
         while time.time() < deadline:
-            r2 = admin.get(BASE + f"/api/diag/schedule/logs/{lid}",
-                           params={"logId": lid}, timeout=10)
-            body = r2.json() or {}
+            body = find_log(admin, sid, lid)
             if body.get("diagJobId") and body.get("structDiagId"):
                 both_set = True
                 break
@@ -259,7 +262,7 @@ def main():
         assert both_set, f"BOTH 에서 diagJobId/structDiagId 둘 다 세팅되어야 함. last={body}"
         print(f"  diagJobId={body.get('diagJobId')[:8]}... structDiagId={body.get('structDiagId')[:8]}...")
         # 둘 다 완료까지 대기 (DONE 이어야 함, 하나라도 ERROR 면 ERROR 로 마감)
-        final = poll_log_until(admin, lid, ("DONE", "ERROR"), max_sec=180, interval=5)
+        final = poll_log_until(admin, sid, lid, ("DONE", "ERROR"), max_sec=180, interval=5)
         print(f"  최종 status={final.get('execStatus')} duration={final.get('execDurationSec')}s")
         # DONE 기대 (실패하지 않았다면)
         assert final.get("execStatus") == "DONE", \

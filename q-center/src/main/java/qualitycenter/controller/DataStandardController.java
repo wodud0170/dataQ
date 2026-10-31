@@ -18,6 +18,7 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
@@ -2886,16 +2888,16 @@ public class DataStandardController {
 	/**
 	 * 표준화 추천 - 용어 일괄 등록 API (트랜잭션 사용)
 	 *
-	 * <p>분석 결과를 바탕으로 신규 단어 등록 + 용어 등록을 한 번에 처리한다.</p>
+	 * <p>분석 결과를 바탕으로 용어를 등록한다. 구성 단어는 모두 등록된 단어여야 한다
+	 * (화면은 모든 단어가 MATCHED 일 때만 등록하고, 미등록 단어는 [단어등록]으로 먼저 등록한다).</p>
 	 * <ul>
-	 *   <li>신규 단어: 금칙어 체크 후 자동 등록</li>
-	 *   <li>구성 단어 승인 여부 체크 (미승인 단어 포함 시 실패)</li>
-	 *   <li>도메인 유효성 체크</li>
+	 *   <li>형식단어 체크 (사전이 요구할 때)</li>
+	 *   <li>도메인 필수·유효성 체크</li>
 	 *   <li>관리자: 일괄 등록 변경이력(BULK_INSERT) 저장</li>
 	 * </ul>
 	 *
-	 * @param body { items: [{termsNm, termsEngAbrvNm, words, newWords, ...}] }
-	 * @return 등록 결과 (registeredTerms, registeredWords, skipped, failed, details)
+	 * @param body { items: [{termsNm, termsEngAbrvNm, words, ...}] }
+	 * @return 등록 결과 (registeredTerms, skipped, failed, details)
 	 */
 	@RequestMapping(value = "/registerTermsBatch", method = RequestMethod.POST)
 	public Map<String, Object> registerTermsBatch(@RequestBody Map<String, Object> body) {
@@ -2926,14 +2928,12 @@ public class DataStandardController {
 			}
 			Map<String, Object> res = new HashMap<>();
 			res.put("registeredTerms", 0);
-			res.put("registeredWords", 0);
 			res.put("skipped", 0);
 			res.put("failed", items.size());
 			res.put("details", fails);
 			return res;
 		}
 		int registeredTerms = 0;
-		int registeredWords = 0;
 		int skipped = 0;
 		int failed = 0;
 		List<Map<String, Object>> details = new ArrayList<>();
@@ -2945,8 +2945,6 @@ public class DataStandardController {
 			String domainNm = (String) item.get("domainNm");
 			@SuppressWarnings("unchecked")
 			List<Map<String, Object>> words = (List<Map<String, Object>>) item.get("words");
-			@SuppressWarnings("unchecked")
-			List<Map<String, Object>> newWords = (List<Map<String, Object>>) item.get("newWords");
 
 			SqlSession session = sqlSessionFactory.openSession();
 			try {
@@ -2961,49 +2959,8 @@ public class DataStandardController {
 					continue;
 				}
 
-				// 신규 단어 등록
-				int newWordCount = 0;
-				Map<Integer, String> newWordIdMap = new HashMap<>();
-				Map<String, String> newWordNms = new java.util.LinkedHashMap<>();   // 104번 WP1 — 결재 문서용 (ID → 이름)
-				if (newWords != null) {
-					for (int i = 0; i < newWords.size(); i++) {
-						Map<String, Object> nw = newWords.get(i);
-						String wordNm = (String) nw.get("wordNm");
-						String wordEngAbrvNm = (String) nw.get("wordEngAbrvNm");
-						String wordEngNm = (String) nw.get("wordEngNm");
-						if (wordNm == null || wordNm.trim().isEmpty()
-								|| wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
-								|| wordEngNm == null || wordEngNm.trim().isEmpty()) {
-							throw new RuntimeException("신규 단어 필수 항목 누락: 한글명, 영문약어, 영문명은 필수입니다. (단어: " + wordNm + ")");
-						}
-						// 금칙어 체크
-						String forbiddenMsg = checkForbiddenWord(wordNm.trim(), dictId);
-						if (forbiddenMsg != null) {
-							throw new RuntimeException(forbiddenMsg);
-						}
-						StdWordVo wordVo = new StdWordVo();
-						wordVo.setDictId(dictId);
-						String wordId = StringUtils.getUUID();
-						wordVo.setId(wordId);
-						wordVo.setWordNm((String) nw.get("wordNm"));
-						// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자, 단어 영문명 중복
-						wordVo.setWordEngAbrvNm(dictService.checkWordEngAbrv(dictId, (String) nw.get("wordEngAbrvNm")));
-						dictService.checkWordEngNmDup(dictId, (String) nw.get("wordEngNm"), wordId);
-						wordVo.setWordEngNm((String) nw.get("wordEngNm"));
-						wordVo.setWordDesc((String) nw.get("wordDesc"));
-						wordVo.setDomainClsfNm((String) nw.get("domainClsfNm"));
-						wordVo.setWordClsfYn("N");
-						wordVo.setCommStndYn("N");
-						wordVo.setCretUserId(userId);
-						if (directApprove) wordVo.setAprvYn("Y");
-						else wordVo.setAprvYn("N");
-						session.insert("word.insertWord", wordVo);
-						newWordIdMap.put(i, wordId);
-						newWordNms.put(wordId, wordVo.getWordNm());
-						newWordCount++;
-					}
-				}
-
+				// 110번 7.5-6 — 신규 단어 함께 등록(newWords) 경로는 뺐다. 화면은 모든 단어가 MATCHED 일 때만 등록하고
+				// 미등록 단어는 [단어등록](registerWord)으로 먼저 등록한다. 그래서 구성 단어는 모두 wordId 가 있다
 				// 구성 단어 승인 여부 체크는 용어 승인 시점에 수행 (등록은 자유)
 
 				if (words == null || words.isEmpty()) {
@@ -3011,29 +2968,20 @@ public class DataStandardController {
 				}
 				// 형식단어 검증: 등록할 사전이 요구할 때만 마지막 단어가 형식단어인지 본다 (단일 단어 용어도 허용)
 				if (dictService.isTermLastWordClsfRequired(dictId)) {
-					Map<String, Object> lastWordEntry = words.get(words.size() - 1);
-					String lastWordId = (String) lastWordEntry.get("wordId");
-					if (lastWordId == null) {
-						// 신규 단어인 경우 newWordIndex로 ID 가져오기
-						Number lastNewWordIndex = (Number) lastWordEntry.get("newWordIndex");
-						if (lastNewWordIndex != null) {
-							lastWordId = newWordIdMap.get(lastNewWordIndex.intValue());
-						}
-					}
+					String lastWordId = (String) words.get(words.size() - 1).get("wordId");
 					if (lastWordId == null) {
 						throw new RuntimeException("마지막 단어의 ID를 확인할 수 없습니다. 단어 등록 후 다시 시도해주세요.");
 					}
 					checkLastWordClsf(session, lastWordId);
 				}
 
-				// 도메인 유효성 체크
-				if (domainNm != null && !domainNm.trim().isEmpty()) {
-					Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(dictId, "domainNm", domainNm.trim()));
-					if (domainCheck == null) {
-						throw new RuntimeException("등록되지 않은 도메인입니다: " + domainNm);
-					}
-				} else {
-					domainNm = null;
+				// 도메인 필수·유효성 체크 — 110번 7.5-7: TB_TERMS.DOMAIN_NM NOT NULL. 예전에는 null 로 넣어 DB 오류로 실패했다 (createTerms 3.12-15-e 와 같은 문구)
+				if (domainNm == null || domainNm.trim().isEmpty()) {
+					throw new RuntimeException("도메인명은 필수입니다.");
+				}
+				Object domainCheck = session.selectOne("domain.selectDomainInfoByNm", dictService.nameParam(dictId, "domainNm", domainNm.trim()));
+				if (domainCheck == null) {
+					throw new RuntimeException("등록되지 않은 도메인입니다: " + domainNm);
 				}
 
 				// 용어 등록
@@ -3061,16 +3009,7 @@ public class DataStandardController {
 						Number wordOrd = (Number) w.get("wordOrd");
 						tw.setWordOrd(wordOrd != null ? wordOrd.shortValue() : (short) 0);
 
-						String wordId = (String) w.get("wordId");
-						if (wordId != null) {
-							tw.setWordId(wordId);
-						} else {
-							// 신규 단어 매핑
-							Number newWordIndex = (Number) w.get("newWordIndex");
-							if (newWordIndex != null) {
-								tw.setWordId(newWordIdMap.get(newWordIndex.intValue()));
-							}
-						}
+						tw.setWordId((String) w.get("wordId"));
 						if (tw.getWordId() == null) {
 							throw new RuntimeException("단어 ID를 확인할 수 없습니다. 단어 등록 후 다시 시도해주세요. (순서: " + tw.getWordOrd() + ")");
 						}
@@ -3087,10 +3026,8 @@ public class DataStandardController {
 
 				session.commit();
 				registeredTerms++;
-				registeredWords += newWordCount;
-				// 104번 WP1 — 승인 대기로 들어간 새 단어·용어에 결재선이 있으면 결재 문서
+				// 104번 WP1 — 승인 대기로 들어간 용어에 결재선이 있으면 결재 문서
 				if (!directApprove) {
-					for (Map.Entry<String, String> nw : newWordNms.entrySet()) openAprv("WORD", nw.getKey(), nw.getValue(), dictId);
 					openAprv("TERMS", termsId, termsNm, dictId);
 				}
 
@@ -3127,11 +3064,17 @@ public class DataStandardController {
 				session.rollback();
 				failed++;
 				log.error("registerTermsBatch item failed: {} - {}", termsNm, e.getMessage());
+				// 110번 7.5-8 — DB 오류 원문은 내보내지 않는다 (createWord 와 같은 방식). 일괄 등록 이력 상세 비고도 이 문구
+				String dupMsg = StdInputRule.translateDuplicateError(e.getMessage());
+				String userMsg = dupMsg != null ? dupMsg : e.getMessage();
+				if (userMsg != null && (userMsg.startsWith("\r\n### Error") || userMsg.contains("PSQLException") || userMsg.contains("org.postgresql"))) {
+					userMsg = "용어 등록 중 오류가 발생했습니다. 입력값을 확인해주세요.";
+				}
 
 				Map<String, Object> detail = new HashMap<>();
 				detail.put("termsNm", termsNm);
 				detail.put("status", "FAIL");
-				detail.put("message", e.getMessage());
+				detail.put("message", userMsg);
 				details.add(detail);
 			} finally {
 				session.close();
@@ -3169,7 +3112,6 @@ public class DataStandardController {
 
 		Map<String, Object> result = new HashMap<>();
 		result.put("registeredTerms", registeredTerms);
-		result.put("registeredWords", registeredWords);
 		result.put("skipped", skipped);
 		result.put("failed", failed);
 		result.put("details", details);
@@ -3214,7 +3156,9 @@ public class DataStandardController {
 				}
 			}
 		} catch (Exception e) {
+			// 110번 7.5-11 — 예전에는 예외를 삼켜 빈 목록을 돌려줘 화면의 '엑셀 파싱 실패' 창이 뜨지 않았다
 			log.error("Excel parsing failed: {}", e.getMessage());
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "엑셀 파일을 읽지 못했습니다");
 		}
 		return columnNames;
 	}
@@ -3560,68 +3504,6 @@ public class DataStandardController {
 		if (len >= 2 && len <= 4) return 500 + len * 50;
 		if (len >= 5) return 100;
 		return 10;
-	}
-
-	/**
-	 * 입력 문자열을 순서대로 커버하는 최적 토큰 조합을 선택한다.
-	 * - 등록된 단어(wordsByNm에 존재)를 우선 매칭
-	 * - 같은 조건이면 긴 토큰 우선 (greedy)
-	 * - 예: "API코드" → ["API", "코드"] (등록단어), "API코드"나 "코", "드" 등은 제외
-	 */
-	/**
-	 * 1순위 분리: TB_WORD > DICT > OKT longest 순으로 greedy 매칭 (fallback용)
-	 */
-	private List<String> greedySplit(String input, Set<String> candidates,
-			Map<String, List<StdWordVo>> wordsByNm, Map<String, Map<String, Object>> wordDict) {
-		List<String> result = new ArrayList<>();
-		Set<String> dictKeys = wordDict.keySet();
-		String remaining = input;
-		int maxIter = 100;
-
-		while (!remaining.isEmpty() && maxIter-- > 0) {
-			String selected = null;
-
-			// 1. TB_WORD longest match
-			for (String c : candidates) {
-				if (wordsByNm.containsKey(c) && remaining.startsWith(c) && !c.equals(input)) {
-					if (selected == null || c.length() > selected.length()) selected = c;
-				}
-			}
-			if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
-
-			// 2. DICT longest match
-			for (String c : candidates) {
-				if (dictKeys.contains(c) && remaining.startsWith(c) && !c.equals(input)) {
-					if (selected == null || c.length() > selected.length()) selected = c;
-				}
-			}
-			if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
-
-			// 3. remaining 자체가 OKT 토큰이면 사용 (1글자 마지막 토큰 처리)
-			if (candidates.contains(remaining) && !remaining.equals(input)) {
-				result.add(remaining); remaining = ""; continue;
-			}
-
-			// 4. OKT longest 2+ chars
-			for (String c : candidates) {
-				if (c.length() >= 2 && remaining.startsWith(c) && c.length() < remaining.length() && !c.equals(input)) {
-					if (selected == null || c.length() > selected.length()) selected = c;
-				}
-			}
-			if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
-
-			// 5. 매칭 불가 → 다음 매칭점까지 스킵
-			boolean skipped = false;
-			for (int skip = 1; skip < remaining.length(); skip++) {
-				String sub = remaining.substring(skip);
-				for (String c : candidates) {
-					if (sub.startsWith(c) && !c.equals(input)) { skipped = true; break; }
-				}
-				if (skipped) { result.add(remaining.substring(0, skip)); remaining = remaining.substring(skip); break; }
-			}
-			if (!skipped) { result.add(remaining); remaining = ""; }
-		}
-		return result;
 	}
 
 	/**

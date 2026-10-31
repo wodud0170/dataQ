@@ -1230,9 +1230,10 @@ export default {
     },
     // 114 권고 채택(10-28)·110번 3.12-15-c — 데이터 길이 빈칸은 지금처럼 0(길이 없음)이지만,
     // 길이가 있어야 하는 타입(VARCHAR 등 문자열)은 1 이상. 서버(StdInputRule.domainLenError)도 같은 규칙으로 막는다
+    // 114 권고 채택(10-31) — BINARY·VARBINARY 도 같다 (StdInputRule.LEN_REQUIRED_TYPES 와 같은 목록)
     domainLenOk(dataType, dataLen) {
       const t = String(dataType || '').trim().toUpperCase();
-      if (!['VARCHAR', 'VARCHAR2', 'CHAR', 'NVARCHAR', 'NVARCHAR2', 'NCHAR'].includes(t) || Number(dataLen) >= 1) return true;
+      if (!['VARCHAR', 'VARCHAR2', 'CHAR', 'NVARCHAR', 'NVARCHAR2', 'NCHAR', 'BINARY', 'VARBINARY'].includes(t) || Number(dataLen) >= 1) return true;
       this.$swal.fire({
         title: `데이터 타입 ${t} 은(는) 데이터 길이를 1 이상으로 입력해야 합니다.`,
         confirmButtonText: '확인',

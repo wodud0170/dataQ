@@ -15,7 +15,7 @@ import com.ndata.quality.model.std.TermAnalysisResult;
 /**
  * DataStandardController의 순수 헬퍼 메서드 단위 테스트
  *
- * 대상: greedySplit, generateAlternativeSplit, subSplit,
+ * 대상: generateAlternativeSplit, subSplit,
  *       buildWordAnalyses, composeEngAbrv, judgeStatus
  *
  * DB 의존성 없이 로직만 재현하여 테스트
@@ -56,104 +56,8 @@ class DataStandardHelperTest {
     }
 
     // ==================================================================
-    // 1. greedySplit 테스트
+    // 1. (삭제) greedySplit 테스트 — 110번 7.5-9c: 서버 greedySplit() 은 호출부가 없어 지웠다
     // ==================================================================
-
-    @Nested
-    @DisplayName("greedySplit - 1순위 분리")
-    class GreedySplitTest {
-
-        @Test
-        @DisplayName("전체 TB_WORD 등록 단어로만 구성된 용어")
-        void allRegisteredWords() {
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("사용자", "전화", "번호"));
-            List<String> result = greedySplit("사용자전화번호", candidates, wordsByNm, wordDict);
-            assertEquals(Arrays.asList("사용자", "전화", "번호"), result);
-        }
-
-        @Test
-        @DisplayName("TB_WORD > DICT 우선순위 적용")
-        void wordOverDict() {
-            // "번호"는 TB_WORD에 있고 DICT에도 있을 경우 TB_WORD 우선
-            addDict("번호", "NUMBER", "NO", "");
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("사용자", "번호"));
-            List<String> result = greedySplit("사용자번호", candidates, wordsByNm, wordDict);
-            assertEquals(Arrays.asList("사용자", "번호"), result);
-        }
-
-        @Test
-        @DisplayName("DICT 단어로 분리")
-        void dictWordsSplit() {
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("핸드폰", "번호", "핸드", "폰"));
-            List<String> result = greedySplit("핸드폰번호", candidates, wordsByNm, wordDict);
-            // 핸드폰은 DICT에 있고, 번호는 TB_WORD에 있음 - TB_WORD가 먼저 체크되지만 번호 먼저 매칭은 안 됨
-            // 사실 "번호"가 TB_WORD에 있으므로 먼저 매칭을 시도하나, "핸드폰번호"에서 "번호"는 startsWith가 아님
-            // 따라서 핸드폰(DICT longest)가 매칭
-            assertEquals("핸드폰", result.get(0));
-            assertEquals("번호", result.get(1));
-        }
-
-        @Test
-        @DisplayName("빈 입력")
-        void emptyInput() {
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("사용자"));
-            List<String> result = greedySplit("", candidates, wordsByNm, wordDict);
-            assertTrue(result.isEmpty());
-        }
-
-        @Test
-        @DisplayName("매칭 불가능한 문자가 포함된 경우 gap 처리")
-        void gapHandling() {
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("사용자", "번호"));
-            // "사용자XY번호" → "사용자", "X", "Y", 또는 "XY", "번호"
-            List<String> result = greedySplit("사용자XY번호", candidates, wordsByNm, wordDict);
-            assertEquals("사용자", result.get(0));
-            // gap은 한 글자씩 또는 매칭점까지 스킵
-            assertTrue(result.contains("번호"), "번호가 결과에 포함되어야 함");
-        }
-
-        @Test
-        @DisplayName("단일 단어 (TB_WORD에 등록)")
-        void singleRegisteredWord() {
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("주소"));
-            List<String> result = greedySplit("주소", candidates, wordsByNm, wordDict);
-            // input == "주소"이고 candidate "주소"도 있지만, !c.equals(input) 조건으로 건너뜀
-            // candidates.contains(remaining) && !remaining.equals(input) 도 false
-            // 결국 gap 처리로 "주소" 통째로 남음
-            assertEquals(1, result.size());
-            assertEquals("주소", result.get(0));
-        }
-
-        @Test
-        @DisplayName("longest match 우선 - 운전면허 vs 운전+면허")
-        void longestMatchPriority() {
-            addWord("운전면허", "DRIVER_LICENSE", "DRVNG_LCNS", "");
-            Set<String> candidates = new LinkedHashSet<>(
-                    Arrays.asList("운전면허번호", "운전면허", "운전", "면허", "번호", "면허번호"));
-            List<String> result = greedySplit("운전면허번호", candidates, wordsByNm, wordDict);
-            assertEquals(Arrays.asList("운전면허", "번호"), result);
-        }
-
-        @Test
-        @DisplayName("OKT 2글자 이상 토큰으로 매칭")
-        void oktLongestMatch() {
-            // TB_WORD/DICT에 없고 candidate에만 있는 토큰
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("미등록단어", "미등록", "단어"));
-            List<String> result = greedySplit("미등록단어", candidates, wordsByNm, wordDict);
-            // "미등록" (2+) startsWith, length < input → 선택
-            assertEquals("미등록", result.get(0));
-            assertEquals("단어", result.get(1));
-        }
-
-        @Test
-        @DisplayName("전체 매칭 불가 → 잔여 통째 반환")
-        void noMatchAtAll() {
-            Set<String> candidates = new LinkedHashSet<>();
-            List<String> result = greedySplit("없는단어", candidates, wordsByNm, wordDict);
-            assertEquals(1, result.size());
-            assertEquals("없는단어", result.get(0));
-        }
-    }
 
     // ==================================================================
     // 2. generateAlternativeSplit 테스트
@@ -538,11 +442,11 @@ class DataStandardHelperTest {
     @DisplayName("통합 시나리오")
     class IntegrationScenarios {
 
+        // 110번 7.5-9c — greedySplit 사본을 지워 분리 결과(토큰)를 직접 준다
         @Test
-        @DisplayName("greedySplit → buildWordAnalyses → judgeStatus 파이프라인 - 전체 MATCHED")
+        @DisplayName("buildWordAnalyses → judgeStatus 파이프라인 - 전체 MATCHED")
         void fullPipelineAllMatched() {
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("사용자", "이름"));
-            List<String> tokens = greedySplit("사용자이름", candidates, wordsByNm, wordDict);
+            List<String> tokens = Arrays.asList("사용자", "이름");
             List<TermAnalysisResult.WordAnalysis> analyses = buildWordAnalyses(tokens, wordsByNm, wordDict, usageMap);
             String status = judgeStatus(analyses);
             String engAbrv = composeEngAbrv(analyses);
@@ -552,10 +456,9 @@ class DataStandardHelperTest {
         }
 
         @Test
-        @DisplayName("greedySplit → buildWordAnalyses → judgeStatus 파이프라인 - PARTIAL")
+        @DisplayName("buildWordAnalyses → judgeStatus 파이프라인 - PARTIAL")
         void fullPipelinePartial() {
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("핸드폰", "번호"));
-            List<String> tokens = greedySplit("핸드폰번호", candidates, wordsByNm, wordDict);
+            List<String> tokens = Arrays.asList("핸드폰", "번호");
             List<TermAnalysisResult.WordAnalysis> analyses = buildWordAnalyses(tokens, wordsByNm, wordDict, usageMap);
             String status = judgeStatus(analyses);
 
@@ -566,7 +469,7 @@ class DataStandardHelperTest {
         @DisplayName("1순위 → 2순위 대체 분리")
         void primaryToAlternative() {
             Set<String> candidates = new LinkedHashSet<>(Arrays.asList("핸드폰", "핸드", "폰", "번호"));
-            List<String> primary = greedySplit("핸드폰번호", candidates, wordsByNm, wordDict);
+            List<String> primary = Arrays.asList("핸드폰", "번호");
             List<String> alt = generateAlternativeSplit(primary, candidates, wordsByNm);
 
             // 핸드폰(DICT에는 있지만 TB_WORD에 없음)은 미등록 → 추가 분리
@@ -578,8 +481,7 @@ class DataStandardHelperTest {
         @Test
         @DisplayName("코드금액일자 → 3단어 분리, AUTO")
         void threeWordAutoScenario() {
-            Set<String> candidates = new LinkedHashSet<>(Arrays.asList("코드", "금액", "일자"));
-            List<String> tokens = greedySplit("코드금액일자", candidates, wordsByNm, wordDict);
+            List<String> tokens = Arrays.asList("코드", "금액", "일자");
             List<TermAnalysisResult.WordAnalysis> analyses = buildWordAnalyses(tokens, wordsByNm, wordDict, usageMap);
 
             assertEquals("AUTO", judgeStatus(analyses));
@@ -699,105 +601,13 @@ class DataStandardHelperTest {
     }
 
     // ==================================================================
-    // 9. registerTermsBatch newWords 필수필드 검증 로직 테스트
+    // 9. registerTermsBatch 빈 items 처리 테스트
+    //    (110번 7.5-6 — 신규 단어 함께 등록(newWords) 경로를 뺐으므로 그 검증 사본 테스트는 지웠다)
     // ==================================================================
 
     @Nested
-    @DisplayName("registerTermsBatch newWords 필수필드 검증")
-    class RegisterTermsBatchNewWordsValidationTest {
-
-        @Test
-        @DisplayName("newWords null → 검증 통과 (단어 등록 없이 진행)")
-        void newWordsNull() {
-            assertDoesNotThrow(() -> validateNewWords(null));
-        }
-
-        @Test
-        @DisplayName("newWords 빈 리스트 → 검증 통과")
-        void newWordsEmpty() {
-            assertDoesNotThrow(() -> validateNewWords(new ArrayList<>()));
-        }
-
-        @Test
-        @DisplayName("newWord에 wordNm null → RuntimeException")
-        void newWordWordNmNull() {
-            List<Map<String, Object>> newWords = new ArrayList<>();
-            Map<String, Object> nw = new HashMap<>();
-            nw.put("wordNm", null);
-            nw.put("wordEngAbrvNm", "TST");
-            nw.put("wordEngNm", "TEST");
-            newWords.add(nw);
-            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
-        }
-
-        @Test
-        @DisplayName("newWord에 wordNm 빈값 → RuntimeException")
-        void newWordWordNmEmpty() {
-            List<Map<String, Object>> newWords = new ArrayList<>();
-            Map<String, Object> nw = new HashMap<>();
-            nw.put("wordNm", "  ");
-            nw.put("wordEngAbrvNm", "TST");
-            nw.put("wordEngNm", "TEST");
-            newWords.add(nw);
-            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
-        }
-
-        @Test
-        @DisplayName("newWord에 wordEngAbrvNm 빈값 → RuntimeException")
-        void newWordAbrvEmpty() {
-            List<Map<String, Object>> newWords = new ArrayList<>();
-            Map<String, Object> nw = new HashMap<>();
-            nw.put("wordNm", "테스트");
-            nw.put("wordEngAbrvNm", "");
-            nw.put("wordEngNm", "TEST");
-            newWords.add(nw);
-            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
-        }
-
-        @Test
-        @DisplayName("newWord에 wordEngNm null → RuntimeException")
-        void newWordEngNmNull() {
-            List<Map<String, Object>> newWords = new ArrayList<>();
-            Map<String, Object> nw = new HashMap<>();
-            nw.put("wordNm", "테스트");
-            nw.put("wordEngAbrvNm", "TST");
-            nw.put("wordEngNm", null);
-            newWords.add(nw);
-            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
-        }
-
-        @Test
-        @DisplayName("첫 번째 정상, 두 번째 누락 → RuntimeException")
-        void secondWordInvalid() {
-            List<Map<String, Object>> newWords = new ArrayList<>();
-            Map<String, Object> nw1 = new HashMap<>();
-            nw1.put("wordNm", "테스트1");
-            nw1.put("wordEngAbrvNm", "TST1");
-            nw1.put("wordEngNm", "TEST1");
-            newWords.add(nw1);
-
-            Map<String, Object> nw2 = new HashMap<>();
-            nw2.put("wordNm", "테스트2");
-            nw2.put("wordEngAbrvNm", "");
-            nw2.put("wordEngNm", "TEST2");
-            newWords.add(nw2);
-
-            assertThrows(RuntimeException.class, () -> validateNewWords(newWords));
-        }
-
-        @Test
-        @DisplayName("모든 필수필드 정상 → 예외 없음")
-        void allFieldsValid() {
-            List<Map<String, Object>> newWords = new ArrayList<>();
-            Map<String, Object> nw = new HashMap<>();
-            nw.put("wordNm", "핸드폰");
-            nw.put("wordEngAbrvNm", "HNDPHN");
-            nw.put("wordEngNm", "HANDPHONE");
-            nw.put("wordDesc", "핸드폰 설명");
-            nw.put("domainClsfNm", "");
-            newWords.add(nw);
-            assertDoesNotThrow(() -> validateNewWords(newWords));
-        }
+    @DisplayName("registerTermsBatch 빈 items 처리")
+    class RegisterTermsBatchEmptyItemsTest {
 
         @Test
         @DisplayName("items가 null이거나 빈 리스트 → 빈 결과 반환")
@@ -837,24 +647,6 @@ class DataStandardHelperTest {
     }
 
     /**
-     * registerTermsBatch의 newWords 필수필드 검증 로직 재현
-     */
-    private void validateNewWords(List<Map<String, Object>> newWords) {
-        if (newWords == null) return;
-        for (int i = 0; i < newWords.size(); i++) {
-            Map<String, Object> nw = newWords.get(i);
-            String wordNm = (String) nw.get("wordNm");
-            String wordEngAbrvNm = (String) nw.get("wordEngAbrvNm");
-            String wordEngNm = (String) nw.get("wordEngNm");
-            if (wordNm == null || wordNm.trim().isEmpty()
-                    || wordEngAbrvNm == null || wordEngAbrvNm.trim().isEmpty()
-                    || wordEngNm == null || wordEngNm.trim().isEmpty()) {
-                throw new RuntimeException("신규 단어 필수 항목 누락: 한글명, 영문약어, 영문명은 필수입니다. (단어: " + wordNm + ")");
-            }
-        }
-    }
-
-    /**
      * registerTermsBatch의 빈 items 처리 로직 재현
      */
     private Map<String, Object> simulateBatchWithEmptyItems(List<Map<String, Object>> items) {
@@ -866,59 +658,6 @@ class DataStandardHelperTest {
             return res;
         }
         return new HashMap<>(); // 여기선 도달하지 않음
-    }
-
-    private List<String> greedySplit(String input, Set<String> candidates,
-            Map<String, List<StdWordVo>> wordsByNm, Map<String, Map<String, Object>> wordDict) {
-        List<String> result = new ArrayList<>();
-        Set<String> dictKeys = wordDict.keySet();
-        String remaining = input;
-        int maxIter = 100;
-
-        while (!remaining.isEmpty() && maxIter-- > 0) {
-            String selected = null;
-
-            // 1. TB_WORD longest match
-            for (String c : candidates) {
-                if (wordsByNm.containsKey(c) && remaining.startsWith(c) && !c.equals(input)) {
-                    if (selected == null || c.length() > selected.length()) selected = c;
-                }
-            }
-            if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
-
-            // 2. DICT longest match
-            for (String c : candidates) {
-                if (dictKeys.contains(c) && remaining.startsWith(c) && !c.equals(input)) {
-                    if (selected == null || c.length() > selected.length()) selected = c;
-                }
-            }
-            if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
-
-            // 3. remaining == OKT token
-            if (candidates.contains(remaining) && !remaining.equals(input)) {
-                result.add(remaining); remaining = ""; continue;
-            }
-
-            // 4. OKT longest 2+
-            for (String c : candidates) {
-                if (c.length() >= 2 && remaining.startsWith(c) && c.length() < remaining.length() && !c.equals(input)) {
-                    if (selected == null || c.length() > selected.length()) selected = c;
-                }
-            }
-            if (selected != null) { result.add(selected); remaining = remaining.substring(selected.length()); continue; }
-
-            // 5. gap
-            boolean skipped = false;
-            for (int skip = 1; skip < remaining.length(); skip++) {
-                String sub = remaining.substring(skip);
-                for (String c : candidates) {
-                    if (sub.startsWith(c) && !c.equals(input)) { skipped = true; break; }
-                }
-                if (skipped) { result.add(remaining.substring(0, skip)); remaining = remaining.substring(skip); break; }
-            }
-            if (!skipped) { result.add(remaining); remaining = ""; }
-        }
-        return result;
     }
 
     private List<String> generateAlternativeSplit(List<String> primarySplit, Set<String> candidates, Map<String, List<StdWordVo>> wordsByNm) {

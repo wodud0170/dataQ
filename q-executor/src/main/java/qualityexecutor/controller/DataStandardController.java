@@ -1,13 +1,8 @@
 package qualityexecutor.controller;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,11 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 import com.ndata.messaging.common.CustomHeaders;
-import com.ndata.quality.model.std.TermAnalysisResult;
 
 import lombok.extern.slf4j.Slf4j;
 import qualityexecutor.service.std.DataStandardService;
-import qualityexecutor.service.std.TermRecommendService;
 import qualityexecutor.service.stomp.StompSessionService;
 import reactor.core.publisher.Mono;
 
@@ -33,9 +26,6 @@ public class DataStandardController extends DataControllerBase {
 	@Autowired
 	private StompSessionService stompSessionService;
 
-	@Autowired
-	private TermRecommendService termRecommendService;
-	
 	//@ResponseBody
     @PostMapping(value = "/uploadWords", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<Response> uploadWords(@RequestHeader(value=CustomHeaders.HEADER_USERNAME, required=false) String userId,
@@ -168,16 +158,5 @@ public class DataStandardController extends DataControllerBase {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
     	return Mono.just(result);
-    }
-
-    // 표준화 추천 - 용어 분석
-    @PostMapping(value = "/analyzeTermsBatch")
-    public List<TermAnalysisResult> analyzeTermsBatch(@RequestBody Map<String, Object> request) {
-        @SuppressWarnings("unchecked")
-        List<String> termNames = (List<String>) request.get("termNames");
-        if (termNames == null) termNames = new ArrayList<>();
-        String dictId = (String) request.get("dictId");
-        log.info(">> analyzeTermsBatch: {} items, dict={}", termNames.size(), dictId);
-        return termRecommendService.analyze(termNames, dictId);
     }
 }

@@ -8,8 +8,8 @@ A. 표준 진단 (DiagService)
 B. 구조 변경 진단 (StructDiagController.execute)
    - 논리 모델(dataModelDsId NULL) 은 400 + "[CONFIG]" 메시지로 즉시 거부
 
-C. 진단 스케줄러로 STRUCT 트리거 시 (논리 모델)
-   - LOG.execStatus='ERROR' + errorMsg startswith "[CONFIG]"
+C. 진단 스케줄러 STRUCT 등록 (논리 모델)
+   - 등록 단계에서 400 "데이터 소스가 없는 논리 모델은 구조 변경 진단을 예약할 수 없습니다." (110 6.10-11a)
 
 전제: 28091/28098 + dataq-db 기동
 """
@@ -55,6 +55,13 @@ def get_attr_list(s, dm_id):
     return r.json() or []
 
 
+def schedule_log(s, schedule_id, log_id):
+    """스케줄 실행 이력 한 건 — 110 6.10-29 로 /logs/{logId} 를 지워 이력 목록(scheduleId)에서 찾는다"""
+    r = s.get(BASE + "/api/diag/schedule/logs", params={"scheduleId": schedule_id}, timeout=10)
+    r.raise_for_status()
+    return next((l for l in (r.json() or []) if l.get("logId") == log_id), {})
+
+
 state = {}
 
 
@@ -95,17 +102,11 @@ def main():
         deadline = time.time() + 90
         final = None
         while time.time() < deadline:
-            r5 = admin.get(BASE + f"/api/diag/schedule/logs/{log_id}",
-                           params={"logId": log_id}, timeout=10)
-            final = r5.json() or {}
+            final = schedule_log(admin, sched_id, log_id)
             if final.get("execStatus") in ("DONE", "ERROR"): break
             time.sleep(5)
         assert final, "폴링 실패"
-        if final.get("execStatus") == "ERROR" and "[DATA_NOT_FOUND]" in (final.get("errorMsg") or ""):
-            # 수집 이력 없는 모델 → 비표준 제외 자체를 검증할 수 없음. 우아하게 스킵.
-            print(f"  대상 모델에 수집 이력 없음 ({final.get('errorMsg')[:60]}). "
-                  "필터 검증은 수집 이력 있는 모델 필요 — 스킵.")
-            return
+        # 110 6.10-10 — 수집 이력이 없는 모델도 예약 표준 진단이 돈다 ([DATA_NOT_FOUND] 로 끝나지 않음)
         assert final.get("execStatus") == "DONE", f"표준 진단 완료 못 함: {final}"
         diag_job_id = final.get("diagJobId")
         assert diag_job_id, "diagJobId 누락"
@@ -153,10 +154,10 @@ def main():
         print(f"  거부 메시지: {msg}")
     if not step("B. 구조 변경 진단 — 논리 모델 400 [CONFIG] 거부", _logical_model_struct_rejected): pass
 
-    # ==================== 시나리오 C: 스케줄러 STRUCT 트리거 거부 ====================
+    # ==================== 시나리오 C: 논리 모델 STRUCT 스케줄 등록 거부 ====================
+    # 110 6.10-11a — 예전에는 등록이 되고 실행 때마다 launcher 의 [CONFIG] 로 ERROR 였다. 이제 등록 단계에서 400
     def _scheduler_struct_logical_error():
         dm_id = state["b_dmId"]
-        # STRUCT 스케줄 등록 + 즉시 실행
         sched_body = {
             "scheduleNm": "struct_logical_" + datetime.now().strftime("%H%M%S"),
             "diagType": "STRUCT", "dataModelId": dm_id,
@@ -164,28 +165,14 @@ def main():
         }
         r = admin.post(BASE + "/api/diag/schedule/create", json=sched_body, timeout=10)
         r.raise_for_status()
-        sched_id = r.json()["contents"]
-        state["c_sched_id"] = sched_id
-        r2 = admin.post(BASE + "/api/diag/schedule/runNow",
-                        json={"scheduleId": sched_id}, timeout=30)
-        r2.raise_for_status()
-        log_id = r2.json()["contents"]
-
-        # ERROR 로 빠르게 마감 예상 (launcher 가 dsId 없음 throw → catch → updateLogFinish)
-        deadline = time.time() + 30
-        final = None
-        while time.time() < deadline:
-            r3 = admin.get(BASE + f"/api/diag/schedule/logs/{log_id}",
-                           params={"logId": log_id}, timeout=10)
-            final = r3.json() or {}
-            if final.get("execStatus") in ("ERROR", "DONE"): break
-            time.sleep(2)
-        assert final and final.get("execStatus") == "ERROR", \
-            f"ERROR 기대, got {final.get('execStatus')}"
-        msg = final.get("errorMsg") or ""
-        assert msg.startswith("[CONFIG]"), f"[CONFIG] prefix 누락: {msg}"
-        print(f"  LOG ERROR 메시지: {msg[:120]}")
-    if not step("C. 스케줄러 STRUCT 트리거 — 논리 모델 [CONFIG] ERROR", _scheduler_struct_logical_error): pass
+        body = r.json()
+        if body.get("resultCode") == 200:
+            state["c_sched_id"] = body.get("contents")
+        assert body.get("resultCode") == 400, f"400 기대, got {body}"
+        msg = body.get("resultMessage") or ""
+        assert msg == "데이터 소스가 없는 논리 모델은 구조 변경 진단을 예약할 수 없습니다.", f"안내 문구: {msg}"
+        print(f"  등록 거부 메시지: {msg}")
+    if not step("C. 스케줄러 STRUCT — 논리 모델은 등록 단계에서 400", _scheduler_struct_logical_error): pass
 
     # 정리
     def _cleanup():

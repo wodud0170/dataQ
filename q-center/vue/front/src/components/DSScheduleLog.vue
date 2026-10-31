@@ -1,6 +1,7 @@
 <template>
   <v-main>
-    <v-sheet class="pa-3" style="display:flex; flex-direction:column; height:100%;">
+    <!-- 110 6.10-33 — 50건씩 보이면 목록이 화면보다 길어진다. height 로 고정하면 흰 바탕이 목록 중간에서 끊겨 min-height 로 -->
+    <v-sheet class="pa-3" style="display:flex; flex-direction:column; min-height:100%;">
       <!-- 상단 필터 -->
       <v-sheet class="d-flex align-center pa-2 flex-wrap" style="border-bottom:1px solid #E8EAF6; gap:8px;">
         <v-autocomplete v-model="filter.scheduleId" :items="scheduleOptions"
@@ -19,8 +20,12 @@
         <v-btn small text @click="resetFilter">초기화</v-btn>
       </v-sheet>
 
+      <!-- 110 6.10-33 — 서버는 최근 logLimit 건까지만 준다. 다 찼으면 조건으로 좁히라고 알린다 -->
+      <div v-if="items.length >= logLimit" id="schLogLimitNote" class="sch-limit-note">
+        최근 {{ logLimit }}건까지 보입니다 — 스케줄·기간으로 좁혀 조회하세요
+      </div>
       <v-data-table :headers="headers" :items="items" dense hide-default-footer
-        :items-per-page="100" class="elevation-0" :loading="loading"
+        :page.sync="page" :items-per-page="itemsPerPage" class="elevation-0" :loading="loading"
         @click:row="openDetail" style="cursor:pointer;">
         <template v-slot:item.execDt="{ item }">
           <span style="font-size:.8rem;">{{ formatDt(item.execDt) }}</span>
@@ -57,6 +62,14 @@
           <span class="grey--text">이력이 없습니다.</span>
         </template>
       </v-data-table>
+      <div id="schLogPager" class="d-flex align-center px-4 pt-2 pb-2">
+        <v-spacer />
+        <v-pagination v-if="pageCount > 1" v-model="page" :length="pageCount" prev-icon="mdi-menu-left" next-icon="mdi-menu-right"
+          color="ndColor" :total-visible="10" />
+        <v-spacer />
+        <v-select v-model="itemsPerPage" :items="[20,50,100]" dense outlined hide-details
+          style="max-width:100px; font-size:.75rem;" suffix="건" />
+      </div>
     </v-sheet>
 
     <!-- 상세 드로어 -->
@@ -155,6 +168,9 @@ export default {
     return {
       loading: false,
       items: [],
+      logLimit: 200,       // 110 6.10-33 — 서버에 넘기는 조회 상한
+      page: 1,
+      itemsPerPage: 50,
       scheduleOptions: [],
       filter: { scheduleId: null, execStatus: null, fromDt: '', toDt: '' },
       statusOptions: ['RUNNING', 'DONE', 'ERROR', 'SKIPPED'],
@@ -172,6 +188,15 @@ export default {
       batchRun: null,   // 104번 WP9-67 — 선택한 실행의 배치 결과
     };
   },
+  computed: {
+    pageCount() {
+      return Math.ceil(this.items.length / this.itemsPerPage);
+    },
+  },
+  watch: {
+    // 건수 변경으로 페이지가 줄면 마지막 페이지로
+    pageCount(n) { if (this.page > n) this.page = Math.max(1, n); },
+  },
   mounted() {
     this.loadScheduleOptions();
     this.loadList();
@@ -183,13 +208,13 @@ export default {
     },
     loadList() {
       this.loading = true;
-      const p = { limit: 200 };
+      const p = { limit: this.logLimit };
       if (this.filter.scheduleId) p.scheduleId = this.filter.scheduleId;
       if (this.filter.execStatus) p.execStatus = this.filter.execStatus;
       if (this.filter.fromDt)     p.fromDt     = this.filter.fromDt + ' 00:00:00';
       if (this.filter.toDt)       p.toDt       = this.filter.toDt   + ' 23:59:59';
       axios.get(this.$APIURL.base + 'api/diag/schedule/logs', { params: p })
-        .then(res => { this.items = res.data || []; })
+        .then(res => { this.items = res.data || []; this.page = 1; })
         .finally(() => { this.loading = false; });
     },
     resetFilter() {
@@ -226,3 +251,13 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+/* 110 6.10-33 — DSChangeHistory 의 상한 안내와 같은 모양 */
+.sch-limit-note {
+  font-size: .8rem;
+  color: #E65100;
+  background: #FFF3E0;
+  padding: 6px 12px;
+}
+</style>

@@ -38,7 +38,7 @@ import qualitycenter.service.auth.SessionService;
  * 진단 스케줄러 관리 API (65번 문서)
  *
  * <p>관리자 전용: create / update / delete / toggle / runNow</p>
- * <p>일반 사용자 허용: list / detail / logs / cronPreview</p>
+ * <p>일반 사용자 허용: list / logs / cronPreview</p>
  *
  * <p>실제 스케줄 평가/실행은 q-executor 의 DiagSchedulerRunner 가 담당.
  * 본 컨트롤러는 메타데이터 CRUD + runNow 트리거만 다룬다.</p>
@@ -70,11 +70,6 @@ public class DiagScheduleController {
         p.put("diagType",    diagType);
         p.put("useYn",       useYn);
         return sqlSessionTemplate.selectList("diagSchedule.selectScheduleList", p);
-    }
-
-    @GetMapping("/{scheduleId}")
-    public DiagScheduleVo detail(@RequestParam String scheduleId) {
-        return sqlSessionTemplate.selectOne("diagSchedule.selectScheduleById", scheduleId);
     }
 
     // ==================== 생성/수정/삭제 (관리자) ====================
@@ -183,6 +178,22 @@ public class DiagScheduleController {
                     "diagSchedule.selectScheduleById", scheduleId);
             if (sc == null) throw new IllegalArgumentException("스케줄 없음");
 
+            // 110 6.10-12a — 화면에서 돌린 진단(Job·구조 진단 이력)이 진행 중이면 겹쳐 띄우지 않는다 (화면 실행과 같은 409, LOG 안 만듦)
+            String diagType = sc.getDiagType();
+            int active = 0;
+            if ("STANDARD".equals(diagType) || "BOTH".equals(diagType)) {
+                int jobCnt = sqlSessionTemplate.selectOne("diag.selectActiveDiagJobCount", sc.getDataModelId());
+                active += jobCnt;
+            }
+            if ("STRUCT".equals(diagType) || "BOTH".equals(diagType)) {
+                int structCnt = sqlSessionTemplate.selectOne("structdiag.selectActiveStructDiagCount", sc.getDataModelId());
+                active += structCnt;
+            }
+            if (active > 0) {
+                res.setResultInfo(409, "이미 진행 중인 진단이 있습니다.");
+                return res;
+            }
+
             // 1) LOG (RUNNING) 먼저 insert
             DiagScheduleLogVo log = new DiagScheduleLogVo();
             log.setLogId(StringUtils.getUUID());
@@ -194,35 +205,32 @@ public class DiagScheduleController {
             sqlSessionTemplate.insert("diagSchedule.insertLog", log);
 
             // 2) q-executor 에 실행 요청 (동일 logId 전달)
+            // 110 6.10-13b — 실행자는 누른 사람 (런처가 Job·구조 진단 이력·범정부 메타·배치 실행자로 기록)
             Map<String, String> params = new HashMap<>();
             params.put("scheduleId", scheduleId);
             params.put("logId",      log.getLogId());
+            params.put("userId",     sessionService.getUserId());
             WebClientHandler webClient = new WebClientHandler(
                     NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/diag/schedule/runNow");
             // postData 는 Mono 이지만 본 엔드포인트는 동기 반환이라 block().
             // 실패 시 LOG 를 ERROR 로 즉시 마감.
+            Response er;
             try {
-                webClient.postData(
+                er = webClient.postData(
                         sessionService.getUserId(),
                         Objects.toString(request.getSession().getAttribute("SSID"), null),
                         params
                 ).block();
             } catch (Exception we) {
-                Map<String, Object> p = new HashMap<>();
-                p.put("logId",        log.getLogId());
-                p.put("execStatus",   "ERROR");
-                p.put("errorMsg",     "[CONFIG] q-executor 호출 실패: " + we.getMessage());
-                p.put("diagJobId",    null);
-                p.put("structDiagId", null);
-                sqlSessionTemplate.update("diagSchedule.updateLogFinish", p);
-                // LOG 만 마감하면 스케줄 목록의 "마지막 실행" 이 계속 빈칸으로 남는다.
-                // 정상 완료 경로(DiagSchedulerRunner.markFinish)와 동일하게 LAST_EXEC_* 도 갱신.
-                Map<String, Object> pSc = new HashMap<>();
-                pSc.put("scheduleId", scheduleId);
-                pSc.put("status",     "ERROR");
-                pSc.put("logId",      log.getLogId());
-                sqlSessionTemplate.update("diagSchedule.updateScheduleLastExec", pSc);
+                finishRunNowError(scheduleId, log.getLogId(), "[CONFIG] q-executor 호출 실패: " + we.getMessage());
                 throw we;
+            }
+            // 110 6.10-7a·7b — executor 가 거부하면(스케줄 없음·[CONFIG] 등) 실패로 알리고 RUNNING LOG 를 마감한다.
+            // 예전엔 응답 코드를 안 봐 "실행 요청 전송 완료" 로 보이고 LOG 는 60분 뒤 타임아웃까지 RUNNING 이었다.
+            if (er.getResultCode() != RestResult.CODE_200.getCode()) {
+                finishRunNowError(scheduleId, log.getLogId(), "[EXECUTOR] " + er.getResultMessage());
+                res.setResultInfo(RestResult.CODE_500.getCode(), er.getResultMessage());
+                return res;
             }
 
             res.setContents(log.getLogId());
@@ -236,6 +244,27 @@ public class DiagScheduleController {
             res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
         }
         return res;
+    }
+
+    /**
+     * 즉시 실행 실패 마감 — LOG 가 아직 RUNNING 일 때만 ERROR 로 닫고 스케줄 LAST_EXEC_* 도 갱신한다.
+     * launcher 가 기동 실패를 이미 마감했으면(그쪽 사유가 더 정확) 덮지 않는다.
+     * LOG 만 마감하면 스케줄 목록의 "마지막 실행" 이 빈칸으로 남으므로 정상 완료 경로(DiagSchedulerRunner.markFinish)와 같이 갱신.
+     */
+    private void finishRunNowError(String scheduleId, String logId, String errorMsg) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("logId",        logId);
+        p.put("execStatus",   "ERROR");
+        p.put("errorMsg",     errorMsg);
+        p.put("diagJobId",    null);
+        p.put("structDiagId", null);
+        p.put("onlyRunning",  true);
+        if (sqlSessionTemplate.update("diagSchedule.updateLogFinish", p) == 0) return;
+        Map<String, Object> pSc = new HashMap<>();
+        pSc.put("scheduleId", scheduleId);
+        pSc.put("status",     "ERROR");
+        pSc.put("logId",      logId);
+        sqlSessionTemplate.update("diagSchedule.updateScheduleLastExec", pSc);
     }
 
     // ==================== 이력 조회 ====================
@@ -254,11 +283,6 @@ public class DiagScheduleController {
         p.put("toDt",       toDt);
         p.put("limit",      limit);
         return sqlSessionTemplate.selectList("diagSchedule.selectLogList", p);
-    }
-
-    @GetMapping("/logs/{logId}")
-    public DiagScheduleLogVo logDetail(@RequestParam String logId) {
-        return sqlSessionTemplate.selectOne("diagSchedule.selectLogById", logId);
     }
 
     // ==================== CRON 미리보기 ====================
@@ -309,6 +333,9 @@ public class DiagScheduleController {
         boolean batch = "COMPLIANCE_SNAPSHOT".equals(vo.getDiagType()) || "UNUSED_STD".equals(vo.getDiagType());
         if (vo.getDataModelId() != null && vo.getDataModelId().trim().isEmpty()) vo.setDataModelId(null);
         if (!batch && vo.getDataModelId() == null) throw new IllegalArgumentException("데이터모델 필수");
+        // 110 6.10-2 — 표준사전은 표준화 진단(STANDARD·BOTH)에만 쓴다. 그 밖의 유형은 화면이 보낸 사전을 버린다
+        boolean std = "STANDARD".equals(vo.getDiagType()) || "BOTH".equals(vo.getDiagType());
+        if (!std) vo.setDictId(null);
 
         if (batch) {
             if (vo.getDataModelId() != null && sqlSessionTemplate.selectOne("datamodel.selectDataModelById", vo.getDataModelId()) == null)
@@ -320,24 +347,49 @@ public class DiagScheduleController {
             java.util.Map<String, Object> dm = sqlSessionTemplate.selectOne("govMeta.selectModel", vo.getDataModelId());
             if (dm == null || dm.get("dsId") == null || String.valueOf(dm.get("dsId")).trim().isEmpty())
                 throw new IllegalArgumentException("데이터소스가 없는 모델은 범정부 메타 대상이 아닙니다.");
-        } else if (dictService.resolve(null, vo.getDataModelId()) == null) {
-            // 98번 — 예약 실행에는 사전을 고를 사람이 없다. 모델에 사전이 없으면
-            // 실행 시점에 무엇으로 진단할지 정할 수 없으므로 등록 단계에서 막는다.
-            // (실행할 때 실패시키면 사용자가 원인을 알기 어렵다)
-            throw new IllegalArgumentException(
-                "이 데이터 모델에 표준사전이 지정되어 있지 않아 예약 진단을 등록할 수 없습니다."
-                + " [데이터 모델 관리] 에서 모델을 수정해 표준사전을 먼저 지정해 주세요.");
+        } else {
+            boolean struct = "STRUCT".equals(vo.getDiagType())   || "BOTH".equals(vo.getDiagType());
+            java.util.Map<String, Object> dm = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", vo.getDataModelId());
+            if (dm == null) throw new IllegalArgumentException("데이터 모델을 찾을 수 없습니다.");
+            // 110 6.10-11a — 구조 변경 진단은 실 DB 와 비교하므로 데이터 소스가 있어야 한다.
+            // 등록 때 막지 않으면 실행마다 ScheduledDiagLauncher.startStructDiag 의 [CONFIG] 로 실패했다.
+            if (struct) {
+                Object dsId = dm.get("dataModelDsId");
+                if (dsId == null || String.valueOf(dsId).trim().isEmpty())
+                    throw new IllegalArgumentException("데이터 소스가 없는 논리 모델은 구조 변경 진단을 예약할 수 없습니다.");
+            }
+            // 110 6.10-2 — 스케줄에 고른 사전은 사용 중인 사전이어야 한다. 비우면 실행 때 모델의 사전
+            if (std) {
+                if (vo.getDictId() != null && vo.getDictId().trim().isEmpty()) vo.setDictId(null);
+                if (vo.getDictId() != null && dictService.list().stream().noneMatch(d -> vo.getDictId().equals(d.get("dictId"))))
+                    throw new IllegalArgumentException("사용할 수 없는 표준사전입니다.");
+                if (dictService.resolve(vo.getDictId(), vo.getDataModelId()) == null) {
+                    // 98번 — 예약 실행에는 사전을 고를 사람이 없다. 사전을 안 고르고 모델에도 사전이 없으면
+                    // 실행 시점에 무엇으로 진단할지 정할 수 없으므로 등록 단계에서 막는다.
+                    // (실행할 때 실패시키면 사용자가 원인을 알기 어렵다)
+                    throw new IllegalArgumentException(
+                        "이 데이터 모델에 표준사전이 지정되어 있지 않아 예약 진단을 등록할 수 없습니다."
+                        + " [데이터 모델 관리] 에서 모델을 수정해 표준사전을 먼저 지정해 주세요.");
+                }
+            }
         }
 
         String type = vo.getScheduleType() == null ? "SIMPLE" : vo.getScheduleType();
         if ("SIMPLE".equals(type)) {
             if (vo.getRepeatCycle() == null) throw new IllegalArgumentException("반복 주기 필수");
-            if (vo.getRepeatTime() == null || !vo.getRepeatTime().matches("^[0-2]\\d:[0-5]\\d$"))
+            // 110 6.10-11b — 24~29시가 통과하던 정규식을 00~23시로
+            if (vo.getRepeatTime() == null || !vo.getRepeatTime().matches("^([01]\\d|2[0-3]):[0-5]\\d$"))
                 throw new IllegalArgumentException("실행 시각(HH:mm) 형식 오류");
-            if ("WEEKLY".equals(vo.getRepeatCycle()) && vo.getRepeatDayOfWeek() == null)
-                throw new IllegalArgumentException("요일 필수");
-            if ("MONTHLY".equals(vo.getRepeatCycle()) && vo.getRepeatDayOfMonth() == null)
-                throw new IllegalArgumentException("일자 필수");
+            if ("WEEKLY".equals(vo.getRepeatCycle())) {
+                if (vo.getRepeatDayOfWeek() == null) throw new IllegalArgumentException("요일 필수");
+                if (vo.getRepeatDayOfWeek() < 1 || vo.getRepeatDayOfWeek() > 7)
+                    throw new IllegalArgumentException("요일은 1(월)~7(일) 이어야 합니다.");
+            }
+            if ("MONTHLY".equals(vo.getRepeatCycle())) {
+                if (vo.getRepeatDayOfMonth() == null) throw new IllegalArgumentException("일자 필수");
+                if (vo.getRepeatDayOfMonth() < 1 || vo.getRepeatDayOfMonth() > 28)
+                    throw new IllegalArgumentException("일자는 1~28 이어야 합니다.");
+            }
         } else if ("CRON".equals(type)) {
             if (vo.getCronExpr() == null) throw new IllegalArgumentException("Cron 표현식 필수");
             try { CronExpression.parse(vo.getCronExpr()); }

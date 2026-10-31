@@ -285,7 +285,6 @@ public class StructDiagController {
 	@PostMapping("/execute")
 	public Mono<Response> execute(HttpServletRequest request, @RequestBody Map<String, Object> body) {
 		String dataModelId = (String) body.get("dataModelId");
-		String clctId = (String) body.get("clctId"); // 선택적: 특정 수집건 지정. 없으면 최신
 		Response result = new Response();
 
 		if (dataModelId == null || dataModelId.trim().isEmpty()) {
@@ -324,14 +323,11 @@ public class StructDiagController {
 			historyParam.put("cretUserId", userId);
 			sqlSessionTemplate.insert("structdiag.insertStructDiagHistory", historyParam);
 
-			// q-executor에 실행 요청
+			// q-executor에 실행 요청 (110 6.10-27c — 진단은 늘 모델의 지금 컬럼과 실 DB 를 비교한다, 수집건 지정 없음)
 			Map<String, String> params = new HashMap<>();
 			params.put("diagId", diagId);
 			params.put("dataModelId", dataModelId);
 			params.put("userId", userId);
-			if (clctId != null && !clctId.trim().isEmpty()) {
-				params.put("clctId", clctId);
-			}
 
 			WebClientHandler webClientHandler = new WebClientHandler(
 					NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/structDiag/run");
@@ -340,14 +336,33 @@ public class StructDiagController {
 					Objects.toString(request.getSession().getAttribute("SSID"), null),
 					params)
 				.map(res -> {
+					// 110 6.10-5b — executor 가 기동을 거부하면 이력을 ERROR 로 (READY 로 남으면 다음 실행이 늘 409)
+					if (res.getResultCode() != RestResult.CODE_200.getCode()) {
+						markStructDiagError(diagId);
+						return res;
+					}
 					res.setContents(diagId);
 					return res;
+				})
+				.onErrorResume(e -> {
+					// 110 6.10-5a — executor 호출 자체가 실패해도 같게 (표준 진단 startDiag 와 같은 방식)
+					log.error(">> executor 호출 실패, 구조 진단 이력을 ERROR로 변경: {}", diagId, e);
+					markStructDiagError(diagId);
+					result.setResultInfo(RestResult.CODE_500.getCode(), "진단 서버 연결 실패: " + e.getMessage());
+					return Mono.just(result);
 				});
 		} catch (Exception e) {
 			log.error(">> structDiag execute failed", e);
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 			return Mono.just(result);
 		}
+	}
+
+	private void markStructDiagError(String diagId) {
+		Map<String, Object> p = new HashMap<>();
+		p.put("diagId", diagId);
+		p.put("status", "ERROR");
+		sqlSessionTemplate.update("structdiag.updateStructDiagStatus", p);
 	}
 
 	/** 진단 상태 조회 (폴링용) */
@@ -414,41 +429,6 @@ public class StructDiagController {
 		return result;
 	}
 
-	/**
-	 * 스키마 비교 실행 (수집 스냅샷 vs 현재 DBMS)
-	 * q-executor에 동기 요청하여 결과를 프론트에 반환
-	 */
-	@PostMapping("/compareSchema")
-	public Mono<Response> compareSchema(HttpServletRequest request, @RequestBody Map<String, Object> body) {
-		String dataModelId = (String) body.get("dataModelId");
-		String clctId = (String) body.get("clctId");
-		Response result = new Response();
-
-		if (dataModelId == null || dataModelId.trim().isEmpty()) {
-			result.setResultInfo(RestResult.CODE_500.getCode(), "dataModelId는 필수입니다.");
-			return Mono.just(result);
-		}
-
-		try {
-			Map<String, String> params = new HashMap<>();
-			params.put("dataModelId", dataModelId);
-			if (clctId != null && !clctId.trim().isEmpty()) {
-				params.put("clctId", clctId);
-			}
-
-			WebClientHandler webClientHandler = new WebClientHandler(
-					NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/structDiag/compareSchema");
-			return webClientHandler.postData(
-					sessionService.getUserId(),
-					Objects.toString(request.getSession().getAttribute("SSID"), null),
-					params);
-		} catch (Exception e) {
-			log.error(">> compareSchema failed", e);
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
-			return Mono.just(result);
-		}
-	}
-
 	/** 구조 진단 결과 엑셀 다운로드 */
 	@GetMapping("/downloadResult")
 	public void downloadResult(HttpServletRequest request, HttpServletResponse response, String diagId) {
@@ -478,20 +458,5 @@ public class StructDiagController {
 		} catch (Exception e) {
 			log.error(">> download struct diag constraint result excel failed: {}", e.getMessage());
 		}
-	}
-
-	/** 스키마별 최신 구조 진단 상태 (뱃지용) */
-	@GetMapping("/latestStatus")
-	public Map<String, Object> latestStatus(@RequestParam String dsId, @RequestParam(required = false) String schemaNm) {
-		Map<String, Object> param = new HashMap<>();
-		param.put("dsId", dsId);
-		param.put("schemaNm", schemaNm);
-		Map<String, Object> latest = sqlSessionTemplate.selectOne("structdiag.selectLatestStructDiagStatus", param);
-		if (latest == null) {
-			Map<String, Object> empty = new HashMap<>();
-			empty.put("status", "NONE");
-			return empty;
-		}
-		return latest;
 	}
 }

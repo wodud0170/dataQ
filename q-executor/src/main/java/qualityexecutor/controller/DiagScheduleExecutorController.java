@@ -31,20 +31,22 @@ public class DiagScheduleExecutorController {
     @Autowired
     private ScheduledDiagLauncher launcher;
 
-    /** 즉시 실행. q-center 가 LOG(RUNNING) 을 먼저 insert 하고 logId 를 전달한다. */
+    /** 즉시 실행. q-center 가 LOG(RUNNING) 을 먼저 insert 하고 logId 를 전달한다.
+     *  500 을 돌려주면 q-center 가 아직 RUNNING 인 LOG 를 ERROR 로 마감한다 (110 6.10-7b). */
     @PostMapping("/runNow")
     public Mono<Response> runNow(@RequestBody Map<String, String> params) {
         Response res = new Response();
         String scheduleId = params.get("scheduleId");
         String logId      = params.get("logId");  // q-center 가 이미 insert 한 로그 ID
-        log.info(">> schedule runNow: scheduleId={}, logId={}", scheduleId, logId);
+        String userId     = params.get("userId"); // 110 6.10-13b — 즉시 실행을 누른 사람
+        log.info(">> schedule runNow: scheduleId={}, logId={}, userId={}", scheduleId, logId, userId);
         try {
             if (scheduleId == null) throw new IllegalArgumentException("scheduleId 필수");
             DiagScheduleVo sc = sql.selectOne("diagSchedule.selectScheduleById", scheduleId);
             if (sc == null) throw new IllegalStateException("[DATA_NOT_FOUND] 스케줄 없음: " + scheduleId);
 
             // launcher 가 logId null 이면 새로 생성, 있으면 기존 LOG 를 이어씀
-            String usedLogId = launcher.launch(sc, "MANUAL", logId);
+            String usedLogId = launcher.launch(sc, "MANUAL", logId, userId);
 
             res.setContents(usedLogId);
             res.setResultInfo(RestResult.CODE_200);

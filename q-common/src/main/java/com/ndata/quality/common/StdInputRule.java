@@ -21,9 +21,12 @@ public final class StdInputRule {
 		return "단어 영문약어는 대문자 영문(A-Z)으로 시작하고 영문/숫자(0-9)만 사용할 수 있습니다. (입력값: " + abrv + ")";
 	}
 
-	/** 114 권고 채택(10-28)·110번 3.12-15-c — 길이가 있어야 하는 도메인 데이터 타입(문자열). 그 밖의 타입은 길이 0(빈칸)이 "길이 없음" 이다 */
+	/**
+	 * 114 권고 채택(10-28)·110번 3.12-15-c — 길이가 있어야 하는 도메인 데이터 타입(문자열). 그 밖의 타입은 길이 0(빈칸)이 "길이 없음" 이다.
+	 * 114 권고 채택(10-31) — BINARY·VARBINARY 도 길이가 있어야 한다
+	 */
 	public static final java.util.Set<String> LEN_REQUIRED_TYPES = new java.util.HashSet<>(java.util.Arrays.asList(
-			"VARCHAR", "VARCHAR2", "CHAR", "NVARCHAR", "NVARCHAR2", "NCHAR"));
+			"VARCHAR", "VARCHAR2", "CHAR", "NVARCHAR", "NVARCHAR2", "NCHAR", "BINARY", "VARBINARY"));
 
 	/** 도메인 데이터 길이가 그 타입에 맞지 않으면 안내 문구, 맞으면 null */
 	public static String domainLenError(String dataType, long dataLen) {

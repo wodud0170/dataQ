@@ -20,14 +20,15 @@ import lombok.extern.slf4j.Slf4j;
  * 스케줄 트리거 시 실제 진단 서비스를 기동하는 런처.
  *
  * <ol>
- *   <li>TB_DIAG_SCHEDULE_LOG 에 RUNNING 이력 insert (scheduleNmSnapshot 포함)</li>
+ *   <li>TB_DIAG_SCHEDULE_LOG 에 RUNNING 이력 insert (scheduleNmSnapshot 포함), 스케줄 LAST_EXEC_* 를 RUNNING 으로</li>
  *   <li>DIAG_TYPE 분기:
  *     <ul>
- *       <li>STANDARD: 최신 CLCT_ID resolve → TB_DIAG_JOB insert (READY) → DiagService Runnable 기동</li>
- *       <li>STRUCT: TB_STRUCT_DIAG_HISTORY 는 StructDiagService 내부에서 생성됨. diagId 만 UUID 로 발급해 넘김</li>
- *       <li>BOTH: STANDARD 를 먼저 실행. STRUCT 는 완료 폴링 단계에서 STANDARD DONE 관찰 후 이어 기동하도록 후속 훅 필요 (Phase 2 1차는 BOTH 를 순차 실행하지 않고 STANDARD 만 실행 + 후속 세션에서 보강)</li>
+ *       <li>STANDARD: TB_DIAG_JOB insert (READY, 사전은 스케줄 DICT_ID 또는 모델 사전, 수집일시용 최근 완료 수집) → DiagService Runnable 기동</li>
+ *       <li>STRUCT: TB_STRUCT_DIAG_HISTORY READY insert → StructDiagService Runnable 기동</li>
+ *       <li>BOTH: STANDARD 와 STRUCT 를 함께 기동 (LOG 는 둘 다 끝나야 DONE)</li>
  *     </ul>
  *   </li>
+ *   <li>실행자: 즉시 실행은 누른 사람, 자동 실행은 스케줄 등록자 (둘 다 없으면 SCHEDULER)</li>
  *   <li>실패 시 LOG 를 즉시 ERROR 로 마감</li>
  * </ol>
  */
@@ -50,10 +51,12 @@ public class ScheduledDiagLauncher {
     /**
      * 스케줄 1건 실행. 이미 LOG_ID 가 있으면(runNow) 그 로그를 사용, 없으면 새로 생성.
      *
+     * @param execUserId 실행자 — 즉시 실행은 누른 사람, 자동 실행은 스케줄 등록자 (null 이면 SCHEDULER)
      * @return 사용된 LOG_ID
      */
-    public String launch(DiagScheduleVo sc, String triggerType, String existingLogId) {
+    public String launch(DiagScheduleVo sc, String triggerType, String existingLogId, String execUserId) {
         String logId = existingLogId != null ? existingLogId : UUID.randomUUID().toString().replace("-", "");
+        String userId = execUserId != null ? execUserId : "SCHEDULER";
 
         // 1. RUNNING LOG 확보 (이미 있으면 스킵)
         if (existingLogId == null) {
@@ -66,12 +69,19 @@ public class ScheduledDiagLauncher {
             log.setExecStatus("RUNNING");
             sql.insert("diagSchedule.insertLog", log);
         }
+        // 110 6.10-9 — 기동 시각을 LAST_EXEC_DT 로. CRON 다음 슬롯을 기동 기준으로 세어, 실행이 1분 넘게 걸려도
+        // 다음 평가가 같은 슬롯을 다시 도래로 보지 않는다 (완료 때 markFinish 가 DONE/ERROR 로 다시 갱신)
+        Map<String, Object> pRun = new HashMap<>();
+        pRun.put("scheduleId", sc.getScheduleId());
+        pRun.put("status",     "RUNNING");
+        pRun.put("logId",      logId);
+        sql.update("diagSchedule.updateScheduleLastExec", pRun);
 
         try {
             String diagType = sc.getDiagType();
             // STANDARD + BOTH: 표준화 진단 기동
             if ("STANDARD".equals(diagType) || "BOTH".equals(diagType)) {
-                String diagJobId = startStandardDiag(sc);
+                String diagJobId = startStandardDiag(sc, userId);
                 Map<String, Object> p = new HashMap<>();
                 p.put("logId",     logId);
                 p.put("diagJobId", diagJobId);
@@ -79,7 +89,7 @@ public class ScheduledDiagLauncher {
             }
             // STRUCT + BOTH: 구조변경 진단 기동 (BOTH 는 병행 실행)
             if ("STRUCT".equals(diagType) || "BOTH".equals(diagType)) {
-                String structDiagId = startStructDiag(sc);
+                String structDiagId = startStructDiag(sc, userId);
                 Map<String, Object> p = new HashMap<>();
                 p.put("logId",        logId);
                 p.put("structDiagId", structDiagId);
@@ -87,7 +97,7 @@ public class ScheduledDiagLauncher {
             }
             // 104번 WP5-78 — 범정부 메타 생성 전 검증 (모델 = DB 단위). 파일 생성·전송은 규격을 받은 뒤
             if ("GOV_META".equals(diagType)) {
-                String sendId = startGovMeta(sc, logId);
+                String sendId = startGovMeta(sc, logId, userId);
                 Map<String, Object> p = new HashMap<>();
                 p.put("logId",         logId);
                 p.put("govMetaSendId", sendId);
@@ -95,8 +105,7 @@ public class ScheduledDiagLauncher {
             }
             // 104번 WP9-67 — 준수 현황 스냅샷·미사용 표준 (모델이 비어 있을 수 있다)
             if ("COMPLIANCE_SNAPSHOT".equals(diagType) || "UNUSED_STD".equals(diagType)) {
-                String runId = batchRunService.start(diagType, sc.getDataModelId(),
-                        sc.getCretUserId() != null ? sc.getCretUserId() : "SCHEDULER", logId);
+                String runId = batchRunService.start(diagType, sc.getDataModelId(), userId, logId);
                 Map<String, Object> p = new HashMap<>();
                 p.put("logId",      logId);
                 p.put("batchRunId", runId);
@@ -127,13 +136,9 @@ public class ScheduledDiagLauncher {
     }
 
     /** TB_DIAG_JOB 생성 + DiagService 기동 */
-    private String startStandardDiag(DiagScheduleVo sc) {
-        // 1. 최신 CLCT_ID resolve
-        String clctId = sql.selectOne("datamodel.selectLatestClctIdByDmId", sc.getDataModelId());
-        if (clctId == null || clctId.isEmpty()) {
-            throw new IllegalStateException("[DATA_NOT_FOUND] 데이터모델 "
-                    + sc.getDataModelId() + " 에 수집 이력이 없어 표준화 진단을 실행할 수 없습니다.");
-        }
+    private String startStandardDiag(DiagScheduleVo sc, String userId) {
+        // 1. 수집일시 표시용 최근 완료 수집 (110 6.10-10 — 진단 대상은 DM_ID 기준이라 수집 이력이 없는 모델도 진단한다. 화면 실행과 같다)
+        String clctId = sql.selectOne("datamodel.selectLatestDoneClctIdByDmId", sc.getDataModelId());
 
         // 2. TB_DIAG_JOB READY 생성
         String diagJobId = UUID.randomUUID().toString().replace("-", "");
@@ -141,12 +146,13 @@ public class ScheduledDiagLauncher {
         job.setDiagJobId(diagJobId);
         job.setClctId(clctId);
         job.setDataModelId(sc.getDataModelId());
-        job.setCretUserId(sc.getCretUserId() != null ? sc.getCretUserId() : "SCHEDULER");
+        job.setDictId(sc.getDictId());   // 110 6.10-2 — 스케줄의 사전. 비면 DiagService 가 모델 사전으로 정해 기록한다
+        job.setCretUserId(userId);
         sql.insert("diag.insertDiagJob", job);
 
         // 3. DiagService Runnable 을 별도 Thread 로 실행
         DiagService svc = new DiagService(diagJobId, clctId, sc.getDataModelId(),
-                job.getCretUserId());
+                userId, sc.getDictId());
         appContext.getAutowireCapableBeanFactory().autowireBean(svc);
         Thread t = new Thread(svc, "DiagService-" + diagJobId.substring(0, 8));
         t.setDaemon(true);
@@ -160,7 +166,7 @@ public class ScheduledDiagLauncher {
      * StructDiagService.updateStatus 는 UPDATE 이므로 TB_STRUCT_DIAG_HISTORY 에
      * READY 행을 먼저 insert 해야 한다 (q-center StructDiagController 의 패턴과 동일).
      */
-    private String startStructDiag(DiagScheduleVo sc) {
+    private String startStructDiag(DiagScheduleVo sc, String userId) {
         // 논리 모델(dsId 없음) 사전 차단 — launcher 의 catch 가 [CONFIG] errorMsg 로 LOG 마감
         Map<String, Object> dmInfo = sql.selectOne("datamodel.selectDataModelById", sc.getDataModelId());
         if (dmInfo == null) {
@@ -172,7 +178,6 @@ public class ScheduledDiagLauncher {
         }
 
         String diagId = UUID.randomUUID().toString().replace("-", "");
-        String userId = sc.getCretUserId() != null ? sc.getCretUserId() : "SCHEDULER";
 
         // TB_STRUCT_DIAG_HISTORY READY 생성 (StructDiagService 의 UPDATE 가 유효하도록)
         Map<String, Object> history = new HashMap<>();
@@ -182,7 +187,7 @@ public class ScheduledDiagLauncher {
         history.put("cretUserId",  userId);
         sql.insert("structdiag.insertStructDiagHistory", history);
 
-        StructDiagService svc = new StructDiagService(diagId, sc.getDataModelId(), userId, null);
+        StructDiagService svc = new StructDiagService(diagId, sc.getDataModelId(), userId);
         appContext.getAutowireCapableBeanFactory().autowireBean(svc);
         Thread t = new Thread(svc, "StructDiagService-" + diagId.substring(0, 8));
         t.setDaemon(true);
@@ -191,9 +196,8 @@ public class ScheduledDiagLauncher {
     }
 
     /** GovMetaService.validate 를 별도 Thread 로 — 완료는 DiagSchedulerRunner 가 TB_GOV_META_SEND.STATUS 로 본다 */
-    private String startGovMeta(DiagScheduleVo sc, String logId) {
+    private String startGovMeta(DiagScheduleVo sc, String logId, String userId) {
         String sendId = GovMetaService.newSendId();
-        String userId = sc.getCretUserId() != null ? sc.getCretUserId() : "SCHEDULER";
         Thread t = new Thread(() -> govMetaService.validate(sendId, "SCHEDULE", null, sc.getDataModelId(), logId, userId),
                 "GovMetaValidate-" + sendId.substring(0, 8));
         t.setDaemon(true);

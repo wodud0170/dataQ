@@ -98,12 +98,6 @@
         <v-chip v-if="isChanged(item)" x-small color="orange" text-color="white">변경</v-chip>
         <v-chip v-else x-small outlined color="grey">유지</v-chip>
       </template>
-      <template #[`item.target`]="{ item }">
-        <span v-if="item.objNm" style="font-family:monospace; font-size:.78rem;">
-          {{ (item.objOwner ? item.objOwner + '.' : '') + item.objNm + (item.attrNm ? '.' + item.attrNm : '') }}
-        </span>
-        <span v-else class="grey--text text--lighten-1">-</span>
-      </template>
       <template #[`item.changeDt`]="{ item }">{{ formatDt(item.changeDt) }}</template>
       <template #top>
         <v-progress-linear v-show="loading" color="indigo darken-2" indeterminate />
@@ -112,6 +106,12 @@
         <v-alert v-show="!loading" color="grey lighten-3">변환 이력이 없습니다.</v-alert>
       </template>
     </v-data-table>
+
+    <!-- 110 7.5-13a — 페이지 이동 (DSWord 와 같은 방식) -->
+    <div class="text-center px-4 pt-4 pb-4 pagination_wrap" v-show="pageCount > 1">
+      <v-pagination v-model="page" :length="pageCount" prev-icon="mdi-menu-left" next-icon="mdi-menu-right"
+        color="ndColor" :total-visible="10"></v-pagination>
+    </div>
   </v-main>
 </template>
 
@@ -158,10 +158,15 @@ export default {
     changedCount() {
       return this.items.filter(i => this.isChanged(i)).length;
     },
+    pageCount() {
+      return Math.ceil(this.items.length / this.itemsPerPage);
+    },
   },
-  mounted() {
-    this.load();
+  watch: {
+    // 검색으로 건수가 줄거나 표시 건수를 늘리면 남는 페이지가 없도록 맞춘다
+    pageCount(n) { if (this.page > n) this.page = Math.max(1, n); },
   },
+  // 110 7.5-13d — keep-alive 는 첫 진입에도 activated 가 불리므로 mounted 에서 따로 조회하지 않는다
   activated() { this.load(); },
   methods: {
     isChanged(item) {
@@ -226,5 +231,9 @@ export default {
   align-items: center;
   padding: 10px 20px;
   background: #FAFBFF;
+}
+.pagination_wrap {
+  position: relative;
+  width: 100%;
 }
 </style>

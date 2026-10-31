@@ -56,19 +56,6 @@
         <result property="dictNm"       column="DICT_NM"/>
     </resultMap>
 
-    <resultMap id="diagResultMap" type="com.ndata.quality.model.std.StdDiagResultVo">
-        <result property="resultId"     column="RESULT_ID"/>
-        <result property="diagJobId"    column="DIAG_JOB_ID"/>
-        <result property="objOwner"     column="OBJ_OWNER"/>
-        <result property="objNm"        column="OBJ_NM"/>
-        <result property="attrNm"       column="ATTR_NM"/>
-        <result property="attrNmKr"     column="ATTR_NM_KR"/>
-        <result property="diagType"     column="DIAG_TYPE"/>
-        <result property="diagDetail"   column="DIAG_DETAIL"/>
-        <result property="stdValue"     column="STD_VALUE"/>
-        <result property="actualValue"  column="ACTUAL_VALUE"/>
-    </resultMap>
-
     <insert id="insertDiagJob" parameterType="com.ndata.quality.model.std.StdDiagJobVo">
         INSERT INTO TB_DIAG_JOB (
             DIAG_JOB_ID, DM_CLCT_ID, DM_ID, STATUS,
@@ -147,6 +134,14 @@
         AND STATUS IN ('READY', 'RUNNING')
     </select>
 
+    <!-- 110 6.10-6 — executor 기동 때: READY/RUNNING 으로 남은 Job 은 실행하던 executor 가 죽은 것 → ERROR.
+         그대로 두면 같은 모델 진단이 selectActiveDiagJobCount 로 늘 409 였다 (DiagSchedulerRunner.cleanupOrphanDiags) -->
+    <update id="updateOrphanDiagJobs">
+        UPDATE TB_DIAG_JOB
+           SET STATUS = 'ERROR', END_DT = to_char(now(), 'YYYYMMDDHH24MISS')
+         WHERE STATUS IN ('READY', 'RUNNING')
+    </update>
+
     <select id="selectDiagJobById" parameterType="String" resultMap="diagJobMap">
         SELECT
              J.DIAG_JOB_ID
@@ -185,15 +180,6 @@
         DELETE FROM TB_DIAG_RESULT WHERE DIAG_JOB_ID = #{diagJobId}
     </delete>
 
-    <select id="selectDiagResultList" parameterType="String" resultMap="diagResultMap">
-        SELECT
-            RESULT_ID, DIAG_JOB_ID, OBJ_OWNER, OBJ_NM, ATTR_NM, ATTR_NM_KR,
-            DIAG_TYPE, DIAG_DETAIL, STD_VALUE, ACTUAL_VALUE
-        FROM TB_DIAG_RESULT
-        WHERE DIAG_JOB_ID = #{diagJobId}
-        ORDER BY OBJ_OWNER, OBJ_NM, ATTR_NM
-    </select>
-
     <!--
         테이블 상세: 전체 테이블 기준 1건=1행 (이슈 없는 테이블 포함)
         - TB_DATA_MODEL_OBJ 기반 + TB_DIAG_RESULT LEFT JOIN
@@ -227,8 +213,12 @@
         - 용어/도메인 LEFT JOIN으로 표준 정보 포함
         - TB_DIAG_RESULT LEFT JOIN + STRING_AGG로 이슈유형 집계
         - 테이블 한글명(OBJ_NM_KR) 포함
+        - 110 6.10-15 — 용어(T, 영문명)·한글명 매칭 용어(MT)는 이 진단의 사전과 상위 사전(dictIds, 가까운 순)의 승인 용어에서 한 건,
+          도메인(D·MD)은 그 용어의 사전에서 찾는다 (진단 executor 의 terms.selectAllTermsForDiag 와 같은 기준).
+          사전 조건 없이 조인하면 다른 사전 값이 보이고 같은 컬럼이 여러 행이 됐다.
+          파라미터: diagJobId, dictIds (DiagController.getDiagResultDetail 이 StdDictService.lineageParam 으로 채움)
     -->
-    <select id="selectDiagResultDetail" parameterType="String" resultType="map">
+    <select id="selectDiagResultDetail" parameterType="java.util.Map" resultType="map">
         SELECT
              A.OBJ_NM                                       as "objNm"
             ,COALESCE(A.OBJ_OWNER, '')                      as "objOwner"
@@ -268,18 +258,29 @@
             AND R.OBJ_NM  = A.OBJ_NM
             AND R.ATTR_NM  = A.ATTR_NM
             AND COALESCE(R.OBJ_OWNER,'') = COALESCE(A.OBJ_OWNER,'')
-        LEFT JOIN TB_TERMS T
-            ON T.TERMS_ENG_ABRV_NM = A.ATTR_NM
+        LEFT JOIN LATERAL (
+            SELECT TT.TERMS_NM, TT.DOMAIN_NM, TT.DICT_ID
+            FROM TB_TERMS TT
+            WHERE TT.TERMS_ENG_ABRV_NM = A.ATTR_NM
+              AND TT.APRV_YN = 'Y'
+              AND TT.DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+            ORDER BY array_position(ARRAY[<foreach collection="dictIds" item="d" separator=",">#{d}</foreach>]::varchar[], TT.DICT_ID)
+            LIMIT 1
+        ) T ON TRUE
         LEFT JOIN TB_DOMAIN D
             ON D.DOMAIN_NM = T.DOMAIN_NM
+            AND D.DICT_ID = T.DICT_ID
         LEFT JOIN LATERAL (
-            SELECT TT.TERMS_NM, TT.TERMS_ENG_ABRV_NM, TT.DOMAIN_NM
+            SELECT TT.TERMS_NM, TT.TERMS_ENG_ABRV_NM, TT.DOMAIN_NM, TT.DICT_ID
             FROM TB_TERMS TT
             WHERE TT.APRV_YN = 'Y'
               AND A.ATTR_NM_KR IS NOT NULL
               AND ( TT.TERMS_NM = A.ATTR_NM_KR
                  OR A.ATTR_NM_KR = ANY(TT.ALLOPH_SYNM_LST) )
-            ORDER BY CASE WHEN TT.TERMS_NM = A.ATTR_NM_KR THEN 0 ELSE 1 END
+              AND TT.DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+            <!-- 정확 일치 먼저, 그다음 가까운 사전 -->
+            ORDER BY CASE WHEN TT.TERMS_NM = A.ATTR_NM_KR THEN 0 ELSE 1 END,
+                     array_position(ARRAY[<foreach collection="dictIds" item="d" separator=",">#{d}</foreach>]::varchar[], TT.DICT_ID)
             LIMIT 1
         ) MT ON TRUE
         LEFT JOIN TB_STD_MAP SM
@@ -290,6 +291,7 @@
             ON SMT.TERMS_ID = SM.NEW_ID
         LEFT JOIN TB_DOMAIN MD
             ON MD.DOMAIN_NM = MT.DOMAIN_NM
+            AND MD.DICT_ID = MT.DICT_ID
         WHERE A.DM_ID = (SELECT DM_ID FROM TB_DIAG_JOB WHERE DIAG_JOB_ID = #{diagJobId})
           AND A.USE_YN = 'Y'
         GROUP BY A.OBJ_NM, A.OBJ_OWNER, A.DM_ID, A.ATTR_NM, A.ATTR_NM_KR,
