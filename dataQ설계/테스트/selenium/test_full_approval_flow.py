@@ -412,6 +412,14 @@ def register_domain(driver, domain_nm):
                 ac_input[0].send_keys(Keys.ENTER)
                 time.sleep(0.5)
 
+    # 5-b) 데이터 길이 — 114 권고 채택(babfac7): 문자열 타입(VARCHAR 등) 도메인은 길이 1 이상이 필수
+    len_inputs = modal.find_elements(By.CSS_SELECTOR, "input[placeholder='10']")
+    if len_inputs:
+        len_inputs[0].click()
+        len_inputs[0].send_keys(Keys.CONTROL, "a")
+        len_inputs[0].send_keys("50")
+        time.sleep(0.3)
+
     time.sleep(0.5)
 
     # 6) 등록 버튼 클릭

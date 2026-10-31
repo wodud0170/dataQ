@@ -64,6 +64,7 @@ import qualitycenter.service.ddl.DdlGenerator;
 import qualitycenter.service.ddl.DdlRuleService;
 import qualitycenter.service.ddl.DdlSafety;
 import qualitycenter.service.ws.WebSocketService;
+import qualitycenter.util.ErwinXmlExporter;
 import qualitycenter.util.ErwinXmlParser;
 import qualitycenter.util.ErwinXmlParser.ErwinParseResult;
 import qualitycenter.util.XmiParser;
@@ -726,102 +727,9 @@ public class DataModelController {
 	 * ERwin 모델을 데이터모델에 임포트한다.
 	 * 기존 수집 구조(TB_DATA_MODEL_CLCT, TB_DATA_MODEL_OBJ, TB_DATA_MODEL_ATTR)를 재활용한다.
 	 */
-	@SuppressWarnings("unchecked")
 	@PostMapping("/importErwinModel")
 	public Map<String, Object> importErwinModel(@RequestBody Map<String, Object> body) {
-		Map<String, Object> result = new HashMap<>();
-		String dataModelId = (String) body.get("dataModelId");
-		List<Map<String, Object>> tables = (List<Map<String, Object>>) body.get("tables");
-		List<Map<String, Object>> columns = (List<Map<String, Object>>) body.get("columns");
-
-		if (dataModelId == null || tables == null || columns == null) {
-			result.put("success", false);
-			result.put("message", "필수 파라미터(dataModelId, tables, columns)가 누락되었습니다.");
-			return result;
-		}
-
-		// 109번 #3 — 테이블·컬럼 이름과 데이터 타입은 [DB 반영] DDL 에 들어간다
-		String bad = importCheck(tables, columns);
-		if (bad == null) bad = importStndReqCheck(dataModelId, columns);   // 109번 #9
-		if (bad != null) {
-			result.put("success", false);
-			result.put("message", bad);
-			return result;
-		}
-
-		String clctId = StringUtils.getUUID();
-		String userId = sessionService.getUserId();
-		String now = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-
-		SqlSession session = sqlSessionFactory.openSession();
-		try {
-			// 1) 수집 이력 생성 (시작)
-			StdDataModelCollectVo clctVo = new StdDataModelCollectVo();
-			clctVo.setClctId(clctId);
-			clctVo.setDataModelId(dataModelId);
-			clctVo.setClctType("ERWIN");
-			clctVo.setCretUserId(userId);
-			session.insert("datamodel.updateDataModelCollect", clctVo);
-
-			// 2) 테이블(OBJ) 등록
-			for (Map<String, Object> tbl : tables) {
-				StdDataModelObjVo objVo = new StdDataModelObjVo();
-				objVo.setClctId(clctId);
-				objVo.setDataModelId(dataModelId);
-				objVo.setObjNm((String) tbl.get("objNm"));
-				objVo.setObjNmKr((String) tbl.get("objNmKr"));
-				objVo.setObjOwner("ERWIN");
-				Object attrCntObj = tbl.get("objAttrCnt");
-				objVo.setObjAttrCnt(attrCntObj instanceof Number ? ((Number) attrCntObj).shortValue() : 0);
-				session.insert("datamodel.insertDataModelObj", objVo);
-			}
-
-			// 3) 컬럼(ATTR) 등록
-			for (Map<String, Object> col : columns) {
-				StdDataModelAttrVo attrVo = new StdDataModelAttrVo();
-				attrVo.setClctId(clctId);
-				attrVo.setDataModelId(dataModelId);
-				// 110 4.12-33-a — 테이블과 같은 소유자. 비우면 같은 이름 테이블 중 아무 소유자에 붙었다
-				attrVo.setObjOwner("ERWIN");
-				attrVo.setObjNm((String) col.get("objNm"));
-				attrVo.setAttrNm((String) col.get("attrNm"));
-				attrVo.setAttrNmKr((String) col.get("attrNmKr"));
-				attrVo.setDataType((String) col.get("dataType"));
-				Object dataLenObj = col.get("dataLen");
-				attrVo.setDataLen(dataLenObj instanceof Number ? ((Number) dataLenObj).longValue() : 0L);
-				attrVo.setNullableYn((String) col.get("nullableYn"));
-				attrVo.setPkYn((String) col.get("pkYn"));
-				attrVo.setFkYn("N");
-				attrVo.setTermsStndYn("N");
-				attrVo.setDomainStndYn("N");
-				Object ordObj = col.get("attrOrder");
-				attrVo.setAttrOrder(ordObj instanceof Number ? ((Number) ordObj).shortValue() : 0);
-				session.insert("datamodel.insertDataModelAttr", attrVo);
-			}
-
-			// 4) 수집 이력 완료 업데이트 (110 4.12-14-a — 가져온 테이블·컬럼 수)
-			clctVo.setClctEndDt(now);
-			clctVo.setClctCmptnYn("Y");
-			clctVo.setObjCnt(tables.size());
-			clctVo.setAttrCnt(columns.size());
-			session.insert("datamodel.updateDataModelCollect", clctVo);
-
-			session.commit();
-
-			result.put("success", true);
-			result.put("clctId", clctId);
-			result.put("tableCount", tables.size());
-			result.put("columnCount", columns.size());
-			result.put("message", "ERwin 모델 임포트 완료: 테이블 " + tables.size() + "건, 컬럼 " + columns.size() + "건");
-		} catch (Exception e) {
-			session.rollback();
-			log.error(">> importErwinModel failed : {}", e.getMessage(), e);
-			result.put("success", false);
-			result.put("message", "임포트 실패: " + e.getMessage());
-		} finally {
-			session.close();
-		}
-		return result;
+		return importModelRows(body, "ERWIN", "ERWIN", "ERwin", null);
 	}
 
 	// ======== 85번 — XMI 2.1 임포트 (OMG 표준, ERwin 9.x+ / EA / VP 등 호환) ========
@@ -853,9 +761,18 @@ public class DataModelController {
 	 * XMI 모델을 데이터모델에 임포트한다.
 	 * importErwinModel 과 동일한 적재 로직 사용. CLCT_TYPE 만 'XMI' 로 표기.
 	 */
-	@SuppressWarnings("unchecked")
 	@PostMapping("/importXmiModel")
 	public Map<String, Object> importXmiModel(@RequestBody Map<String, Object> body) {
+		return importModelRows(body, "XMI", "XMI", "XMI", "XMI 2.1");
+	}
+
+	/**
+	 * ERwin·XMI 가져오기 적재. 104번 WP8-40 — 두 복사본을 합쳤다. 형식별로 다른 것은 CLCT_TYPE·기본 소유자·메시지·응답 format 뿐.
+	 * 소유자는 행 값(빈 소유자 포함), 없으면 기본 소유자(ERWIN·XMI). 소수점·코멘트·설명·기본값·FK·부모는 행에 있는 값.
+	 * 승인 흐름(APPROVED·이력 없음)은 그대로 — 114 §3 4.12-8-d·e 결정 대기.
+	 */
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> importModelRows(Map<String, Object> body, String clctType, String defaultOwner, String label, String format) {
 		Map<String, Object> result = new HashMap<>();
 		String dataModelId = (String) body.get("dataModelId");
 		List<Map<String, Object>> tables = (List<Map<String, Object>>) body.get("tables");
@@ -870,6 +787,7 @@ public class DataModelController {
 		// 109번 #3 — 테이블·컬럼 이름과 데이터 타입은 [DB 반영] DDL 에 들어간다
 		String bad = importCheck(tables, columns);
 		if (bad == null) bad = importStndReqCheck(dataModelId, columns);   // 109번 #9
+		if (bad == null) bad = importOverwriteCheck(dataModelId, defaultOwner, tables, columns);   // 104번 WP8-40
 		if (bad != null) {
 			result.put("success", false);
 			result.put("message", bad);
@@ -882,49 +800,59 @@ public class DataModelController {
 
 		SqlSession session = sqlSessionFactory.openSession();
 		try {
+			// 1) 수집 이력 생성 (시작)
 			StdDataModelCollectVo clctVo = new StdDataModelCollectVo();
 			clctVo.setClctId(clctId);
 			clctVo.setDataModelId(dataModelId);
-			clctVo.setClctType("XMI");
+			clctVo.setClctType(clctType);
 			clctVo.setCretUserId(userId);
 			session.insert("datamodel.updateDataModelCollect", clctVo);
 
+			// 2) 테이블(OBJ) 등록
 			for (Map<String, Object> tbl : tables) {
 				StdDataModelObjVo objVo = new StdDataModelObjVo();
 				objVo.setClctId(clctId);
 				objVo.setDataModelId(dataModelId);
 				objVo.setObjNm((String) tbl.get("objNm"));
 				objVo.setObjNmKr((String) tbl.get("objNmKr"));
-				objVo.setObjOwner("XMI");
+				objVo.setObjOwner(importOwner(tbl, defaultOwner));
+				objVo.setObjComment((String) tbl.get("objComment"));
+				objVo.setObjDesc((String) tbl.get("objDesc"));
 				Object attrCntObj = tbl.get("objAttrCnt");
 				objVo.setObjAttrCnt(attrCntObj instanceof Number ? ((Number) attrCntObj).shortValue() : 0);
 				session.insert("datamodel.insertDataModelObj", objVo);
 			}
 
+			// 3) 컬럼(ATTR) 등록
 			for (Map<String, Object> col : columns) {
 				StdDataModelAttrVo attrVo = new StdDataModelAttrVo();
 				attrVo.setClctId(clctId);
 				attrVo.setDataModelId(dataModelId);
-				attrVo.setObjOwner("XMI");   // 110 4.12-33-a — 테이블과 같은 소유자
+				// 110 4.12-33-a — 테이블과 같은 소유자. 비우면 같은 이름 테이블 중 아무 소유자에 붙었다
+				attrVo.setObjOwner(importOwner(col, defaultOwner));
 				attrVo.setObjNm((String) col.get("objNm"));
 				attrVo.setAttrNm((String) col.get("attrNm"));
 				attrVo.setAttrNmKr((String) col.get("attrNmKr"));
+				attrVo.setAttrComment((String) col.get("attrComment"));
 				attrVo.setDataType((String) col.get("dataType"));
 				Object dataLenObj = col.get("dataLen");
 				attrVo.setDataLen(dataLenObj instanceof Number ? ((Number) dataLenObj).longValue() : 0L);
-				// 110 4.12-34 — DataQ 가 내보낸 XMI 는 소수점 자리도 싣는다
+				// 110 4.12-34 — DataQ 가 내보낸 XMI·ERwin XML 은 소수점 자리도 싣는다
 				Object decObj = col.get("dataDecimalLen");
 				if (decObj instanceof Number) attrVo.setDataDecimalLen(((Number) decObj).shortValue());
 				attrVo.setNullableYn((String) col.get("nullableYn"));
 				attrVo.setPkYn((String) col.get("pkYn"));
-				// 85번 — XMI 관계 매핑: FK + 부모
+				// 85번 — 관계 매핑: FK + 부모
 				String fk = (String) col.get("fkYn");
 				attrVo.setFkYn(fk != null ? fk : "N");
 				attrVo.setFkParentObjNm((String) col.get("fkParentObjNm"));
-				// XMI/ERwin 에는 스키마 개념이 없다. 임포트 모델은 단일 소유자이므로
-				// 부모 소유자는 자기 자신과 같다고 본다. (110 4.12-33-b — 예전에는 아직 비어 있는 컬럼 소유자를 넣어 NULL 이었다)
-				attrVo.setFkParentObjOwner(attrVo.getFkParentObjNm() == null ? null : attrVo.getObjOwner());
+				// 부모 소유자: 파일에 있으면 그 값(ERwin XML parent_owner), 없으면 부모가 있을 때 자기 소유자
+				// (110 4.12-33-b — 예전에는 아직 비어 있는 컬럼 소유자를 넣어 NULL 이었다)
+				String parentOwner = (String) col.get("fkParentObjOwner");
+				attrVo.setFkParentObjOwner(parentOwner != null ? parentOwner
+						: attrVo.getFkParentObjNm() == null ? null : attrVo.getObjOwner());
 				attrVo.setFkParentAttrNm((String) col.get("fkParentAttrNm"));
+				attrVo.setDefaultVal((String) col.get("defaultVal"));
 				attrVo.setTermsStndYn("N");
 				attrVo.setDomainStndYn("N");
 				Object ordObj = col.get("attrOrder");
@@ -932,9 +860,10 @@ public class DataModelController {
 				session.insert("datamodel.insertDataModelAttr", attrVo);
 			}
 
+			// 4) 수집 이력 완료 업데이트 (110 4.12-14-a — 가져온 테이블·컬럼 수)
 			clctVo.setClctEndDt(now);
 			clctVo.setClctCmptnYn("Y");
-			clctVo.setObjCnt(tables.size());     // 110 4.12-14-a
+			clctVo.setObjCnt(tables.size());
 			clctVo.setAttrCnt(columns.size());
 			session.insert("datamodel.updateDataModelCollect", clctVo);
 
@@ -944,17 +873,62 @@ public class DataModelController {
 			result.put("clctId", clctId);
 			result.put("tableCount", tables.size());
 			result.put("columnCount", columns.size());
-			result.put("format", "XMI 2.1");
-			result.put("message", "XMI 모델 임포트 완료: 테이블 " + tables.size() + "건, 컬럼 " + columns.size() + "건");
+			if (format != null) result.put("format", format);
+			result.put("message", label + " 모델 임포트 완료: 테이블 " + tables.size() + "건, 컬럼 " + columns.size() + "건");
 		} catch (Exception e) {
 			session.rollback();
-			log.error(">> importXmiModel failed : {}", e.getMessage(), e);
+			log.error(">> import {} model failed : {}", clctType, e.getMessage(), e);
 			result.put("success", false);
 			result.put("message", "임포트 실패: " + e.getMessage());
 		} finally {
 			session.close();
 		}
 		return result;
+	}
+
+	/** 104번 WP8-40 — 가져오기 소유자: 행 값(빈 소유자 "" 포함), 없으면(null) 기본 소유자 ERWIN·XMI */
+	private static String importOwner(Map<String, Object> row, String defaultOwner) {
+		Object owner = row.get("objOwner");
+		return owner != null ? owner.toString() : defaultOwner;
+	}
+
+	/**
+	 * 104번 WP8-40 — 덮어쓰기 막기. 기본 소유자(ERWIN·XMI)가 아닌 파일 소유자의 테이블이 대상 모델에 이미 있으면
+	 * 가져오기 전체를 거부한다 — 권한 검사·결재 없이 수집된 기존 테이블을 APPROVED 로 덮어쓰지 않게(허용 여부는 108 보류 §2-27).
+	 * USE_YN 과 상관없이 본다 — 삭제 승인 대기·재수집에서 빠진 테이블(USE_YN='N')도 insertDataModelObj 가 되살린다.
+	 * 문구에는 파일에 적힌 이름만 쓴다(보이지 않는 남의 미승인 테이블 소유자를 드러내지 않게).
+	 * 새 테이블은 만든다. 걸린 테이블이 있으면 앞 5건을 담은 메시지, 없으면 null
+	 */
+	private String importOverwriteCheck(String dataModelId, String defaultOwner,
+			List<Map<String, Object>> tables, List<Map<String, Object>> columns) {
+		Map<String, String> useYnByKey = new HashMap<>();    // 소유자|테이블 → USE_YN
+		Map<String, String> useYnByName = new HashMap<>();   // 테이블 → USE_YN (같은 이름 중 하나라도 Y 면 Y)
+		for (Map<String, Object> o : sqlSessionTemplate.<Map<String, Object>>selectList("datamodel.selectDataModelObjKeysAll", dataModelId)) {
+			String nm = (String) o.get("objNm");
+			String useYn = (String) o.get("useYn");
+			useYnByKey.put(o.get("objOwner") + "|" + nm, useYn);
+			useYnByName.merge(nm, useYn, (a, b) -> "Y".equals(a) ? a : b);
+		}
+		List<Map<String, Object>> rows = new ArrayList<>(tables);
+		rows.addAll(columns);
+		Set<String> hit = new java.util.LinkedHashSet<>();
+		boolean hidden = false;
+		for (Map<String, Object> r : rows) {
+			String owner = str(r.get("objOwner"));
+			if (owner == null || defaultOwner.equals(owner)) continue;
+			String nm = str(r.get("objNm"));
+			String useYn = useYnByKey.get(owner + "|" + nm);
+			// 빈 소유자 컬럼은 insertDataModelAttr 가 같은 이름 테이블의 아무 소유자에 붙인다 — 다른 소유자의 같은 이름 테이블도 막는다
+			if (useYn == null && owner.isEmpty()) useYn = useYnByName.get(nm);
+			if (useYn == null) continue;
+			hit.add(owner.isEmpty() ? nm : owner + "." + nm);
+			if (!"Y".equals(useYn)) hidden = true;
+		}
+		if (hit.isEmpty()) return null;
+		List<String> l = new ArrayList<>(hit);
+		return "대상 모델에 이미 있는 테이블은 가져오기로 덮어쓸 수 없습니다 — " + String.join(" / ", l.subList(0, Math.min(5, l.size())))
+				+ (l.size() > 5 ? " 외 " + (l.size() - 5) + "건" : "")
+				+ (hidden ? " (삭제 승인 대기 중이거나 삭제된 테이블 포함)" : "");
 	}
 
 	/**
@@ -976,8 +950,7 @@ public class DataModelController {
 			// 110 4.12-11 — 화면에 보이는 행만 (승인됐거나 본인이 요청한 행)
 			String userId = sessionService.getUserId();
 			List<Map<String, Object>> tables = new ArrayList<>();
-			for (StdDataModelObjVo o : sqlSessionTemplate.<StdDataModelObjVo>selectList("datamodel.selectDataModelObjListByClctId", dataModelId)) {
-				if (!visibleTo(o.getAprvStatus(), o.getRequesterUserId(), userId)) continue;
+			for (StdDataModelObjVo o : visibleObjs(dataModelId, userId)) {
 				Map<String, Object> t = new HashMap<>();
 				t.put("objOwner", o.getObjOwner() == null ? "" : o.getObjOwner());
 				t.put("objNm", o.getObjNm());
@@ -985,8 +958,7 @@ public class DataModelController {
 				tables.add(t);
 			}
 			List<Map<String, Object>> columns = new ArrayList<>();
-			for (StdDataModelAttrVo a : sqlSessionTemplate.<StdDataModelAttrVo>selectList("datamodel.selectDataModelAttrListByClctId", dataModelId)) {
-				if (!visibleTo(a.getAprvStatus(), a.getRequesterUserId(), userId)) continue;
+			for (StdDataModelAttrVo a : visibleAttrs(dataModelId, userId)) {
 				Map<String, Object> c = new HashMap<>();
 				c.put("objOwner", a.getObjOwner() == null ? "" : a.getObjOwner());
 				c.put("objNm", a.getObjNm());
@@ -1015,6 +987,49 @@ public class DataModelController {
 			return org.springframework.http.ResponseEntity.status(500)
 					.body("<error>" + e.getMessage() + "</error>");
 		}
+	}
+
+	/**
+	 * 104번 WP8-40 — DataQ 모델 → ERwin XML 내려받기 (우리 ERwin XML 가져오기가 읽는 형식, 108 §4.25).
+	 * exportXmi 와 같은 틀 — 모델명 조회, 보이는 행만(110 4.12-11), 영숫자 파일명, 오류 500.
+	 */
+	@GetMapping(value = "/exportErwinXml", produces = "application/xml; charset=UTF-8")
+	public org.springframework.http.ResponseEntity<String> exportErwinXml(@RequestParam("dataModelId") String dataModelId) {
+		try {
+			Map<String, Object> dm = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dataModelId);
+			String modelName = dm != null && dm.get("dataModelNm") != null
+					? dm.get("dataModelNm").toString() : ("model-" + dataModelId);
+			String userId = sessionService.getUserId();
+			String exportedAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+
+			String xml = ErwinXmlExporter.export(modelName, exportedAt, visibleObjs(dataModelId, userId), visibleAttrs(dataModelId, userId));
+			String safeName = modelName.replaceAll("[^A-Za-z0-9_-]", "_");
+			return org.springframework.http.ResponseEntity.ok()
+					.header("Content-Disposition",
+							"attachment; filename=\"" + safeName + ".xml\"")
+					.header("Content-Type", "application/xml; charset=UTF-8")
+					.body(xml);
+		} catch (Exception e) {
+			log.error(">> exportErwinXml failed", e);
+			return org.springframework.http.ResponseEntity.status(500)
+					.body("<error>" + e.getMessage() + "</error>");
+		}
+	}
+
+	/** XMI·ERwin XML 내려받기의 테이블 — 화면에 보이는 행만 (110 4.12-11 — 승인됐거나 본인이 요청한 행) */
+	private List<StdDataModelObjVo> visibleObjs(String dmId, String userId) {
+		List<StdDataModelObjVo> all = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByClctId", dmId);
+		return all.stream()
+			.filter(o -> visibleTo(o.getAprvStatus(), o.getRequesterUserId(), userId))
+			.collect(java.util.stream.Collectors.toList());
+	}
+
+	/** XMI·ERwin XML 내려받기의 컬럼 — 화면에 보이는 행만 */
+	private List<StdDataModelAttrVo> visibleAttrs(String dmId, String userId) {
+		List<StdDataModelAttrVo> all = sqlSessionTemplate.selectList("datamodel.selectDataModelAttrListByClctId", dmId);
+		return all.stream()
+			.filter(a -> visibleTo(a.getAprvStatus(), a.getRequesterUserId(), userId))
+			.collect(java.util.stream.Collectors.toList());
 	}
 
 	// ======== 데이터모델 재설계 1단계: 최신 스냅샷 편집 API (설계문서 40/41) ========
@@ -2968,18 +2983,26 @@ public class DataModelController {
 
 	/**
 	 * 109번 #3 — ERwin·XMI 가져오기의 테이블·컬럼 이름과 데이터 타입 검사. 걸린 항목이 있으면 앞 5건을 담은 메시지, 없으면 null.
+	 * 104번 WP8-40 — 소유자 이름(빈 소유자 허용)·기본값(저장 때 규칙)·길이·소수점(0 이상)도 본다 — 셋 다 [DB 반영] DDL 에 들어간다.
 	 */
 	private static String importCheck(List<Map<String, Object>> tables, List<Map<String, Object>> columns) {
 		List<String> bad = new ArrayList<>();
 		for (Map<String, Object> t : tables) {
-			try { DdlSafety.ident("테이블", str(t.get("objNm"))); }
+			try {
+				DdlSafety.ident("테이블", str(t.get("objNm")));
+				DdlSafety.identOpt("소유자", str(t.get("objOwner")));
+			}
 			catch (DdlSafety.Invalid e) { bad.add(e.getMessage()); }
 		}
 		for (Map<String, Object> c : columns) {
 			try {
+				DdlSafety.identOpt("소유자", str(c.get("objOwner")));
 				DdlSafety.ident("테이블", str(c.get("objNm")));
 				DdlSafety.ident("컬럼", str(c.get("attrNm")));
 				DdlSafety.dataType(str(c.get("dataType")));
+				DdlSafety.length(c.get("dataLen") instanceof Number ? ((Number) c.get("dataLen")).longValue() : 0L,
+						c.get("dataDecimalLen") instanceof Number ? ((Number) c.get("dataDecimalLen")).longValue() : 0L);
+				DdlSafety.defaultValue(str(c.get("defaultVal")), null);
 			} catch (DdlSafety.Invalid e) {
 				bad.add(str(c.get("objNm")) + "." + str(c.get("attrNm")) + ": " + e.getMessage());
 			}

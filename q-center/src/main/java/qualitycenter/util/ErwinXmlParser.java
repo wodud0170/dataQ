@@ -41,10 +41,15 @@ public class ErwinXmlParser {
 
             String logicalName = getTagValue(entity, "name");
             String physicalName = getTagValue(entity, "physical_name");
+            // 104번 WP8-40 — 태그 없으면 null(가져오기 기본 소유자), 빈 태그면 "" (빈 소유자)
+            String owner = getTagValue(entity, "owner");
 
             Map<String, Object> table = new HashMap<>();
             table.put("objNm", physicalName);       // 물리명 (영문)
             table.put("objNmKr", logicalName);       // 논리명 (한글)
+            table.put("objOwner", owner);
+            table.put("objComment", getTagValue(entity, "comment"));
+            table.put("objDesc", getTagValue(entity, "definition"));
 
             // 속성(컬럼) 파싱
             NodeList attrNodes = entity.getElementsByTagName("attribute");
@@ -55,20 +60,32 @@ public class ErwinXmlParser {
                 Element attr = (Element) attrNodes.item(j);
 
                 Map<String, Object> col = new HashMap<>();
+                String attrNm = getTagValue(attr, "physical_name");
+                col.put("objOwner", owner);
                 col.put("objNm", physicalName);
                 col.put("objNmKr", logicalName);
-                col.put("attrNm", getTagValue(attr, "physical_name"));
+                col.put("attrNm", attrNm);
                 col.put("attrNmKr", getTagValue(attr, "name"));
+                col.put("attrComment", getTagValue(attr, "comment"));
                 col.put("dataType", getTagValue(attr, "datatype"));
 
                 String lenStr = getTagValue(attr, "length");
-                col.put("dataLen", lenStr != null ? Long.parseLong(lenStr) : 0L);
+                col.put("dataLen", lenStr != null ? toLong(lenStr, physicalName, attrNm) : 0L);
+                String scaleStr = getTagValue(attr, "scale");
+                col.put("dataDecimalLen", scaleStr != null ? toShort(scaleStr, physicalName, attrNm) : (short) 0);
 
                 String nullable = getTagValue(attr, "nullable");
                 col.put("nullableYn", "Y".equalsIgnoreCase(nullable) ? "Y" : "N");
 
                 String pk = getTagValue(attr, "pk");
                 col.put("pkYn", "Y".equalsIgnoreCase(pk) ? "Y" : "N");
+
+                String fk = getTagValue(attr, "fk");
+                col.put("fkYn", "Y".equalsIgnoreCase(fk) ? "Y" : "N");
+                col.put("fkParentObjOwner", getTagValue(attr, "parent_owner"));
+                col.put("fkParentObjNm", getTagValue(attr, "parent_entity"));
+                col.put("fkParentAttrNm", getTagValue(attr, "parent_attribute"));
+                col.put("defaultVal", getTagValue(attr, "default"));
 
                 col.put("attrOrder", (short)(j + 1));
 
@@ -101,6 +118,28 @@ public class ErwinXmlParser {
             }
         }
         return null;
+    }
+
+    /** 길이 — 숫자가 아니면 화면에 보일 문구로 (parseErwinXml 이 "ERwin XML 파싱 실패: …" 로 감싼다) */
+    private static long toLong(String v, String table, String column) {
+        try {
+            return Long.parseLong(v);
+        } catch (NumberFormatException e) {
+            throw notNumber(v, table, column);
+        }
+    }
+
+    /** 소수점 — 숫자가 아니면 화면에 보일 문구로 */
+    private static short toShort(String v, String table, String column) {
+        try {
+            return Short.parseShort(v);
+        } catch (NumberFormatException e) {
+            throw notNumber(v, table, column);
+        }
+    }
+
+    private static IllegalArgumentException notNumber(String v, String table, String column) {
+        return new IllegalArgumentException("길이·소수점은 숫자여야 합니다: " + table + "." + column + " — '" + v + "'");
     }
 
     /**

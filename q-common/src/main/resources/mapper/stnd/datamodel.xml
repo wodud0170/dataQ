@@ -225,6 +225,14 @@
 			order by OBJ_NM
 	</select>
 
+	<!-- 104번 WP8-40 — 가져오기 덮어쓰기 막기용 모델의 모든 테이블 키. USE_YN 을 거르지 않는다
+	     (삭제 승인 대기·재수집에서 빠진 USE_YN='N' 행도 insertDataModelObj ON CONFLICT 가 되살리므로) -->
+	<select id="selectDataModelObjKeysAll" parameterType="String" resultType="java.util.HashMap">
+		SELECT COALESCE(OBJ_OWNER,'') AS "objOwner", OBJ_NM AS "objNm", COALESCE(USE_YN,'Y') AS "useYn"
+		  FROM TB_DATA_MODEL_OBJ
+		 WHERE DM_ID = #{value}
+	</select>
+
 	<!-- DM_ID 기반 ATTR 조회 (CLCT 폐기 후) -->
 	<select id="selectDataModelAttrListByClctId" parameterType="String" resultMap="stdDataModelAttrMap">
 			select

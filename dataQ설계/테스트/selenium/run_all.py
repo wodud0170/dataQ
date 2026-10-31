@@ -93,6 +93,7 @@ GROUPS = [
         "test_wp8_dm_mgmt.py",       # 104 WP8 — 사용자 정의 속성·주제영역·구조 진단 결과 현행화
         "test_wp9_stat_batch.py",    # 104 WP9 — 변경 전후 비교·준수 현황 스냅샷·미사용 표준 예약·시스템별 현황·DA 목표
         "test_w10_collect_dbms.py",  # 104 WP4 보완 — MariaDB·SQL Server·Cubrid 화면 수집 (시험 DB 컨테이너·W10_TESTDB_PW 필요)
+        "test_w10_erwin_export.py",  # 104 WP8-40 (108 §4.23-3) — ERwin XML 내보내기·되읽기·미리보기 소유자/FK 열
         "test_crud_std_dict.py",
     ]),
     ("표준 사전 (단어/용어/도메인)", [
