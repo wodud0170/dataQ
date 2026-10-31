@@ -3080,14 +3080,14 @@ CREATE TABLE quality.tb_udp_def (
 -- Name: TABLE tb_udp_def; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_udp_def IS '사용자 정의 속성 정의 — 데이터 모델 테이블에 기관이 더하는 관리 항목 (104번 WP8-31·75)';
+COMMENT ON TABLE quality.tb_udp_def IS '사용자 정의 속성 정의 — 데이터 모델 테이블·컬럼에 기관이 더하는 관리 항목 (104번 WP8-31·75)';
 
 
 --
 -- Name: COLUMN tb_udp_def.target_tp; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_udp_def.target_tp IS '대상 — OBJ(테이블)';
+COMMENT ON COLUMN quality.tb_udp_def.target_tp IS '대상 — OBJ(테이블)·ATTR(컬럼). 만든 뒤 바꾸지 않는다';
 
 
 --
@@ -3124,7 +3124,7 @@ CREATE TABLE quality.tb_udp_val (
 -- Name: TABLE tb_udp_val; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_udp_val IS '사용자 정의 속성 값 — 테이블(ATTR_NM 빈 값)마다 (104번 WP8-31·75)';
+COMMENT ON TABLE quality.tb_udp_val IS '사용자 정의 속성 값 — 테이블(ATTR_NM 빈 값)·컬럼(ATTR_NM 컬럼 영문명)마다 (104번 WP8-31·75)';
 
 
 --

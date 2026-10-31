@@ -329,7 +329,9 @@ public class DataModelApprovalController {
 		k.put("objNm",       h.get("obj_nm"));
 		if ("ADD_ATTR".equals(type)) {
 			k.put("attrNm", h.get("attr_nm"));
-			sqlSessionTemplate.delete("datamodel.deleteRejectedAttr", k);
+			if (sqlSessionTemplate.delete("datamodel.deleteRejectedAttr", k) > 0) {
+				sqlSessionTemplate.delete("udp.deleteAttrVals", k);   // 104번 WP8-75
+			}
 		} else if ("ADD_OBJ".equals(type)) {
 			sqlSessionTemplate.delete("datamodel.deleteRejectedAttrsByObj", k);
 			if (sqlSessionTemplate.delete("datamodel.deleteRejectedObj", k) > 0) {
@@ -404,6 +406,7 @@ public class DataModelApprovalController {
 					sqlSessionTemplate.delete("datamodel.deleteIndexByAttr",       dp);
 					sqlSessionTemplate.delete("datamodel.deleteInboundFkByAttr",   dp);
 					sqlSessionTemplate.update("datamodel.clearFkParentRefByAttr",  dp);
+					sqlSessionTemplate.delete("udp.deleteAttrVals",                dp);   // 104번 WP8-75
 					sqlSessionTemplate.delete("datamodel.deleteDataModelAttr",     dp);
 					log.info(">> DEL_ATTR 승인 — 물리 삭제 {}.{}.{}", objOwner, objNm, attrNm);
 					return n;
@@ -589,7 +592,7 @@ public class DataModelApprovalController {
 				before.put("currObjNm",    objNm);
 				before.put("currAttrNm",   attrNm);
 				int r = sqlSessionTemplate.update("datamodel.restoreAttrFromBefore", before);
-				// 110 5.8-14 — 영문명 변경 때(saveAttrs) 함께 바꾼 인덱스·제약조건·참조 제약조건·FK 부모 이름도 변경 전 이름으로
+				// 110 5.8-14 — 영문명 변경 때(saveAttrs) 함께 바꾼 인덱스·제약조건·참조 제약조건·FK 부모 이름(104번 WP8-75 사용자 정의 속성 값도)을 변경 전 이름으로
 				String oldAttr = (String) before.get("attrNm");
 				if (r > 0 && oldAttr != null && !oldAttr.equals(attrNm)) {
 					Map<String, Object> ren = new HashMap<>();
@@ -602,6 +605,7 @@ public class DataModelApprovalController {
 					sqlSessionTemplate.update("datamodel.renameAttrInConstraint",    ren);
 					sqlSessionTemplate.update("datamodel.renameAttrInConstraintRef", ren);
 					sqlSessionTemplate.update("datamodel.renameAttrInFkParent",      ren);
+					sqlSessionTemplate.update("udp.renameAttrVals",                  ren);   // 104번 WP8-75
 				}
 				log.info(">> MODIFY_ATTR 반려 — {}건 원복 {}.{}.{}", r, objOwner, objNm, attrNm);
 			} else if ("MODIFY_OBJ".equals(changeType)) {

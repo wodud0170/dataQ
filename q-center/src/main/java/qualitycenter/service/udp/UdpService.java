@@ -13,20 +13,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * 104번 WP8-31·75 — 사용자 정의 속성(테이블 관리 항목) 값 검사·저장.
+ * 104번 WP8-31·75 — 사용자 정의 속성(테이블·컬럼 관리 항목) 값 검사·저장.
  *
- * <p>테이블 추가·수정·엑셀 업로드가 부른다. 사용 중인 정의만 보고, 필수 속성이 비면 저장을 막는다.
- * 값은 유형대로 검사한다 — 숫자, 날짜(YYYY-MM-DD), 선택(선택값 중 하나), 글(4,000자까지).</p>
+ * <p>테이블 추가·수정·엑셀 업로드와 컬럼 배치 저장(saveAttrs)·컬럼 엑셀 업로드가 부른다. 그 대상(OBJ·ATTR)의 사용 중인 정의만 보고,
+ * 필수 속성이 비면 저장을 막는다. 값은 유형대로 검사한다 — 숫자, 날짜(YYYY-MM-DD), 선택(선택값 중 하나), 글(4,000자까지).</p>
  */
 @Service
 public class UdpService {
 
 	@Autowired private SqlSessionTemplate sqlSessionTemplate;
 
-	/** 사용 중인 정의 (순서대로) */
-	public List<Map<String, Object>> activeDefs() {
+	/** 그 대상(OBJ 테이블·ATTR 컬럼)의 사용 중인 정의 (순서대로) */
+	public List<Map<String, Object>> activeDefs(String targetTp) {
 		Map<String, Object> p = new HashMap<>();
 		p.put("useOnly", "Y");
+		p.put("targetTp", targetTp);
 		return sqlSessionTemplate.selectList("udp.selectDefs", p);
 	}
 
@@ -38,14 +39,28 @@ public class UdpService {
 		return out;
 	}
 
+	/** 테이블 하나의 컬럼 값 {attrNm: {udpId: val}} */
+	public Map<String, Map<String, String>> attrValsByObj(String dmId, String objOwner, String objNm) {
+		Map<String, Object> p = key(dmId, objOwner, objNm);
+		Map<String, Map<String, String>> out = new HashMap<>();
+		for (Map<String, Object> r : sqlSessionTemplate.<Map<String, Object>>selectList("udp.selectAttrValsByObj", p)) {
+			out.computeIfAbsent((String) r.get("attrNm"), k -> new LinkedHashMap<>()).put((String) r.get("udpId"), (String) r.get("val"));
+		}
+		return out;
+	}
+
+	/** 테이블 정의로 검사 — 테이블 추가·수정·엑셀 업로드 */
+	public Map<String, String> check(Map<String, String> existing, Map<String, Object> sent) {
+		return check(activeDefs("OBJ"), existing, sent);
+	}
+
 	/**
-	 * 값 검사. existing 은 지금 저장된 값(추가면 빈 맵), sent 는 요청 값(null 이면 보내지 않음 — 기존 값 그대로).
+	 * 값 검사. defs 는 그 대상의 사용 중인 정의, existing 은 지금 저장된 값(추가면 빈 맵), sent 는 요청 값(null 이면 보내지 않음 — 기존 값 그대로).
 	 *
 	 * @return 저장할 값 (사용 중 정의만, 다듬은 값)
 	 * @throws IllegalArgumentException 필수가 비었거나 유형이 맞지 않을 때 (메시지는 화면에 그대로 보인다)
 	 */
-	public Map<String, String> check(Map<String, String> existing, Map<String, Object> sent) {
-		List<Map<String, Object>> defs = activeDefs();
+	public Map<String, String> check(List<Map<String, Object>> defs, Map<String, String> existing, Map<String, Object> sent) {
 		Map<String, String> merged = new LinkedHashMap<>();
 		List<String> missing = new ArrayList<>();
 		for (Map<String, Object> d : defs) {
@@ -81,10 +96,16 @@ public class UdpService {
 		return merged;
 	}
 
-	/** check 결과를 저장 — 빈 값은 지운다. session 이 null 이면 바로 반영 */
+	/** 테이블 값 저장 — check 결과. 빈 값은 지운다. session 이 null 이면 바로 반영 */
 	public void save(SqlSession session, String dmId, String objOwner, String objNm, Map<String, String> vals, String userId) {
+		saveAttr(session, dmId, objOwner, objNm, "", vals, userId);
+	}
+
+	/** 컬럼 값 저장 — check 결과. 테이블 save 와 같고 키에 컬럼 영문명(테이블은 '') */
+	public void saveAttr(SqlSession session, String dmId, String objOwner, String objNm, String attrNm, Map<String, String> vals, String userId) {
 		for (Map.Entry<String, String> e : vals.entrySet()) {
 			Map<String, Object> p = key(dmId, objOwner, objNm);
+			p.put("attrNm", attrNm);
 			p.put("udpId", e.getKey());
 			p.put("val", e.getValue());
 			p.put("userId", userId);

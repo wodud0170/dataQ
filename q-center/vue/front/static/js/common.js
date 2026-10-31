@@ -3,6 +3,8 @@ const DEVELOP_MODE = process.env.NODE_ENV === "production" ? false : true;
 // 개발 서버는 config/index.js 의 proxyTable 이 q-center(28090)로 넘긴다 — 세션 쿠키가 실려야 API 가 열린다.
 const APIURLBASE = "/";
 const LOGINSTATUSDATA = JSON.parse(sessionStorage.getItem("loginStatus"));
+// resizableGrid — 끌고 있는 머리 칸과 시작 위치, 문서 이벤트를 달았는지
+const gripDrag = { th: undefined, startOffset: 0, bound: false };
 
 const methods = {
   getToday() {
@@ -95,13 +97,14 @@ const methods = {
   
     return year + month + day + hours + minutes + seconds;
   },
+  // 표 머리 칸마다 폭 조절 손잡이를 붙인다. 여러 번 불러도 된다 — 손잡이가 이미 있는 칸은 건너뛰고 문서 이벤트는 한 번만 단다
+  // (104번 WP8-75 — 컬럼 화면이 사용자 정의 속성 열이 바뀔 때마다 새로 생긴 머리 칸에 붙이려고 다시 부른다)
   resizableGrid() {
-    let thElm;
-    let startOffset;
-
     Array.prototype.forEach.call(
       document.querySelectorAll("table th"),
       function(th) {
+        if (th.dataset.resizeGrip) return;
+        th.dataset.resizeGrip = "Y";
         th.style.position = "relative";
 
         let grip = document.createElement("div");
@@ -113,22 +116,24 @@ const methods = {
         grip.style.position = "absolute";
         grip.style.cursor = "col-resize";
         grip.addEventListener("mousedown", function(e) {
-          thElm = th;
-          startOffset = th.offsetWidth - e.pageX;
+          gripDrag.th = th;
+          gripDrag.startOffset = th.offsetWidth - e.pageX;
         });
 
         th.appendChild(grip);
       }
     );
 
+    if (gripDrag.bound) return;
+    gripDrag.bound = true;
     document.addEventListener("mousemove", function(e) {
-      if (thElm) {
-        thElm.style.width = startOffset + e.pageX + "px";
+      if (gripDrag.th) {
+        gripDrag.th.style.width = gripDrag.startOffset + e.pageX + "px";
       }
     });
 
     document.addEventListener("mouseup", function() {
-      thElm = undefined;
+      gripDrag.th = undefined;
     });
   },
   encodePw(s) {

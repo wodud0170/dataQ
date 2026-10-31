@@ -35,9 +35,10 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>모델 행 — 수집이 이번에 읽은 칸은 수집 값 그대로(화면 반려처럼 변경 전 값으로 되돌리지 않는다). 그 밖은 신청 전으로:
  *     수정 대기 — 수집이 덮지 않는 칸(컬럼 한글명, 테이블 한글명·설명·테이블스페이스·업무영역·주제영역)은 신청 전 값,
  *       수집에 없는 컬럼·테이블은 모든 칸(이름 포함)을 신청 전 값으로.
- *       이름·소유자 변경으로 생긴 실제 DB 에 없는 이름의 행은, 처음 이름이 이번에 수집됐으면 그 행으로 대신하고 지운다(수집이 덮지 않는 칸은 옮긴다);
+ *       이름·소유자 변경으로 생긴 실제 DB 에 없는 이름의 행은, 처음 이름이 이번에 수집됐으면 그 행으로 대신하고 지운다(수집이 덮지 않는 칸과 테이블·컬럼 사용자 정의 속성 값은 옮긴다 —
+ *       이름을 바꾼 뒤 같은 이름을 새로 추가해 처음 이름 행에 같은 속성 값이 있으면 사본 값);
  *     추가 대기 — 읽었으면 APPROVED, 안 읽었으면 컬럼·테이블 REJECTED / 제약조건·인덱스 삭제;
- *     삭제 대기 — 읽었으면 수집이 되살렸고, 이번에 읽은 스키마인데 없으면 물리 삭제(딸린 인덱스·제약조건·참조·사용자 정의 속성 값까지);
+ *     삭제 대기 — 읽었으면 수집이 되살렸고, 이번에 읽은 스키마인데 없으면 물리 삭제(딸린 인덱스·제약조건·참조·테이블·컬럼 사용자 정의 속성 값까지);
  *     반려된 FK 추가가 남긴 컬럼 FK 표시는 신청 전 값(수집은 FK 부모를 읽지 않아 덮지 않는다)</li>
  * </ol>
  */
@@ -174,7 +175,8 @@ public class RecollectRejectService {
 	 * <ul>
 	 *   <li>지금 이름이 수집됨 — 수집 값 그대로, 한글명만 신청 전 값</li>
 	 *   <li>지금 이름은 없고 처음 이름이 수집됨(실제 DB 가 아직 처음 이름) — 바뀐 이름 행은 사본이다. 수집이 덮지 않는 칸을 처음 이름 행으로 옮기고
-	 *       한글명은 신청 전 값, 그 이름을 가리키던 인덱스·제약조건·참조 제약조건·FK 부모를 처음 이름으로 돌리고 사본을 지운다</li>
+	 *       한글명은 신청 전 값, 그 이름을 가리키던 인덱스·제약조건·참조 제약조건·FK 부모와 사용자 정의 속성 값을 처음 이름으로 돌리고 사본을 지운다
+	 *       (이름을 바꾼 뒤 같은 이름 컬럼을 새로 추가해 처음 이름 행에 같은 속성 값이 있으면 사본 값 — 수집이 덮지 않는 칸처럼)</li>
 	 *   <li>둘 다 수집에 없음 — 수집이 덮은 칸이 없으므로 화면 반려와 같이 모든 칸(이름 포함)을 신청 전 값으로. 처음 이름의 다른 행이 있으면 이름은 둔다</li>
 	 * </ul>
 	 */
@@ -216,6 +218,7 @@ public class RecollectRejectService {
 				cp.put("toAttrNm", ch.orig);
 				s.update("datamodel.copyUncollectedAttrCols", cp);
 				s.update("datamodel.restoreAttrNmKr", kr);
+				s.delete("udp.deleteAttrValsCopied", cp);   // 104번 WP8-75 — 처음 이름 컬럼에 같은 속성 값이 있으면 사본 값이 이긴다
 				renameAttrRefs(s, dmId, ch.owner, ch.obj, ch.cur, ch.orig);
 				s.delete("datamodel.deleteDataModelAttr", mkey(dmId, ch.owner, ch.obj, ch.cur));
 				log.info(">> 재수집 자동 반려 — 이름 변경 대기 컬럼 {}.{}.{} 은 DB 에 없어 처음 이름 {} 행으로 대신", ch.owner, ch.obj, ch.cur, ch.orig);
@@ -238,7 +241,10 @@ public class RecollectRejectService {
 		}
 	}
 
-	/** 컬럼 영문명 변경 때(saveAttrs) 함께 바꾼 인덱스·제약조건·참조 제약조건·FK 부모의 이름을 되돌린다 */
+	/**
+	 * 컬럼 영문명 변경 때(saveAttrs) 함께 바꾼 인덱스·제약조건·참조 제약조건·FK 부모의 이름과 사용자 정의 속성 값(104번 WP8-75)을 되돌린다.
+	 * 이름 변경 사본 정리(사본 값이 처음 이름 행으로)와 이름 되돌림 두 경우 모두
+	 */
 	private void renameAttrRefs(SqlSession s, String dmId, String owner, String obj, String from, String to) {
 		Map<String, Object> ren = new HashMap<>();
 		ren.put("dataModelId", dmId);
@@ -250,12 +256,13 @@ public class RecollectRejectService {
 		s.update("datamodel.renameAttrInConstraint", ren);
 		s.update("datamodel.renameAttrInConstraintRef", ren);
 		s.update("datamodel.renameAttrInFkParent", ren);
+		s.update("udp.renameAttrVals", ren);
 	}
 
 	/**
 	 * 테이블 수정 대기(MODIFY_OBJ — 이름·소유자 변경, 함께 바꾼 한글명·설명·테이블스페이스·업무영역·주제영역). 컬럼과 같은 규칙:
 	 * 지금 (소유자, 이름)이 수집됨 — 함께 바꾼 칸(수집이 덮지 않음)만 신청 전 값.
-	 * 처음 (소유자, 이름)만 수집됨 — 바뀐 테이블은 사본이다. 수집이 덮지 않는 테이블·컬럼 칸과 사용자 정의 속성 값을 처음 이름 테이블로 옮기고
+	 * 처음 (소유자, 이름)만 수집됨 — 바뀐 테이블은 사본이다. 수집이 덮지 않는 테이블·컬럼 칸과 사용자 정의 속성 값(처음 테이블에 같은 값이 있으면 사본 값)을 처음 이름 테이블로 옮기고
 	 * 함께 바꾼 칸은 신청 전 값, 다른 테이블의 참조(참조 제약조건·FK 부모)를 처음 이름으로 돌리고 사본(컬럼·인덱스·제약조건)을 지운다.
 	 * 둘 다 없음 — 화면 반려와 같이 소유자·이름을 되돌리고(컬럼·인덱스·제약조건·참조·FK 부모·속성 값까지) 함께 바꾼 칸도 신청 전 값.
 	 * 이름 변경 때 FK 부모는 소유자를 바꾸지 않으므로 FK 부모는 이름만 돌린다. 함께 바꾼 칸의 신청 전 값은 그 칸이 이력에 남은 신청(10-28 뒤)만 있다.
@@ -295,6 +302,7 @@ public class RecollectRejectService {
 				s.update("datamodel.copyUncollectedObjCols", cp);
 				s.update("datamodel.copyUncollectedAttrCols", cp);
 				restoreObjUncollected(s, dmId, ch.origOwner, ch.orig, ch.before);
+				s.delete("udp.deleteObjValsCopied", cp);   // 처음 테이블에 같은 (속성, 컬럼) 값이 있으면 사본 값이 이긴다
 				renameObjVals(s, dmId, ch.owner, ch.obj, ch.origOwner, ch.orig);
 				renameObjRefs(s, dmId, ch.owner, ch.obj, ch.origOwner, ch.orig);
 				Map<String, Object> k = mkey(dmId, ch.owner, ch.obj, null);
@@ -419,8 +427,8 @@ public class RecollectRejectService {
 	/**
 	 * 삭제 대기로 감춘(USE_YN='N') 행이 이번 수집에 없으면(수집이 읽은 스키마인데 없음 — 실제 DB 에서도 없어짐) 물리 삭제한다.
 	 * 같은 이름을 다시 추가할 때 막히지 않게. 딸린 것은 승인 때(GOV-B07)와 같이 정리한다:
-	 * 컬럼 — 그 컬럼이 든 인덱스·제약조건, 그 컬럼을 참조하는 FK 제약조건, 다른 컬럼의 FK 부모 / 테이블 — 그 테이블의 인덱스·제약조건,
-	 * 그 테이블을 참조하는 FK 제약조건, 다른 컬럼의 FK 부모, 사용자 정의 속성 값, 컬럼 / PK·FK — 그 제약조건(PK 면 같은 이름 인덱스, PK 삭제에 딸려 감춘 FK).
+	 * 컬럼 — 그 컬럼이 든 인덱스·제약조건, 그 컬럼을 참조하는 FK 제약조건, 다른 컬럼의 FK 부모, 그 컬럼의 사용자 정의 속성 값 / 테이블 — 그 테이블의 인덱스·제약조건,
+	 * 그 테이블을 참조하는 FK 제약조건, 다른 컬럼의 FK 부모, 사용자 정의 속성 값(컬럼 값 포함), 컬럼 / PK·FK — 그 제약조건(PK 면 같은 이름 인덱스, PK 삭제에 딸려 감춘 FK).
 	 * 인덱스·제약조건은 그 수집 단계를 끝까지 읽었을 때만 지운다. 이번에 읽지 않은 스키마의 행은 감춘 채 둔다.
 	 */
 	@SuppressWarnings("unchecked")
@@ -436,6 +444,7 @@ public class RecollectRejectService {
 				s.delete("datamodel.deleteIndexByAttr", k);
 				s.delete("datamodel.deleteInboundFkByAttr", k);
 				s.update("datamodel.clearFkParentRefByAttr", k);
+				s.delete("udp.deleteAttrVals", k);
 				s.delete("datamodel.deleteDataModelAttr", k);
 				log.info(">> 재수집 자동 반려 — 삭제 대기 컬럼 {}.{}.{} 은 DB 에도 없어 물리 삭제", owner, obj, attr);
 			} else if ("DEL_OBJ".equals(type)) {

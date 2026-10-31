@@ -218,7 +218,7 @@
 
     <!-- 컬럼 목록 (인라인 편집) -->
     <!-- 86번 #11 — fixed-header + 동적 height. 가로/세로 스크롤 모두 그리드 내부에서 동작 -->
-    <v-data-table id="clTable_table" :headers="dmColumnDetaileHeaders" :items="mergedItems"
+    <v-data-table id="clTable_table" :headers="gridHeaders" :items="mergedItems"
       :page.sync="page" :items-per-page="itemsPerPage" hide-default-footer
       item-key="_rowKey" show-select v-model="selectedRows"
       :sort-by.sync="userSortBy" :sort-desc.sync="userSortDesc"
@@ -332,6 +332,19 @@
           :class="'inline-edit inline-edit-center ' + (isRowDirty(item) ? 'inline-dirty' : '')"
           dense hide-details outlined flat solo single-line placeholder="-"
           @paste.native="onCellPaste(item, 'defaultVal', $event)" />
+      </template>
+
+      <!-- 104번 WP8-75 — 컬럼 대상 사용자 정의 속성 (관리 > 사용자 정의 속성). 머리에 마우스를 올리면 설명 -->
+      <template v-for="d in attrUdpDefs" #[`header.udp_${d.udpId}`]="{ header }">
+        <span :title="d.udpDesc">{{ header.text }}</span>
+      </template>
+      <template v-for="d in attrUdpDefs" #[`item.udp_${d.udpId}`]="{ item }">
+        <v-select v-if="d.dataTp === 'SELECT'" v-model="item.udp[d.udpId]"
+          :items="udpSelectItems(item, d)" clearable :menu-props="{ maxHeight: 280 }"
+          :class="udpCellClass(item, d)" dense hide-details outlined flat solo single-line />
+        <v-text-field v-else v-model="item.udp[d.udpId]"
+          :type="d.dataTp === 'NUMBER' ? 'number' : (d.dataTp === 'DATE' ? 'date' : 'text')"
+          :class="udpCellClass(item, d)" dense hide-details outlined flat solo single-line />
       </template>
 
       <template #item.termsStndYn="{ item }">
@@ -554,6 +567,10 @@ export default {
       this.pageCount = Math.ceil(this.mergedItems.length / this.itemsPerPage);
       if (this.page > this.pageCount) this.page = Math.max(1, this.pageCount);
     },
+    // 104번 WP8-75 — 속성 열이 바뀌면 새로 생긴 머리에도 폭 조절 손잡이를 붙인다
+    attrUdpDefs() {
+      this.$nextTick(() => this.$resizableGrid());
+    },
     addTargetKey(newVal, oldVal) {
       if (this.addTargetLocked && newVal !== oldVal && oldVal != null) {
         this.$nextTick(() => {
@@ -629,6 +646,8 @@ export default {
     // 104번 WP7-26 컬럼 영향도
     colImpactShow: false,
     colImpact: { title: '', attrNm: null, attrNmKr: null },
+    // 104번 WP8-75 — 사용 중인 컬럼 대상 사용자 정의 속성 (그리드 '디폴트' 뒤에 속성마다 열)
+    attrUdpDefs: [],
     // 87-3 PK/FK
     // key = ownerObjNm (예: USER1TB_MEMBER), value = { byCol: { ATTR_NM: { pk:{name,columns}, fk:{name,refTable,refCol} } }, pk: {...}, fkList: [...] }
     constraintsByKey: {},
@@ -684,7 +703,7 @@ export default {
       { text: '테이블(영문)', value: 'objNm', align: 'center', sortable: false, width: '140px' },
       { text: '테이블(한글)', value: 'objNmKr', align: 'center', sortable: false, width: '120px' },
       { text: '컬럼(영문)', value: 'attrNm', align: 'center', sortable: false, width: '140px' },
-      { text: '컬럼(한글)', value: 'attrNmKr', align: 'center', sortable: false },
+      { text: '컬럼(한글)', value: 'attrNmKr', align: 'center', sortable: false, width: '120px' },
       { text: '타입', value: 'dataType', align: 'center', sortable: false, width: '90px' },
       { text: '길이', value: 'dataLen', align: 'center', sortable: false, width: '60px' },
       { text: 'PK', value: 'pkYn', align: 'center', sortable: false, width: '50px' },
@@ -692,7 +711,8 @@ export default {
       { text: '참조 테이블', value: 'refObjNmKr', align: 'center', sortable: false, width: '120px' },
       { text: '참조 컬럼', value: 'refAttrNmKr', align: 'center', sortable: false, width: '120px' },
       { text: '삭제 규칙', value: 'deleteRule', align: 'center', sortable: false, width: '90px' },
-      { text: '메시지', value: '_msg', sortable: false },
+      // 104번 WP8-75 — 폭이 없던 컬럼(한글)이 긴 메시지(속성 값 오류)에 밀려 한 글자 폭으로 줄었다 — 두 열에 폭을 준다
+      { text: '메시지', value: '_msg', sortable: false, width: '300px' },
     ],
   }),
   computed: {
@@ -703,6 +723,17 @@ export default {
     },
     // 104번 WP2 — 모델 직접 반영 권한(관리자 또는 DM_MANAGE): 컬럼 순서 바꾸기
     canManageModel() { return this.$can('DM_MANAGE'); },
+    // 104번 WP8-75 — '디폴트' 뒤에 컬럼 대상 사용자 정의 속성 열 (머리 = 속성 이름, 필수는 ' *')
+    // 폭은 이름 길이를 따라 240px 까지 넓힌다 — 120px 고정이면 긴 이름이 머리를 네 줄로 늘려 머리 줄 전체가 높아졌다
+    gridHeaders() {
+      const i = this.dmColumnDetaileHeaders.findIndex(h => h.value === 'defaultVal') + 1;
+      const udp = this.attrUdpDefs.map(d => {
+        const text = d.udpNm + (d.requiredYn === 'Y' ? ' *' : '');
+        const w = Math.min(240, Math.max(d.dataTp === 'DATE' ? 160 : 120, text.length * 13 + 24));
+        return { text, value: 'udp_' + d.udpId, sortable: false, align: 'center', width: w + 'px', class: 'hdr-udp' };
+      });
+      return [...this.dmColumnDetaileHeaders.slice(0, i), ...udp, ...this.dmColumnDetaileHeaders.slice(i)];
+    },
     // 87-3 모달용 옵션
     pkColumnOptions() {
       return (this.dmColumnAllItems || [])
@@ -747,8 +778,9 @@ export default {
         return sortOrd(a) - sortOrd(b);
       });
     },
+    // 104번 WP8-75 — 속성 칸만 고친 행도 센다 (저장 버튼 건수·"수정중 N건")
     dirtyCount() {
-      return (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it)).length;
+      return (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it) || this.isUdpDirty(it)).length;
     },
     // 87-x — saved 행의 attr_ord 가 변경된 게 있는지 (추가 대상 변경 잠금 조건의 일부)
     hasOrderChanged() {
@@ -830,10 +862,20 @@ export default {
         return;
       }
       this.loadTable = true;
-      axios.get(this.$APIURL.base + "api/dm/getDataModelAttrListByClctId", {
-        params: { 'clctId': this.selectedModelId }
-      }).then((res) => {
-        this.dmColumnAllItems = this._mapColumnData(res.data);
+      // 104번 WP8-75 — 컬럼 목록과 컬럼 속성 값·속성 정의를 함께 읽는다 (관리 화면에서 바꾼 정의가 탭을 닫지 않아도 [조회]로 반영)
+      Promise.all([
+        axios.get(this.$APIURL.base + "api/dm/getDataModelAttrListByClctId", {
+          params: { 'clctId': this.selectedModelId }
+        }),
+        axios.post(this.$APIURL.base + 'api/udp/attrVals', { dmId: this.selectedModelId }),
+        this._loadAttrUdpDefs(),
+      ]).then(([res, valRes]) => {
+        const valMap = {};   // '소유자|테이블|컬럼' → { 속성 ID: 값 }
+        (valRes.data || []).forEach(v => {
+          const k = (v.objOwner || '') + '|' + v.objNm + '|' + v.attrNm;
+          (valMap[k] = valMap[k] || {})[v.udpId] = v.val;
+        });
+        this.dmColumnAllItems = this._mapColumnData(res.data, valMap);
         this.selectedRows = [];
         this.loadTable = false;
         this.fetchConstraints();
@@ -841,6 +883,41 @@ export default {
         this.$swal.fire({ title: '컬럼 정보 로드 실패 - API 확인 필요', confirmButtonText: '확인', icon: 'error' });
         this.loadTable = false;
       });
+    },
+    // 104번 WP8-75 — 사용 중인 컬럼 대상 사용자 정의 속성
+    _loadAttrUdpDefs() {
+      return axios.post(this.$APIURL.base + 'api/udp/defs', { useOnly: 'Y', targetTp: 'ATTR' }).then(r => {
+        this.attrUdpDefs = r.data || [];
+      });
+    },
+    _blankUdp() {
+      const udp = {};
+      this.attrUdpDefs.forEach(d => { udp[d.udpId] = ''; });
+      return udp;
+    },
+    // 속성 칸이 저장된 값과 다른가 (저장된 행만 — 추가 행은 늘 새 값)
+    udpCellDirty(item, d) {
+      if (item._mode !== 'saved') return false;
+      const v = item.udp[d.udpId];
+      return (v == null ? '' : String(v)) !== (item._orig.udp[d.udpId] || '');
+    },
+    // 속성 칸만 따로 본다 — isRowDirty(중복·한글명 검사·UPDATE 대상)에 넣지 않는다
+    isUdpDirty(item) {
+      return this.attrUdpDefs.some(d => this.udpCellDirty(item, d));
+    },
+    // 선택 칸 목록 — 저장된 값이 지금 선택값에 없으면(관리 화면에서 선택값을 고친 뒤) 그 값도 넣어 칸에 보이게 한다
+    udpSelectItems(item, d) {
+      const opts = (d.selectVals || '').split('\n');
+      const v = item.udp[d.udpId];
+      return v && !opts.includes(v) ? opts.concat(v) : opts;
+    },
+    // 필수 칸이 비었거나 선택 칸 값이 선택값에 없으면 빨강(추가 행·속성을 고친 행만 — 막는 것은 서버), 고친 칸은 노랑
+    udpCellClass(item, d) {
+      const v = item.udp[d.udpId];
+      const empty = v == null || String(v).trim() === '';
+      const outOfOpts = d.dataTp === 'SELECT' && !empty && !(d.selectVals || '').split('\n').includes(v);
+      if (((d.requiredYn === 'Y' && empty) || outOfOpts) && (item._mode === 'add' || this.isUdpDirty(item))) return 'inline-edit inline-error';
+      return 'inline-edit ' + (this.udpCellDirty(item, d) ? 'inline-dirty' : '');
     },
     // 87-3 — 모델 단위 PK/FK 일괄 조회 + 컬럼별 매핑
     fetchConstraints() {
@@ -1184,7 +1261,7 @@ export default {
         }).catch(() => this.$swal.fire({ title: 'FK 삭제 실패', icon: 'error' }));
       });
     },
-    _mapColumnData(data) {
+    _mapColumnData(data, valMap) {
       return data.map(item => {
         // 86번 #11 — PK/FK 는 제약 없는 컬럼에서 NULL 로 들어옴.
         // 예전엔 _orig 만 default 채우고 item 본체는 raw 라
@@ -1200,6 +1277,10 @@ export default {
         const dataLen    = item.dataLen    || 0;
         const dataDecimalLen = item.dataDecimalLen || 0;
         const attrOrder  = item.attrOrder  || 0;
+        // 104번 WP8-75 — 컬럼 속성 값 (속성 ID → 값, 없으면 '')
+        const vals = valMap[(item.objOwner || '') + '|' + item.objNm + '|' + attrNm] || {};
+        const udp = {};
+        this.attrUdpDefs.forEach(d => { udp[d.udpId] = vals[d.udpId] || ''; });
         return {
           attrId: item.attrId,
           objOwner: item.objOwner, objNm: item.objNm, objNmKr: item.objNmKr,
@@ -1215,8 +1296,9 @@ export default {
           _rowKey: 's_' + (item.objOwner || '') + '_' + item.objNm + '_' + item.attrNm,
           _mode: 'saved',
           _resolveReason: null,
+          udp,
           _orig: { attrNmKr, nullableYn, pkYn, fkYn, defaultVal,
-                   attrNm, dataType, dataLen, dataDecimalLen, attrOrder },
+                   attrNm, dataType, dataLen, dataDecimalLen, attrOrder, udp: Object.assign({}, udp) },
         };
       });
     },
@@ -1287,6 +1369,7 @@ export default {
         fkYn: 'N',
         defaultVal: '',
         termsStndYn: 'N',
+        udp: this._blankUdp(),   // 104번 WP8-75
       };
     },
     addEmptyRow() {
@@ -1823,12 +1906,15 @@ export default {
         return;
       }
       const dirtyItems = (this.dmColumnAllItems || []).filter(it => this.isRowDirty(it));
+      // 104번 WP8-75 — 속성 칸만 고친 행은 mode UDP (값만 저장, 컬럼 행·변경 이력은 그대로)
+      const udpOnlyItems = (this.dmColumnAllItems || []).filter(it => !this.isRowDirty(it) && this.isUdpDirty(it));
       const addGroups = this._groupByObj(this.newRows);
       const delGroups = this._groupByObj(this.pendingDeletes);
       const updGroups = this._groupByObj(dirtyItems);
+      const udpGroups = this._groupByObj(udpOnlyItems);
       // (owner, objNm) 조합 키 셋
       const allKeys = new Set([
-        ...Object.keys(addGroups), ...Object.keys(delGroups), ...Object.keys(updGroups),
+        ...Object.keys(addGroups), ...Object.keys(delGroups), ...Object.keys(updGroups), ...Object.keys(udpGroups),
       ]);
       if (allKeys.size === 0) return;
 
@@ -1837,7 +1923,7 @@ export default {
       allKeys.forEach(k => {
         if (onlyKeys && !onlyKeys.has(k)) return;
         reqKeys.push(k);
-        const meta = (addGroups[k] || delGroups[k] || updGroups[k]);
+        const meta = (addGroups[k] || delGroups[k] || updGroups[k] || udpGroups[k]);
         const objNm = meta.objNm;
         const objOwner = meta.objOwner;
         const attrs = [];
@@ -1848,17 +1934,26 @@ export default {
           pkYn: r.pkYn, fkYn: r.fkYn,
           nullableYn: r.nullableYn, defaultVal: r.defaultVal,
           stndExceptReason: exceptReason || null,
+          udpVals: r.udp,   // 104번 WP8-75 — 추가는 늘 검사 (필수가 비면 서버가 거부)
         }));
-        ((updGroups[k] && updGroups[k].rows) || []).forEach(r => attrs.push({
-          mode: 'UPDATE',
-          origAttrNm: (r._orig && r._orig.attrNm) || r.attrNm,  // PK 매칭용
-          attrNm: r.attrNm,                                      // 새 영문명 (변경 시 cascade)
-          attrNmKr: r.attrNmKr,
-          dataType: r.dataType, dataLen: r.dataLen, dataDecimalLen: r.dataDecimalLen,
-          attrOrder: r.attrOrder,
-          pkYn: r.pkYn, fkYn: r.fkYn,
-          nullableYn: r.nullableYn, defaultVal: r.defaultVal,
-          stndExceptReason: exceptReason || null,
+        ((updGroups[k] && updGroups[k].rows) || []).forEach(r => {
+          const a = {
+            mode: 'UPDATE',
+            origAttrNm: (r._orig && r._orig.attrNm) || r.attrNm,  // PK 매칭용
+            attrNm: r.attrNm,                                      // 새 영문명 (변경 시 cascade)
+            attrNmKr: r.attrNmKr,
+            dataType: r.dataType, dataLen: r.dataLen, dataDecimalLen: r.dataDecimalLen,
+            attrOrder: r.attrOrder,
+            pkYn: r.pkYn, fkYn: r.fkYn,
+            nullableYn: r.nullableYn, defaultVal: r.defaultVal,
+            stndExceptReason: exceptReason || null,
+          };
+          // 104번 WP8-75 — 속성도 고쳤을 때만 보낸다 (보내지 않으면 서버가 속성을 검사하지 않는다)
+          if (this.isUdpDirty(r)) a.udpVals = r.udp;
+          attrs.push(a);
+        });
+        ((udpGroups[k] && udpGroups[k].rows) || []).forEach(r => attrs.push({
+          mode: 'UDP', attrNm: r._orig.attrNm, udpVals: r.udp,
         }));
         ((delGroups[k] && delGroups[k].rows) || []).forEach(r => attrs.push({
           mode: 'DELETE', attrNm: r.attrNm,
@@ -2283,6 +2378,7 @@ export default {
   },
   created() {
     this.getModelList();
+    this._loadAttrUdpDefs().catch(() => {});
   },
   mounted() {
     this.$resizableGrid && this.$resizableGrid();
@@ -2329,9 +2425,10 @@ pre { font-family: 'Roboto'; }
 .checkboxStyle { margin-top: 0; padding-top: 0; }
 /* 86번 #11 — height/overflow 는 v-data-table fixed-header + :height prop 에서 처리. CSS 강제 height 제거. */
 .row-nonstandard > td { background-color: #FFEBEE !important; }
-/* 88번 거버넌스 — DRAFT/SUBMITTED 노란 배경, REJECTED 빨간 배경 */
-.row-draft > td { background-color: #FFF8E1 !important; }
-.row-rejected > td { background-color: #FFEBEE !important; }
+/* 88번 거버넌스 — DRAFT/SUBMITTED 노란 배경, REJECTED 빨간 배경.
+   그리드 칸(td)은 v-data-table 이 그려 scoped 선택자가 닿지 않았다 — >>> 로 (테이블 화면 WP8 과 같음, 오른쪽 고정 칸도 같은 색) */
+#clTable_table >>> .row-draft > td { background-color: #FFF8E1 !important; }
+#clTable_table >>> .row-rejected > td { background-color: #FFEBEE !important; }
 .inline-edit { min-width: 100px; }
 .inline-edit >>> input { padding: 2px 6px; }
 .add-position-select { width: 90px !important; min-width: 90px !important; max-width: 90px !important; }
@@ -2353,4 +2450,14 @@ pre { font-family: 'Roboto'; }
 #clTable_table >>> th.hdr-physical { background-color: #E3F2FD !important; color: #1565C0 !important; }
 /* 헤더 한 글자씩 줄바꿈 방지 (디 폴 트, 데 이 터 타 입 등) */
 #clTable_table >>> th { white-space: nowrap !important; }
+/* 104번 WP8-75 — 컬럼 대상 사용자 정의 속성 열 (연한 주황). 긴 속성 이름은 낱말 단위로 줄바꿈 */
+#clTable_table >>> th.hdr-udp { background-color: #FFF3E0 !important; color: #E65100 !important;
+  white-space: normal !important; word-break: keep-all; overflow-wrap: break-word; }
+/* 머리 줄 고정(fixed-header) — 폭 조절 손잡이($resizableGrid)가 머리 칸에 position: relative 를 넣어 그동안 고정되지 않았다 */
+#clTable_table >>> thead th { position: sticky !important; }
+/* '삽입/삭제' 열은 오른쪽에 붙여 가로 스크롤 때도 보이게 (테이블 화면과 같음) */
+#clTable_table >>> th:last-child { right: 0; z-index: 3; box-shadow: -3px 0 4px rgba(0, 0, 0, .06); }
+#clTable_table >>> td:last-child { position: sticky; right: 0; z-index: 1; background: #fff; white-space: nowrap; box-shadow: -3px 0 4px rgba(0, 0, 0, .06); }
+/* 빈 목록 안내 칸(한 칸이 모든 열을 덮는다)은 고정하지 않고 왼쪽에 — 고정되면 오른쪽 끝에 붙어 글자가 잘렸다 */
+#clTable_table >>> .v-data-table__empty-wrapper > td { position: static !important; text-align: left !important; padding-left: 24px !important; box-shadow: none; }
 </style>

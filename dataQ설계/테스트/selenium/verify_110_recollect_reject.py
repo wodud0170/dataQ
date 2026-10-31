@@ -16,15 +16,17 @@
 
 필요:
   - q-center(28091)·q-executor(28098) 기동
-  - 환경 변수 PGPASSWORD (개발 DB admin), DATAQ_TEST_PW (시험 계정 space·jyjang 비밀번호), 선택 PSQL (psql.exe 경로)
+  - 환경 변수 DATAQ_TEST_PW (시험 계정 space·jyjang 비밀번호)
+  - 개발 DB psql 은 dbcmd.PSQL — PC1 은 dataq-db 컨테이너, PC2 는 DATAQ_PSQL=native·PGPASSWORD (개발 DB admin)
+    (시험 데이터 소스는 어느 PC 에서나 개발 DB 의 25433 포트로 붙는다)
 시험 데이터(시험 스키마·역할, 데이터 소스, 모델과 그 테이블·컬럼·제약·이력, 결재선·결재 문서·알림)는 끝에서 지운다.
 """
 import base64, json, os, secrets, subprocess, sys, time, traceback
 import requests
+from dbcmd import PSQL
 
 BASE = "http://localhost:28091"
 TAG = time.strftime("%H%M%S")
-PSQL = os.environ.get("PSQL", r"C:\Program Files\PostgreSQL\13\bin\psql.exe")
 PW = os.environ["DATAQ_TEST_PW"]
 REASON = "재수집으로 실제 DB 구조로 바뀜"
 EXEC_LOG = os.environ.get("QEXEC_LOG")      # 선택 — q-executor 로그 파일(STOMP 오류 확인)
@@ -45,9 +47,7 @@ def step(name, fn):
 
 
 def psql(sql):
-    r = subprocess.run([PSQL, "-h", "localhost", "-p", "25433", "-U", "admin", "-d", "postgres", "-w", "-At", "-c", sql],
-                       capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace",
-                       env=dict(os.environ, PGCLIENTENCODING="UTF8"))
+    r = subprocess.run(PSQL + ["-At", "-c", sql], capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         raise RuntimeError("psql 실패: " + (r.stderr or "")[:300])
     return (r.stdout or "").strip()

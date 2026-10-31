@@ -189,7 +189,7 @@ public class DataModelController {
 	@Autowired
 	private DataStandardController stdController;
 
-	/** 104번 WP8-31 — 테이블 사용자 정의 속성 값 검사·저장 */
+	/** 104번 WP8-31·75 — 테이블·컬럼 사용자 정의 속성 값 검사·저장 */
 	@Autowired
 	private qualitycenter.service.udp.UdpService udpService;
 
@@ -2512,6 +2512,7 @@ public class DataModelController {
 		session.delete("datamodel.deleteIndexByAttr",       param);
 		session.delete("datamodel.deleteInboundFkByAttr",   param);
 		session.update("datamodel.clearFkParentRefByAttr",  param);
+		session.delete("udp.deleteAttrVals",                param);   // 104번 WP8-75
 	}
 
 	/**
@@ -2519,8 +2520,13 @@ public class DataModelController {
 	 * 논리 영역만 받는다: 물리명·타입·길이 등은 서버에서 TMP_COL_N / VARCHAR(255) 기본값.
 	 * 단일 트랜잭션으로 ADD / UPDATE / DELETE 섞어서 처리.
 	 *
-	 * 요청: { dataModelId, objNm, attrs: [{ mode, attrNm?, attrNmKr?, pkYn?, fkYn?, nullableYn?, defaultVal?, attrDesc? }] }
+	 * 요청: { dataModelId, objNm, attrs: [{ mode, attrNm?, attrNmKr?, pkYn?, fkYn?, nullableYn?, defaultVal?, attrDesc?, udpVals? }] }
 	 * 응답: { saved, added, updated, deleted, errors:[{index, mode, message}] }
+	 *
+	 * 104번 WP8-75 — 컬럼 사용자 정의 속성 udpVals({속성 ID: 값}). ADD 는 늘 검사(없으면 빈 값 — 필수면 거부)하고 컬럼과 함께 저장,
+	 * UPDATE 는 udpVals 를 보냈을 때만 검사·저장(보내지 않은 일괄 표준화·구조 진단 반영은 필수 속성이 빈 기존 컬럼이어도 막지 않는다).
+	 * mode UDP({attrNm, udpVals}) 는 속성 값만 — 컬럼 행·변경 이력은 건드리지 않는다(updated 로 센다. UDP 행만 보낸 요청은 컬럼 개수·순서 재배열도 하지 않는다).
+	 * 영문명 변경·삭제(관리자 바로 삭제)는 값도 따라간다.
 	 */
 	@RequestMapping(value = "/saveAttrs", method = RequestMethod.POST)
 	public Mono<Response> saveAttrs(@RequestBody Map<String, Object> body) {
@@ -2562,6 +2568,10 @@ public class DataModelController {
 				if (objOwner == null) objOwner = "";
 			}
 
+			// 104번 WP8-75 — 사용 중인 컬럼 대상 속성 정의와 이 테이블의 컬럼 값 (요청마다 한 번)
+			List<Map<String, Object>> attrDefs = udpService.activeDefs("ATTR");
+			Map<String, Map<String, String>> attrUdpVals = udpService.attrValsByObj(dataModelId, objOwner, objNm);
+
 			// 현재 최대 ATTR_ORD 조회 (ADD 시 nextOrd 증분 기준)
 			Map<String, Object> ordParam = new HashMap<>();
 			ordParam.put("dataModelId", dataModelId);
@@ -2589,7 +2599,7 @@ public class DataModelController {
 				if (ord != null && ord > 0) batchNewOrders.put(orig.trim(), ord.shortValue());
 			}
 
-			int added = 0, updated = 0, deleted = 0;
+			int added = 0, updated = 0, deleted = 0, udpOnly = 0;   // udpOnly — mode UDP 행 수 (updated 에도 센다)
 			List<Map<String, Object>> errors = new ArrayList<>();
 
 			for (int i = 0; i < attrs.size(); i++) {
@@ -2624,6 +2634,7 @@ public class DataModelController {
 								throw new IllegalArgumentException("이미 있는 컬럼입니다: " + objNm + "." + addAttrNm
 										+ " (승인 대기·삭제 대기 중인 같은 이름 컬럼 포함)");
 							session.delete("datamodel.deleteDataModelAttr", sameKey);
+							session.delete("udp.deleteAttrVals", sameKey);   // 104번 WP8-75 — 반려된 행의 속성 값도
 						}
 						// 사용자 입력 attrOrder 우선, 없으면 max+1
 						Integer addOrdIn = parseIntSafe(row.get("attrOrder"));
@@ -2691,7 +2702,11 @@ public class DataModelController {
 							vo.setAprvUserId(vo.getRequesterUserId());
 							vo.setAprvDt(vo.getReqDt());
 						}
+						// 104번 WP8-75 — 컬럼 속성은 추가 때 늘 검사 (보내지 않으면 빈 값 — 필수면 거부)
+						Map<String, String> addUdp = checkAttrUdp(attrDefs, new HashMap<>(), row.get("udpVals"),
+								objNm + "." + (attrNmInput != null && !attrNmInput.trim().isEmpty() ? addAttrNm : attrNmKr));
 						session.insert("datamodel.insertDataModelAttr", vo);
+						udpService.saveAttr(session, dataModelId, objOwner, objNm, addAttrNm, addUdp, changeHistory.safeUserId());
 						added++;
 						changeHistory.record(session, dataModelId, "ADD_ATTR", "TIER1",
 								objOwner, objNm, addAttrNm, null, null,
@@ -2745,7 +2760,12 @@ public class DataModelController {
 							session.update("datamodel.renameAttrInConstraint",    ren);
 							session.update("datamodel.renameAttrInConstraintRef", ren);
 							session.update("datamodel.renameAttrInFkParent",      ren);
+							session.update("udp.renameAttrVals",                  ren);   // 104번 WP8-75
 						}
+						// 104번 WP8-75 — 컬럼 속성은 보냈을 때만 검사·저장 (저장된 값에 보낸 값을 겹쳐 검사)
+						Map<String, String> updUdp = row.containsKey("udpVals")
+								? checkAttrUdp(attrDefs, attrUdpVals.getOrDefault(origAttrNm, new HashMap<>()), row.get("udpVals"), objNm + "." + newAttrNm)
+								: null;
 
 						// 물리 컬럼 (영문명/타입/길이/소수점/순서) UPDATE
 						String dataTypeIn = str(row.get("dataType"));
@@ -2860,6 +2880,7 @@ public class DataModelController {
 							}
 						}
 						session.update("datamodel.updateDataModelAttr", vo);
+						if (updUdp != null) udpService.saveAttr(session, dataModelId, objOwner, objNm, newAttrNm, updUdp, changeHistory.safeUserId());
 						updated++;
 						// 104번 WP9-55 — 이력의 '변경 후' 가 바꾸지 않은 항목까지 빈 값으로 남아
 						// 결재 화면 전후 비교에 "컬럼 순서 1 → 0" 같은 없는 변경이 보였다
@@ -2912,6 +2933,23 @@ public class DataModelController {
 								delBefore, null,
 								changeHistory.generateDdlSnippet(dataModelId, "DEL_ATTR", objOwner, objNm, attrNm, null, null),
 								delAprvStatus);
+					} else if ("UDP".equalsIgnoreCase(mode)) {
+						// 104번 WP8-75 — 속성만 고친 행: 값만 검사·저장. 컬럼 행·변경 이력은 건드리지 않는다 (테이블처럼 속성 값은 이력에 남기지 않는다)
+						String attrNm = str(row.get("attrNm"));
+						if (attrNm == null || attrNm.trim().isEmpty())
+							throw new IllegalArgumentException("attrNm 누락");
+						attrNm = attrNm.trim();
+						Map<String, Object> k = new HashMap<>();
+						k.put("dataModelId", dataModelId);
+						k.put("objOwner",    objOwner);
+						k.put("objNm",       objNm);
+						k.put("attrNm",      attrNm);
+						if (session.selectOne("datamodel.selectDataModelAttrOne", k) == null)
+							throw new IllegalArgumentException("속성 값을 저장할 컬럼이 없습니다: " + objNm + "." + attrNm);
+						Map<String, String> v = checkAttrUdp(attrDefs, attrUdpVals.getOrDefault(attrNm, new HashMap<>()), row.get("udpVals"), objNm + "." + attrNm);
+						udpService.saveAttr(session, dataModelId, objOwner, objNm, attrNm, v, changeHistory.safeUserId());
+						updated++;
+						udpOnly++;
 					} else {
 						throw new IllegalArgumentException("알 수 없는 mode: " + mode);
 					}
@@ -2925,14 +2963,17 @@ public class DataModelController {
 				}
 			}
 
-			// 컬럼 개수 동기화 — 86번 #11 OBJ_OWNER 매칭 추가
-			Map<String, Object> syncParam = new HashMap<>();
-			syncParam.put("dataModelId", dataModelId);
-			syncParam.put("objOwner",    objOwner);
-			syncParam.put("objNm",       objNm);
-			session.update("datamodel.syncDataModelObjAttrCnt", syncParam);
-			// 컬럼 순서 재배열 — 같은 (owner, objNm) 안의 빠진 자리 채워서 1..N 으로 재할당
-			session.update("datamodel.compactAttrOrders", syncParam);
+			// 104번 WP8-75 — 속성 값만 저장한 요청(mode UDP 만)은 컬럼 행을 건드리지 않는다 (개수 동기화·순서 재배열 안 함)
+			if (udpOnly == 0 || added + updated + deleted > udpOnly) {
+				// 컬럼 개수 동기화 — 86번 #11 OBJ_OWNER 매칭 추가
+				Map<String, Object> syncParam = new HashMap<>();
+				syncParam.put("dataModelId", dataModelId);
+				syncParam.put("objOwner",    objOwner);
+				syncParam.put("objNm",       objNm);
+				session.update("datamodel.syncDataModelObjAttrCnt", syncParam);
+				// 컬럼 순서 재배열 — 같은 (owner, objNm) 안의 빠진 자리 채워서 1..N 으로 재할당
+				session.update("datamodel.compactAttrOrders", syncParam);
+			}
 			session.commit();
 
 			Map<String, Object> data = new HashMap<>();
@@ -2966,6 +3007,16 @@ public class DataModelController {
 
 	/** 화면이 이 문구로 시작하는 오류를 받으면 표준 예외 신청을 띄운다 */
 	private static final String STND_REQ_MSG = "표준 준수 필수 모델입니다. 비표준 컬럼: ";
+
+	/** 104번 WP8-75 — 컬럼 속성 값 검사. 오류 문구 앞에 "{테이블}.{컬럼} — " 를 붙인다 */
+	@SuppressWarnings("unchecked")
+	private Map<String, String> checkAttrUdp(List<Map<String, Object>> attrDefs, Map<String, String> existing, Object sent, String label) {
+		try {
+			return udpService.check(attrDefs, existing, (Map<String, Object>) sent);
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException(label + " — " + e.getMessage());
+		}
+	}
 
 	/**
 	 * 109번 #3 — 컬럼 입력 검사 (이름·데이터 타입·길이·소수점·기본값은 [DB 반영] DDL 에 들어간다). 규칙은 DdlSafety.
@@ -3050,12 +3101,13 @@ public class DataModelController {
 		try { return Integer.parseInt(s); } catch (NumberFormatException e) { return null; }
 	}
 
-	// 87-x — saveAttrs 처리 순서: DELETE(0) → UPDATE(1) → ADD(2). attr_ord 충돌 회피.
+	// 87-x — saveAttrs 처리 순서: DELETE(0) → UPDATE·UDP(1) → ADD(2). attr_ord 충돌 회피.
 	private static int modeOrder(String mode) {
 		if (mode == null) return 99;
 		String m = mode.trim().toUpperCase();
 		if ("DELETE".equals(m)) return 0;
 		if ("UPDATE".equals(m)) return 1;
+		if ("UDP".equals(m))    return 1;
 		if ("ADD".equals(m))    return 2;
 		return 99;
 	}
@@ -3253,9 +3305,10 @@ public class DataModelController {
 
 	// 테이블 화면 헤더 순서와 통일 (소유자/업무영역/한글명/영문명/테이블스페이스/설명).
 	// 양식 다운로드(uploadTemplate)·파싱(parseTableWorkbook) 둘 다 이 배열을 사용.
-	private static final String[] TABLE_HEADERS = { "소유자", "업무영역", "테이블명(한글)", "테이블명(영문)", "테이블스페이스", "설명" };
+	// 104번 WP8-75 — 사용자 정의 속성 이름이 이 기본 열 이름과 같으면 거부한다(UdpController.save) — 그래서 패키지 공개
+	static final String[] TABLE_HEADERS = { "소유자", "업무영역", "테이블명(한글)", "테이블명(영문)", "테이블스페이스", "설명" };
 	// 86번 #11 — 업로드/다운로드 양식 통일. 다운로드한 파일 그대로 백업·재업로드 가능.
-	private static final String[] ATTR_HEADERS = {
+	static final String[] ATTR_HEADERS = {
 		"소유자", "테이블명(영문)", "테이블명(한글)", "컬럼명(영문)", "컬럼명(한글)",
 		"데이터타입", "길이", "소수점자리", "컬럼 순서",
 		"NULL여부", "PK여부", "FK여부", "디폴트값",
@@ -3435,6 +3488,9 @@ public class DataModelController {
 							vo.setDomainStndYn("N");
 						}
 						session.insert("datamodel.insertDataModelAttr", vo);
+						@SuppressWarnings("unchecked")
+						Map<String, String> udpVals = (Map<String, String>) r.get("udpVals");
+						udpService.saveAttr(session, dataModelId, vo.getObjOwner(), vo.getObjNm(), vo.getAttrNm(), udpVals, changeHistory.safeUserId());   // 104번 WP8-75
 						r.put("attrNm", vo.getAttrNm());
 					}
 					// Pass 2: FK — 한글 참조를 물리명으로 바꿔 제약조건(R) 행과 컬럼의 FK 부모를 넣는다.
@@ -3555,13 +3611,10 @@ public class DataModelController {
 	                            HttpServletResponse res) throws Exception {
 		// 86번 #9 — 양식 동적 생성 (TABLE_HEADERS / ATTR_HEADERS 변경 시 자동 반영)
 		boolean isAttrs = "attrs".equalsIgnoreCase(scope);
-		String[] headers = isAttrs ? ATTR_HEADERS : TABLE_HEADERS;
-		if (!isAttrs) {
-			// 104번 WP8-31 — 테이블 양식 끝에 사용 중인 사용자 정의 속성 열
-			List<String> hs = new ArrayList<>(java.util.Arrays.asList(TABLE_HEADERS));
-			for (Map<String, Object> d : udpService.activeDefs()) hs.add((String) d.get("udpNm"));
-			headers = hs.toArray(new String[0]);
-		}
+		// 104번 WP8-31·75 — 양식 끝에 그 대상(테이블·컬럼)의 사용 중인 사용자 정의 속성 열
+		List<String> hs = new ArrayList<>(java.util.Arrays.asList(isAttrs ? ATTR_HEADERS : TABLE_HEADERS));
+		for (Map<String, Object> d : udpService.activeDefs(isAttrs ? "ATTR" : "OBJ")) hs.add((String) d.get("udpNm"));
+		String[] headers = hs.toArray(new String[0]);
 		String fileName = isAttrs ? "dataq_attrs_template.xlsx" : "dataq_tables_template.xlsx";
 
 		res.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -3608,7 +3661,7 @@ public class DataModelController {
 			if (header == null) throw new IllegalArgumentException("시트가 비어있습니다.");
 			Map<String, Integer> hIdx = mapHeaders(header, TABLE_HEADERS);
 			// 104번 WP8-31 — 사용 중인 사용자 정의 속성 이름과 같은 헤더는 그 속성 값
-			List<Map<String, Object>> udpDefs = udpService.activeDefs();
+			List<Map<String, Object>> udpDefs = udpService.activeDefs("OBJ");
 			String[] udpNms = new String[udpDefs.size()];
 			for (int i = 0; i < udpDefs.size(); i++) udpNms[i] = (String) udpDefs.get(i).get("udpNm");
 			Map<String, Integer> udpIdx = mapHeaders(header, udpNms);
@@ -3755,6 +3808,11 @@ public class DataModelController {
 			Map<String, Integer> hIdx = mapHeaders(header, ATTR_HEADERS);
 			if (!hIdx.containsKey("소유자"))
 				throw new IllegalArgumentException("필수 헤더 누락: 소유자");
+			// 104번 WP8-75 — 사용 중인 컬럼 대상 사용자 정의 속성 이름과 같은 헤더는 그 속성 값
+			List<Map<String, Object>> attrDefs = udpService.activeDefs("ATTR");
+			String[] udpNms = new String[attrDefs.size()];
+			for (int i = 0; i < attrDefs.size(); i++) udpNms[i] = (String) attrDefs.get(i).get("udpNm");
+			Map<String, Integer> udpIdx = mapHeaders(header, udpNms);
 
 			int last = sh.getLastRowNum();
 			for (int r = 1; r <= last; r++) {
@@ -3897,6 +3955,19 @@ public class DataModelController {
 				}
 
 				m.put("_action", "INSERT");
+				// 104번 WP8-75 — 등록할 행만 속성 값 검사 (필수 빠짐·유형 틀림 → 오류 행). 건너뛰는 행(이미 있는 컬럼)의 값은 쓰지 않는다
+				Map<String, Object> sentUdp = new HashMap<>();
+				for (Map<String, Object> d : attrDefs) {
+					Integer ci = udpIdx.get((String) d.get("udpNm"));
+					if (ci != null) sentUdp.put((String) d.get("udpId"), getStr(row, ci));
+				}
+				try {
+					m.put("udpVals", udpService.check(attrDefs, new HashMap<>(), sentUdp));
+				} catch (IllegalArgumentException udpErr) {
+					m.put("_action", "ERROR");
+					m.put("_msg", udpErr.getMessage());
+					errors.add(errRow(r + 1, udpErr.getMessage()));
+				}
 				rows.add(m);
 			}
 		}

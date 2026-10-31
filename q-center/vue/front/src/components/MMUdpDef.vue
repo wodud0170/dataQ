@@ -1,17 +1,19 @@
 <!--
   104번 WP8-31·75 — 사용자 정의 속성 (관리 > 사용자 정의 속성)
 
-  데이터 모델 테이블에 기관이 더하는 관리 항목(보존기간·데이터 볼륨 등)을 정의한다.
-  필수로 두면 테이블 추가·수정·엑셀 업로드가 그 값 없이 저장되지 않는다.
+  데이터 모델 테이블·컬럼에 기관이 더하는 관리 항목(보존기간·데이터 볼륨 등)을 정의한다.
+  대상(테이블·컬럼)은 추가 때 정하고 바꾸지 않는다 (값이 테이블 키·컬럼 키로 저장돼 있다).
+  필수로 두면 테이블 추가·수정·엑셀 업로드(대상 테이블), 컬럼 저장·엑셀 업로드(대상 컬럼)가 그 값 없이 저장되지 않는다.
   값이 있는 속성은 지우지 않고 사용 중지한다 (값은 남고 화면·검사에서 빠진다).
 -->
 <template>
   <v-container fluid class="pa-2" style="height:100%; display:flex; flex-direction:column;">
     <v-sheet class="pa-2 mb-2 d-flex align-center" style="background:#F5F7FA; border-radius:4px; border:1px solid #E8EAF6;">
       <v-icon small color="#3F51B5" class="mr-2">mdi-information-outline</v-icon>
-      <span style="font-size:.8rem; color:#546E7A;">
+      <span id="udpGuide" style="font-size:.8rem; color:#546E7A;">
         데이터 모델 > 테이블의 추가·수정 창과 엑셀 양식에 들어가는 관리 항목입니다.
         필수 항목을 비우면 테이블을 저장하지 않습니다. 값이 있는 항목은 삭제 대신 사용 중지합니다.
+        대상이 컬럼인 항목은 데이터 모델 > 컬럼 목록의 열과 컬럼 엑셀 양식에 들어갑니다.
       </span>
     </v-sheet>
 
@@ -30,6 +32,7 @@
         <span class="udp-nm">{{ item.udpNm }}</span>
         <v-chip v-if="item.dfltSetYn === 'Y'" x-small class="ml-1">기본</v-chip>
       </template>
+      <template v-slot:item.targetTp="{ item }">{{ targetLabel(item.targetTp) }}</template>
       <template v-slot:item.dataTp="{ item }">{{ tpLabel(item.dataTp) }}</template>
       <template v-slot:item.selectVals="{ item }">
         <span class="udp-desc">{{ (item.selectVals || '').split('\n').filter(v => v).join(' · ') }}</span>
@@ -47,17 +50,21 @@
       <v-card>
         <v-card-title>{{ form.udpId ? '사용자 정의 속성 수정' : '사용자 정의 속성 추가' }}</v-card-title>
         <v-card-text class="pt-3">
+          <!-- 104번 WP8-75 — 대상은 추가 때만 고른다 (값이 테이블 키·컬럼 키로 저장돼 있어 바꾸지 않는다) -->
+          <v-select id="udpTargetTp" v-model="form.targetTp" :items="targetOptions" item-text="text" item-value="value" label="대상"
+            :disabled="!!form.udpId" :hint="form.udpId ? '저장한 뒤에는 대상을 바꿀 수 없습니다' : ''" persistent-hint
+            :hide-details="!form.udpId" dense :class="['mt-2', form.udpId ? 'mb-7' : 'mb-4']" @change="onTargetChange" />
           <v-text-field id="udpNm" v-model="form.udpNm" label="속성 이름 *" dense hide-details class="mt-2" />
           <div class="udp-desc mt-1 mb-4">엑셀 업로드에서 같은 이름의 열을 이 속성 값으로 읽습니다.</div>
           <v-select id="udpDataTp" v-model="form.dataTp" :items="tpOptions" item-text="text" item-value="value" label="유형" dense hide-details class="mb-4" />
           <v-textarea v-if="form.dataTp === 'SELECT'" id="udpSelectVals" v-model="form.selectValsText" label="선택값 (한 줄에 하나, 2개 이상)"
             rows="4" dense outlined hide-details class="mb-2" />
           <v-switch id="udpRequired" v-model="form.requiredYn" true-value="Y" false-value="N" dense hide-details
-            label="필수 — 비우면 테이블을 저장하지 않음" />
+            :label="form.targetTp === 'ATTR' ? '필수 — 비우면 컬럼을 저장하지 않음' : '필수 — 비우면 테이블을 저장하지 않음'" />
           <v-switch id="udpUse" v-model="form.useYn" true-value="Y" false-value="N" dense hide-details label="사용" />
           <v-text-field id="udpSortOrder" v-model="form.sortOrder" label="순서" type="number" dense hide-details class="mt-6 mb-4" />
           <v-text-field id="udpDesc" v-model="form.udpDesc" label="설명" dense hide-details />
-          <div class="udp-desc mt-1">테이블 추가·수정 창에서 이 속성 칸 아래 안내로 보입니다.</div>
+          <div id="udpDescGuide" class="udp-desc mt-1">{{ form.targetTp === 'ATTR' ? '컬럼 목록에서 이 속성 열 머리에 마우스를 올리면 보입니다.' : '테이블 추가·수정 창에서 이 속성 칸 아래 안내로 보입니다.' }}</div>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -80,6 +87,10 @@ const TP = [
   { value: 'DATE', text: '날짜' },
   { value: 'SELECT', text: '선택' },
 ];
+const TARGET = [
+  { value: 'OBJ', text: '테이블' },
+  { value: 'ATTR', text: '컬럼' },
+];
 
 export default {
   name: 'MMUdpDef',
@@ -92,9 +103,11 @@ export default {
       modal: false,
       form: {},
       tpOptions: TP,
+      targetOptions: TARGET,
       snackbar: false, snackbarMsg: '', snackbarColor: 'info',
       headers: [
         { text: '속성 이름', value: 'udpNm', width: '200px' },
+        { text: '대상', value: 'targetTp', width: '80px', align: 'center' },
         { text: '유형', value: 'dataTp', width: '80px', align: 'center' },
         { text: '선택값', value: 'selectVals', sortable: false },
         { text: '필수', value: 'requiredYn', width: '80px', align: 'center' },
@@ -116,6 +129,17 @@ export default {
       const t = TP.find(x => x.value === v);
       return t ? t.text : v;
     },
+    targetLabel(v) {
+      const t = TARGET.find(x => x.value === v);
+      return t ? t.text : v;
+    },
+    /** 새 속성의 순서 기본값 — 고른 대상의 속성 수 + 1 */
+    _nextSortOrder(targetTp) {
+      return this.defs.filter(d => d.targetTp === targetTp).length + 1;
+    },
+    onTargetChange() {
+      this.form.sortOrder = this._nextSortOrder(this.form.targetTp);
+    },
     load() {
       axios.post(this.$APIURL.base + 'api/udp/defs', { useOnly: this.showAll ? 'N' : 'Y' }).then(res => {
         this.defs = res.data || [];
@@ -123,21 +147,21 @@ export default {
       }).catch(() => this.notify('속성 목록 조회 실패', 'error'));
     },
     openAdd() {
-      this.form = { udpId: null, udpNm: '', dataTp: 'TEXT', selectValsText: '', requiredYn: 'N', useYn: 'Y', sortOrder: (this.defs.length + 1), udpDesc: '' };
+      this.form = { udpId: null, targetTp: 'OBJ', udpNm: '', dataTp: 'TEXT', selectValsText: '', requiredYn: 'N', useYn: 'Y', sortOrder: this._nextSortOrder('OBJ'), udpDesc: '' };
       this.modal = true;
     },
     openEdit() {
       if (!this.selected) return;
       const s = this.selected;
       this.form = {
-        udpId: s.udpId, udpNm: s.udpNm, dataTp: s.dataTp, selectValsText: s.selectVals || '',
+        udpId: s.udpId, targetTp: s.targetTp, udpNm: s.udpNm, dataTp: s.dataTp, selectValsText: s.selectVals || '',
         requiredYn: s.requiredYn || 'N', useYn: s.useYn || 'Y', sortOrder: s.sortOrder, udpDesc: s.udpDesc || '',
       };
       this.modal = true;
     },
     save() {
       const body = {
-        udpId: this.form.udpId, udpNm: this.form.udpNm, dataTp: this.form.dataTp,
+        udpId: this.form.udpId, targetTp: this.form.targetTp, udpNm: this.form.udpNm, dataTp: this.form.dataTp,
         selectVals: (this.form.selectValsText || '').split('\n').map(v => v.trim()).filter(v => v),
         requiredYn: this.form.requiredYn, useYn: this.form.useYn, sortOrder: this.form.sortOrder, udpDesc: this.form.udpDesc,
       };

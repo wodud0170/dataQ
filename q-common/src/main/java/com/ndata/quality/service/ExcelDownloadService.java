@@ -645,9 +645,10 @@ public class ExcelDownloadService {
             new String[]{"테이블스페이스","20","LEFT"},
             new String[]{"설명","40","LEFT"}
         ));
-        // 104번 WP8-31 — 사용 중인 사용자 정의 속성 열 (업로드 양식과 같은 이름이라 다시 올릴 수 있다)
+        // 104번 WP8-31 — 사용 중인 사용자 정의 속성 열 (업로드 양식과 같은 이름이라 다시 올릴 수 있다). 테이블 대상만 (WP8-75)
         Map<String, Object> udpP = new HashMap<>();
         udpP.put("useOnly", "Y");
+        udpP.put("targetTp", "OBJ");
         List<Map<String, Object>> udpDefs = sqlSessionTemplate.selectList("udp.selectDefs", udpP);
         for (Map<String, Object> d : udpDefs) headers.add(new String[]{(String) d.get("udpNm"), "20", "LEFT"});
         Map<String, String> udpVals = new HashMap<>();   // owner|obj|udpId → 값
@@ -702,7 +703,7 @@ public class ExcelDownloadService {
 
         // 86번 #11 — 업로드 양식 (DataModelController.ATTR_HEADERS) 와 동일 순서·명칭 (다운로드 → 재업로드 가능).
         // 표준여부/용어/도메인/단어 같은 derived 컬럼은 백업 대상 아님 (재업로드 시 표준화 단계에서 다시 생성).
-        List<String[]> headers = Arrays.asList(
+        List<String[]> headers = new ArrayList<>(Arrays.asList(
             new String[]{"소유자","15","LEFT"},
             new String[]{"테이블명(영문)","25","LEFT"},
             new String[]{"테이블명(한글)","25","LEFT"},
@@ -719,7 +720,18 @@ public class ExcelDownloadService {
             new String[]{"참조 테이블(한글)","25","LEFT"},
             new String[]{"참조 컬럼(한글)","25","LEFT"},
             new String[]{"삭제 규칙","12","CENTER"}
-        );
+        ));
+        // 104번 WP8-75 — 사용 중인 컬럼 대상 사용자 정의 속성 열 (업로드 양식과 같은 이름이라 다시 올릴 수 있다).
+        // 값은 보이는 컬럼 행만 돌며 넣으므로 다른 사용자의 미승인 컬럼 값은 담기지 않는다
+        Map<String, Object> udpP = new HashMap<>();
+        udpP.put("useOnly", "Y");
+        udpP.put("targetTp", "ATTR");
+        List<Map<String, Object>> udpDefs = sqlSessionTemplate.selectList("udp.selectDefs", udpP);
+        for (Map<String, Object> d : udpDefs) headers.add(new String[]{(String) d.get("udpNm"), "20", "LEFT"});
+        Map<String, String> udpVals = new HashMap<>();   // owner|obj|attr|udpId → 값
+        for (Map<String, Object> v : sqlSessionTemplate.<Map<String, Object>>selectList("udp.selectModelAttrVals", searchKey)) {
+            udpVals.put(v.get("objOwner") + "|" + v.get("objNm") + "|" + v.get("attrNm") + "|" + v.get("udpId"), (String) v.get("val"));
+        }
 
         // 데이터 리스트
         List<Map<String, Object>> list = new ArrayList<>();
@@ -744,6 +756,11 @@ public class ExcelDownloadService {
             tempMap.put("HEADER15", dataVo.getFkParentAttrNm() == null ? null
                     : attrKr.get(refOwner + "|" + dataVo.getFkParentObjNm() + "|" + dataVo.getFkParentAttrNm()));
             tempMap.put("HEADER16", "");  // 삭제 규칙 — VO 에 미보존 (CONSTRAINT 테이블 별도). 백업 시 공란
+            int h = 17;
+            for (Map<String, Object> d : udpDefs) {
+                tempMap.put("HEADER" + (h++), udpVals.get((dataVo.getObjOwner() == null ? "" : dataVo.getObjOwner()) + "|" + dataVo.getObjNm()
+                        + "|" + dataVo.getAttrNm() + "|" + d.get("udpId")));
+            }
             list.add(tempMap);
         }
         log.info(">> excel export size={}", list.size());

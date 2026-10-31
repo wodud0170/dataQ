@@ -387,7 +387,7 @@ export default {
     loadAreaOptions() {
       axios.post(this.$APIURL.base + 'api/area/biz/list', {}).then(r => { this.bizAreaOptions = r.data || []; }).catch(() => {});
       axios.post(this.$APIURL.base + 'api/area/subj/list', {}).then(r => { this.subjAreaOptions = r.data || []; }).catch(() => {});
-      axios.post(this.$APIURL.base + 'api/udp/defs', { useOnly: 'Y' }).then(r => { this.udpDefs = r.data || []; }).catch(() => {});
+      axios.post(this.$APIURL.base + 'api/udp/defs', { useOnly: 'Y', targetTp: 'OBJ' }).then(r => { this.udpDefs = r.data || []; }).catch(() => {});
     },
     /** 104번 WP8-38 — 고른 주제영역이나 그 하위 영역에 연결된 테이블 */
     _inSubj(subjAreaId) {
