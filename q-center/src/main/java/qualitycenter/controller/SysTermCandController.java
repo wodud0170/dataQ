@@ -139,9 +139,35 @@ public class SysTermCandController {
 				items.add(it);
 			}
 
+			// 104번 WP7-23 리뷰 — 보이는 행의 테이블마다 모든 컬럼 영문명. 화면 영문명 겹침 검사가 목록에 없는 같은 테이블 컬럼
+			// (표준 Y·한글명 없음·표준 진단 제외·남의 미승인·삭제 대기)과의 겹침도 본다 — 컬럼 저장이 그 겹침으로 테이블째 거부한다
+			Map<String, List<String>> tableAttrs = new LinkedHashMap<>();
+			Map<String, Map<String, Object>> tbls = new LinkedHashMap<>();
+			for (Map<String, Object> a : shown) {
+				String key = a.get("dmId") + "|" + a.get("objOwner") + "|" + a.get("objNm");
+				if (tbls.containsKey(key)) continue;
+				Map<String, Object> t = new HashMap<>();
+				t.put("dmId", a.get("dmId"));
+				t.put("objOwner", a.get("objOwner"));
+				t.put("objNm", a.get("objNm"));
+				tbls.put(key, t);
+				tableAttrs.put(key, new ArrayList<>());
+			}
+			if (!tbls.isEmpty()) {
+				Map<String, Object> tp = new HashMap<>();
+				List<Object> tblDmIds = new ArrayList<>();
+				for (Map<String, Object> t : tbls.values()) if (!tblDmIds.contains(t.get("dmId"))) tblDmIds.add(t.get("dmId"));
+				tp.put("dmIds", tblDmIds);
+				tp.put("tables", new ArrayList<>(tbls.values()));
+				for (Map<String, Object> n : sqlSessionTemplate.<Map<String, Object>>selectList("datamodel.selectAttrNmsByTables", tp)) {
+					tableAttrs.get(n.get("dmId") + "|" + n.get("objOwner") + "|" + n.get("objNm")).add((String) n.get("attrNm"));
+				}
+			}
+
 			Map<String, Object> data = new LinkedHashMap<>();
 			data.put("models", models);
 			data.put("items", items);
+			data.put("tableAttrs", tableAttrs);
 			data.put("total", total);
 			data.put("limit", LIMIT);
 			res.setResultInfo(RestResult.CODE_200);
@@ -157,8 +183,12 @@ public class SysTermCandController {
 	 * 104번 WP7-23 (108 §4.29) — 고른 용어를 컬럼에 적용한다. (모델, 소유자, 테이블)마다 컬럼 저장 요청 하나 — 테이블 하나가
 	 * 한 트랜잭션이고, 실패한 테이블은 errors 에 담고 다음 테이블로 간다(114 §1 권고 채택).
 	 *
+	 * 고른 용어로 바뀌는 값이 없는 행(영문명 대소문자 무시·한글명·타입·길이·소수가 같음)은 컬럼 저장으로 보내지 않고 표준 여부만 다시 판정한다
+	 * (rechecked — 이력 없음, 표준이 아니면 notStd 에 이유).
+	 *
 	 * @param body {items:[{dmId, objOwner, objNm, attrNm, attrNmKr(조회 때 한글명), termsId}]} — 2,000개까지
-	 * @return contents {applied(적용한 컬럼 수), tables(적용한 테이블 수), errors:[{dmId, dmNm, objOwner, objNm, message}]}
+	 * @return contents {applied(적용한 테이블의 컬럼 수 — rechecked 포함), tables(적용한 테이블 수), rechecked(표준 여부만 다시 판정한 컬럼 수),
+	 *         notStd:[{dmId, objOwner, objNm, attrNm, message}](다시 판정해도 표준이 아닌 컬럼), errors:[{dmId, dmNm, objOwner, objNm, message}]}
 	 */
 	@PostMapping("/applyTermsBySys")
 	public Mono<Response> applyTermsBySys(@RequestBody Map<String, Object> body) {
@@ -175,14 +205,26 @@ public class SysTermCandController {
 				groups.computeIfAbsent(Arrays.asList((String) it.get("dmId"), owner, (String) it.get("objNm")), k -> new ArrayList<>()).add(it);
 			}
 
-			int applied = 0, tables = 0;
+			int applied = 0, tables = 0, rechecked = 0;
+			List<Map<String, Object>> notStd = new ArrayList<>();
 			List<Map<String, Object>> errors = new ArrayList<>();
 			for (Map.Entry<List<String>, List<Map<String, Object>>> g : groups.entrySet()) {
 				String dmId = g.getKey().get(0), owner = g.getKey().get(1), objNm = g.getKey().get(2);
 				try {
-					applyTable(dmId, owner, objNm, g.getValue());
+					Map<String, String> same = applyTable(dmId, owner, objNm, g.getValue());
 					applied += g.getValue().size();
 					tables++;
+					rechecked += same.size();
+					for (Map.Entry<String, String> s : same.entrySet()) {
+						if (s.getValue() == null) continue;
+						Map<String, Object> ns = new LinkedHashMap<>();
+						ns.put("dmId", dmId);
+						ns.put("objOwner", owner);
+						ns.put("objNm", objNm);
+						ns.put("attrNm", s.getKey());
+						ns.put("message", s.getValue());
+						notStd.add(ns);
+					}
 				} catch (Exception e) {
 					Map<String, Object> m = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dmId);
 					Map<String, Object> err = new LinkedHashMap<>();
@@ -198,6 +240,8 @@ public class SysTermCandController {
 			Map<String, Object> data = new LinkedHashMap<>();
 			data.put("applied", applied);
 			data.put("tables", tables);
+			data.put("rechecked", rechecked);
+			data.put("notStd", notStd);
 			data.put("errors", errors);
 			res.setResultInfo(RestResult.CODE_200);
 			res.setContents(new ObjectMapper().writeValueAsString(data));
@@ -214,11 +258,16 @@ public class SysTermCandController {
 	 * 본다 — 한 행이라도 걸리면 이 테이블은 보내지 않는다(구조 진단 현행화 109번 #23 과 같은 방식). ③ UPDATE 행은 컬럼 화면이
 	 * 용어를 고를 때(applyTermToRow)와 같게 한글명 = 용어명, 영문명 = 용어 영문약어, 도메인 타입이 있으면 타입·길이·소수 = 도메인 값,
 	 * 나머지(PK·FK·NULL·기본값)는 지금 값 — saveAttrs UPDATE 는 보낸 값으로 덮어쓴다. 순서·속성 값·표준 예외 사유는 보내지 않는다.
+	 * ④ 바뀌는 값이 없는 행은 보내지 않고(saveAttrs 는 "변경 없음" 이라 플래그를 그대로 두고 전후가 같은 이력만 남긴다), 컬럼 저장이 끝난 뒤
+	 * 표준 여부만 다시 판정한다({@link DataModelController#recheckAttrStandard}) ⑤ 보내는 행은 이름 사슬 순서로({@link #renameOrder}).
+	 *
+	 * @return 표준 여부만 다시 판정한 행 — 영문명 → 표준이 아니면 그 이유(표준이면 null)
 	 */
-	private void applyTable(String dmId, String owner, String objNm, List<Map<String, Object>> rows) {
+	private Map<String, String> applyTable(String dmId, String owner, String objNm, List<Map<String, Object>> rows) {
 		String dictId = dictService.resolve(null, dmId);
 		List<String> stale = new ArrayList<>();
 		List<Map<String, Object>> attrs = new ArrayList<>();
+		List<StdDataModelAttrVo> same = new ArrayList<>();
 		for (Map<String, Object> r : rows) {
 			String attrNm = (String) r.get("attrNm");
 			String col = objNm + "." + attrNm;
@@ -262,16 +311,64 @@ public class SysTermCandController {
 			a.put("fkYn", ex.getFkYn());
 			a.put("nullableYn", ex.getNullableYn());
 			a.put("defaultVal", ex.getDefaultVal());
-			attrs.add(a);
+			if (unchanged(a, ex)) same.add(ex);
+			else attrs.add(a);
 		}
 		if (!stale.isEmpty()) throw new IllegalStateException(String.join(" / ", stale));
 
-		Map<String, Object> sb = new HashMap<>();
-		sb.put("dataModelId", dmId);
-		sb.put("objOwner", owner);
-		sb.put("objNm", objNm);
-		sb.put("attrs", attrs);
-		Response r = dataModelController.saveAttrs(sb).block();
-		if (r.getResultCode() != RestResult.CODE_200.getCode()) throw new IllegalStateException(r.getResultMessage());
+		if (!attrs.isEmpty()) {
+			Map<String, Object> sb = new HashMap<>();
+			sb.put("dataModelId", dmId);
+			sb.put("objOwner", owner);
+			sb.put("objNm", objNm);
+			sb.put("attrs", renameOrder(attrs));
+			Response r = dataModelController.saveAttrs(sb).block();
+			if (r.getResultCode() != RestResult.CODE_200.getCode()) throw new IllegalStateException(r.getResultMessage());
+		}
+		Map<String, String> out = new LinkedHashMap<>();
+		for (StdDataModelAttrVo ex : same) out.put(ex.getAttrNm(), dataModelController.recheckAttrStandard(ex));
+		return out;
+	}
+
+	/**
+	 * 고른 용어로 바뀌는 값이 없는 행 — 영문명(대소문자만 다르면 saveAttrs 가 지금 이름을 둔다)·한글명·타입·길이·소수가 지금과 같다.
+	 * 길이·소수가 비어 있으면 saveAttrs 처럼 지금 값을 쓴다.
+	 */
+	private static boolean unchanged(Map<String, Object> a, StdDataModelAttrVo ex) {
+		return ex.getAttrNm().equalsIgnoreCase((String) a.get("attrNm"))
+				&& Objects.equals(ex.getAttrNmKr(), a.get("attrNmKr"))
+				&& Objects.equals(ex.getDataType(), a.get("dataType"))
+				&& (a.get("dataLen") == null || ((Number) a.get("dataLen")).longValue() == ex.getDataLen())
+				&& (a.get("dataDecimalLen") == null || ((Number) a.get("dataDecimalLen")).shortValue() == ex.getDataDecimalLen());
+	}
+
+	/**
+	 * 같은 테이블 안의 이름 사슬(A→B, B→C) 순서. saveAttrs 는 행마다 그때의 DB 이름으로 영문명 중복을 보므로, 다른 행의 지금 이름을
+	 * 새 이름으로 쓰는 행은 그 행 뒤로 보낸다(나머지는 받은 순서 — 컬럼 순서). 맞바꿈(A→B, B→A)처럼 순서로 풀 수 없으면 거부한다.
+	 * 이름은 대소문자를 무시하고 비교한다(화면 영문명 겹침 검사와 같음).
+	 */
+	private static List<Map<String, Object>> renameOrder(List<Map<String, Object>> attrs) {
+		List<Map<String, Object>> out = new ArrayList<>();
+		List<Map<String, Object>> rest = new ArrayList<>(attrs);
+		while (!rest.isEmpty()) {
+			List<Map<String, Object>> ready = new ArrayList<>();
+			for (Map<String, Object> r : rest) {
+				String to = ((String) r.get("attrNm")).toUpperCase();
+				boolean waits = false;
+				for (Map<String, Object> s : rest) {
+					if (s != r && to.equals(((String) s.get("origAttrNm")).toUpperCase())) { waits = true; break; }
+				}
+				if (!waits) ready.add(r);
+			}
+			if (ready.isEmpty()) {
+				List<String> pairs = new ArrayList<>();
+				for (Map<String, Object> r : rest) pairs.add(r.get("origAttrNm") + " → " + r.get("attrNm"));
+				throw new IllegalStateException("같은 테이블에서 영문명을 맞바꾸는 변경은 한 번에 적용할 수 없습니다 — 한 컬럼씩 나눠 적용하세요: "
+						+ String.join(", ", pairs));
+			}
+			out.addAll(ready);
+			rest.removeAll(ready);
+		}
+		return out;
 	}
 }

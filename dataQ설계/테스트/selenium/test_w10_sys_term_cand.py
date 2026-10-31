@@ -4,8 +4,8 @@
 시험 데이터(psql·API, 끝에서 모두 지움):
   사전 A·B(서로 남)·C(A 의 하위). A: 단어 고객 CUST·번호 NO·명 NM, 도메인 W10번호 VARCHAR(20)·W10명 VARCHAR(50),
      용어 고객번호 CUST_NO·고객명 CUST_NM. B: 단어 고객 CSTMR·번호 NO, 도메인 W10번호 VARCHAR(15), 용어 고객번호 CSTMR_NO. C: 비어 있음(상위 A).
-  시스템 P(상위)·Q(P 의 하위)·E(모델 없음)·N(비표준 없는 모델만).
-  모델 M1(P·A, 이름 40자)·M2(Q·B)·M4(P·C·표준 준수 필수)·M6(N·A). 일반 사용자 w10stc<tag>(API).
+  시스템 P(상위)·Q(P 의 하위)·E(모델 없음)·N(비표준 없는 모델만)·R(리뷰 지적 확인).
+  모델 M1(P·A, 이름 40자)·M2(Q·B)·M4(P·C·표준 준수 필수)·M6(N·A)·M7(R·A). 일반 사용자 w10stc<tag>(API).
 
   T1. 메뉴·조회 전 안내·[조회] 비활성, 시스템을 바꾸면 고른 모델 비움·모델 목록은 하위 시스템 모델만, P 조회 → 모델 요약(사전·필수 칩·건수),
       같은 한글명에 M1 CUST_NO·M2 CSTMR_NO 1순위, M4 상위 사전 표시, 적용 뒤 칸, 제외 행 없음, 1366 폭 가로 스크롤 없음
@@ -15,6 +15,8 @@
   T5. 테이블 이름 → 컬럼 탭(그 모델·소유자·테이블)
   T6. 시험 일반 사용자 — 메뉴, 자기 DRAFT "승인 대기" 칩, 남의 DRAFT 없음, 확인 창 결재 문구, 적용 → 이력 DRAFT·내 변경 신청
   T7. 빈 상태 — 모델 없는 시스템, 비표준 없는 시스템
+  T8. 리뷰 지적 — 바뀌는 값이 없는 행 "그대로 (표준 여부만 다시 판정)"(적용 → 표준 Y·이력 없음), 대소문자만 다른 행 안내(적용 → 결과 칸 "표준 아님 — …"),
+      목록에 없는 같은 테이블 컬럼과의 영문명 겹침(빨간 행·"이미 있는 컬럼"), 같은 테이블 이름 사슬(겹침 아님 → 둘 다 적용), 확인 창·결과 창 문구
 """
 import base64, json, os, secrets, subprocess, sys, time, traceback
 from edgeopt import headless
@@ -29,11 +31,11 @@ BASE = "http://localhost:28091"
 TAG = time.strftime("%H%M%S")
 USER = "w10stc" + TAG
 OTHER = "w10stcoth" + TAG
-SYS = {k: f"W10STC{k}{TAG}" for k in "PQEN"}
-SYSNM = {k: f"W10STC시스템{k}{TAG}" for k in "PQEN"}
-DM = {k: f"W10STCM{k}{TAG}" for k in "1246"}
+SYS = {k: f"W10STC{k}{TAG}" for k in "PQENR"}
+SYSNM = {k: f"W10STC시스템{k}{TAG}" for k in "PQENR"}
+DM = {k: f"W10STCM{k}{TAG}" for k in "12467"}
 DMNM = {"1": f"W10STC_{TAG}_M1_고객관리시스템통합데이터모델장기보관용시험명칭", "2": f"W10STC_{TAG}_M2",
-        "4": f"W10STC_{TAG}_M4", "6": f"W10STC_{TAG}_M6"}
+        "4": f"W10STC_{TAG}_M4", "6": f"W10STC_{TAG}_M6", "7": f"W10STC_{TAG}_M7"}
 DICTNM = {k: f"W10STC사전{k}{TAG}" for k in "ABC"}
 LONG_T = "T_CUSTOMER_CONTRACT_HISTORY_DETAIL_ARCHIVE"
 LONG_TKR = "고객계약이력상세보관테이블고객계약이력상세보관테이블"
@@ -120,13 +122,14 @@ def setup():
         okc(sa.post(BASE + "/api/std/createTerms", json={"termsNm": nm, "termsEngAbrvNm": ab, "termsDesc": nm, "domainNm": dom,
                                                         "wordList": wl, "dictId": d[k]}, timeout=20))
 
-    for k, parent in (("P", None), ("Q", "P"), ("E", None), ("N", None)):
+    for k, parent in (("P", None), ("Q", "P"), ("E", None), ("N", None), ("R", None)):
         psql(f"insert into quality.tb_sys_info (sys_cd, p_sys_cd, sys_tp, sys_nm, cret_dt) values ({q(SYS[k])}, {q(SYS[parent] if parent else None)}, 1, {q(SYSNM[k])}, {now})")
-    for k, s, dk, req in (("1", "P", "A", "N"), ("2", "Q", "B", "N"), ("4", "P", "C", "Y"), ("6", "N", "A", "N")):
+    for k, s, dk, req in (("1", "P", "A", "N"), ("2", "Q", "B", "N"), ("4", "P", "C", "Y"), ("6", "N", "A", "N"), ("7", "R", "A", "N")):
         psql(f"insert into quality.tb_data_model (dm_id, dm_nm, dm_sys_cd, ver, use_yn, dict_id, stnd_req_yn, cret_dt) "
              f"values ({q(DM[k])}, {q(DMNM[k])}, {q(SYS[s])}, '1', 'Y', {q(d[dk])}, {q(req)}, {now})")
     objs = [("1", "T_CUST", "고객"), ("1", "T_OV", "겹침"), ("1", "T_FAIL", "실패"), ("1", "T_USR", "사용자"), ("1", LONG_T, LONG_TKR),
-            ("2", "T_CUST", "고객"), ("4", "T_CUST", "고객"), ("6", "T_STD", "표준")]
+            ("2", "T_CUST", "고객"), ("4", "T_CUST", "고객"), ("6", "T_STD", "표준"),
+            ("7", "T_SAME", "그대로"), ("7", "T_CASE", "대소문자"), ("7", "T_HAS", "이미있음"), ("7", "T_CHAIN", "사슬")]
     for dm, o, kr in objs:
         psql(f"insert into quality.tb_data_model_obj (dm_id, obj_owner, obj_nm, obj_nm_kr, obj_attr_cnt, use_yn) "
              f"values ({q(DM[dm])}, 'APP', {q(o)}, {q(kr)}, 1, 'Y')")
@@ -145,7 +148,15 @@ def setup():
              ("1", LONG_T, "CUST_LONG_KR", "고객계약이력상세정보고객계약이력상세정보값", 30, 2, "N", None, None),
              ("2", "T_CUST", "CUST_NUM", "고객번호", 30, 1, "N", None, None),
              ("4", "T_CUST", "CUST_NUM", "고객번호", 30, 1, "N", None, None),
-             ("6", "T_STD", "STD_ONLY", "고객번호", 30, 1, "Y", None, None)]
+             ("6", "T_STD", "STD_ONLY", "고객번호", 30, 1, "Y", None, None),
+             # T8 — 용어와 같은 컬럼(표준 N 으로 남음), 대소문자만 다른 컬럼, 목록에 없는 표준 컬럼과 겹침, 이름 사슬(CUST_NUM→CUST_NO, CUST_NO→CUST_NM)
+             ("7", "T_SAME", "CUST_NM", "고객명", 50, 1, "N", None, None),
+             ("7", "T_CASE", "cust_nm", "고객명", 50, 1, "N", None, None),
+             ("7", "T_CASE", "CUST_NM", "고객명", 50, 2, "Y", None, None),   # 목록에 없는 표준 컬럼 — 대소문자만 다른 행은 이름을 안 바꾸니 겹침 아님
+             ("7", "T_HAS", "CUST_NO", "고객번호", 20, 1, "Y", None, None),
+             ("7", "T_HAS", "CUSTNUM", "고객번호", 30, 2, "N", None, None),
+             ("7", "T_CHAIN", "CUST_NUM", "고객번호", 30, 1, "N", None, None),
+             ("7", "T_CHAIN", "CUST_NO", "고객명", 30, 2, "N", None, None)]
     vals = ",".join(f"({q(DM[dm])}, 'APP', {q(o)}, {q(a)}, {q(kr)}, 'VARCHAR', {ln}, {od}, 'N', 'Y', 'Y', {q(st)}, {q(ap or 'APPROVED')}, {q(rq)})"
                     for dm, o, a, kr, ln, od, st, ap, rq in attrs)
     psql("insert into quality.tb_data_model_attr (dm_id, obj_owner, obj_nm, attr_nm, attr_nm_kr, data_type, data_len, attr_ord, pk_yn, nullable_yn, "
@@ -298,6 +309,9 @@ def main():
             ap = d.find_element(By.ID, "btn-sysTermCand-apply")
             assert ap.text.strip() == "적용 (0)" and ap.get_attribute("disabled"), ap.text
             assert s.js(C + "return c.modelOptions.length;") == 0
+            # 하위 시스템은 들여쓴다 (Q 는 P 의 하위 — 한 단계)
+            depth = s.js(C + "const o = {}; c.sysOptions.forEach(x => { o[x.value] = x.depth; }); return [o[arguments[0]], o[arguments[1]]];", SYS["P"], SYS["Q"])
+            assert depth == [0, 1], depth
             # 시스템을 바꾸면 고른 모델을 비운다. 모델 목록은 그 시스템과 하위 시스템의 모델만
             s.set_sys("P")
             opts = s.js(C + "return c.modelOptions.map(m => m.dataModelId).sort();")
@@ -437,6 +451,62 @@ def main():
             s.open()   # 다시 이 화면으로 (탭은 그대로)
             assert s.js(C + "return c.items.length;") == 7
         step("T5. 테이블 이름 → 컬럼 탭(그 모델·소유자·테이블 정확 일치)", _t5)
+
+        def _t8():
+            s.set_sys("R")
+            s.search()
+            same, case = s.row("7", "T_SAME", "CUST_NM"), s.row("7", "T_CASE", "cust_nm")
+            print("  그대로", same["cells"][4:], "\n  대소문자", case["cells"][4:])
+            assert same["cells"][4] == "고객명 (CUST_NM) — 한글명 일치" and same["cells"][5] == "그대로 (표준 여부만 다시 판정)", same["cells"]
+            assert case["cells"][5] == "그대로 (표준 여부만 다시 판정)\n영문명 대소문자만 다름 — 표준 판정 안 됨", case["cells"]
+            # 같은 테이블에 목록에 없는 CUST_NM 이 있어도 이 행은 이름을 바꾸지 않으니 겹침이 아니다
+            assert "row-overlap" not in case["cls"] and case["cells"][6] == "", case
+            col = s.js("return getComputedStyle(arguments[0].querySelector('.stc-warn')).color;", s.row_el("7", "T_CASE", "cust_nm"))
+            assert col == "rgb(230, 81, 0)", col
+            # 좁은 칸에서 낱말 중간에서 꺾이지 않게 (1366 에서 "다/시" 로 꺾이던 것)
+            wb = s.js("return getComputedStyle(arguments[0].querySelectorAll('td')[5].querySelector('.stc-none')).wordBreak;", s.row_el("7", "T_SAME", "CUST_NM"))
+            assert wb == "keep-all", wb
+            # 목록에 없는 같은 테이블 컬럼(표준 Y 인 CUST_NO)과 겹침 — 빨간 행
+            has = s.row("7", "T_HAS", "CUSTNUM")
+            assert "row-overlap" in has["cls"] and has["cells"][6] == "같은 테이블에 영문명 'CUST_NO' 인 컬럼이 이미 있습니다", has
+            # 이름 사슬은 겹침이 아니다 (서버가 순서를 정한다)
+            for nm in ("CUST_NUM", "CUST_NO"):
+                r = s.row("7", "T_CHAIN", nm)
+                assert "row-overlap" not in r["cls"] and r["cells"][6] == "", r
+            s.js("arguments[0].click();", d.find_element(By.ID, "btn-sysTermCand-apply"))
+            body = s.swal("영문명 겹침")
+            print("  ", body.replace("\n", " / "))
+            assert f"· {DMNM['7']} · APP.T_HAS — CUST_NO (이미 있는 컬럼)" in body, body
+            s.swal_click()
+            assert hist("7", "T_HAS", "CUST_NO") == "", "겹침인데 보냄"
+            s.set_pick("7", "T_HAS", "CUSTNUM", None)
+            assert "row-overlap" not in s.row("7", "T_HAS", "CUSTNUM")["cls"]
+            s.js("arguments[0].click();", d.find_element(By.ID, "btn-sysTermCand-apply"))
+            body = s.swal("시스템 단위 표준 후보 적용")
+            print("  확인 창:", body.replace("\n", " / "))
+            assert body == ("모델 1개 · 테이블 3개 · 컬럼 4개에 적용합니다.\n"
+                            "영문명이 바뀌는 컬럼 2개 — 같은 모델의 인덱스·제약조건·FK 참조 이름도 함께 바뀝니다.\n"
+                            "바뀌는 값이 없는 컬럼 2개는 값은 그대로 두고 표준 여부만 다시 판정합니다 (변경 이력 없음).\n"
+                            "영문명이 용어와 대소문자만 다른 컬럼 1개는 영문명을 바꾸지 않아 표준으로 판정되지 않습니다."), body
+            s.swal_click("swal2-confirm")
+            body = s.swal("4개 컬럼에 적용했습니다.")
+            print("  결과 창:", body.replace("\n", " / "))
+            assert body == "테이블 3개\n바뀌는 값이 없어 표준 여부만 다시 판정한 컬럼 2개 — 그중 1개는 표준이 아닙니다 (결과 칸에 이유)", body
+            assert s.js("const i = document.querySelector('.swal2-popup.swal2-show .swal2-icon.swal2-info'); return !!i && getComputedStyle(i).display !== 'none';")
+            s.swal_click()
+            s.wait_idle()
+            assert attr("7", "T_SAME", "CUST_NM") == "고객명|VARCHAR|50|Y|Y" and hist("7", "T_SAME", "CUST_NM") == "", "그대로 행 — 표준 Y, 이력 없음"
+            assert attr("7", "T_CASE", "cust_nm") == "고객명|VARCHAR|50|N|" and hist("7", "T_CASE", "cust_nm") == ""
+            assert attr("7", "T_CHAIN", "CUST_NO") == "고객번호|VARCHAR|20|Y|Y" and attr("7", "T_CHAIN", "CUST_NM") == "고객명|VARCHAR|50|Y|Y", "이름 사슬 둘 다 적용"
+            left = sorted((r["cells"][1].split("\n")[0], r["cells"][2].split("\n")[0]) for r in s.rows())
+            assert left == [("APP.T_CASE", "cust_nm"), ("APP.T_HAS", "CUSTNUM")], left
+            r = s.row("7", "T_CASE", "cust_nm")
+            assert r["cells"][6] == "표준 미준수: 'cust_nm' 에 해당하는 표준 용어가 등록되어있지 않습니다.", r["cells"]
+            col = s.js("return getComputedStyle(arguments[0].querySelectorAll('td')[6].querySelector('.stc-err')).color;", s.row_el("7", "T_CASE", "cust_nm"))
+            assert col == "rgb(211, 47, 47)", col
+            s.search()
+            assert s.row("7", "T_CASE", "cust_nm")["cells"][6] == "", "[조회] 해도 표준 아님 문구가 남음"
+        step("T8. 리뷰 지적 — '그대로'·대소문자만 다름 안내, 목록에 없는 컬럼과 겹침, 이름 사슬 적용, 확인·결과 창, 표준 아님 결과 칸", _t8)
 
         def _t7():
             s.set_sys("E")

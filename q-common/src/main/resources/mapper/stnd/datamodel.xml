@@ -589,6 +589,20 @@
 		 ORDER BY M.DM_NM, A.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD
 	</select>
 
+	<!-- 104번 WP7-23 리뷰 — 조회한 테이블들(tables: [{dmId, objOwner, objNm}])의 모든 컬럼 영문명. 사용 여부·승인 상태를 거르지 않는다
+	     (컬럼 저장의 영문명 중복 검사 countDataModelAttr 와 같은 범위) — 화면 영문명 겹침 검사가 목록에 없는 컬럼과의 겹침도 보도록 -->
+	<select id="selectAttrNmsByTables" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT A.DM_ID                   AS "dmId"
+		      ,COALESCE(A.OBJ_OWNER, '') AS "objOwner"
+		      ,A.OBJ_NM                  AS "objNm"
+		      ,A.ATTR_NM                 AS "attrNm"
+		  FROM TB_DATA_MODEL_ATTR A
+		 WHERE A.DM_ID IN <foreach collection="dmIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+		   AND (A.DM_ID, COALESCE(A.OBJ_OWNER, ''), A.OBJ_NM) IN
+		       <foreach collection="tables" item="t" open="(" separator="," close=")">(#{t.dmId}, #{t.objOwner}, #{t.objNm})</foreach>
+		 ORDER BY A.DM_ID, A.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD, A.ATTR_NM
+	</select>
+
 	<update id="updateDataModel" parameterType="com.ndata.quality.model.std.StdDataModelVo">
            UPDATE TB_DATA_MODEL
            SET

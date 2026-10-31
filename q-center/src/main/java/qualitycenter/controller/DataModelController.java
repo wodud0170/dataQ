@@ -2568,15 +2568,18 @@ public class DataModelController {
 			attrs.sort((a, b) -> modeOrder(str(a.get("mode"))) - modeOrder(str(b.get("mode"))));
 
 			// 86번 #11 — objOwner 미전달 시 부모 OBJ 에서 lookup. PK (DM_ID, OBJ_OWNER, OBJ_NM) 일관 매칭 위해 명시화.
+			// 104번 WP7-23 리뷰 — 빈 소유자를 보냈고 소유자 없는 같은 이름 테이블이 있으면 그 테이블이다. 예전에는 이름이 같은 첫 테이블이라
+			// 소유자 없는 테이블과 다른 소유자 테이블이 같은 이름으로 함께 있으면 이름순 정렬의 동순위 순서에 따라 다른 소유자 테이블을 고쳤다
 			if (objOwner == null || objOwner.isEmpty()) {
 				List<StdDataModelObjVo> objs = sqlSessionTemplate.selectList("datamodel.selectDataModelObjListByDmId", dataModelId);
+				String found = null;
 				for (StdDataModelObjVo o : objs) {
-					if (objNm.equals(o.getObjNm())) {
-						objOwner = o.getObjOwner() == null ? "" : o.getObjOwner();
-						break;
-					}
+					if (!objNm.equals(o.getObjNm())) continue;
+					String ow = o.getObjOwner() == null ? "" : o.getObjOwner();
+					if (objOwner != null && ow.isEmpty()) { found = ow; break; }
+					if (found == null) found = ow;
 				}
-				if (objOwner == null) objOwner = "";
+				objOwner = found == null ? "" : found;
 			}
 
 			// 104번 WP8-75 — 사용 중인 컬럼 대상 속성 정의와 이 테이블의 컬럼 값 (요청마다 한 번)
@@ -3308,6 +3311,39 @@ public class DataModelController {
 		}
 		attrVo.setWordLst(wordLst);
 		attrVo.setWordStndLst(wordStndLst);
+	}
+
+	/**
+	 * 104번 WP7-23 리뷰 — 값은 그대로 두고 표준 여부만 다시 판정한다. 시스템 단위 표준 후보에서 고른 용어와 영문명(대소문자 무시)·한글명·
+	 * 타입·길이·소수가 이미 같은 컬럼용이다. 수집 뒤 용어가 승인돼 표준 진단을 다시 돌리기 전까지 'N' 으로 남은 컬럼으로, 컬럼 저장(saveAttrs)에
+	 * 보내면 "변경 없음" 이라 플래그는 그대로이고 전후가 같은 이력만 쌓였다. 바뀌는 값이 없으니 이력은 남기지 않는다(진단 뒤 플래그 동기화와 같다).
+	 * 표준이 아니어도 거부하지 않는다(표준 준수 필수 모델 포함 — 값을 바꾸지 않으므로).
+	 *
+	 * @param ex 지금 컬럼 (selectDataModelAttrOne)
+	 * @return 표준이면 null(표준 Y·단어 목록 저장), 아니면 표준 검사 문구(그대로 둔다)
+	 */
+	String recheckAttrStandard(StdDataModelAttrVo ex) {
+		StdDataModelAttrVo v = new StdDataModelAttrVo();
+		v.setDataModelId(ex.getDataModelId());
+		v.setObjOwner(ex.getObjOwner());
+		v.setObjNm(ex.getObjNm());
+		v.setAttrNm(ex.getAttrNm());
+		v.setAttrNmKr(ex.getAttrNmKr());
+		v.setDataType(ex.getDataType());
+		v.setDataLen(ex.getDataLen());
+		v.setDataDecimalLen(ex.getDataDecimalLen());
+		v.setNullableYn(ex.getNullableYn());
+		v.setPkYn(ex.getPkYn());
+		v.setFkYn(ex.getFkYn());
+		v.setDefaultVal(ex.getDefaultVal());
+		try {
+			validateAttrStandards(v);
+		} catch (Exception stdErr) {
+			return stdErr.getMessage();
+		}
+		applyStandardFlags(v);
+		sqlSessionTemplate.update("datamodel.updateDataModelAttr", v);
+		return null;
 	}
 
 	// ===================================================================
