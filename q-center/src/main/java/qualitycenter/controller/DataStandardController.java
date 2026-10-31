@@ -314,14 +314,16 @@ public class DataStandardController {
 				return Mono.just(result);
 			}
 			// 중복 체크: 동일 단어명이 이미 존재하면 승인 상태에 따라 메시지 분기
-			StdWordVo existingWord = sqlSessionTemplate.selectOne("word.selectWordInfoByNm", dictService.nameParam(dataVo.getDictId(), "wordNm", dataVo.getWordNm()));
-			if (existingWord != null) {
-				// 104번 WP7-8 — 다른 단어의 이음동의어(유사어)와 같으면 표준 단어를 안내한다
-				String dupMsg = !existingWord.getWordNm().equals(dataVo.getWordNm())
-						? StdInputRule.synonymOfMsg(dataVo.getWordNm(), existingWord.getWordNm())
-						: "Y".equals(existingWord.getAprvYn())
-						? "이미 승인된 단어명입니다."
-						: "승인 대기 중인 단어명입니다.";
+			// 108 §4.31 — 동음이의어 허용 사전은 같은 이름 단어가 여럿이라 목록으로 본다. 같은 이름은 통과(같은 영문약어면 DB tb_word_ux_2 가 막는다)
+			List<StdWordVo> sameNmWords = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(dataVo.getDictId(), "wordNm", dataVo.getWordNm()));
+			StdWordVo exactWord = sameNmWords.stream().filter(w -> w.getWordNm().equals(dataVo.getWordNm())).findFirst().orElse(null);
+			StdWordVo synonymOf = sameNmWords.stream().filter(w -> !w.getWordNm().equals(dataVo.getWordNm())).findFirst().orElse(null);
+			String dupMsg = exactWord != null && !dictService.isHomonymAllowed(dataVo.getDictId())
+					? ("Y".equals(exactWord.getAprvYn()) ? "이미 승인된 단어명입니다." : "승인 대기 중인 단어명입니다.")
+					// 104번 WP7-8 — 다른 단어의 이음동의어(유사어)와 같으면 표준 단어를 안내한다
+					: synonymOf != null ? StdInputRule.synonymOfMsg(dataVo.getWordNm(), synonymOf.getWordNm())
+					: null;
+			if (dupMsg != null) {
 				result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg);
 				return Mono.just(result);
 			}
@@ -418,7 +420,9 @@ public class DataStandardController {
 					prevValue, dataVo.toString(), "단어 수정: " + dataVo.getWordNm());
 		} catch (Exception e) {
 			log.error(">> updateWord failed : {}", e.getMessage());
-			String userMsg = e.getMessage();
+			// 108 §4.31 — 기존 단어명·영문약어로 바꾸면 등록과 같은 중복 문구
+			String dupMsg = StdInputRule.translateDuplicateError(e.getMessage());
+			String userMsg = dupMsg != null ? dupMsg : e.getMessage();
 			if (userMsg != null && (userMsg.startsWith("\r\n### Error") || userMsg.contains("PSQLException") || userMsg.contains("org.postgresql"))) {
 				userMsg = "단어 수정 중 오류가 발생했습니다. 입력값을 확인해주세요.";
 			}
@@ -515,7 +519,10 @@ public class DataStandardController {
 		String nm = wordNm == null ? "" : wordNm.trim();
 		result.put("status", "NONE");
 		if (nm.isEmpty()) return result;
-		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(dictId, "wordNm", nm));
+		Map<String, Object> np = dictService.nameParam(dictId, "wordNm", nm);
+		// 108 §4.31 — 동음이의어 허용 사전이면 같은 이름 단어가 있어도 영문약어가 다르면 등록할 수 있다 (화면은 막지 않고 안내만)
+		result.put("homonymYn", dictService.isHomonymAllowed((String) np.get("dictId")) ? "Y" : "N");
+		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", np);
 		if (words != null && !words.isEmpty()) {
 			StdWordVo w = words.stream().filter(x -> nm.equals(x.getWordNm())).findFirst().orElse(words.get(0));
 			result.put("status", nm.equals(w.getWordNm()) ? "EXACT" : "SYNONYM");
@@ -524,6 +531,19 @@ public class DataStandardController {
 			result.put("wordEngAbrvNm", w.getWordEngAbrvNm());
 			result.put("wordEngNm", w.getWordEngNm());
 			result.put("aprvYn", w.getAprvYn());
+			if (nm.equals(w.getWordNm())) {
+				List<Map<String, Object>> sameNm = new ArrayList<>();
+				for (StdWordVo x : words) {
+					if (!nm.equals(x.getWordNm())) continue;
+					Map<String, Object> m = new LinkedHashMap<>();
+					m.put("wordId", x.getId());
+					m.put("wordNm", x.getWordNm());
+					m.put("wordEngAbrvNm", x.getWordEngAbrvNm());
+					m.put("aprvYn", x.getAprvYn());
+					sameNm.add(m);
+				}
+				result.put("sameNmWords", sameNm);
+			}
 			return result;
 		}
 		Map<String, Object> forbidden = sqlSessionTemplate.selectOne("word.selectWordByForbiddenNm", dictService.nameParam(dictId, "wordNm", nm));
@@ -550,7 +570,25 @@ public class DataStandardController {
 		// 1. TB_WORD 조회 — 98번: 화면에서 고른 사전 안에서
 		List<StdWordVo> words = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(dictId, "wordNm", wordNm.trim()));
 		if (words != null && !words.isEmpty()) {
+			// 108 §4.31 — 동음이의어 허용 사전은 같은 이름 단어가 여럿. 정확 일치 먼저, 지금 필드는 첫 건, candidates 에 전부
+			String nm = wordNm.trim();
+			words.sort(java.util.Comparator.comparing((StdWordVo x) -> !nm.equals(x.getWordNm())));
 			StdWordVo w = words.get(0);
+			List<Map<String, Object>> candidates = new ArrayList<>();
+			for (StdWordVo x : words) {
+				if (!w.getWordNm().equals(x.getWordNm())) continue;   // 같은 이름 단어만 (다른 단어의 유사어로 맞은 행은 뺀다)
+				Map<String, Object> m = new LinkedHashMap<>();
+				m.put("wordId", x.getId());
+				m.put("wordNm", x.getWordNm());
+				m.put("wordEngAbrvNm", x.getWordEngAbrvNm());
+				m.put("wordEngNm", x.getWordEngNm());
+				m.put("wordDesc", x.getWordDesc());
+				m.put("domainClsfNm", x.getDomainClsfNm());
+				m.put("wordClsfYn", x.getWordClsfYn());
+				m.put("aprvYn", x.getAprvYn());
+				candidates.add(m);
+			}
+			result.put("candidates", candidates);
 			result.put("found", true);
 			result.put("source", "WORD");
 			// 104번 WP7-8 — 입력이 이 단어의 유사어(이음동의어)면 표시
@@ -779,9 +817,9 @@ public class DataStandardController {
 		// 요청된 용어가 단어이고, 형식단어(도메인)인 경우에는 바로 리턴한다. 98번 — 요청 사전 안에서 찾는다.
 		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(dictId, "wordNm", termsNm));
 		log.info(">> word info by termsNm : {}", wordVoLst);
-		if (wordVoLst.size() == 1) {
-			StdWordVo wordVo = wordVoLst.get(0);
-			wordVo.setPartOfSpeech("NN");
+		// 108 §4.31 — 동음이의어 허용 사전은 같은 이름 단어가 여럿이라 1건 이상이면 모두 돌려준다
+		if (!wordVoLst.isEmpty()) {
+			for (StdWordVo wordVo : wordVoLst) wordVo.setPartOfSpeech("NN");
 			wordMap.put(termsNm, wordVoLst);
 			return wordMap;
 		}
@@ -833,13 +871,15 @@ public class DataStandardController {
 		// 요청된 용어가 단어이고, 형식단어(도메인)인 경우에는 바로 리턴한다. 98번 — 요청 사전 안에서 찾는다.
 		wordVoLst = sqlSessionTemplate.selectList("word.selectWordByNm", dictService.nameParam(dictId, "wordNm", termsNm));
 		log.info(">> word info by termsNm : {}", wordVoLst);
-		if (wordVoLst.size() == 1) {
-			StdWordVo wordVo = wordVoLst.get(0);
-			wordVo.setPartOfSpeech("NN");
+		// 108 §4.31 — 동음이의어 허용 사전은 같은 이름 단어가 여럿이라 1건 이상이면 모두 돌려준다
+		if (!wordVoLst.isEmpty()) {
 			// set result
 			WordDataVo wordData = new WordDataVo();
 			wordData.setWordNm(termsNm);
-			wordData.getWordLst().add(wordVo);
+			for (StdWordVo wordVo : wordVoLst) {
+				wordVo.setPartOfSpeech("NN");
+				wordData.getWordLst().add(wordVo);
+			}
 			wordDatas.add(wordData);
 			return wordDatas;
 		}
@@ -958,7 +998,9 @@ public class DataStandardController {
 		} catch (Exception e) {
 			session.rollback();
 			log.error("update terms : {}", e.getMessage());
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
+			// 108 §4.31 — 기존 용어 영문약어로 바꾸면 등록과 같은 중복 문구
+			String dupMsg = StdInputRule.translateDuplicateError(e.getMessage());
+			result.setResultInfo(RestResult.CODE_500.getCode(), dupMsg != null ? dupMsg : e.getMessage());
 		} finally {
 			session.close();
 		}
@@ -2618,12 +2660,13 @@ public class DataStandardController {
 			}
 		}
 
+		// 108 §4.31 — 사용 빈도는 단어 ID 별 (동음이의어끼리 점수가 갈린다)
 		List<Map<String, Object>> usageCounts = sqlSessionTemplate.selectList("word.selectWordUsageCounts", dp);
 		Map<String, Integer> usageMap = new HashMap<>();
 		for (Map<String, Object> row : usageCounts) {
-			String nm = (String) row.get("wordNm");
+			String wordId = (String) row.get("wordId");
 			Number cnt = (Number) row.get("cnt");
-			if (nm != null && cnt != null) usageMap.put(nm, cnt.intValue());
+			if (wordId != null && cnt != null) usageMap.put(wordId, cnt.intValue());
 		}
 
 		List<StdDomainVo> allDomains = sqlSessionTemplate.selectList("domain.selectAllDomains", dp);
@@ -2812,9 +2855,15 @@ public class DataStandardController {
 
 		// 중복 체크 — 같은 사전 안에서만 본다. 다른 사전의 동명 단어는 별개다.
 		List<StdWordVo> existing = sqlSessionTemplate.selectList("word.selectWordInfoByNm", dictService.nameParam(dictId, "wordNm", wordNm.trim()));
-		if (existing != null && !existing.isEmpty()) {
+		// 108 §4.31 — 동음이의어 허용 사전은 같은 이름이라도 같은 영문약어 단어일 때만 그 단어, 없으면 새 단어로 등록 (유사어로만 맞으면 지금처럼 표준 단어)
+		StdWordVo existWord = existing == null || existing.isEmpty() ? null : existing.get(0);
+		if (existWord != null && dictService.isHomonymAllowed(dictId)) {
+			String nm = wordNm.trim(), abrv = wordEngAbrvNm.trim();
+			List<StdWordVo> exact = existing.stream().filter(w -> nm.equals(w.getWordNm())).collect(java.util.stream.Collectors.toList());
+			if (!exact.isEmpty()) existWord = exact.stream().filter(w -> abrv.equals(w.getWordEngAbrvNm())).findFirst().orElse(null);
+		}
+		if (existWord != null) {
 			// 이미 등록된 단어 → 기존 정보 반환
-			StdWordVo existWord = existing.get(0);
 			res.put("success", true);
 			res.put("alreadyExists", true);
 			// 104번 WP7-8 — 유사어로 맞춘 경우 표준 단어로 바꿨다고 알린다
@@ -3546,7 +3595,7 @@ public class DataStandardController {
 	}
 
 	/**
-	 * 토큰 목록 → WordAnalysis 목록 변환
+	 * 토큰 목록 → WordAnalysis 목록 변환 (usageMap — 단어 ID → 사용 빈도, 108 §4.31)
 	 */
 	private List<TermAnalysisResult.WordAnalysis> buildWordAnalyses(List<String> tokens,
 			Map<String, List<StdWordVo>> wordsByNm, Map<String, Map<String, Object>> wordDict,
@@ -3568,10 +3617,11 @@ public class DataStandardController {
 					c.setWordNm(w.getWordNm());
 					c.setWordEngAbrvNm(w.getWordEngAbrvNm());
 					c.setWordEngNm(w.getWordEngNm());
+					c.setWordDesc(w.getWordDesc());
 					c.setDomainClsfNm(w.getDomainClsfNm());
 					c.setWordClsfYn(w.getWordClsfYn());
 					int score = 0;
-					Integer usage = usageMap.get(w.getWordNm());
+					Integer usage = usageMap.get(w.getId());
 					if (usage != null) score += usage * 100;
 					if (w.getWordEngAbrvNm() != null) score += Math.min(w.getWordEngAbrvNm().length(), 10) * 10;
 					c.setScore(score);
@@ -3591,11 +3641,12 @@ public class DataStandardController {
 				c.setWordNm(w.getWordNm());
 				c.setWordEngAbrvNm(w.getWordEngAbrvNm());
 				c.setWordEngNm(w.getWordEngNm());
+				c.setWordDesc(w.getWordDesc());
 				c.setDomainClsfNm(w.getDomainClsfNm());
 				c.setWordClsfYn(w.getWordClsfYn());
 				c.setSelected(true);
 				int score = 0;
-				Integer usage = usageMap.get(w.getWordNm());
+				Integer usage = usageMap.get(w.getId());
 				if (usage != null) score += usage * 100;
 				if (w.getWordEngAbrvNm() != null) score += Math.min(w.getWordEngAbrvNm().length(), 10) * 10;
 				c.setScore(score);

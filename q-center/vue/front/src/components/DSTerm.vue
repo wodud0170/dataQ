@@ -332,14 +332,18 @@
                         <!-- 104번 WP7-8 — 입력이 표준 단어의 유사어면 권장 단어로 바꿨다고 알린다 -->
                         <v-chip v-if="item.wordNm && item.wordNm !== item.wordLst[0].wordNm" x-small color="orange" text-color="white"
                           class="ml-1 term-synonym-chip">유사어 → 권장 '{{ item.wordLst[0].wordNm }}'</v-chip>
+                        <!-- 108 §4.31 — 동음이의어 허용 사전: 같은 이름 단어 중 하나를 고른다 -->
+                        <v-chip v-if="item.wordLst.length > 1" x-small color="blue-grey" text-color="white"
+                          class="ml-1 term-homonym-chip">동음이의어 {{ item.wordLst.length }}</v-chip>
                       </h4>
                       <v-btn icon x-small color="red" @click="removeWordAt(index)" title="단어 삭제">
                         <v-icon x-small>mdi-close</v-icon>
                       </v-btn>
                     </div>
+                    <!-- 108 §4.31 — 행 키는 단어 ID (같은 토큰의 동음이의어 후보가 함께 골라지지 않게), 한 토큰에 하나만 -->
                     <v-data-table class="px-2 pb-2" :headers="wordListHeader"
-                      :items="item.wordLst" item-key="index" v-model="addTerm_selected_word_list[index]"
-                      :value="addTerm_selected_word_list[index]" hide-default-footer show-select dense>
+                      :items="item.wordLst" item-key="id" v-model="addTerm_selected_word_list[index]"
+                      :value="addTerm_selected_word_list[index]" hide-default-footer show-select single-select dense>
                     </v-data-table>
                   </template>
                   <template v-else>
@@ -2223,14 +2227,11 @@ export default {
       for (var i = 0; i < words.length; i++) {
         var w = words[i];
         if (w.status === 'MATCHED' && w.selected) {
-          var s = w.selected;
-          var item = {
-            id: s.wordId, wordNm: s.wordNm,
-            wordEngAbrvNm: s.wordEngAbrvNm, wordEngNm: s.wordEngNm,
-            domainClsfNm: s.domainClsfNm, partOfSpeech: 'NN', index: i
-          };
+          // 108 §4.31 — 동음이의어 허용 사전은 같은 이름 단어가 여럿: 후보를 모두 행으로, 1순위(selected)를 미리 고른다
+          var cands = w.candidates.map(c => this._wordItem(c, i));
+          var item = cands.find(c => c.id === w.selected.wordId);
           wordListArr.push({
-            wordNm: w.wordNm, wordLst: [item],
+            wordNm: w.wordNm, wordLst: cands,
             inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
             inlineSaving: false
           });
@@ -2255,6 +2256,18 @@ export default {
       // post-validation — NEW/UNRECOGNIZED 행을 lookupWord 로 재검증
       this._postValidateNewTokens();
     },
+    /** 108 §4.31 — 분석 후보·lookupWord 후보(wordId) → 구성 단어 표 행 (item-key="id") */
+    _wordItem(c, index) {
+      return {
+        id: c.wordId, wordNm: c.wordNm,
+        wordEngAbrvNm: c.wordEngAbrvNm, wordEngNm: c.wordEngNm, wordDesc: c.wordDesc,
+        domainClsfNm: c.domainClsfNm, partOfSpeech: 'NN', index: index
+      };
+    },
+    /** 108 §4.31 — lookupWord 응답(source WORD)의 candidates(같은 이름 단어 전부, 첫 건이 응답의 단어) → 구성 단어 표 행들 */
+    _lookupItems(data, index) {
+      return data.candidates.map(c => this._wordItem(c, index));
+    },
     /**
      * 86번 #24 — wordListArr 의 미등록 행에 대해 lookupWord 호출 → TB_WORD 발견 시 MATCHED 로 승격.
      * 자동표준화의 onWordNmInput 패턴.
@@ -2276,19 +2289,15 @@ export default {
               var cur = self.addTerm_wordListArr[idx];
               if (!cur || (cur.wordLst && cur.wordLst.length > 0)) return;  // 그새 변경됐으면 skip
               if (data.source === 'WORD') {
-                // TB_WORD 발견 → MATCHED 승격
-                var matched = {
-                  id: data.wordId, wordNm: data.wordNm,
-                  wordEngAbrvNm: data.wordEngAbrvNm, wordEngNm: data.wordEngNm,
-                  domainClsfNm: data.domainClsfNm || '', partOfSpeech: 'NN', index: idx
-                };
+                // TB_WORD 발견 → MATCHED 승격 (108 §4.31 — 같은 이름 단어 전부, 첫 건을 고름)
+                var matched = self._lookupItems(data, idx);
                 // 104번 WP7-8 — 유사어로 찾았으면 입력 이름을 남겨 "유사어 → 권장" 칩이 보이게 한다
                 self.$set(self.addTerm_wordListArr, idx, {
-                  wordNm: data.synonymOf ? wordNm : data.wordNm, wordLst: [matched],
+                  wordNm: data.synonymOf ? wordNm : data.wordNm, wordLst: matched,
                   inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
                   inlineSaving: false
                 });
-                self.$set(self.addTerm_selected_word_list, idx, [matched]);
+                self.$set(self.addTerm_selected_word_list, idx, [matched[0]]);
               } else if (data.source === 'DICT') {
                 // DICT 추천 → 영문약어/영문명 자동 채움
                 var c = self.addTerm_wordListArr[idx];
@@ -2325,17 +2334,13 @@ export default {
             if (!cur || (cur.wordLst && cur.wordLst.length > 0)) return;
             if (data && data.found) {
               if (data.source === 'WORD') {
-                var matched = {
-                  id: data.wordId, wordNm: data.wordNm,
-                  wordEngAbrvNm: data.wordEngAbrvNm, wordEngNm: data.wordEngNm,
-                  domainClsfNm: data.domainClsfNm || '', partOfSpeech: 'NN', index: index
-                };
+                var matched = self._lookupItems(data, index);   // 108 §4.31 — 같은 이름 단어 전부, 첫 건을 고름
                 self.$set(self.addTerm_wordListArr, index, {
-                  wordNm: data.synonymOf ? nm : data.wordNm, wordLst: [matched],
+                  wordNm: data.synonymOf ? nm : data.wordNm, wordLst: matched,
                   inlineWordNm: '', inlineWordEngAbrvNm: '', inlineWordEngNm: '',
                   inlineSaving: false
                 });
-                self.$set(self.addTerm_selected_word_list, index, [matched]);
+                self.$set(self.addTerm_selected_word_list, index, [matched[0]]);
               } else if (data.source === 'DICT') {
                 if (!cur.inlineWordEngAbrvNm) cur.inlineWordEngAbrvNm = data.wordEngAbrvNm || '';
                 if (!cur.inlineWordEngNm)     cur.inlineWordEngNm     = data.wordEngNm || '';
@@ -2387,6 +2392,19 @@ export default {
       });
       this.addTerm_selected_word_list.push([item]);
       this.addTerm_selectedClsfWord = null;
+      // 108 §4.31 — 같은 이름 단어(동음이의어)가 있으면 후보 행으로 함께, 고른 형식단어는 그대로 선택
+      var self = this;
+      axios.get(self.$APIURL.base + 'api/std/lookupWord', { params: { wordNm: c.wordNm, dictId: self.dictId } })
+        .then(function(res) {
+          var data = res.data;
+          var cur = self.addTerm_wordListArr[idx];
+          if (!data || data.source !== 'WORD' || data.candidates.length < 2) return;
+          if (!cur || cur.wordLst.indexOf(item) < 0) return;   // 그새 행이 지워졌거나 바뀌었으면 그대로
+          var cands = self._lookupItems(data, idx);
+          self.$set(cur, 'wordLst', cands);
+          self.$set(self.addTerm_selected_word_list, idx, [cands.find(x => x.id === item.id)]);
+        })
+        .catch(function() { /* lookup 실패는 무시 — 고른 형식단어 한 건 그대로 */ });
     },
     /**
      * 86번 #23 — 사용자가 수동으로 단어 한 개 추가.
@@ -2664,6 +2682,8 @@ export default {
           showConfirmButton: false, timer: 1800
         });
         // 등록 성공 → 단어 목록 조회하여 갱신 (current arr[index] 에 직접 set, item 변수 의존 X)
+        // 108 §4.31 — 동음이의어 허용 사전은 같은 이름 단어가 여럿: 방금 등록한 영문약어의 단어를 고른다
+        var newAbrv = (item.inlineWordEngAbrvNm || '').trim().toUpperCase();
         axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', {
           params: { wordNm: item.inlineWordNm, dictId: self.dictId }
         }).then(function(res2) {
@@ -2679,7 +2699,7 @@ export default {
             self.$set(cur, 'inlineWordNm', '');
             self.$set(cur, 'inlineWordEngAbrvNm', '');
             self.$set(cur, 'inlineWordEngNm', '');
-            self.$set(selList, index, [words[0]]);
+            self.$set(selList, index, [words.find(x => (x.wordEngAbrvNm || '').toUpperCase() === newAbrv)]);
           }
           self.$set(cur, 'inlineSaving', false);
         }).catch(function() {

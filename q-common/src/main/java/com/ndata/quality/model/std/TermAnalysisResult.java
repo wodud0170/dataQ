@@ -67,6 +67,7 @@ public class TermAnalysisResult {
         private String wordNm;
         private String wordEngAbrvNm;
         private String wordEngNm;
+        private String wordDesc;       // 108 §4.31 — 동음이의어 후보를 설명으로 가른다
         private String domainClsfNm;
         private String wordClsfYn;
         private int score;

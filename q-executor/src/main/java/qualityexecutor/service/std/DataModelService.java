@@ -18,6 +18,7 @@ import com.ndata.model.ws.WsDestType;
 import com.ndata.model.ws.WsNoticeLevel;
 import com.ndata.module.DateUtils;
 import com.ndata.module.StringUtils;
+import com.ndata.quality.common.TermPick;
 import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelCollectVo;
 import com.ndata.quality.model.std.StdDataModelObjVo;
@@ -230,8 +231,9 @@ public class DataModelService implements Runnable {
 					String attrNmUp = stdDataModelAttrVo.getAttrNm() == null ? "" : stdDataModelAttrVo.getAttrNm().toUpperCase();
 					// 98번 — 수집 중인 이 모델의 사전에서 찾는다. 다른 사전 용어가 섞이면
 					//        수집 직후 화면의 표준여부 표시가 남의 사전 기준이 된다.
-					StdTermsVo stdTermsVo = session.selectOne("terms.selectApprovedTermsByEngNm",
-							dictService.nameParam(clctDictId, "termsEngAbrvNm", attrNmUp));
+					// 108 §4.31 — 용어 영문약어명 중복 허용 사전은 여러 건: 코멘트(한글명)가 같은 용어, 없으면 용어명 순 첫 용어
+					StdTermsVo stdTermsVo = TermPick.pick(session.selectList("terms.selectApprovedTermsByEngNm",
+							dictService.nameParam(clctDictId, "termsEngAbrvNm", attrNmUp)), attrDbComment);
 					if (stdTermsVo != null) {
 						stdDataModelAttrVo.setTermsStndYn("Y");
 						stdDataModelAttrVo.setDomainStndYn(isDomainStnd(stdTermsVo, stdDataModelAttrVo) ? "Y" : "N");

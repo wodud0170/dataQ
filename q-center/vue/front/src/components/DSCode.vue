@@ -240,11 +240,16 @@
               <v-stepper-content step="2">
 
                 <v-row v-for="(item, index) in addTerm_wordListArr" :key="index" :style="{ margin: '0px 0px 20px 0px' }">
-                  <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}</h3>
+                  <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}
+                    <!-- 108 §4.31 — 동음이의어 허용 사전: 같은 이름 단어 중 하나를 고른다 -->
+                    <v-chip v-if="item.wordLst && item.wordLst.length > 1" x-small color="blue-grey" text-color="white"
+                      class="ml-1 term-homonym-chip">동음이의어 {{ item.wordLst.length }}</v-chip>
+                  </h3>
                   <v-col cols="12" :style="{ padding: '0px' }">
+                    <!-- 108 §4.31 — 행 키는 단어 ID (동음이의어 후보가 함께 골라지지 않게), 한 토큰에 하나만 -->
                     <v-data-table id="addTerm_wordList_table" class="px-4 pb-3" :headers="wordListHeader"
-                      :items="item.wordLst" item-key="index" v-model="addTerm_selected_word_list[index]"
-                      :value="addTerm_selected_word_list[index]" hide-default-footer show-select>
+                      :items="item.wordLst" item-key="id" v-model="addTerm_selected_word_list[index]"
+                      :value="addTerm_selected_word_list[index]" hide-default-footer show-select single-select>
                     </v-data-table>
                   </v-col>
                 </v-row>
@@ -478,11 +483,16 @@
 
                   <v-row v-for="(item, index) in updateTerm_wordListArr" :key="index"
                     :style="{ margin: '0px 0px 20px 0px' }">
-                    <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}</h3>
+                    <h3 :style="{ margin: '10px 0px' }">{{ item.wordNm }}
+                      <!-- 108 §4.31 — 동음이의어 허용 사전: 같은 이름 단어 중 하나를 고른다 -->
+                      <v-chip v-if="item.wordLst && item.wordLst.length > 1" x-small color="blue-grey" text-color="white"
+                        class="ml-1 term-homonym-chip">동음이의어 {{ item.wordLst.length }}</v-chip>
+                    </h3>
                     <v-col cols="12" :style="{ padding: '0px' }">
+                      <!-- 108 §4.31 — 행 키는 단어 ID (동음이의어 후보가 함께 골라지지 않게), 한 토큰에 하나만 -->
                       <v-data-table id="updateTerm_wordList_table" class="px-4 pb-3" :headers="wordListHeader"
-                        :items="item.wordLst" item-key="index" v-model="updateTerm_selected_word_list[index]"
-                        :value="updateTerm_selected_word_list[index]" hide-default-footer show-select>
+                        :items="item.wordLst" item-key="id" v-model="updateTerm_selected_word_list[index]"
+                        :value="updateTerm_selected_word_list[index]" hide-default-footer show-select single-select>
                       </v-data-table>
                     </v-col>
                   </v-row>

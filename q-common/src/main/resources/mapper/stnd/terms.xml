@@ -270,6 +270,8 @@
 			where A.TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
 			  and A.APRV_YN = 'Y'
 			  and A.DICT_ID = #{dictId}
+			<!-- 108 §4.31 — 용어 영문약어명 중복 허용 사전은 여러 건 (TermPick: 한글명 같은 용어, 없으면 용어명 순 첫 용어) -->
+			order by A.TERMS_NM
 	</select>
 
 	<select id="selectApprovedTermsByNm" parameterType="java.util.Map" resultMap="stdTermsMap">
@@ -284,6 +286,8 @@
 		<include refid="termsSingleSelectBody"/>
 			where A.TERMS_ENG_ABRV_NM = #{termsEngAbrvNm}
 			  and A.DICT_ID = #{dictId}
+			<!-- 108 §4.31 — 용어 영문약어명 중복 허용 사전은 여러 건 -->
+			order by A.TERMS_NM
 	</select>
 
 	<!-- 진단용: 전체 용어 + 도메인 데이터 한번에 로드 (UNNEST 없이 1건/용어) -->
@@ -297,6 +301,7 @@
 			,D.DATA_TYPE
 			,D.DATA_LEN
 			,D.DATA_DECIMAL_LEN
+			,T.DICT_ID
 		FROM TB_TERMS T
 		LEFT JOIN TB_DOMAIN D ON T.DOMAIN_NM = D.DOMAIN_NM AND T.DICT_ID = D.DICT_ID
 		<!-- DEF-12 — 승인된 용어만 진단 기준이 된다.
@@ -304,12 +309,13 @@
 		     그 용어가 반려되는 순간 준수율이 소급해서 틀어진다. -->
 		WHERE T.APRV_YN = 'Y'
 		<choose>
-			<!-- 104번 WP5-11 — 사전과 상위 사전들. 먼 사전부터 내보내 호출부 맵에서 가까운 사전이 덮어쓴다 -->
+			<!-- 104번 WP5-11 — 사전과 상위 사전들. 먼 사전부터 내보내 호출부 맵에서 가까운 사전이 덮어쓴다
+			     108 §4.31 — 같은 사전 안은 용어명 순 (용어 영문약어명 중복 허용 사전에서 TermPick 의 "용어명 순 첫 용어") -->
 			<when test="dictIds != null and dictIds.size() > 0">
 				AND T.DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach>
-				ORDER BY array_position(ARRAY[<foreach collection="dictIds" item="d" separator=",">#{d}</foreach>]::varchar[], T.DICT_ID) DESC
+				ORDER BY array_position(ARRAY[<foreach collection="dictIds" item="d" separator=",">#{d}</foreach>]::varchar[], T.DICT_ID) DESC, T.TERMS_NM
 			</when>
-			<when test="dictId != null and dictId != ''"> AND T.DICT_ID = #{dictId} </when>
+			<when test="dictId != null and dictId != ''"> AND T.DICT_ID = #{dictId} ORDER BY T.TERMS_NM </when>
 		</choose>
 	</select>
 
@@ -355,6 +361,7 @@
 			,APRV_STAT_UPDT_DT
 			,REQ_SYS_CD
             ,DICT_ID
+            ,TERMS_ENG_ABRV_UNIQ_YN
            )
            VALUES
            (
@@ -379,6 +386,8 @@
 			,to_char(now(), 'YYYYMMDDHH24MISS')
 			,#{reqSysCd, jdbcType=VARCHAR}
             ,COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')
+            <!-- 108 §4.31 (104번 WP6-13) — 사전이 용어 영문약어명 중복을 허용하면 'N' (tb_terms_ux_2 부분 인덱스에서 빠짐) -->
+            ,COALESCE((SELECT CASE WHEN TERM_ENG_ABRV_DUP_YN = 'Y' THEN 'N' END FROM TB_STD_DICT WHERE DICT_ID = COALESCE(#{dictId, jdbcType=VARCHAR}, 'DEFAULT')), 'Y')
            )
 	</insert>
 

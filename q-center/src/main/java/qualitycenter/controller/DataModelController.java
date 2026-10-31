@@ -48,6 +48,7 @@ import com.ndata.quality.tool.DataSourceUtils;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.NDQualityConstant;
 import com.ndata.quality.common.NDQualityRetrieveCond;
+import com.ndata.quality.common.TermPick;
 import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDataModelCollectVo;
 import com.ndata.quality.model.std.StdDataModelObjVo;
@@ -2045,16 +2046,25 @@ public class DataModelController {
 	 */
 	// ===== 104번 WP5-11 — 사전과 상위 사전에서 승인 용어 찾기 (가까운 사전 우선, 찾은 사전을 dictId 에) =====
 
-	private com.ndata.quality.model.std.StdTermsVo approvedTermByEng(String dictId, String eng) {
+	/**
+	 * 108 §4.31 — 그 영문약어 승인 용어가 있는 가장 가까운 사전의 용어들 (용어명 순, dictId 는 찾은 사전).
+	 * 용어 영문약어명 중복 허용 사전이면 여러 건. 없으면 빈 목록
+	 */
+	private List<com.ndata.quality.model.std.StdTermsVo> approvedTermsByEng(String dictId, String eng) {
 		for (String d : dictService.lineage(dictId)) {
-			com.ndata.quality.model.std.StdTermsVo t = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
+			List<com.ndata.quality.model.std.StdTermsVo> list = sqlSessionTemplate.selectList("terms.selectApprovedTermsByEngNm",
 					dictService.nameParam(d, "termsEngAbrvNm", eng));
-			if (t != null) {
-				t.setDictId(d);
-				return t;
+			if (!list.isEmpty()) {
+				for (com.ndata.quality.model.std.StdTermsVo t : list) t.setDictId(d);
+				return list;
 			}
 		}
-		return null;
+		return new ArrayList<>();
+	}
+
+	/** 108 §4.31 — 같은 영문약어 용어가 여럿이면 한글명이 같은 용어, 없으면 용어명 순 첫 용어 (TermPick) */
+	private com.ndata.quality.model.std.StdTermsVo approvedTermByEng(String dictId, String eng, String kr) {
+		return TermPick.pick(approvedTermsByEng(dictId, eng), kr);
 	}
 
 	private com.ndata.quality.model.std.StdTermsVo approvedTermByNm(String dictId, String nm) {
@@ -2080,7 +2090,7 @@ public class DataModelController {
 			@RequestParam(required = false) String attrNmKr) {
 		String dictId = dictService.resolve(null, dmId);
 		Map<String, Object> out = new HashMap<>();
-		com.ndata.quality.model.std.StdTermsVo term = approvedTermByEng(dictId, attrNm.trim());
+		com.ndata.quality.model.std.StdTermsVo term = approvedTermByEng(dictId, attrNm.trim(), attrNmKr);
 		String matchType = "ENG";
 		if (term == null && attrNmKr != null && !attrNmKr.trim().isEmpty()) {
 			term = approvedTermByNm(dictId, attrNmKr.trim());
@@ -2142,17 +2152,21 @@ public class DataModelController {
 		return list;
 	}
 
-	/** 104번 WP5-11 — 같은 영문약어 용어가 사전과 상위 사전에 다 있으면 가까운 사전 것만 (순서는 그대로). 상위 사전 것에는 inheritedDictNm */
+	/**
+	 * 104번 WP5-11 — 같은 영문약어 용어가 사전과 상위 사전에 다 있으면 가까운 사전 것만 (순서는 그대로). 상위 사전 것에는 inheritedDictNm.
+	 * 108 §4.31 — 용어 영문약어명 중복 허용 사전은 가까운 사전의 같은 영문약어 용어가 여럿이라 그 사전 것을 모두 남긴다
+	 */
 	private List<Map<String, Object>> nearestByEng(List<Map<String, Object>> rows, Object dictIds) {
 		@SuppressWarnings("unchecked")
 		List<String> lin = (List<String>) dictIds;
-		Map<String, Map<String, Object>> best = new LinkedHashMap<>();
+		Map<String, Integer> nearest = new HashMap<>();
 		for (Map<String, Object> t : rows) {
-			String key = (String) t.get("termsEngAbrvNm");
-			Map<String, Object> prev = best.get(key);
-			if (prev == null || lin.indexOf(t.get("dictId")) < lin.indexOf(prev.get("dictId"))) best.put(key, t);
+			nearest.merge((String) t.get("termsEngAbrvNm"), lin.indexOf(t.get("dictId")), Math::min);
 		}
-		List<Map<String, Object>> out = new ArrayList<>(best.values());
+		List<Map<String, Object>> out = new ArrayList<>();
+		for (Map<String, Object> t : rows) {
+			if (lin.indexOf(t.get("dictId")) == nearest.get((String) t.get("termsEngAbrvNm"))) out.add(t);
+		}
 		for (Map<String, Object> t : out) {
 			if (!lin.get(0).equals(t.get("dictId"))) {
 				Object id = t.get("dictId");
@@ -2465,9 +2479,15 @@ public class DataModelController {
 		if (engNm == null || engNm.trim().isEmpty())
 			throw new IllegalStateException("영문명 없음");
 		// 98번 — 이 컬럼이 속한 모델의 사전에서 찾는다.
-		com.ndata.quality.model.std.StdTermsVo terms = approvedTermByEng(dictService.resolve(null, attr.getDataModelId()), engNm.trim());
-		if (terms == null)
+		List<com.ndata.quality.model.std.StdTermsVo> cands = approvedTermsByEng(dictService.resolve(null, attr.getDataModelId()), engNm.trim());
+		if (cands.isEmpty())
 			throw new IllegalStateException("'" + engNm + "' 에 해당하는 표준 용어가 없습니다.");
+		// 108 §4.31 (114 §1 권고 채택) — 같은 영문약어 용어가 여럿이고 한글명이 그중 하나가 아니면 어느 용어로 채울지 알 수 없다
+		String kr = attr.getAttrNmKr() == null ? "" : attr.getAttrNmKr().trim();
+		if (cands.size() > 1 && cands.stream().noneMatch(t -> kr.equals(t.getTermsNm())))
+			throw new IllegalStateException("영문약어 '" + engNm.trim() + "' 인 용어가 여러 개입니다 (" + TermPick.names(cands)
+					+ ") — 한글명 기준 표준화로 맞추세요");
+		com.ndata.quality.model.std.StdTermsVo terms = TermPick.pick(cands, kr);
 		Map<String, Object> item = new HashMap<>();
 		item.put("objOwner", attr.getObjOwner());                    // 스키마까지 있어야 행이 식별된다
 		item.put("objNm", attr.getObjNm());
@@ -3217,23 +3237,22 @@ public class DataModelController {
 
 		// 영문명 기준 표준 용어 매칭 (TB_TERMS.TERMS_ENG_ABRV_NM = attrNm)
 		// 104번 WP5-11 — 사전에 없으면 상위 사전 (가까운 사전 우선)
-		com.ndata.quality.model.std.StdTermsVo term = null;
-		for (String d : dictService.lineage(dictId)) {
-			term = sqlSessionTemplate.selectOne("terms.selectApprovedTermsByEngNm",
-				dictService.nameParam(d, "termsEngAbrvNm", attrNm.trim()));
-			if (term != null) break;
-		}
+		// 108 §4.31 — 같은 영문약어 용어가 여럿이면 한글명이 같은 용어, 없으면 용어명 순 첫 용어 (입력 한글명이 비면 첫 용어)
+		String inputKr = attrVo.getAttrNmKr();
+		List<com.ndata.quality.model.std.StdTermsVo> cands = approvedTermsByEng(dictId, attrNm.trim());
+		com.ndata.quality.model.std.StdTermsVo term = TermPick.pick(cands, inputKr);
 		if (term == null) {
 			throw new IllegalStateException("표준 미준수: '" + attrNm + "' 에 해당하는 표준 용어가 등록되어있지 않습니다.");
 		}
 
 		// 한글명 일치 검증 — 표준 용어에 한글명이 있고, 입력 attrNmKr 가 있을 때만 비교
 		String stdKr = term.getTermsNm();
-		String inputKr = attrVo.getAttrNmKr();
 		if (stdKr != null && !stdKr.trim().isEmpty()
 				&& inputKr != null && !inputKr.trim().isEmpty()
 				&& !stdKr.trim().equals(inputKr.trim())) {
-			throw new IllegalStateException("표준 미준수: 한글명이 표준 용어와 다릅니다 (표준: " + stdKr + ", 입력: " + inputKr + ")");
+			// 108 §4.31 — 후보가 여럿이면 표준값에 후보 용어명 모두
+			throw new IllegalStateException("표준 미준수: 한글명이 표준 용어와 다릅니다 (표준: "
+					+ (cands.size() > 1 ? TermPick.names(cands) : stdKr) + ", 입력: " + inputKr + ")");
 		}
 
 		// 도메인 타입/길이 일치 검증 (term 에 도메인이 지정된 경우만)

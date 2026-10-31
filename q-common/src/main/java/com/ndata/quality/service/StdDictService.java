@@ -182,6 +182,24 @@ public class StdDictService {
 	}
 
 	/**
+	 * 108 §4.31 (104번 WP6-13) — 동음이의어(같은 단어명의 단어를 영문약어를 달리해 여러 개)를 허용하는가. 기본 N.
+	 * DB 유일성은 행 표시 칸(TB_WORD.WORD_NM_UNIQ_YN)과 부분 유니크 인덱스 tb_word_ux_3 이 지킨다.
+	 */
+	public boolean isHomonymAllowed(String dictId) {
+		Map<String, Object> d = snapshot().get(dictId == null ? DEFAULT_DICT_ID : dictId);
+		return d != null && "Y".equals(d.get("homonymYn"));
+	}
+
+	/**
+	 * 108 §4.31 (104번 WP6-13) — 용어 영문약어명 중복(같은 영문약어명 용어 여러 개)을 허용하는가. 기본 N.
+	 * DB 유일성은 행 표시 칸(TB_TERMS.TERMS_ENG_ABRV_UNIQ_YN)과 부분 유니크 인덱스 tb_terms_ux_2 가 지킨다.
+	 */
+	public boolean isTermEngAbrvDupAllowed(String dictId) {
+		Map<String, Object> d = snapshot().get(dictId == null ? DEFAULT_DICT_ID : dictId);
+		return d != null && "Y".equals(d.get("termEngAbrvDupYn"));
+	}
+
+	/**
 	 * 104번 WP6-13 — 단어 영문약어를 사전 옵션대로 다듬는다. 표준 대문자가 켜져 있으면 대문자로 바꾸고,
 	 * 꺼져 있으면 소문자가 있을 때 거부한다.
 	 */
@@ -289,8 +307,26 @@ public class StdDictService {
 		log.info(">> std dict created: {}", p.get("dictId"));
 	}
 
+	/**
+	 * 사전 수정.
+	 *
+	 * <p>108 §4.31 (104번 WP6-13) — 동음이의어 허용·용어 영문약어명 중복 허용을 바꾸면 그 사전 행의 유일 검사 표시 칸을
+	 * 사전 저장과 같은 트랜잭션에서 맞춘다 (지금 값과 비교해 바뀐 옵션만). 끄는데 중복이 있으면 거부한다(자동 정리 안 함).</p>
+	 *
+	 * @throws IllegalArgumentException 옵션을 끄는데 같은 이름 단어·같은 영문약어명 용어가 있을 때 (메시지는 화면에 그대로 보인다)
+	 */
 	public void update(Map<String, Object> p) {
+		String dictId = (String) p.get("dictId");
 		try (SqlSession session = sqlSessionFactory.openSession()) {
+			Map<String, Object> cur = session.selectOne("stddict.selectDictById", dictId);
+			if (cur != null) {
+				syncUniq(session, dictId, cur.get("homonymYn"), p.get("homonymYn"),
+						"stddict.selectDupWordNms", "stddict.syncWordNmUniq",
+						"같은 단어명의 단어가 있어 동음이의어 허용을 끌 수 없습니다: ", "단어명을 정리한 뒤 끄세요.");
+				syncUniq(session, dictId, cur.get("termEngAbrvDupYn"), p.get("termEngAbrvDupYn"),
+						"stddict.selectDupTermEngAbrvs", "stddict.syncTermEngAbrvUniq",
+						"같은 영문약어명의 용어가 있어 용어 영문약어명 중복 허용을 끌 수 없습니다: ", "영문약어명을 정리한 뒤 끄세요.");
+			}
 			session.update("stddict.updateDict", p);
 			if ("Y".equals(p.get("defaultYn"))) {
 				session.update("stddict.clearDefaultDict");
@@ -300,6 +336,34 @@ public class StdDictService {
 		}
 		invalidate();
 		log.info(">> std dict updated: {}", p.get("dictId"));
+	}
+
+	/**
+	 * 108 §4.31 — 중복 허용 옵션 하나의 행 표시 칸 맞추기. 보내지 않았거나 지금 값과 같으면 아무것도 안 한다.
+	 * 켜면 그 사전 행을 'N'(유니크 인덱스에서 빠짐), 끄면 중복을 먼저 보고 있으면 거부(5개까지, 넘으면 "외 n개"), 없으면 'Y'.
+	 */
+	private void syncUniq(SqlSession session, String dictId, Object curYn, Object newYn,
+			String dupSql, String syncSql, String dupHead, String dupTail) {
+		if (newYn == null) return;
+		boolean on = "Y".equals(newYn);
+		if (on == "Y".equals(curYn)) return;
+		Map<String, Object> q = new HashMap<>();
+		q.put("dictId", dictId);
+		if (!on) {
+			List<Map<String, Object>> dups = session.selectList(dupSql, q);
+			if (!dups.isEmpty()) {
+				StringBuilder sb = new StringBuilder(dupHead);
+				for (int i = 0; i < dups.size(); i++) {
+					if (i > 0) sb.append(", ");
+					sb.append(dups.get(i).get("nm")).append('(').append(dups.get(i).get("cnt")).append("개)");
+				}
+				long total = ((Number) dups.get(0).get("total")).longValue();
+				if (total > dups.size()) sb.append(" 외 ").append(total - dups.size()).append("개");
+				throw new IllegalArgumentException(sb.append(" — ").append(dupTail).toString());
+			}
+		}
+		q.put("uniqYn", on ? "N" : "Y");
+		session.update(syncSql, q);
 	}
 
 	/**

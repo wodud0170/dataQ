@@ -24,7 +24,7 @@
 
     <v-data-table :headers="headers" :items="dicts" dense hide-default-footer
       :items-per-page="-1" item-key="dictId" single-select show-select
-      v-model="selectedRows" class="elevation-0" @item-selected="onSelect">
+      v-model="selectedRows" class="elevation-0 dict-table" @item-selected="onSelect">
       <template v-slot:item.defaultYn="{ item }">
         <v-chip v-if="item.defaultYn === 'Y'" x-small color="primary" text-color="white">기본</v-chip>
       </template>
@@ -37,16 +37,20 @@
       <template v-slot:item.termLastWordClsfYn="{ item }">
         <span>{{ item.termLastWordClsfYn === 'Y' ? '필수' : '미적용' }}</span>
       </template>
+      <!-- 108 §4.31 — 옵션이 6개라 옵션 하나는 꺾지 않고 옵션 사이에서만 줄바꿈 (글자 단위로 꺾여 1366 에서 12줄이 됐다).
+           좁으면 한 줄에 하나, 넓으면 여러 개 -->
       <template v-slot:item.opts="{ item }">
-        <span class="dict-opt-desc">
-          대문자 {{ item.upperYn === 'N' ? '거부' : '자동' }}
-          · 단어 영문명 중복 {{ item.wordEngNmDupYn === 'N' ? '불가' : '허용' }}
-          · 용어 영문약어 {{ item.termEngMaxLen ? item.termEngMaxLen + ' Byte 이하' : '길이 제한 없음' }}
-          · 구표준 {{ item.oldStdYn === 'Y' ? '사용' : '안 씀' }}
-        </span>
+        <div class="dict-opt-desc dict-opt-list">
+          <span>대문자 {{ item.upperYn === 'N' ? '거부' : '자동' }}</span>
+          <span>단어 영문명 중복 {{ item.wordEngNmDupYn === 'N' ? '불가' : '허용' }}</span>
+          <span>용어 영문약어 {{ item.termEngMaxLen ? item.termEngMaxLen + ' Byte 이하' : '길이 제한 없음' }}</span>
+          <span>구표준 {{ item.oldStdYn === 'Y' ? '사용' : '안 씀' }}</span>
+          <span>동음이의어 {{ item.homonymYn === 'Y' ? '허용' : '불가' }}</span>
+          <span>용어 영문약어 중복 {{ item.termEngAbrvDupYn === 'Y' ? '허용' : '불가' }}</span>
+        </div>
       </template>
       <template v-slot:item.counts="{ item }">
-        <span v-if="stats[item.dictId]">
+        <span v-if="stats[item.dictId]" class="dict-counts">
           단어 {{ stats[item.dictId].wordCnt }} / 용어 {{ stats[item.dictId].termsCnt }}
           / 도메인 {{ stats[item.dictId].domainCnt }} / 모델 {{ stats[item.dictId].modelCnt }}
         </span>
@@ -76,6 +80,13 @@
           <v-switch id="dictWordEngNmDupYn" v-model="form.wordEngNmDupYn" true-value="Y" false-value="N" dense hide-details
             label="단어 영문명 중복 허용" />
           <div class="ml-8 mb-2 dict-opt-desc">끄면 같은 영문명(대소문자 무시)을 쓰는 단어가 이 사전에 있을 때 등록·수정하지 않습니다.</div>
+          <!-- 108 §4.31 (104번 WP6-13) — 끌 때 같은 이름 단어·같은 영문약어명 용어가 있으면 서버가 거부한다 -->
+          <v-switch id="dictHomonymYn" v-model="form.homonymYn" true-value="Y" false-value="N" dense hide-details
+            label="동음이의어 허용" />
+          <div class="ml-8 mb-2 dict-opt-desc">켜면 이 사전에 같은 단어명의 단어를 영문약어를 달리해 여러 개 등록할 수 있습니다. 용어 등록·한글컬럼 일괄 표준화에서 같은 이름 단어 중 하나를 고릅니다.</div>
+          <v-switch id="dictTermEngAbrvDupYn" v-model="form.termEngAbrvDupYn" true-value="Y" false-value="N" dense hide-details
+            label="용어 영문약어명 중복 허용" />
+          <div class="ml-8 mb-2 dict-opt-desc">켜면 영문약어명이 같은 용어를 여러 개 등록할 수 있습니다. 표준 진단·컬럼 표준 검사는 영문명이 같은 용어 중 한글명이 같은 용어로 판정합니다.</div>
           <v-text-field id="dictTermEngMaxLen" v-model="form.termEngMaxLen" label="용어 영문약어명 최대 길이 (Byte, 비우면 제한 없음)"
             dense type="number" min="1" class="mt-2" />
           <v-switch id="dictOldStdYn" v-model="form.oldStdYn" true-value="Y" false-value="N" dense hide-details
@@ -122,7 +133,7 @@ export default {
       selectedRows: [],
       modal: false,
       editing: false,
-      form: { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', dictTp: 'ORG', parentDictId: null, defaultYn: 'N' },
+      form: { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', homonymYn: 'N', termEngAbrvDupYn: 'N', dictTp: 'ORG', parentDictId: null, defaultYn: 'N' },
       snackbar: false, snackbarMsg: '', snackbarColor: 'info',
       headers: [
         { text: '사전명', value: 'dictNm', width: '180px' },
@@ -131,7 +142,7 @@ export default {
         { text: '유형·상위 사전', value: 'dictTp', width: '170px', sortable: false },
         { text: '형식단어 강제', value: 'termLastWordClsfYn', width: '110px', align: 'center' },
         { text: '운영 옵션', value: 'opts', sortable: false },
-        { text: '보유 건수', value: 'counts', width: '320px', sortable: false },
+        { text: '보유 건수', value: 'counts', width: '220px', sortable: false },
       ],
     };
   },
@@ -160,7 +171,7 @@ export default {
     onSelect() { /* v-model 로 처리 */ },
     openAdd() {
       this.editing = false;
-      this.form = { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', dictTp: 'ORG', parentDictId: null, defaultYn: 'N' };
+      this.form = { dictId: null, dictNm: '', dictDesc: '', termLastWordClsfYn: 'N', upperYn: 'Y', wordEngNmDupYn: 'Y', termEngMaxLen: null, oldStdYn: 'N', homonymYn: 'N', termEngAbrvDupYn: 'N', dictTp: 'ORG', parentDictId: null, defaultYn: 'N' };
       this.modal = true;
     },
     openEdit() {
@@ -177,9 +188,14 @@ export default {
           this.selectedRows = [];
           this.load();
         } else {
-          this.notify('저장 실패: ' + (res.data && res.data.resultMessage), 'error');
+          // 108 §4.31 — 옵션 끄기 거부 문구는 같은 이름 목록(5개 + 외 n개)이라 스낵바 3초에 읽히지 않는다 → 창으로
+          this.$swal.fire({ title: '저장 실패', html: this.msgBox(res.data && res.data.resultMessage), icon: 'error', confirmButtonText: '확인' });
         }
       }).catch(() => this.notify('서버 오류', 'error'));
+    },
+    msgBox(s) {
+      const t = String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return '<div style="word-break:keep-all;overflow-wrap:anywhere;">' + t + '</div>';
     },
     confirmDisable() {
       if (!this.selected) return;
@@ -213,4 +229,9 @@ export default {
 <style scoped>
 .dict-opt-title { font-size: .85rem; font-weight: 600; color: #37474F; margin: 12px 0 2px; }
 .dict-opt-desc { font-size: .75rem; color: #78909C; }
+.dict-opt-list { padding: 4px 0; line-height: 1.5; }
+.dict-opt-list span { display: inline-block; white-space: nowrap; }
+.dict-opt-list span:not(:last-child)::after { content: '\00a0·'; }
+/* 108 §4.31 — 1366 에서 보유 건수·머리글이 글자 단위로 꺾이지 않게 (띄어쓰기에서 줄바꿈) */
+.dict-table >>> th, .dict-counts { word-break: keep-all; overflow-wrap: anywhere; }
 </style>

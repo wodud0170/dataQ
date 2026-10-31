@@ -12,6 +12,7 @@ import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.ndata.quality.common.TermPick;
 import com.ndata.quality.model.std.StdDataModelAttrVo;
 import com.ndata.quality.model.std.StdDiagJobVo;
 import com.ndata.quality.model.std.StdDiagResultVo;
@@ -116,9 +117,17 @@ public class DiagService implements Runnable {
 
             List<StdTermsVo> allTerms = sqlSessionTemplate.selectList(
                     "terms.selectAllTermsForDiag", dictService.lineageParam(diagDictId));   // 104번 WP5-11 — 상위 사전 포함, 가까운 사전이 이긴다
-            Map<String, StdTermsVo> termsByEng = new HashMap<>();
+            // 108 §4.31 — 용어 영문약어명 중복 허용 사전은 한 영문약어에 용어가 여럿. 먼 사전부터 오므로
+            //   사전이 바뀌면 목록을 새로 시작한다 → 그 영문약어 용어가 있는 가장 가까운 사전 것만 남는다
+            Map<String, List<StdTermsVo>> termsByEng = new HashMap<>();
             for (StdTermsVo t : allTerms) {
-                if (t.getTermsEngAbrvNm() != null) termsByEng.put(t.getTermsEngAbrvNm(), t);
+                if (t.getTermsEngAbrvNm() == null) continue;
+                List<StdTermsVo> list = termsByEng.get(t.getTermsEngAbrvNm());
+                if (list == null || !t.getDictId().equals(list.get(0).getDictId())) {
+                    list = new ArrayList<>();
+                    termsByEng.put(t.getTermsEngAbrvNm(), list);
+                }
+                list.add(t);
             }
 
             // 3. 진단 대상 컬럼 목록 로드 — 모델 전체 ATTR
@@ -155,7 +164,9 @@ public class DiagService implements Runnable {
                 int    dataDecimalLen = attr.getDataDecimalLen();
 
                 // STEP 1. 영문명 기준 용어 존재 확인
-                StdTermsVo termByEng = attrNm != null ? termsByEng.get(attrNm.trim()) : null;
+                // 108 §4.31 — 같은 영문약어 용어가 여럿이면 한글명이 같은 용어, 없으면 용어명 순 첫 용어 (TermPick)
+                List<StdTermsVo> cands = attrNm != null ? termsByEng.get(attrNm.trim()) : null;
+                StdTermsVo termByEng = cands != null ? TermPick.pick(cands, attrNmKr) : null;
 
                 if (termByEng == null) {
                     // 영문명 기준 용어 미존재 → 진단 종료
@@ -169,8 +180,14 @@ public class DiagService implements Runnable {
                     if (stdTermsNm != null && !stdTermsNm.trim().isEmpty()) {
                         String actualKr = (attrNmKr != null) ? attrNmKr.trim() : "";
                         if (!stdTermsNm.trim().equals(actualKr)) {
+                            // 108 §4.31 — 후보가 여럿이면 표준값에 후보 용어명 모두 (STD_VALUE 500자)
+                            String stdValue = stdTermsNm;
+                            if (cands.size() > 1) {
+                                stdValue = TermPick.names(cands);
+                                if (stdValue.length() > 500) stdValue = stdValue.substring(0, 500);
+                            }
                             batch.add(buildResult(attr, TERM_KR_NM_MISMATCH, "한글명 불일치",
-                                    stdTermsNm, attrNmKr));
+                                    stdValue, attrNmKr));
                             resultCnt++;
                         }
                     }

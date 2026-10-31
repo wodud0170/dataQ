@@ -93,6 +93,8 @@ public class StdDictController {
 				if (id != null && up.contains(id.trim())) throw new IllegalArgumentException("자기 자신이나 하위 사전을 상위 사전으로 둘 수 없습니다.");
 				if (up.size() >= 5) throw new IllegalArgumentException("상위 사전은 5단계까지입니다.");
 			}
+			// 108 §4.31 (104번 WP6-13) — 동음이의어 허용(homonymYn)·용어 영문약어명 중복 허용(termEngAbrvDupYn)은 그대로 넘긴다.
+			// 행 표시 칸 맞추기·끌 때 중복 거부는 StdDictService.update
 			if (id == null || id.trim().isEmpty()) {
 				p.put("dictId", UUID.randomUUID().toString().replace("-", "").substring(0, 22));
 				dictService.create(p);

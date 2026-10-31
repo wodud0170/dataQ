@@ -16,6 +16,8 @@
 		       word_eng_nm_dup_yn     as "wordEngNmDupYn",
 		       term_eng_max_len       as "termEngMaxLen",
 		       old_std_yn             as "oldStdYn",
+		       homonym_yn             as "homonymYn",
+		       term_eng_abrv_dup_yn   as "termEngAbrvDupYn",
 		       COALESCE(dict_tp, 'ORG') as "dictTp",
 		       parent_dict_id         as "parentDictId",
 		       cret_dt                as "cretDt",
@@ -69,7 +71,8 @@
 	<insert id="insertDict" parameterType="java.util.Map">
 		INSERT INTO tb_std_dict
 		  (dict_id, dict_nm, dict_desc, default_yn, use_yn,
-		   term_last_word_clsf_yn, upper_yn, word_eng_nm_dup_yn, term_eng_max_len, old_std_yn, dict_tp, parent_dict_id,
+		   term_last_word_clsf_yn, upper_yn, word_eng_nm_dup_yn, term_eng_max_len, old_std_yn,
+		   homonym_yn, term_eng_abrv_dup_yn, dict_tp, parent_dict_id,
 		   cret_dt, cret_user_id, updt_dt, updt_user_id)
 		VALUES
 		  (#{dictId}, #{dictNm}, #{dictDesc, jdbcType=VARCHAR},
@@ -77,6 +80,7 @@
 		   COALESCE(#{termLastWordClsfYn, jdbcType=VARCHAR}, 'N'),
 		   COALESCE(#{upperYn, jdbcType=VARCHAR}, 'Y'), COALESCE(#{wordEngNmDupYn, jdbcType=VARCHAR}, 'Y'),
 		   #{termEngMaxLen, jdbcType=INTEGER}, COALESCE(#{oldStdYn, jdbcType=VARCHAR}, 'N'),
+		   COALESCE(#{homonymYn, jdbcType=VARCHAR}, 'N'), COALESCE(#{termEngAbrvDupYn, jdbcType=VARCHAR}, 'N'),
 		   COALESCE(#{dictTp, jdbcType=VARCHAR}, 'ORG'), NULLIF(#{parentDictId, jdbcType=VARCHAR}, ''),
 		   to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR},
 		   to_char(now(), 'YYYYMMDDHH24MISS'), #{userId, jdbcType=VARCHAR})
@@ -92,6 +96,9 @@
 		       <!-- 104번 WP6-13 — 최대 길이는 비우면 제한 없음(NULL) 이라 보낸 값 그대로 -->
 		       term_eng_max_len       = #{termEngMaxLen, jdbcType=INTEGER},
 		       old_std_yn             = COALESCE(#{oldStdYn, jdbcType=VARCHAR}, old_std_yn),
+		       <!-- 108 §4.31 (104번 WP6-13) — 동음이의어 허용·용어 영문약어명 중복 허용. 행 표시 칸은 StdDictService.update 가 같은 트랜잭션에서 맞춘다 -->
+		       homonym_yn             = COALESCE(#{homonymYn, jdbcType=VARCHAR}, homonym_yn),
+		       term_eng_abrv_dup_yn   = COALESCE(#{termEngAbrvDupYn, jdbcType=VARCHAR}, term_eng_abrv_dup_yn),
 		       <!-- 104번 WP5-14·11 — 참조 사전 여부, 상위 사전(비우면 없음) -->
 		       dict_tp                = COALESCE(#{dictTp, jdbcType=VARCHAR}, dict_tp),
 		       parent_dict_id         = NULLIF(#{parentDictId, jdbcType=VARCHAR}, ''),
@@ -99,6 +106,39 @@
 		       updt_user_id           = #{userId, jdbcType=VARCHAR}
 		 WHERE dict_id = #{dictId}
 	</update>
+
+	<!-- 108 §4.31 (104번 WP6-13) — 사전 옵션을 따르는 행 표시 칸. 유니크 인덱스 tb_word_ux_3·tb_terms_ux_2 가 표시 'Y' 인 행만 본다.
+	     동음이의어(용어 영문약어명 중복)를 켜면 'N', 끄면 'Y'. 사전 옵션 저장과 같은 트랜잭션에서 부른다 -->
+	<update id="syncWordNmUniq" parameterType="java.util.Map">
+		UPDATE tb_word SET word_nm_uniq_yn = #{uniqYn}
+		 WHERE dict_id = #{dictId} AND word_nm_uniq_yn <![CDATA[<>]]> #{uniqYn}
+	</update>
+
+	<update id="syncTermEngAbrvUniq" parameterType="java.util.Map">
+		UPDATE tb_terms SET terms_eng_abrv_uniq_yn = #{uniqYn}
+		 WHERE dict_id = #{dictId} AND terms_eng_abrv_uniq_yn <![CDATA[<>]]> #{uniqYn}
+	</update>
+
+	<!-- 옵션을 끄기 전 검사 — 같은 이름 단어(같은 영문약어명 용어)가 있으면 끌 수 없다. 이름순 5건 + 전체 묶음 수(total) -->
+	<select id="selectDupWordNms" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT word_nm AS "nm", COUNT(*) AS "cnt", COUNT(*) OVER () AS "total"
+		  FROM tb_word
+		 WHERE dict_id = #{dictId}
+		 GROUP BY word_nm
+		HAVING COUNT(*) > 1
+		 ORDER BY word_nm
+		 LIMIT 5
+	</select>
+
+	<select id="selectDupTermEngAbrvs" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT terms_eng_abrv_nm AS "nm", COUNT(*) AS "cnt", COUNT(*) OVER () AS "total"
+		  FROM tb_terms
+		 WHERE dict_id = #{dictId}
+		 GROUP BY terms_eng_abrv_nm
+		HAVING COUNT(*) > 1
+		 ORDER BY terms_eng_abrv_nm
+		 LIMIT 5
+	</select>
 
 	<!-- 기본 사전은 하나만. 새로 지정하기 전에 전부 내린다. -->
 	<update id="clearDefaultDict">

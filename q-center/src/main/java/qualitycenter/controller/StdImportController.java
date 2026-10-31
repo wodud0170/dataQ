@@ -27,7 +27,8 @@ import qualitycenter.service.auth.SessionService;
  *
  * <p>원본 사전(참조 사전 — 보통 행안부 공통표준)의 단어·용어·도메인을 골라 기관 사전으로 복사한다.
  * 사전 간 이름 참조 FK(98번) 때문에 용어는 구성 단어·도메인(그룹·분류)을, 도메인은 그룹·분류를 대상 사전에 먼저 만든다.
- * 가져온 항목은 승인(Y)·공통표준여부 Y. 대상 사전에 같은 이름(용어·단어는 같은 영문약어도)이 있으면 건너뛴다.
+ * 가져온 항목은 승인(Y)·공통표준여부 Y. 대상 사전에 같은 이름(용어·단어는 같은 영문약어도)이 있으면 건너뛴다
+ * (108 §4.31 — 대상 사전이 동음이의어를 허용하면 단어는 같은 영문약어만, 용어 영문약어명 중복을 허용하면 용어는 같은 이름만 본다).
  * 항목마다 따로 커밋해 한 건이 실패해도 나머지는 들어간다. 목록은 누구나, 가져오기는 표준 직접 관리 권한(STD_MANAGE).</p>
  */
 @Slf4j
@@ -155,7 +156,8 @@ public class StdImportController {
 		d.put("nm", w.get("nm"));
 		Map<String, Object> p = c.p();
 		p.put("nm", w.get("nm"));
-		if (c.ss.selectOne("stdImport.selectTargetWordByNm", p) != null) return "이미 있는 단어";
+		// 108 §4.31 — 동음이의어 허용 사전은 같은 이름·같은 영문약어만 이미 있는 단어 (같은 이름·다른 영문약어는 동음이의어로 복사)
+		if (targetWordByNm(c, p, w) != null) return "이미 있는 단어";
 		p.put("engAbrvNm", w.get("engAbrvNm"));
 		if ((Integer) c.ss.selectOne("stdImport.countTargetWordByEng", p) > 0) return "같은 영문약어(" + w.get("engAbrvNm") + ")의 단어가 있음";
 		copyWord(c, w);
@@ -178,13 +180,23 @@ public class StdImportController {
 		return newId;
 	}
 
-	/** 용어의 구성 단어 — 대상에 같은 이름이 있으면 그 단어, 없으면 복사 */
+	/**
+	 * 108 §4.31 — 대상 사전에서 이 원본 단어에 해당하는 단어. 동음이의어 허용 사전은 같은 이름·같은 영문약어 단어,
+	 * 아니면 같은 이름 단어(하나뿐). 없으면 null
+	 */
+	private Map<String, Object> targetWordByNm(Ctx c, Map<String, Object> p, Map<String, Object> w) {
+		List<Map<String, Object>> same = c.ss.selectList("stdImport.selectTargetWordByNm", p);
+		if (!dictService.isHomonymAllowed(c.tgt)) return same.isEmpty() ? null : same.get(0);
+		return same.stream().filter(x -> java.util.Objects.equals(w.get("engAbrvNm"), x.get("engAbrvNm"))).findFirst().orElse(null);
+	}
+
+	/** 용어의 구성 단어 — 대상에 같은 이름(동음이의어 허용 사전은 같은 이름·같은 영문약어)이 있으면 그 단어, 없으면 복사 */
 	private String ensureWord(Ctx c, String srcWordId) {
 		Map<String, Object> w = c.ss.selectOne("stdImport.selectWord", srcWordId);
 		if (w == null) throw new IllegalArgumentException("구성 단어가 원본 사전에 없습니다: " + srcWordId);
 		Map<String, Object> p = c.p();
 		p.put("nm", w.get("nm"));
-		Map<String, Object> hit = c.ss.selectOne("stdImport.selectTargetWordByNm", p);
+		Map<String, Object> hit = targetWordByNm(c, p, w);
 		if (hit != null) return (String) hit.get("id");
 		p.put("engAbrvNm", w.get("engAbrvNm"));
 		if ((Integer) c.ss.selectOne("stdImport.countTargetWordByEng", p) > 0) {

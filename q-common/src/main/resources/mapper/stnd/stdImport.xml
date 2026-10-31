@@ -9,7 +9,10 @@
 	<select id="selectSourceWords" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
 		SELECT S.WORD_ID AS "id", S.WORD_NM AS "nm", S.WORD_ENG_ABRV_NM AS "engAbrvNm",
 		       S.WORD_ENG_NM AS "extra", COALESCE(S.COMM_STND_YN, 'N') AS "commStndYn",
-		       CASE WHEN EXISTS (SELECT 1 FROM TB_WORD T WHERE T.DICT_ID = #{targetDictId} AND (T.WORD_NM = S.WORD_NM OR T.WORD_ENG_ABRV_NM = S.WORD_ENG_ABRV_NM)) THEN 'Y' ELSE 'N' END AS "existYn"
+		       <!-- 108 §4.31 — 대상 사전이 동음이의어를 허용하면 같은 이름이라도 영문약어가 다르면 가져올 수 있다 (가져오기 importWord 와 같은 기준) -->
+		       CASE WHEN EXISTS (SELECT 1 FROM TB_WORD T WHERE T.DICT_ID = #{targetDictId}
+		                            AND (T.WORD_ENG_ABRV_NM = S.WORD_ENG_ABRV_NM
+		                                 OR (T.WORD_NM = S.WORD_NM AND COALESCE((SELECT D.HOMONYM_YN FROM TB_STD_DICT D WHERE D.DICT_ID = #{targetDictId}), 'N') <![CDATA[<>]]> 'Y'))) THEN 'Y' ELSE 'N' END AS "existYn"
 		  FROM TB_WORD S
 		 WHERE S.DICT_ID = #{sourceDictId} AND S.APRV_YN = 'Y'
 		<if test='commOnly == "Y"'> AND S.COMM_STND_YN = 'Y' </if>
@@ -22,7 +25,10 @@
 		SELECT S.TERMS_ID AS "id", S.TERMS_NM AS "nm", S.TERMS_ENG_ABRV_NM AS "engAbrvNm",
 		       COALESCE(S.DOMAIN_NM, '') || CASE WHEN S.CODE_GRP IS NOT NULL THEN ' (코드 ' || S.CODE_GRP || ')' ELSE '' END AS "extra",
 		       COALESCE(S.COMM_STND_YN, 'N') AS "commStndYn",
-		       CASE WHEN EXISTS (SELECT 1 FROM TB_TERMS T WHERE T.DICT_ID = #{targetDictId} AND (T.TERMS_NM = S.TERMS_NM OR T.TERMS_ENG_ABRV_NM = S.TERMS_ENG_ABRV_NM)) THEN 'Y' ELSE 'N' END AS "existYn"
+		       <!-- 108 §4.31 — 대상 사전이 용어 영문약어명 중복을 허용하면 이름만 본다 (가져오기 countTargetTerm 과 같은 기준) -->
+		       CASE WHEN EXISTS (SELECT 1 FROM TB_TERMS T WHERE T.DICT_ID = #{targetDictId}
+		                            AND (T.TERMS_NM = S.TERMS_NM
+		                                 OR (T.TERMS_ENG_ABRV_NM = S.TERMS_ENG_ABRV_NM AND COALESCE((SELECT D.TERM_ENG_ABRV_DUP_YN FROM TB_STD_DICT D WHERE D.DICT_ID = #{targetDictId}), 'N') <![CDATA[<>]]> 'Y'))) THEN 'Y' ELSE 'N' END AS "existYn"
 		  FROM TB_TERMS S
 		 WHERE S.DICT_ID = #{sourceDictId} AND S.APRV_YN = 'Y'
 		<if test='commOnly == "Y"'> AND S.COMM_STND_YN = 'Y' </if>
@@ -67,14 +73,20 @@
 	</select>
 
 	<!-- ===== 대상 사전에 이미 있는지 ===== -->
+	<!-- 108 §4.31 — 동음이의어 허용 사전은 같은 이름 단어가 여럿 (목록) -->
 	<select id="selectTargetWordByNm" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
 		SELECT WORD_ID AS "id", WORD_NM AS "nm", WORD_ENG_ABRV_NM AS "engAbrvNm" FROM TB_WORD WHERE DICT_ID = #{dictId} AND WORD_NM = #{nm}
+		 ORDER BY WORD_ENG_ABRV_NM
 	</select>
 	<select id="countTargetWordByEng" parameterType="java.util.Map" resultType="int">
 		SELECT COUNT(*) FROM TB_WORD WHERE DICT_ID = #{dictId} AND WORD_ENG_ABRV_NM = #{engAbrvNm}
 	</select>
+	<!-- 108 §4.31 — 대상 사전이 용어 영문약어명 중복을 허용하면 같은 이름만, 아니면 같은 이름 또는 같은 영문약어 -->
 	<select id="countTargetTerm" parameterType="java.util.Map" resultType="int">
-		SELECT COUNT(*) FROM TB_TERMS WHERE DICT_ID = #{dictId} AND (TERMS_NM = #{nm} OR TERMS_ENG_ABRV_NM = #{engAbrvNm})
+		SELECT COUNT(*) FROM TB_TERMS
+		 WHERE DICT_ID = #{dictId}
+		   AND (TERMS_NM = #{nm}
+		        OR (TERMS_ENG_ABRV_NM = #{engAbrvNm} AND COALESCE((SELECT D.TERM_ENG_ABRV_DUP_YN FROM TB_STD_DICT D WHERE D.DICT_ID = #{dictId}), 'N') <![CDATA[<>]]> 'Y'))
 	</select>
 	<select id="countTargetGrp" parameterType="java.util.Map" resultType="int">
 		SELECT COUNT(*) FROM TB_DOMAIN_GRP WHERE DICT_ID = #{dictId} AND DOMAIN_GRP_NM = #{nm}
@@ -90,10 +102,12 @@
 	<insert id="copyWord" parameterType="java.util.Map">
 		INSERT INTO TB_WORD (WORD_ID, WORD_NM, WORD_ENG_ABRV_NM, WORD_ENG_NM, WORD_DESC, WORD_CLSF_YN, DOMAIN_CLSF_NM,
 		       ALLOPH_SYNM_LST, FORBDN_WORD_LST, COMM_STND_YN, MAGNTD_ORD, APRV_YN, APRV_USER_ID,
-		       CRET_DT, CRET_USER_ID, APRV_STAT_UPDT_DT, USE_YN, DICT_ID)
+		       CRET_DT, CRET_USER_ID, APRV_STAT_UPDT_DT, USE_YN, DICT_ID, WORD_NM_UNIQ_YN)
 		SELECT #{newId}, WORD_NM, WORD_ENG_ABRV_NM, WORD_ENG_NM, WORD_DESC, WORD_CLSF_YN, DOMAIN_CLSF_NM,
 		       ALLOPH_SYNM_LST, FORBDN_WORD_LST, 'Y', MAGNTD_ORD, 'Y', #{userId},
-		       to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), USE_YN, #{targetDictId}
+		       to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), USE_YN, #{targetDictId},
+		       <!-- 108 §4.31 — 대상 사전이 동음이의어를 허용하면 'N' (tb_word_ux_3 부분 인덱스에서 빠짐) -->
+		       COALESCE((SELECT CASE WHEN D.HOMONYM_YN = 'Y' THEN 'N' END FROM TB_STD_DICT D WHERE D.DICT_ID = #{targetDictId}), 'Y')
 		  FROM TB_WORD WHERE WORD_ID = #{srcId}
 	</insert>
 
@@ -131,10 +145,12 @@
 	<insert id="copyTerm" parameterType="java.util.Map">
 		INSERT INTO TB_TERMS (TERMS_ID, TERMS_NM, TERMS_ENG_ABRV_NM, TERMS_DESC, DOMAIN_NM, CODE_GRP, CHRG_ORG, ALLOPH_SYNM_LST,
 		       COMM_STND_YN, MAGNTD_ORD, APRV_YN, APRV_USER_ID, CRET_DT, CRET_USER_ID, APRV_STAT_UPDT_DT, USE_YN, DICT_ID,
-		       PRIV_YN, ENCR_YN, CODE_TP, PARENT_CODE_GRP)
+		       PRIV_YN, ENCR_YN, CODE_TP, PARENT_CODE_GRP, TERMS_ENG_ABRV_UNIQ_YN)
 		SELECT #{newId}, TERMS_NM, #{engAbrvNm}, TERMS_DESC, DOMAIN_NM, CODE_GRP, CHRG_ORG, ALLOPH_SYNM_LST,
 		       'Y', MAGNTD_ORD, 'Y', #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), #{userId}, to_char(now(), 'YYYYMMDDHH24MISS'), USE_YN, #{targetDictId},
-		       PRIV_YN, ENCR_YN, #{codeTp, jdbcType=VARCHAR}, #{parentCodeGrp, jdbcType=VARCHAR}
+		       PRIV_YN, ENCR_YN, #{codeTp, jdbcType=VARCHAR}, #{parentCodeGrp, jdbcType=VARCHAR},
+		       <!-- 108 §4.31 — 대상 사전이 용어 영문약어명 중복을 허용하면 'N' (tb_terms_ux_2 부분 인덱스에서 빠짐) -->
+		       COALESCE((SELECT CASE WHEN D.TERM_ENG_ABRV_DUP_YN = 'Y' THEN 'N' END FROM TB_STD_DICT D WHERE D.DICT_ID = #{targetDictId}), 'Y')
 		  FROM TB_TERMS WHERE TERMS_ID = #{srcId}
 	</insert>
 

@@ -203,7 +203,7 @@
                     :rules="[() => !!addWord_wordNm || '단어명은 필수 입력값입니다.']" clearable required dense placeholder="가능"
                     color="ndColor" @blur="checkWordNm"></v-text-field>
                   <!-- 104번 WP7-8 — 유사어·금칙어면 권장(표준) 단어 안내 -->
-                  <div v-if="addWord_nmCheck" id="addWordNmCheck" :style="{ color: '#d32f2f', fontSize: '0.75rem', marginTop: '-8px' }">
+                  <div v-if="addWord_nmCheck" id="addWordNmCheck" :style="{ color: addWord_nmCheck.level === 'info' ? '#757575' : '#d32f2f', fontSize: '0.75rem', marginTop: '-8px' }">
                     {{ addWord_nmCheck.msg }}
                     <a v-if="addWord_nmCheck.stdNm" href="javascript:void(0)" class="ml-1" @click="showStdWord(addWord_nmCheck.stdNm)">권장 단어 보기</a>
                   </div>
@@ -809,6 +809,10 @@ export default {
           this.addWord_nmCheck = { msg: `'${nm}' 은(는) 표준 단어 ${std} 의 유사어입니다. '${r.wordNm}' 를 쓰세요.`, stdNm: r.wordNm };
         } else if (r.status === 'FORBIDDEN') {
           this.addWord_nmCheck = { msg: `'${nm}' 은(는) 표준 단어 ${std} 의 금칙어입니다. '${r.wordNm}' 를 쓰세요.`, stdNm: r.wordNm };
+        } else if (r.status === 'EXACT' && r.homonymYn === 'Y') {
+          // 108 §4.31 — 동음이의어 허용 사전: 같은 이름 단어가 있어도 영문약어가 다르면 등록할 수 있어 회색 안내만
+          const same = (r.sameNmWords || []).map(w => w.wordNm + (w.wordEngAbrvNm ? '(' + w.wordEngAbrvNm + ')' : '')).join(', ');
+          this.addWord_nmCheck = { msg: `같은 이름의 단어가 있습니다: ${same} — 동음이의어 허용 사전이라 영문약어가 다르면 등록할 수 있습니다.`, stdNm: r.wordNm, level: 'info' };
         } else if (r.status === 'EXACT') {
           this.addWord_nmCheck = { msg: `이미 ${r.aprvYn === 'Y' ? '승인된' : '승인 대기 중인'} 단어입니다.`, stdNm: r.wordNm };
         } else {

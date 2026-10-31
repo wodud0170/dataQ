@@ -85,7 +85,15 @@
 		      ,<include refid="colCols"/>
 		  FROM TB_TERMS T
 		<include refid="colJoin"/>
-		   AND (TRIM(A.ATTR_NM) = T.TERMS_ENG_ABRV_NM OR TRIM(A.ATTR_NM_KR) = T.TERMS_NM)
+		   <!-- 108 §4.31 — 영문약어가 같아도 같은 사전의 다른 같은-영문약어 용어 이름이 컬럼 한글명과 같으면 그 용어에만 붙인다
+		        (용어 영문약어명 중복 허용 사전. 끈 사전은 같은 영문약어 용어가 하나라 지금과 같다) -->
+		   AND ((TRIM(A.ATTR_NM) = T.TERMS_ENG_ABRV_NM
+		         AND NOT EXISTS (SELECT 1 FROM TB_TERMS T2
+		                          WHERE T2.DICT_ID = T.DICT_ID
+		                            AND T2.TERMS_ENG_ABRV_NM = T.TERMS_ENG_ABRV_NM
+		                            AND T2.TERMS_ID &lt;&gt; T.TERMS_ID
+		                            AND T2.TERMS_NM = TRIM(A.ATTR_NM_KR)))
+		        OR TRIM(A.ATTR_NM_KR) = T.TERMS_NM)
 		 WHERE T.TERMS_ID IN <foreach collection="termsIds" item="id" open="(" separator="," close=")">#{id}</foreach>
 		   AND (T.DICT_ID, <include refid="modelDict"/>) IN (SELECT S.ROOT_ID, S.DICT_ID FROM SUBD S)
 		 ORDER BY 3, M.DM_NM, A.OBJ_OWNER, A.OBJ_NM, A.ATTR_ORD

@@ -2448,7 +2448,9 @@ CREATE TABLE quality.tb_std_dict (
     term_eng_max_len integer,
     old_std_yn character(1) DEFAULT 'N'::bpchar,
     dict_tp character varying(10) DEFAULT 'ORG'::character varying,
-    parent_dict_id character varying(22)
+    parent_dict_id character varying(22),
+    homonym_yn character(1) DEFAULT 'N'::bpchar,
+    term_eng_abrv_dup_yn character(1) DEFAULT 'N'::bpchar
 );
 
 
@@ -2513,6 +2515,20 @@ COMMENT ON COLUMN quality.tb_std_dict.dict_tp IS 'ORG(기관 사전) / REF(참�
 --
 
 COMMENT ON COLUMN quality.tb_std_dict.parent_dict_id IS '상위 사전 — 진단·컬럼 표준 검사·목록이 상위 사전 항목도 본다 (가까운 사전 우선, 104번 WP5-11)';
+
+
+--
+-- Name: COLUMN tb_std_dict.homonym_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.homonym_yn IS '동음이의어 허용 — 같은 사전에 같은 단어명 단어 여러 개 (영문약어는 달라야 함, 104번 WP6-13)';
+
+
+--
+-- Name: COLUMN tb_std_dict.term_eng_abrv_dup_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_std_dict.term_eng_abrv_dup_yn IS '용어 영문약어명 중복 허용 — 같은 사전에 같은 영문약어명 용어 여러 개 (104번 WP6-13)';
 
 
 --
@@ -3010,7 +3026,8 @@ CREATE TABLE quality.tb_terms (
     priv_yn character(1),
     encr_yn character(1),
     code_tp character varying(10),
-    parent_code_grp character varying(50)
+    parent_code_grp character varying(50),
+    terms_eng_abrv_uniq_yn character(1) DEFAULT 'Y'::bpchar NOT NULL
 );
 
 
@@ -3040,6 +3057,13 @@ COMMENT ON COLUMN quality.tb_terms.code_tp IS '코드 유형 — SINGLE 단일·
 --
 
 COMMENT ON COLUMN quality.tb_terms.parent_code_grp IS '상위 코드 그룹 — 계층·파생 코드 (104번 WP6-3)';
+
+
+--
+-- Name: COLUMN tb_terms.terms_eng_abrv_uniq_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_terms.terms_eng_abrv_uniq_yn IS '용어 영문약어명 유일 검사 대상 — 사전이 용어 영문약어명 중복을 허용하면 N (tb_terms_ux_2 부분 인덱스 조건, 사전 옵션을 따르는 내부 칸, 104번 WP6-13)';
 
 
 --
@@ -3229,8 +3253,16 @@ CREATE TABLE quality.tb_word (
     aprv_stat_updt_dt character varying(14),
     req_sys_cd character varying(50),
     use_yn character(1) DEFAULT 'Y'::bpchar,
-    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL
+    dict_id character varying(22) DEFAULT 'DEFAULT'::character varying NOT NULL,
+    word_nm_uniq_yn character(1) DEFAULT 'Y'::bpchar NOT NULL
 );
+
+
+--
+-- Name: COLUMN tb_word.word_nm_uniq_yn; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_word.word_nm_uniq_yn IS '단어명 유일 검사 대상 — 사전이 동음이의어를 허용하면 N (tb_word_ux_3 부분 인덱스 조건, 사전 옵션을 따르는 내부 칸, 104번 WP6-13)';
 
 
 --
@@ -4263,6 +4295,13 @@ CREATE INDEX tb_terms_ix_dict ON quality.tb_terms USING btree (dict_id);
 
 
 --
+-- Name: tb_terms_ix_eng; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX tb_terms_ix_eng ON quality.tb_terms USING btree (dict_id, terms_eng_abrv_nm);
+
+
+--
 -- Name: tb_terms_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
@@ -4273,7 +4312,7 @@ CREATE UNIQUE INDEX tb_terms_ux_1 ON quality.tb_terms USING btree (dict_id, term
 -- Name: tb_terms_ux_2; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (dict_id, terms_eng_abrv_nm);
+CREATE UNIQUE INDEX tb_terms_ux_2 ON quality.tb_terms USING btree (dict_id, terms_eng_abrv_nm) WHERE (terms_eng_abrv_uniq_yn = 'Y'::bpchar);
 
 
 --
@@ -4298,6 +4337,13 @@ CREATE INDEX tb_word_ix_dict ON quality.tb_word USING btree (dict_id);
 
 
 --
+-- Name: tb_word_ix_nm; Type: INDEX; Schema: quality; Owner: -
+--
+
+CREATE INDEX tb_word_ix_nm ON quality.tb_word USING btree (dict_id, word_nm);
+
+
+--
 -- Name: tb_word_ux_1; Type: INDEX; Schema: quality; Owner: -
 --
 
@@ -4315,7 +4361,7 @@ CREATE UNIQUE INDEX tb_word_ux_2 ON quality.tb_word USING btree (dict_id, word_e
 -- Name: tb_word_ux_3; Type: INDEX; Schema: quality; Owner: -
 --
 
-CREATE UNIQUE INDEX tb_word_ux_3 ON quality.tb_word USING btree (dict_id, word_nm);
+CREATE UNIQUE INDEX tb_word_ux_3 ON quality.tb_word USING btree (dict_id, word_nm) WHERE (word_nm_uniq_yn = 'Y'::bpchar);
 
 
 --

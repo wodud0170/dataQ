@@ -5,7 +5,7 @@
 	<!-- 104번 WP5-16 — 컬럼의 개인정보여부·암호화여부.
 	     실제 값 = 컬럼 값(TB_DATA_MODEL_ATTR) → 컬럼에 맞는 승인 용어 값 → 그 용어 도메인 값 → 'N'.
 	     컬럼에 맞는 용어 = 모델 표준사전에서 영문약어명이 컬럼 영문명과 같은 승인 용어 (표준화 진단과 같은 기준).
-	     같은 영문약어명의 승인 용어가 여럿이면 용어명 순 첫 번째. -->
+	     같은 영문약어명의 승인 용어가 여럿이면 한글명이 같은 용어, 없으면 용어명 순 첫 번째 (108 §4.31). -->
 	<sql id="privColBody">
 		SELECT M.DM_SYS_CD           as "sysCd"
 		      ,S.SYS_NM              as "sysNm"
@@ -47,12 +47,16 @@
 		    ON O.DM_ID = A.DM_ID AND O.OBJ_OWNER = A.OBJ_OWNER AND O.OBJ_NM = A.OBJ_NM
 		  LEFT JOIN TB_SYS_INFO S
 		    ON S.SYS_CD = M.DM_SYS_CD
-		  LEFT JOIN (SELECT DISTINCT ON (DICT_ID, TERMS_ENG_ABRV_NM)
-		                    DICT_ID, TERMS_ENG_ABRV_NM, TERMS_NM, DOMAIN_NM, PRIV_YN, ENCR_YN
-		               FROM TB_TERMS
-		              WHERE APRV_YN = 'Y'
-		              ORDER BY DICT_ID, TERMS_ENG_ABRV_NM, TERMS_NM) T
-		    ON T.DICT_ID = M.DICT_ID AND T.TERMS_ENG_ABRV_NM = TRIM(A.ATTR_NM)
+		  <!-- 108 §4.31 — 같은 영문약어명 승인 용어가 여럿이면(용어 영문약어명 중복 허용) 한글명이 같은 용어, 없으면 용어명 순 첫 용어
+		       (표준 진단의 TermPick 과 같은 기준) -->
+		  LEFT JOIN LATERAL (
+		        SELECT TT.DICT_ID, TT.TERMS_ENG_ABRV_NM, TT.TERMS_NM, TT.DOMAIN_NM, TT.PRIV_YN, TT.ENCR_YN
+		          FROM TB_TERMS TT
+		         WHERE TT.DICT_ID = M.DICT_ID
+		           AND TT.TERMS_ENG_ABRV_NM = TRIM(A.ATTR_NM)
+		           AND TT.APRV_YN = 'Y'
+		         ORDER BY CASE WHEN TT.TERMS_NM = TRIM(A.ATTR_NM_KR) THEN 0 ELSE 1 END, TT.TERMS_NM
+		         LIMIT 1) T ON TRUE
 		  LEFT JOIN TB_DOMAIN D
 		    ON D.DICT_ID = T.DICT_ID AND D.DOMAIN_NM = T.DOMAIN_NM
 		 WHERE A.USE_YN = 'Y'

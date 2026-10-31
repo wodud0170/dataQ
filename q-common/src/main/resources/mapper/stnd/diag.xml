@@ -264,7 +264,11 @@
             WHERE TT.TERMS_ENG_ABRV_NM = A.ATTR_NM
               AND TT.APRV_YN = 'Y'
               AND TT.DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach>
-            ORDER BY array_position(ARRAY[<foreach collection="dictIds" item="d" separator=",">#{d}</foreach>]::varchar[], TT.DICT_ID)
+            <!-- 가까운 사전 먼저. 108 §4.31 — 같은 사전에 같은 영문약어 용어가 여럿이면(용어 영문약어명 중복 허용)
+                 한글명이 같은 용어, 없으면 용어명 순 첫 용어 (진단 executor 의 TermPick 과 같은 기준) -->
+            ORDER BY array_position(ARRAY[<foreach collection="dictIds" item="d" separator=",">#{d}</foreach>]::varchar[], TT.DICT_ID),
+                     CASE WHEN TT.TERMS_NM = TRIM(A.ATTR_NM_KR) THEN 0 ELSE 1 END,
+                     TT.TERMS_NM
             LIMIT 1
         ) T ON TRUE
         LEFT JOIN TB_DOMAIN D

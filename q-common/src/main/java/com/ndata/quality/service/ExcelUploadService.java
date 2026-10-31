@@ -241,7 +241,11 @@ public class ExcelUploadService {
 					// 104번 WP6-13 — 사전 운영 옵션: 표준 대문자, 용어 영문약어명 최대 길이 (어긋나면 그 행 실패)
 					String termsEngAbrv = dictService.checkTermEngAbrv(dictId, dataRow.get(4));
 					// 용어가 이미 존재하는 경우에는 Skip 한다.
-					if (session.selectOne("terms.selectTermsByEngNm", byName(dictId, "termsEngAbrvNm", termsEngAbrv)) != null) {
+					// 108 §4.31 — 용어 영문약어명 중복 허용 사전은 같은 이름·같은 영문약어 용어가 있을 때만 (같은 영문약어·다른 이름은 등록)
+					List<StdTermsVo> sameEng = session.selectList("terms.selectTermsByEngNm", byName(dictId, "termsEngAbrvNm", termsEngAbrv));
+					if (dictService.isTermEngAbrvDupAllowed(dictId)
+							? sameEng.stream().anyMatch(t -> t.getTermsNm().equals(dataRow.get(2)))
+							: !sameEng.isEmpty()) {
 						result.addSkip();
 						continue;
 					}

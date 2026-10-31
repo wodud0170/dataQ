@@ -46,11 +46,11 @@
 		<if test='noLimit != "Y"'> LIMIT 5000 </if>
 	</select>
 
-	<!-- 용어(코드 포함) — 어떤 컬럼에도 쓰이지 않는 용어 (컬럼명 = 용어 영문약어명인 컬럼이 없음) -->
+	<!-- 용어(코드 포함) — 어떤 컬럼에도 쓰이지 않는 용어 (컬럼명 = 용어 영문약어명인 컬럼이 없음 — 108 §4.31: 같은 영문약어 용어가 여럿이면 한글명이 다른 용어와 같은 컬럼은 빼고) -->
 	<select id="selectUnusedTerms" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
 		WITH RECURSIVE <include refid="subDicts"/>,
 		USED AS MATERIALIZED (
-		SELECT DISTINCT TRIM(A.ATTR_NM) AS NM
+		SELECT DISTINCT TRIM(A.ATTR_NM) AS NM, TRIM(A.ATTR_NM_KR) AS KR
 		<include refid="colJoin"/>
 		   AND <include refid="modelDict"/> IN (SELECT S.DICT_ID FROM SUBD S)
 		)
@@ -62,7 +62,19 @@
 		 WHERE T.DICT_ID = #{dictId}
 		<if test='aprvOnly == "Y"'> AND T.APRV_YN = 'Y' </if>
 		<if test="keyword != null and keyword != ''"> AND (T.TERMS_NM ILIKE '%' || #{keyword} || '%' OR T.TERMS_ENG_ABRV_NM ILIKE '%' || #{keyword} || '%') </if>
-		   AND (T.TERMS_ENG_ABRV_NM IS NULL OR T.TERMS_ENG_ABRV_NM NOT IN (SELECT U.NM FROM USED U))
+		   <!-- 108 §4.31 — 영문약어가 같아도 같은 사전의 다른 같은-영문약어 용어 이름이 컬럼 한글명과 같으면 그 컬럼은 그 용어 것
+		        (용어 영문약어명 중복 허용 사전. 끈 사전은 같은 영문약어 용어가 하나라 지금과 같다).
+		        영문약어가 없는 용어는 U.NM = NULL 이 참이 되지 않아 그대로 남는다. "영문약어 IS NULL OR" 로 감싸면 반 조인으로 풀리지 않아
+		        용어마다 USED 를 훑는다(기본 사전 1.5만 건에 2초 → 0.1초) -->
+		   AND NOT EXISTS (
+		        SELECT 1 FROM USED U
+		         WHERE U.NM = T.TERMS_ENG_ABRV_NM
+		           AND (U.KR = T.TERMS_NM
+		                OR NOT EXISTS (SELECT 1 FROM TB_TERMS T2
+		                                WHERE T2.DICT_ID = T.DICT_ID
+		                                  AND T2.TERMS_ENG_ABRV_NM = T.TERMS_ENG_ABRV_NM
+		                                  AND T2.TERMS_ID &lt;&gt; T.TERMS_ID
+		                                  AND T2.TERMS_NM = U.KR)))
 		 ORDER BY T.TERMS_NM
 		<if test='noLimit != "Y"'> LIMIT 5000 </if>
 	</select>

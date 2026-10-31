@@ -326,6 +326,18 @@
                     :messages="(!w._abrvDupMsg && w._dictHint) ? w._dictHint : ''"
                     @input="w.newWord.wordEngAbrvNm = (w.newWord.wordEngAbrvNm || '').toUpperCase()"
                     style="max-width:120px"></v-text-field>
+                  <!-- 108 §4.31 — 동음이의어 허용 사전: 같은 이름 단어가 여럿이면 영문약어로 고른다 -->
+                  <v-select v-else-if="w.status === 'MATCHED' && w.candidates && w.candidates.length > 1"
+                    :value="w.selected" :items="w.candidates" item-value="wordId" :item-text="homonymText"
+                    return-object dense hide-details class="homonym-select" style="max-width:160px"
+                    :menu-props="{ maxWidth: 360 }" @change="onHomonymChange(w, $event)">
+                    <template v-slot:selection="{ item }">
+                      <span class="homonym-text" :title="homonymText(item)">{{ homonymText(item) }}</span>
+                    </template>
+                    <template v-slot:item="{ item }">
+                      <span class="homonym-text" :title="homonymText(item)">{{ homonymText(item) }}</span>
+                    </template>
+                  </v-select>
                   <span v-else>{{ w.selected && w.selected.wordEngAbrvNm || '-' }}</span>
                 </td>
                 <td>
@@ -339,6 +351,8 @@
                   <!-- 104번 WP7-8 — 유사어로 맞춘 단어 -->
                   <v-chip v-if="w.status === 'MATCHED' && w.selected && w.selected.wordNm !== w.wordNm" x-small color="orange"
                     text-color="white" class="ml-1">유사어 → 권장 '{{ w.selected.wordNm }}'</v-chip>
+                  <v-chip v-if="w.status === 'MATCHED' && w.candidates && w.candidates.length > 1" x-small color="blue-grey"
+                    text-color="white" class="ml-1 term-homonym-chip">동음이의어 {{ w.candidates.length }}</v-chip>
                 </td>
                 <td>
                   <v-btn v-if="(w.status === 'NEW' || w.status === 'UNRECOGNIZED') && !w._registered" small color="primary"
@@ -825,16 +839,11 @@ export default {
           if (data && data.found) {
             if (data.source === 'WORD') {
               // TB_WORD에 등록된 단어 → MATCHED로 전환
+              // 108 §4.31 — 같은 이름 단어(동음이의어) 전부를 후보로, 첫 건(응답의 단어)을 고른다
+              var cands = data.candidates.map(self.toCandidate);
               self.$set(w, 'status', 'MATCHED');
-              self.$set(w, 'selected', {
-                wordId: data.wordId,
-                wordNm: data.wordNm,
-                wordEngAbrvNm: data.wordEngAbrvNm,
-                wordEngNm: data.wordEngNm,
-                domainClsfNm: data.domainClsfNm || '',
-                wordClsfYn: data.wordClsfYn || 'N'
-              });
-              self.$set(w, 'candidates', [w.selected]);
+              self.$set(w, 'selected', cands[0]);
+              self.$set(w, 'candidates', cands);
               self.$set(w, '_registered', true);
               self.$set(w, '_dictHint', '');
               self.$set(w, '_abrvDupMsg', '');
@@ -865,6 +874,23 @@ export default {
           console.error('lookupWord error:', err);
         });
       }, 400);
+    },
+    /** 108 §4.31 — lookupWord 후보·단어 정보 → 편집 표 단어 후보 */
+    toCandidate: function(c) {
+      return {
+        wordId: c.wordId, wordNm: c.wordNm,
+        wordEngAbrvNm: c.wordEngAbrvNm, wordEngNm: c.wordEngNm, wordDesc: c.wordDesc,
+        domainClsfNm: c.domainClsfNm || '', wordClsfYn: c.wordClsfYn || 'N'
+      };
+    },
+    /** 108 §4.31 — 동음이의어 선택 목록 항목 "영문약어 — 설명" */
+    homonymText: function(c) {
+      return (c.wordEngAbrvNm || '') + (c.wordDesc ? ' — ' + c.wordDesc : '');
+    },
+    /** 108 §4.31 — 동음이의어를 바꾸면 영문명·용어 영문약어·마지막 단어 형식단어(도메인 목록)를 다시 계산 */
+    onHomonymChange: function(w, c) {
+      this.$set(w, 'selected', c);
+      this.recalcItemStatus(this.editingItem);
     },
     unlockWord: function(w) {
       // MATCHED 상태를 NEW로 전환하여 다시 편집 가능하게
@@ -907,20 +933,20 @@ export default {
       axios.get(self.$APIURL.base + 'api/std/getWordInfoByNm', { params: { wordNm: nm, dictId: self.dictId } }).then(function(res) {
         var info = res.data;
         if (info && info.length > 0) {
-          // 등록된 단어
+          // 등록된 단어 — 108 §4.31: 같은 이름 단어(동음이의어)가 여럿이면 모두 후보로 (유사어로만 맞으면 지금처럼 그 표준 단어 하나)
+          var exact = info.filter(function(x) { return x.wordNm === nm; });
+          var cands = (exact.length > 0 ? exact : [info[0]]).map(function(x) {
+            return self.toCandidate(Object.assign({}, x, { wordId: x.id }));
+          });
           newWord.status = 'MATCHED';
-          newWord.selected = {
-            wordId: info[0].id,
-            wordNm: info[0].wordNm,
-            wordEngAbrvNm: info[0].wordEngAbrvNm,
-            wordEngNm: info[0].wordEngNm,
-            domainClsfNm: info[0].domainClsfNm || ''
-          };
-          newWord.candidates = [newWord.selected];
+          newWord.selected = cands[0];
+          newWord.candidates = cands;
           self.currentEditWords.push(newWord);
           self.newWordInput = '';
           self.recalcItemStatus(self.editingItem);
-          self.$swal.fire({ title: '등록된 단어입니다.', text: nm + ' → ' + info[0].wordEngAbrvNm, icon: 'success', timer: 1500, confirmButtonText: '확인' });
+          self.$swal.fire({ title: '등록된 단어입니다.', text: nm + ' → ' + cands[0].wordEngAbrvNm
+            + (cands.length > 1 ? ' (같은 이름 단어 ' + cands.length + '개 — 영문약어 칸에서 바꿀 수 있습니다)' : ''),
+            icon: 'success', timer: cands.length > 1 ? 3000 : 1500, confirmButtonText: '확인' });
         } else {
           // 미등록 → DICT에서 추천 조회
           axios.post(self.$APIURL.base + 'api/std/analyzeTermsBatch', { termNames: [nm], dictId: self.dictId }).then(function(res2) {
@@ -1381,4 +1407,7 @@ export default {
 .chip-status-sm { min-width: 90px; justify-content: center; padding: 0 8px !important; }
 ::v-deep .chip-status .v-chip__content,
 ::v-deep .chip-status-sm .v-chip__content { white-space: nowrap; }
+/* 108 §4.31 — 동음이의어 선택 목록: 좁은 칸은 말줄임 (전체는 title 툴팁) */
+.homonym-text { display: inline-block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.v-list-item .homonym-text { max-width: 320px; }
 </style>
