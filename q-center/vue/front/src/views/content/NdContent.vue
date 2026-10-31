@@ -861,6 +861,24 @@ export default {
                 case "approval":
                     this.approvalKey = this.createUUID();
                     break;
+                case "dmApproval":
+                    this.dmApprovalKey = this.createUUID();
+                    break;
+                case "myDmChanges":
+                    this.myDmChangesKey = this.createUUID();
+                    break;
+                case "dmHistory":
+                    this.dmHistoryKey = this.createUUID();
+                    break;
+                case "areaMgmt":
+                    this.areaMgmtKey = this.createUUID();
+                    break;
+                case "stdDict":
+                    this.stdDictKey = this.createUUID();
+                    break;
+                case "termResolveHistory":
+                    this.termResolveHistoryKey = this.createUUID();
+                    break;
                 case "datasource":
                     this.datasourceKey = this.createUUID();
                     break;

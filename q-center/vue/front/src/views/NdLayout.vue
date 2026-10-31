@@ -368,8 +368,7 @@ export default {
                 myDmChanges:  'nav_my_dm_changes',
                 dmApproval:   'nav_dm_approval',
                 areaMgmt:     'nav_area_mgmt',
-                myDmApproval: 'nav_mypage_dm_approval',
-                myDmChangeList: 'nav_mypage_dm_changes',
+                stdDict:      'nav_std_dict',
             };
             return alias[tabName] || ('nav_' + tabName);
         },
@@ -398,9 +397,13 @@ export default {
                     this._activateGroup("diagGroup");
                 } else if (tabName === 'structDiag' || tabName === 'structDiagResult') {
                     this._activateGroup("structDiagGroup");
-                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'erwinImport' || tabName === 'privColumn' || tabName === 'daSystemStat') {
+                } else if (tabName === 'datamodelStatus' || tabName === 'datamodelCollection' || tabName === 'datamodelHistory' || tabName === 'datamodelStatusTable' || tabName === 'datamodelStatusColumn' || tabName === 'datamodelStatusIndex' || tabName === 'datamodelStatusConstraint' || tabName === 'datamodelVisualization' || tabName === 'erwinImport' || tabName === 'privColumn' || tabName === 'daSystemStat' || tabName === 'diagTargetMgmt' || tabName === 'myDmChanges' || tabName === 'dmHistory') {
                     this._activateGroup("dmGroup");
 
+                } else if (tabName === 'termRecommend' || tabName === 'termResolveHistory') {
+                    this._activateGroup("autoStdGroup");
+                } else if (tabName === 'scheduleManage' || tabName === 'scheduleLog') {
+                    this._activateGroup("scheduleGroup");
                 } else if (tabName === 'dqi' || tabName === 'ctq' || tabName === 'dqbr' || tabName === 'target' || tabName === 'qv' || tabName === 'rvi' || tabName === 'dqqvrt') {
                     this._activateGroup("dqGroup");
 
@@ -412,7 +415,7 @@ export default {
                         this._activateGroup("navDqSub3");
                     }
 
-                } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'system' || tabName ==='datasource' || tabName === 'ddlRule' || tabName === 'udpDef' || tabName === 'org' || tabName === 'aprvLine') {
+                } else if (tabName === 'user' || tabName === 'roles' || tabName === 'approval' || tabName === 'dmApproval' || tabName === 'areaMgmt' || tabName === 'stdDict' || tabName === 'system' || tabName ==='datasource' || tabName === 'ddlRule' || tabName === 'udpDef' || tabName === 'org' || tabName === 'aprvLine') {
                     this._activateGroup("mmGroup");
                 } else if (tabName === 'scurrent' || tabName === 'qcurrent') {
                     this._activateGroup("andGroup");
@@ -612,8 +615,11 @@ export default {
             } else if (tabitem === 'myRequest' || tabitem === 'myProfile' || tabitem === 'aprvBox') {
                 this.navMyPageGroup = true;
                 return;
-            } else if (tabitem === 'termRecommend') {
+            } else if (tabitem === 'termRecommend' || tabitem === 'termResolveHistory') {
                 this.navAutoStdGroup = true;
+                return;
+            } else if (tabitem === 'scheduleManage' || tabitem === 'scheduleLog') {
+                this.navScheduleGroup = true;
                 return;
             } else if (tabitem === 'govMetaConf' || tabitem === 'govMetaSys' || tabitem === 'govMetaItems' || tabitem === 'govMetaSend') {
                 this.navGovMetaGroup = true;
@@ -624,7 +630,7 @@ export default {
             } else if (tabitem === 'structDiag' || tabitem === 'structDiagResult') {
                 this.navStructDiagGroup = true;
                 return;
-            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'erwinImport' || tabitem === 'privColumn' || tabitem === 'daSystemStat') {
+            } else if (tabitem === 'datamodelStatus' || tabitem === 'datamodelCollection' || tabitem === 'datamodelHistory' || tabitem === 'datamodelStatusTable' || tabitem === 'datamodelStatusColumn' || tabitem === 'datamodelStatusIndex' || tabitem === 'datamodelStatusConstraint' || tabitem === 'datamodelVisualization' || tabitem === 'erwinImport' || tabitem === 'privColumn' || tabitem === 'daSystemStat' || tabitem === 'diagTargetMgmt' || tabitem === 'myDmChanges' || tabitem === 'dmHistory') {
                 this.navDmGroup = true;
                 return;
             } else if (tabitem === 'word' || tabitem === 'term' || tabitem === 'dsCode' || tabitem === 'domain' || tabitem === 'domainGroup' || tabitem === 'domainClassification' || tabitem === 'changeHistory' || tabitem === 'stdMap' || tabitem === 'unusedStd' || tabitem === 'stdImport') {
@@ -660,7 +666,7 @@ export default {
                 }, 500);
 
                 return;
-            } else if (tabitem === 'user' || tabitem === 'roles' || tabitem === 'approval' || tabitem === 'system' || tabitem === 'datasource' || tabitem === 'ddlRule' || tabitem === 'udpDef' || tabitem === 'org' || tabitem === 'aprvLine') {
+            } else if (tabitem === 'user' || tabitem === 'roles' || tabitem === 'approval' || tabitem === 'dmApproval' || tabitem === 'areaMgmt' || tabitem === 'stdDict' || tabitem === 'system' || tabitem === 'datasource' || tabitem === 'ddlRule' || tabitem === 'udpDef' || tabitem === 'org' || tabitem === 'aprvLine') {
                 this.navMmGroup = true;
                 this.navSubGropClose();
 

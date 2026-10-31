@@ -34,7 +34,7 @@ echo ==================================
 
 set ND_HOME=/c/Users/naraedata/Desktop/dataQ/ndata-quality-master
 
-start "q-center" "C:\Program Files\Git\git-bash.exe" -c "cd /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center/target && ND_HOME=%ND_HOME% java -jar q-center-0.0.1-SNAPSHOT.jar; exec bash"
+start "q-center" "C:\Program Files\Git\git-bash.exe" -c "cd /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-center/target && ND_HOME=%ND_HOME% java -Dfile.encoding=UTF-8 -jar q-center-0.0.1-SNAPSHOT.jar; exec bash"
 
 start "q-executor" "C:\Program Files\Git\git-bash.exe" -c "cd /c/Users/naraedata/Desktop/dataQ/ndata-quality-master/q-executor/target && ND_HOME=%ND_HOME% java -jar q-executor.jar; exec bash"
 

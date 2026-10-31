@@ -141,7 +141,8 @@
         <!-- 파일 첨부 -->
         <div class="mb-3">
           <v-file-input v-model="writeForm.files" label="파일 첨부" outlined dense multiple chips small-chips
-            truncate-length="30" prepend-icon="mdi-paperclip" color="ndColor" hide-details></v-file-input>
+            truncate-length="30" prepend-icon="mdi-paperclip" color="ndColor" :accept="fileAccept"
+            hint="글당 10개까지 (문서·이미지·zip)" persistent-hint></v-file-input>
         </div>
 
         <!-- 기존 첨부파일 (수정 시) -->
@@ -209,6 +210,10 @@ export default {
     editCommentContent: '',
     writeForm: { title: '', content: '', pinYn: 'N', files: [] },
     existingFiles: [],
+    // 110 10.3-6 — 수정 화면에서 X 로 뺀 기존 첨부. 저장할 때 보내 서버가 지운다 (취소하면 버림)
+    deleteFileIds: [],
+    // 110 10.3-4 — 서버 허용 확장자와 같은 목록 (BoardController.FILE_EXTS)
+    fileAccept: '.pdf,.hwp,.hwpx,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg,.gif,.zip',
     isEdit: false,
     editBoardId: null,
     listHeaders: [
@@ -277,25 +282,41 @@ export default {
     submitComment() {
       if (!this.newComment) return;
       axios.post(this.$APIURL.base + "api/board/" + this.currentPost.boardId + "/comment", { content: this.newComment })
-        .then(res => { if (res.data.resultCode === 200) { this.newComment = ''; this.loadComments(this.currentPost.boardId); } });
+        .then(res => {
+          if (res.data.resultCode === 200) { this.newComment = ''; this.loadComments(this.currentPost.boardId); }
+          else { this.$swal.fire({ title: '댓글 등록 실패', text: res.data.resultMessage, icon: 'error', confirmButtonText: '확인' }); }
+        })
+        .catch(() => { this.$swal.fire({ title: '댓글 등록 실패', icon: 'error', confirmButtonText: '확인' }); });
     },
     startCommentEdit(c) { this.editingCommentId = c.commentId; this.editCommentContent = c.content; },
     cancelCommentEdit() { this.editingCommentId = null; this.editCommentContent = ''; },
     saveCommentEdit(commentId) {
       if (!this.editCommentContent.trim()) return;
       axios.post(this.$APIURL.base + "api/board/comment/update", { commentId: commentId, content: this.editCommentContent })
-        .then(res => { if (res.data.resultCode === 200) { this.cancelCommentEdit(); this.loadComments(this.currentPost.boardId); } })
+        .then(res => {
+          if (res.data.resultCode === 200) { this.cancelCommentEdit(); this.loadComments(this.currentPost.boardId); }
+          else { this.$swal.fire({ title: '수정 실패', text: res.data.resultMessage, icon: 'error', confirmButtonText: '확인' }); }
+        })
         .catch(() => { this.$swal.fire({ title: '수정 실패', icon: 'error', confirmButtonText: '확인' }); });
     },
     deleteComment(commentId) {
       this.$swal.fire({ title: '댓글을 삭제하시겠습니까?', icon: 'warning', showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소' })
-        .then(r => { if (r.isConfirmed) { axios.post(this.$APIURL.base + "api/board/comment/delete", { commentId }).then(() => this.loadComments(this.currentPost.boardId)); } });
+        .then(r => {
+          if (!r.isConfirmed) return;
+          axios.post(this.$APIURL.base + "api/board/comment/delete", { commentId })
+            .then(res => {
+              if (res.data.resultCode === 200) { this.loadComments(this.currentPost.boardId); }
+              else { this.$swal.fire({ title: '댓글 삭제 실패', text: res.data.resultMessage, icon: 'error', confirmButtonText: '확인' }); }
+            })
+            .catch(() => { this.$swal.fire({ title: '댓글 삭제 실패', icon: 'error', confirmButtonText: '확인' }); });
+        });
     },
     showWriteForm() {
       this.isEdit = false;
       this.editBoardId = null;
       this.writeForm = { title: '', content: '', pinYn: 'N', files: [] };
       this.existingFiles = [];
+      this.deleteFileIds = [];
       this.viewMode = 'write';
     },
     editPost() {
@@ -303,6 +324,7 @@ export default {
       this.editBoardId = this.currentPost.boardId;
       this.writeForm = { title: this.currentPost.title, content: this.currentPost.content, pinYn: this.currentPost.pinYn || 'N', files: [] };
       this.existingFiles = this.attachFiles.slice();
+      this.deleteFileIds = [];
       this.viewMode = 'write';
     },
     cancelWrite() {
@@ -317,7 +339,12 @@ export default {
       formData.append('title', this.writeForm.title);
       formData.append('content', this.writeForm.content || '');
       formData.append('pinYn', this.writeForm.pinYn || 'N');
-      if (this.isEdit) formData.append('boardId', this.editBoardId);
+      if (this.isEdit) {
+        formData.append('boardId', this.editBoardId);
+        for (var d = 0; d < this.deleteFileIds.length; d++) {
+          formData.append('deleteFileIds', this.deleteFileIds[d]);
+        }
+      }
       // 새 파일
       if (this.writeForm.files && this.writeForm.files.length > 0) {
         for (var i = 0; i < this.writeForm.files.length; i++) {
@@ -338,13 +365,22 @@ export default {
         .catch(() => { this.$swal.fire({ title: '서버 오류', icon: 'error', confirmButtonText: '확인' }); })
         .finally(() => { this.submitting = false; });
     },
+    // 110 10.3-6 — 서버를 부르지 않고 저장 때 지울 목록에만 넣는다 (취소하면 그대로 남음)
     removeExistingFile(fileId) {
-      axios.post(this.$APIURL.base + "api/board/file/delete", { fileId: fileId })
-        .then(() => { this.existingFiles = this.existingFiles.filter(function(f) { return f.fileId !== fileId; }); });
+      this.deleteFileIds.push(fileId);
+      this.existingFiles = this.existingFiles.filter(function(f) { return f.fileId !== fileId; });
     },
     deletePost() {
       this.$swal.fire({ title: "'" + this.currentPost.title + "' 게시글을 삭제하시겠습니까?", icon: 'warning', showCancelButton: true, confirmButtonText: '삭제', cancelButtonText: '취소' })
-        .then(r => { if (r.isConfirmed) { axios.post(this.$APIURL.base + "api/board/delete", { boardId: this.currentPost.boardId }).then(res => { if (res.data.resultCode === 200) { this.viewMode = 'list'; this.loadList(); } }); } });
+        .then(r => {
+          if (!r.isConfirmed) return;
+          axios.post(this.$APIURL.base + "api/board/delete", { boardId: this.currentPost.boardId })
+            .then(res => {
+              if (res.data.resultCode === 200) { this.viewMode = 'list'; this.loadList(); }
+              else { this.$swal.fire({ title: '삭제 실패', text: res.data.resultMessage, icon: 'error', confirmButtonText: '확인' }); }
+            })
+            .catch(() => { this.$swal.fire({ title: '삭제 실패', icon: 'error', confirmButtonText: '확인' }); });
+        });
     },
     goBack() { this.viewMode = 'list'; },
     formatFileSize(bytes) {

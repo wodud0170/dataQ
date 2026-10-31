@@ -158,21 +158,6 @@ export default {
             let href = location.href;
             let isLogpage = href.indexOf("/signin") > -1;
 
-            if (!data) {
-                sessionStorage.setItem(
-                    "loginStatus",
-                    JSON.stringify({ id: null, authed: false })
-                );
-                axios
-                    .get(this.$APIURL.base + "logout")
-                    .then(Response => {
-                        location.href = "/signin";
-                    })
-                    .catch(Error => {
-                        console.log(Error);
-                    });
-            }
-
             if (!data.id || !data.password) {
                 this.$swal
                     .fire({
@@ -190,7 +175,7 @@ export default {
 
             const loginData = new FormData();
             loginData.append("id", data.id);
-            loginData.append("password", btoa(data.password));
+            loginData.append("password", this.$encodePw(data.password));
 
             let _url = this.$APIURL.base + "login";
 

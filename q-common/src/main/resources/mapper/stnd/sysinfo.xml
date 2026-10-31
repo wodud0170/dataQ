@@ -70,56 +70,6 @@
 			order by PATH
   </select>
 
-  <select id="selectSysInfoBySysCd" parameterType="String" resultMap="sysInfoMap">
-       with recursive CODE_LIST(SYS_CD, P_SYS_CD, SYS_TP, SYS_NM, SYS_DS_LST, SYS_DESC, DEPTH, PATH, CYCLE,
-				   CRET_DT, CRET_USER_ID, UPDT_DT, UPDT_USER_ID)
-			as (
-				select A.SYS_CD,
-				       A.P_SYS_CD,
-				       A.SYS_TP,
-				       A.SYS_NM,
-				       A.SYS_DS_LST,
-				       A.SYS_DESC,
-				       1,
-				       array[A.SYS_NM::text],
-				       false,
-				       A.CRET_DT, A.CRET_USER_ID, A.UPDT_DT, A.UPDT_USER_ID
-				from TB_SYS_INFO A
-				where A.P_SYS_CD is null
-				union all 
-				select A.SYS_CD,
-				       A.P_SYS_CD,
-				       A.SYS_TP,
-				       A.SYS_NM,
-				       A.SYS_DS_LST,
-				       A.SYS_DESC,
-				       B.DEPTH + 1,
-				       array_append(B.PATH,A.SYS_NM::text),
-				       A.SYS_CD = any(B.PATH),
-				       A.CRET_DT, A.CRET_USER_ID, A.UPDT_DT, A.UPDT_USER_ID
-				from TB_SYS_INFO A, CODE_LIST B
-				where A.P_SYS_CD = B.SYS_CD
-					and not CYCLE 
-			   )
-			select SYS_CD,
-			   P_SYS_CD,
-			   SYS_NM,
-			   SYS_TP,
-			   SYS_DS_LST,
-			   SYS_DESC,
-			   DEPTH,
-			   PATH,
-			   to_char(to_timestamp(CRET_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as CRET_DT, 
-			   CRET_USER_ID, 
-			   to_char(to_timestamp(UPDT_DT,'YYYYMMDDHH24MISS'),'YYYY-MM-DD HH24:MI:SS') as UPDT_DT,
-			   UPDT_USER_ID,
-			   (select S.DICT_ID from TB_SYS_INFO S where S.SYS_CD = CODE_LIST.SYS_CD) as DICT_ID,
-			   (select D.DICT_NM from TB_SYS_INFO S join TB_STD_DICT D on D.DICT_ID = S.DICT_ID where S.SYS_CD = CODE_LIST.SYS_CD) as DICT_NM
-			from CODE_LIST
-      where SYS_CD = #{sysCd}
-			order by PATH
-  </select>
-
   <!-- 110번 3.12-12-b — 엑셀 일괄등록의 요청시스템 셀(시스템명) → 시스템 코드. 예전에는 SysInfoVo 를 돌려줘 String 필드에 넣다가 ClassCastException -->
   <select id="selectSysCdBySysNm" parameterType="String" resultType="String">
 				select SYS_CD
@@ -194,19 +144,6 @@
                AND (M.USE_YN = 'Y' OR M.USE_YN IS NULL)
              ORDER BY M.DM_NM
   </select>
-
-  <delete id="deleteSysInfoList" parameterType="java.util.List">
-            DELETE FROM TB_SYS_INFO
-            WHERE
-              SYS_CD IN
-    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
-                #{item.sysCd}
-    </foreach>
-              OR P_SYS_CD IN
-    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
-                #{item.sysCd}
-    </foreach>
-  </delete>
 
   <delete id="deleteSysInfos" parameterType="java.util.List">
        with recursive CODE_LIST(SYS_CD, P_SYS_CD, SYS_TP, SYS_NM, SYS_DS_LST, SYS_DESC, DEPTH, PATH, CYCLE)
@@ -324,29 +261,6 @@
             DS_ID = #{id}
   </select>
 
-  <select id="selectDataSourceByDsTp" parameterType="String" resultType="com.ndata.model.DataSourceVo">
-        SELECT
-             DS_ID              as id
-            ,DSN                as dsn
-            ,DS_TP              as dsTp
-            ,DBMS_TP            as dbmsTp
-            ,DRIVER_NM          as driverName
-            ,SVR_ADDR           as svrAddr
-            ,PORT               as port
-            ,USER_ID            as userId
-            ,PWD                as pwd
-            ,CHARSET            as charSet
-            ,PRIVATE_KEY        as privateKey
-            ,DB_NAME            as dbName
-            ,RM_DIR             as rmDir
-            ,CONN_PROPS         as connProps
-            ,SECURE_YN          as useSecure
-        FROM
-            ndata.tb_data_source
-        WHERE 
-            DS_TP = #{dsTp}
-  </select>
-
   <insert id="insertDataSource" parameterType="com.ndata.model.DataSourceVo">
            INSERT INTO ndata.tb_data_source
            (
@@ -419,13 +333,41 @@
             WHERE DS_ID = #{id}
   </update>
 
-  <delete id="deleteDataSource" parameterType="String">
-            DELETE FROM ndata.tb_data_source
-            WHERE
-              DS_ID = #{id}
-  </delete>
+  <!-- 110 11.7-19 — 데이터 소스 삭제 전 참조 확인. 지울 데이터 소스 가운데 사용 중인 것만 돌려준다:
+       사용 중인 데이터 모델(USE_YN 'Y' 또는 NULL)·이 데이터 소스를 고른 시스템(SYS_DS_LST).
+       구조 진단 이력·범정부 전송 이력은 지난 기록이라 보지 않는다.
+       범정부 메타 DB 항목(TB_GOV_META_DB)은 수집 때마다 DBMS 정보로 자동 생기고 시스템을 거쳐서만 보이므로 막는 근거로 쓰지 않고,
+       데이터 소스와 함께 지운다 (deleteDataSources) -->
+  <select id="selectDataSourceRefs" parameterType="java.util.List" resultType="java.util.LinkedHashMap">
+        SELECT R.*
+          FROM (
+                SELECT S.DSN as "dsn"
+                      ,(SELECT string_agg(DISTINCT M.DM_NM, '·' ORDER BY M.DM_NM)
+                          FROM TB_DATA_MODEL M
+                         WHERE M.DM_DS_ID = S.DS_ID
+                           AND (M.USE_YN = 'Y' OR M.USE_YN IS NULL)) as "models"
+                      ,(SELECT string_agg(I.SYS_NM, '·' ORDER BY I.SYS_NM)
+                          FROM TB_SYS_INFO I
+                         WHERE S.DS_ID = ANY(I.SYS_DS_LST)) as "systems"
+                  FROM ndata.tb_data_source S
+                 WHERE S.DS_ID IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                       #{item.id}
+    </foreach>
+               ) R
+         WHERE R."models" IS NOT NULL OR R."systems" IS NOT NULL
+         ORDER BY R."dsn"
+  </select>
 
+  <!-- 데이터 소스와 그 범정부 메타 DB 항목을 한 문장(한 트랜잭션)으로 지운다 -->
   <delete id="deleteDataSources" parameterType="java.util.List">
+            WITH GOV AS (
+                DELETE FROM TB_GOV_META_DB
+                 WHERE DS_ID IN
+    <foreach item="item" index="index" collection="list" open="(" separator="," close=")">
+                       #{item.id}
+    </foreach>
+            )
             DELETE FROM ndata.tb_data_source
             WHERE
               DS_ID IN

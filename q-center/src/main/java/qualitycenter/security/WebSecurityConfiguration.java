@@ -1,6 +1,5 @@
 package qualitycenter.security;
 
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 
 import javax.servlet.http.HttpServletResponse;
@@ -12,15 +11,13 @@ import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.EnableGlobalAuthentication;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.session.SessionRegistry;
-import org.springframework.security.core.session.SessionRegistryImpl;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.PortMapperImpl;
 import org.springframework.security.web.PortResolverImpl;
@@ -31,9 +28,6 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * @author WarmBlueDot
@@ -62,6 +56,20 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
     @Autowired
     CustomLogoutHandler customLogoutHandler;
+
+    @Autowired
+    SessionRegistry sessionRegistry;
+
+    /**
+     * 로그인 프로세스가 진행될 provider.
+     * http.authenticationProvider 로 넣으면 이 provider 가 유일한 AuthenticationProvider 빈이라 전역 AuthenticationManager(부모)에도
+     * 들어가, 인증이 실패하면 부모가 한 번 더 부른다(provider 안의 실패 로그가 두 번 남는다 — 110번 1.10-U6-a).
+     * 여기서 넣으면 이 provider 만 가진 관리자가 부모가 되어 한 번만 불린다.
+     */
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) {
+        auth.authenticationProvider(customAuthenticationProvider);
+    }
 
     @Override
     public void configure(WebSecurity web) throws Exception {
@@ -131,20 +139,18 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
             //.logoutSuccessUrl("/login")
             .invalidateHttpSession(true);
 
-        // 중복 로그인 관련 설정
-//        http.sessionManagement()
-//            .maximumSessions(1)
-//            .maxSessionsPreventsLogin(false)
-//            .expiredUrl("/login")
-//            .sessionRegistry(sessionRegistry());
+        // 로그인 세션 목록 (110번 11.7-14). 같은 ID 의 동시 접속은 막지 않는다(-1).
+        // 사용자를 삭제하면 그 사용자의 세션을 만료시킨다(SessionService.expireSessions). 만료된 세션의 다음 요청은
+        // 로그인이 없는 요청과 같이 처리한다 — /api/** 는 401, 그 밖은 로그인 화면으로.
+        http.sessionManagement()
+            .maximumSessions(-1)
+            .sessionRegistry(sessionRegistry)
+            .expiredSessionStrategy(event -> delegatingEntryPoint.commence(event.getRequest(), event.getResponse(), null));
 
         // csrf 사용유무 설정
         // csrf 설정을 사용하면 모든 request에 csrf 값을 함께 전달해야한다.
 //            .csrf()
         http.csrf().disable(); // 개발 시 에만
-        
-        // 로그인 프로세스가 진행될 provider
-        http.authenticationProvider(customAuthenticationProvider);
 
 //                // ROLE_USER, ROLE_ADMIN으로 권한 분리 유알엘 정의
 //                .antMatchers("/", "/user/login", "/error**").permitAll()
@@ -152,31 +158,6 @@ public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
 //                .antMatchers("/**").access("ROLE_ADMIN")
 //                .antMatchers("/admin/**").access("ROLE_ADMIN")
 //                .antMatchers("/**").authenticated()
-    }
-    
-    //@Bean
-    CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOriginPatterns(Arrays.asList("*"/*"http://127.0.0.1:8080", "http://localhost:8080" */));
-		configuration.setAllowedHeaders(Arrays.asList("*"/*"Origin,Accept,X-Requested-With,Content-Type,Access-Control-Request-Method,Access-Control-Request-Headers,Authorization" */));
-        configuration.setAllowedMethods(Arrays.asList("*"/*"POST", "PUT", "GET", "OPTIONS", "DELETE" */));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(86400L);
-
-        // you can configure many allowed CORS headers
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", new CorsConfiguration().applyPermitDefaultValues());
-        return source;
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder(){
-        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
-    }
-
-    @Bean
-    public SessionRegistry sessionRegistry() {
-        return new SessionRegistryImpl();
     }
 
     @Bean

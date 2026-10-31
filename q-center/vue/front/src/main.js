@@ -86,8 +86,6 @@ export const wsVue = new Vue({
   //},
   methods: {
     connect: function() {
-      this.$checkSession(); //세션을 확인해서 세션이 없으면 로그인페이지로 이동
-
       var socketSessionId = sessionStorage.getItem("socketSessionId");
 
       if (socketSessionId == null) {
@@ -221,13 +219,13 @@ export const wsVue = new Vue({
       console.log("TEST NOTICE [" + msg.noticeType + "] : " + msg.data);
       // -- 2023.03.24 추가
       document.getElementById("logTextWrap").innerHTML +=
-        "TEST NOTICE [" + msg.noticeType + "] : " + msg.data + + '<br /><br />';
+        "TEST NOTICE [" + msg.noticeType + "] : " + msg.data + '<br /><br />';
     },
     onReload(msg) {
       console.log("TEST RELOAD [" + msg.dest + "] : " + msg.data);
       // -- 2023.03.24 추가
       document.getElementById("logTextWrap").innerHTML +=
-        "TEST RELOAD [" + msg.dest + "] : " + msg.data + + '<br /><br />';
+        "TEST RELOAD [" + msg.dest + "] : " + msg.data + '<br /><br />';
     }
   }
 });

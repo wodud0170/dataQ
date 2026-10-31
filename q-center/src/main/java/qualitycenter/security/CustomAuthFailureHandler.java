@@ -7,7 +7,6 @@ import org.springframework.security.authentication.*;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
-import org.springframework.security.web.authentication.session.SessionAuthenticationException;
 
 import com.ndata.common.NDSeverity;
 
@@ -33,18 +32,11 @@ public class CustomAuthFailureHandler implements AuthenticationFailureHandler {
         String message = null;
         String[] loginData = null;
 
-        if (e instanceof UsernameNotFoundException) {
+        // 동시 접속 제한·계정 사용 중지·비밀번호 만료는 쓰지 않는다 (maximumSessions(-1), UserVo.isEnabled·isCredentialsNonExpired 는 늘 true).
+        // InternalAuthenticationServiceException 은 AuthenticationServiceException 의 하위 클래스라 먼저 본다.
+        if (e instanceof UsernameNotFoundException || e instanceof BadCredentialsException
+                || e instanceof InternalAuthenticationServiceException) {
             message = "로그인에 실패했습니다.";
-        } else if (e instanceof BadCredentialsException) {
-            message = "로그인에 실패했습니다.";
-        } else if (e instanceof SessionAuthenticationException) {
-            message = "동일한 아이디로 접속되어 있습니다.";
-        } else if (e instanceof InternalAuthenticationServiceException) {
-            message = "error.BadCredentials";
-        } else if (e instanceof DisabledException) {
-            message = "error.Disaled";
-        } else if (e instanceof CredentialsExpiredException) {
-            message = "error.CredentialsExpired";
         } else if (e instanceof AuthenticationServiceException) {
             loginData = e.getMessage().split("\\|\\|");
             message = loginData[0];

@@ -45,6 +45,7 @@
                 PWD,
                 NM,
                 EMAIL,
+                PHONE,
                 ADM_YN,
                 CRET_DT,
                 UPDT_DT,
@@ -56,12 +57,50 @@
                 #{password},
                 #{name},
                 #{email},
+                #{phone},
                 #{admin},
                 #{createDate},
                 #{updateDate},
                 0
             )
     </insert>
+    <!-- 110번 11.7-11a — 삭제(DEL_YN) 된 같은 ID 가 있는지. 있으면 사용자 추가가 그 행을 restoreUser 로 되살린다 -->
+    <select id="selectDeletedUserCount" parameterType="String" resultType="int">
+        SELECT COUNT(*)
+        FROM
+            tb_user
+        WHERE
+            USER_ID = #{id} AND DEL_YN = true
+    </select>
+    <!-- 새 사용자로 되살린다 — 실패 횟수·차단 시각·부서는 비운다 (역할은 role.deleteUserRolesByUser, 부서장 지정은 clearOrgHead).
+         내장 관리자(space) 행이 삭제 표시로 남아 있을 때 최초 관리자 생성(createAdmin)도 이것으로 되살린다 -->
+    <update id="restoreUser" parameterType="qualitycenter.model.auth.AdminVo">
+        UPDATE tb_user
+        SET
+            PWD              = #{password},
+            NM               = #{name},
+            EMAIL            = #{email},
+            PHONE            = #{phone},
+            ADM_YN           = #{admin},
+            CRET_DT          = #{createDate},
+            UPDT_DT          = #{updateDate},
+            DEL_YN           = false,
+            LOGIN_FAIL_COUNT = 0,
+            BLOCK_TIME       = NULL,
+            ORG_ID           = NULL
+        WHERE
+            USER_ID = #{id} AND DEL_YN = true
+    </update>
+    <!-- 되살린 ID 가 부서장(HEAD_USER_ID)으로 남아 있으면 비운다 — 새 사용자가 예전 사용자의 부서장 결재를 이어받지 않게 -->
+    <update id="clearOrgHead" parameterType="qualitycenter.model.auth.AdminVo">
+        UPDATE tb_org
+        SET
+            HEAD_USER_ID = NULL,
+            UPDT_DT      = #{updateDate},
+            UPDT_USER_ID = #{updateUserId}
+        WHERE
+            HEAD_USER_ID = #{id}
+    </update>
     <update id="deleteAdmin" parameterType="qualitycenter.model.auth.AdminVo">
         UPDATE tb_user
         SET
@@ -78,7 +117,8 @@
             NM    = #{name},
             EMAIL = #{email},
             PHONE = #{phone},
-            ADM_YN  = #{admin}
+            ADM_YN  = #{admin},
+            UPDT_DT = #{updateDate}
         WHERE
             USER_ID = #{id}
     </update>
@@ -86,7 +126,8 @@
         UPDATE
             tb_user
         SET
-            PWD = #{password}
+            PWD = #{password},
+            UPDT_DT = #{updateDate}
         WHERE
             USER_ID = #{id}
     </update>

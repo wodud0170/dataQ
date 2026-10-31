@@ -1,10 +1,10 @@
 package qualitycenter.controller;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
-import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,7 +27,6 @@ import com.ndata.quality.model.mgmt.SysInfoVo;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
-import qualitycenter.service.ws.WebSocketService;
 import reactor.core.publisher.Mono;
 
 @Tag(name = "시스템정보", description = "시스템정보 API")
@@ -44,12 +43,6 @@ public class SysInfoController {
 
 	@Autowired
 	SecurityManager securityUtils;
-
-	@Autowired
-	private SqlSessionFactory sqlSessionFactory; // transaction 사용할 경우 사용
-
-	@Autowired
-	private WebSocketService websocketService;
 
 	// 시스템정보
 	@RequestMapping(value = "/createSysInfo", method = RequestMethod.POST)
@@ -111,11 +104,6 @@ public class SysInfoController {
 	@RequestMapping(value = "/getSysInfoList", method = RequestMethod.GET)
 	public List<SysInfoVo> getSysInfoList() {
 		return sqlSessionTemplate.selectList("sysinfo.selectSysInfoList");
-	}
-
-	@RequestMapping(value = "/getSysInfoBySysCd", method = RequestMethod.GET)
-	public SysInfoVo getSysInfoBySysCd(String sysCd) {
-		return sqlSessionTemplate.selectOne("sysinfo.selectSysInfoBySysCd", sysCd);
 	}
 
 	/** 104번 WP2 — 시스템에 속한 데이터 모델 (TB_DATA_MODEL.DM_SYS_CD) */
@@ -193,6 +181,21 @@ public class SysInfoController {
 		Response result = new Response();
 
 		try {
+			// 110 11.7-19 — 데이터 모델·시스템이 쓰는 데이터 소스가 하나라도 있으면 아무것도 지우지 않는다
+			// (지우면 수집·진단·범정부 메타 생성이 데이터 소스를 못 찾는다). 구조 진단 이력·범정부 전송 이력은 보지 않는다.
+			// 범정부 메타 DB 항목은 데이터 소스와 함께 지운다 (sysinfo.deleteDataSources).
+			List<Map<String, Object>> refs = sqlSessionTemplate.selectList("sysinfo.selectDataSourceRefs", dataVos);
+			if (!refs.isEmpty()) {
+				List<String> lines = new ArrayList<>();
+				for (Map<String, Object> ref : refs) {
+					List<String> parts = new ArrayList<>();
+					if (ref.get("models") != null) parts.add("데이터 모델 " + ref.get("models"));
+					if (ref.get("systems") != null) parts.add("시스템 " + ref.get("systems"));
+					lines.add(ref.get("dsn") + ": " + String.join(", ", parts));
+				}
+				result.setResultInfo(400, "사용 중인 데이터 소스는 삭제할 수 없습니다 — " + String.join(" / ", lines));
+				return Mono.just(result);
+			}
 			sqlSessionTemplate.delete("sysinfo.deleteDataSources", dataVos);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {

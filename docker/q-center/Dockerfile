@@ -20,4 +20,6 @@ ENV TZ=Asia/Seoul
 # 28090 = HTTP, 28091 = WebSocket (server.http.port)
 EXPOSE 28090 28091
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+# file.encoding=UTF-8 — 비밀번호 해시(SecurityManager.encryptSHA256)가 JVM 기본 문자셋으로 바이트를 만든다.
+# 기본 문자셋이 다른 환경끼리 TB_USER 를 옮기면 한글 비밀번호 로그인이 맞지 않으므로 고정한다 (110번 1.10-S6-b)
+ENTRYPOINT ["java", "-Dfile.encoding=UTF-8", "-jar", "/app/app.jar"]

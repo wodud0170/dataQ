@@ -122,6 +122,11 @@
 		 WHERE USER_ID = #{userId} AND ROLE_ID = #{roleId} AND SYS_CD = #{sysCd}
 	</delete>
 
+	<!-- 110번 11.7-11a — 삭제된 ID 를 사용자 추가로 되살릴 때 예전 역할이 말없이 되살아나지 않게 모두 지운다 -->
+	<delete id="deleteUserRolesByUser" parameterType="String">
+		DELETE FROM TB_USER_ROLE WHERE USER_ID = #{userId}
+	</delete>
+
 	<!-- 변경 이력(TB_DATA_MODEL_CHANGE_HISTORY)의 모델이 속한 시스템. DDL_EXEC 판정용 -->
 	<select id="selectSysCdByChangeSeq" parameterType="Object" resultType="String">
 		SELECT M.DM_SYS_CD

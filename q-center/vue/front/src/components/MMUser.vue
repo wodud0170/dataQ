@@ -8,10 +8,11 @@
         <v-btn color="red" dark @click="deleteUser" :disabled="!selectedUserId">삭제</v-btn>
       </v-sheet>
 
-      <v-row no-gutters style="flex:1; overflow:hidden;">
+      <!-- 한 줄(nowrap)이어야 두 열이 이 영역 높이에 맞춰져 각자 세로 스크롤된다 — 1366x768 에서 15번째 행·페이지 버튼·저장 버튼이 잘리지 않게 -->
+      <v-row no-gutters style="flex:1; overflow:hidden; flex-wrap:nowrap;">
         <!-- 좌측: 사용자 목록 -->
         <v-col cols="5" style="border-right:1px solid #E8EAF6; overflow-y:auto;">
-          <v-data-table :headers="userHeaders" :items="userItems" :items-per-page="15"
+          <v-data-table :headers="userHeaders" :items="userItems" :page.sync="page" :items-per-page="itemsPerPage"
             dense hide-default-footer item-key="id" class="elevation-0"
             :loading="isLoading" @click:row="selectUser">
             <template v-slot:item.admin="{ item }">
@@ -21,6 +22,11 @@
               <span class="grey--text">사용자가 없습니다.</span>
             </template>
           </v-data-table>
+          <!-- 페이지네이션 (110번 11.7-9) -->
+          <div class="text-center px-4 pt-4 pb-4" v-show="pageCount > 1">
+            <v-pagination v-model="page" :length="pageCount" prev-icon="mdi-menu-left" next-icon="mdi-menu-right"
+              color="ndColor" :total-visible="10"></v-pagination>
+          </div>
         </v-col>
 
         <!-- 우측: 사용자 상세 -->
@@ -86,11 +92,13 @@
       <v-card>
         <v-card-title>사용자 추가</v-card-title>
         <v-card-text>
-          <v-text-field v-model="addForm.id" label="계정 ID" dense outlined class="mb-2"></v-text-field>
-          <v-text-field v-model="addForm.name" label="이름" dense outlined class="mb-2"></v-text-field>
-          <v-text-field v-model="addForm.email" label="이메일" dense outlined class="mb-2"></v-text-field>
-          <v-text-field v-model="addForm.password" label="비밀번호" type="password" dense outlined class="mb-2"></v-text-field>
-          <v-text-field v-model="addForm.confirmPassword" label="비밀번호 확인" type="password" dense outlined class="mb-2"></v-text-field>
+          <!-- 입력 검사는 등록 때 알림창으로 한다 — 칸 아래 안내 줄(hide-details)을 빼 1366x768 에서도 등록 버튼까지 한 화면에 -->
+          <v-text-field v-model="addForm.id" label="계정 ID" dense outlined hide-details class="mb-4"></v-text-field>
+          <v-text-field v-model="addForm.name" label="이름" dense outlined hide-details class="mb-4"></v-text-field>
+          <v-text-field v-model="addForm.email" label="이메일" dense outlined hide-details class="mb-4"></v-text-field>
+          <v-text-field v-model="addForm.phone" label="전화번호" dense outlined hide-details class="mb-4"></v-text-field>
+          <v-text-field v-model="addForm.password" label="비밀번호" type="password" dense outlined hide-details class="mb-4"></v-text-field>
+          <v-text-field v-model="addForm.confirmPassword" label="비밀번호 확인" type="password" dense outlined hide-details class="mb-4"></v-text-field>
           <v-switch v-model="addForm.admin" inset :label="addForm.admin ? '관리자' : '일반 사용자'" color="indigo" hide-details></v-switch>
         </v-card-text>
         <v-card-actions>
@@ -120,12 +128,15 @@ export default {
       { text: '권한', value: 'admin', width: '70px' },
     ],
     userItems: [],
+    page: 1,
+    pageCount: 0,
+    itemsPerPage: 15,
     orgItems: [],
     selectedUserId: null,
     detailUser: {},
     // 추가 다이얼로그
     addDialogShow: false,
-    addForm: { id: '', name: '', email: '', password: '', confirmPassword: '', admin: false },
+    addForm: { id: '', name: '', email: '', phone: '', password: '', confirmPassword: '', admin: false },
   }),
   created() {
     this.getUserData();
@@ -138,7 +149,12 @@ export default {
       var self = this;
       self.isLoading = true;
       axios.get(this.$APIURL.base + "api/login/getUserList")
-        .then(function(res) { self.userItems = res.data || []; })
+        .then(function(res) {
+          self.userItems = res.data || [];
+          // 15건씩. 삭제 등으로 줄어 지금 페이지가 사라졌으면 마지막 페이지로
+          self.pageCount = Math.ceil(self.userItems.length / self.itemsPerPage);
+          if (self.page > self.pageCount) self.page = Math.max(1, self.pageCount);
+        })
         .catch(function() {
           self.$swal.fire({ title: '사용자 목록 로드 실패', icon: 'error', confirmButtonText: '확인' });
         })
@@ -158,7 +174,7 @@ export default {
         admin: self.detailUser.admin,
       };
       if (self.detailUser.newPassword) {
-        data.password = btoa(self.detailUser.newPassword);
+        data.password = self.$encodePw(self.detailUser.newPassword);
       }
       var orig = self.userItems.find(function(u) { return u.id === self.detailUser.id; }) || {};
       var orgChanged = (orig.orgId || null) !== (self.detailUser.orgId || null);
@@ -186,7 +202,7 @@ export default {
         });
     },
     showAddDialog() {
-      this.addForm = { id: '', name: '', email: '', password: '', confirmPassword: '', admin: false };
+      this.addForm = { id: '', name: '', email: '', phone: '', password: '', confirmPassword: '', admin: false };
       this.addDialogShow = true;
     },
     createUser() {
@@ -200,8 +216,8 @@ export default {
         return;
       }
       axios.post(this.$APIURL.base + "api/login/createUser", {
-        id: self.addForm.id, password: btoa(self.addForm.password),
-        name: self.addForm.name, email: self.addForm.email, admin: self.addForm.admin
+        id: self.addForm.id, password: self.$encodePw(self.addForm.password),
+        name: self.addForm.name, email: self.addForm.email, phone: self.addForm.phone, admin: self.addForm.admin
       }).then(function(res) {
         if (res.data.resultCode === 200) {
           self.addDialogShow = false;
@@ -231,7 +247,14 @@ export default {
               self.selectedUserId = null;
               self.detailUser = {};
               self.getUserData();
+            } else {
+              self.$swal.fire({ title: '삭제 실패', icon: 'error', confirmButtonText: '확인' });
             }
+          })
+          .catch(function(error) {
+            // 권한 없음·내장 관리자 등 서버가 거부한 사유 (110번 11.7-11b)
+            var reason = error.response && error.response.data && error.response.data.message;
+            self.$swal.fire({ title: '삭제 실패', text: reason, icon: 'error', confirmButtonText: '확인' });
           });
       });
     },

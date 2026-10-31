@@ -123,8 +123,11 @@
                 <v-col cols="4">
                   <v-subheader class="reqText">서버주소</v-subheader>
                 </v-col>
-                <v-col cols="8" :style="{ display: 'flex', alignItems: 'center' }">
-                  <vue-ip-input :ip="addDatasource_svrAddr" :on-change="onIpChange" :on-blur="onIpBlur"></vue-ip-input>
+                <v-col cols="8">
+                  <!-- 110번 11.7-17 — IPv4 주소 또는 호스트명. 길이는 SVR_ADDR 컬럼(varchar 50) 까지 -->
+                  <v-text-field v-model="addDatasource_svrAddr" ref="addDatasource_svrAddr" maxlength="50"
+                    :rules="[v => !!v || '서버주소는 필수 입력값입니다.', v => checkSvrAddr(v) || 'IPv4 주소 또는 호스트명을 입력해주세요.']"
+                    placeholder="예: 192.168.0.10, db-server" clearable required dense color="ndColor"></v-text-field>
                 </v-col>
               </v-row>
 
@@ -260,8 +263,11 @@
                 <v-col cols="4">
                   <v-subheader class="reqText">서버주소</v-subheader>
                 </v-col>
-                <v-col cols="8" :style="{ display: 'flex', alignItems: 'center' }">
-                  <vue-ip-input :ip="updateDatasource_svrAddr" :on-change="onIpChange" :on-blur="onIpBlur"></vue-ip-input>
+                <v-col cols="8">
+                  <!-- 110번 11.7-17 — IPv4 주소 또는 호스트명. 길이는 SVR_ADDR 컬럼(varchar 50) 까지 -->
+                  <v-text-field v-model="updateDatasource_svrAddr" ref="updateDatasource_svrAddr" maxlength="50"
+                    :rules="[v => !!v || '서버주소는 필수 입력값입니다.', v => checkSvrAddr(v) || 'IPv4 주소 또는 호스트명을 입력해주세요.']"
+                    placeholder="예: 192.168.0.10, db-server" clearable required dense color="ndColor"></v-text-field>
                 </v-col>
               </v-row>
 
@@ -352,14 +358,12 @@
   
 <script>
 import axios from "axios";
-import VueIpInput from 'vue-ip-input';
 import NdModal from "./../views/modal/NdModal.vue"
 
 export default {
   name: 'MMDatasource',
   components: {
     NdModal,
-    VueIpInput,
   },
   props: ['isMobile'],
   data: () => ({
@@ -387,7 +391,7 @@ export default {
     addDatasource_dsTp: null,
     addDatasource_dbmsTp: null,
     addDatasource_driverName: null,
-    addDatasource_svrAddr: '0.0.0.0',
+    addDatasource_svrAddr: '',
     addDatasource_port: null,
     addDatasource_userId: null,
     addDatasource_pwd: null,
@@ -401,7 +405,7 @@ export default {
     updateDatasource_dsTp: null,
     updateDatasource_dbmsTp: null,
     updateDatasource_driverName: null,
-    updateDatasource_svrAddr: '0.0.0.0',
+    updateDatasource_svrAddr: '',
     updateDatasource_port: null,
     updateDatasource_userId: null,
     updateDatasource_pwd: null,
@@ -411,7 +415,7 @@ export default {
     updateDatasource_connType: 'Service Name',
     updateDatasource_rmDir: null,
     // dbmsTp 아이템
-    datasourceDbmsTpItems: ['Oracle', 'Cubrid', 'SQLServer', 'Altibase', 'Goldilocks', 'Tibero', 'MariaDB', 'PostgreSQL', 'Custom'],
+    datasourceDbmsTpItems: ['Oracle', 'Cubrid', 'SQLServer', 'Altibase', 'Goldilocks', 'Tibero', 'MariaDB', 'PostgreSQL'],
     // driverName 아이템
     datasourceDriverNameItems: [],
     // 캐릭터셋 아이템
@@ -664,10 +668,12 @@ export default {
         axios.get(this.$APIURL.base + "api/sysinfo/getDataSourceList").then(result => {
           let _data = result.data;
 
-          // table에서 사용할 dsTp의 한글명 생성하여 dsTpNm에 저장
+          // table에서 사용할 dsTp의 한글명 생성하여 dsTpNm에 저장 (0 DB, 1 HOST)
           for (let i = 0; i < _data.length; i++) {
-            if (_data[i].dsTp === 0) {
+            if (Number(_data[i].dsTp) === 0) {
               _data[i].dsTpNm = 'DB';
+            } else if (Number(_data[i].dsTp) === 1) {
+              _data[i].dsTpNm = 'HOST';
             }
           }
 
@@ -866,20 +872,6 @@ export default {
     resetDatasourceDriverNameItems() {
       this.datasourceDriverNameItems = [];
     },
-    onIpChange(ip) {
-      if (this.addDatasourceModalShow) {
-        this.addDatasource_svrAddr = ip;
-      } else if (this.updateDatasourceModalShow) {
-        this.updateDatasource_svrAddr = ip;
-      }
-    },
-    onIpBlur(ip) {
-      if (this.addDatasourceModalShow) {
-        this.addDatasource_svrAddr = ip;
-      } else if (this.updateDatasourceModalShow) {
-        this.updateDatasource_svrAddr = ip;
-      }
-    },
     testDatasource() {
       if (this.checkDatasourceTest()) {
         this.datasourceTestSubmit();
@@ -907,8 +899,8 @@ export default {
           _attr = '데이터베이스명';
         }
 
-        if (!this.checkIpAddress(this.addDatasource_svrAddr)) {
-          _attr = '서버 주소(IP)';
+        if (!this.checkSvrAddr(this.addDatasource_svrAddr)) {
+          _attr = '서버 주소';
         }
 
       } else if (this.updateDatasourceModalShow) {
@@ -928,8 +920,8 @@ export default {
           _attr = '데이터베이스명';
         }
 
-        if (!this.checkIpAddress(this.updateDatasource_svrAddr)) {
-          _attr = '서버 주소(IP)';
+        if (!this.checkSvrAddr(this.updateDatasource_svrAddr)) {
+          _attr = '서버 주소';
         }
       }
 
@@ -1012,6 +1004,7 @@ export default {
             });
           }
         }).catch(error => {
+          this.progress = false;
           this.$swal.fire({
             title: '연결 테스트 실패',
             text: error,
@@ -1077,8 +1070,15 @@ export default {
         });
       });
     },
-    checkIpAddress: function (addr) {
-      return /^(?!0)(?!.*\.$)((1?\d?\d|25[0-5]|2[0-4]\d)(\.|$)){4}$/.test(addr);
+    // 110번 11.7-17 — 서버 주소 검사. 숫자와 점만이면 IPv4(4칸, 각 0~255), 아니면 호스트명(영문·숫자·하이픈 라벨을 점으로 이음, 253자 이내)
+    checkSvrAddr(addr) {
+      if (!addr) return false;
+      if (/^[\d.]+$/.test(addr)) {
+        const parts = addr.split('.');
+        return parts.length === 4 && parts.every(p => /^(0|[1-9]\d{0,2})$/.test(p) && Number(p) <= 255);
+      }
+      return addr.length <= 253
+        && addr.split('.').every(label => /^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label));
     },
     closeProgress() {
       // this.progress = false;

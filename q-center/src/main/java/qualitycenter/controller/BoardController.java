@@ -5,11 +5,20 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+import javax.servlet.http.HttpSession;
+
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -36,11 +45,28 @@ public class BoardController {
 
 	private static final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/board/";
 
+	/** 110 10.3-2c — 게시판 유형 */
+	private static final List<String> BOARD_TYPES = Arrays.asList("NOTICE", "QNA");
+
+	/** 110 10.3-4 — 첨부 허용 확장자·글당 개수 (크기 상한은 application.properties multipart 설정) */
+	private static final Set<String> FILE_EXTS = new HashSet<>(Arrays.asList(
+			"pdf", "hwp", "hwpx", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "png", "jpg", "jpeg", "gif", "zip"));
+	private static final int MAX_FILES = 10;
+
+	/** 110 10.3-9 — 이 세션에서 연 글 (조회수는 세션당 한 번) */
+	private static final String VIEWED_ATTR = "BOARD_VIEWED";
+
+	private static final String MSG_NOT_FOUND = "게시글을 찾을 수 없습니다.";
+	private static final String MSG_NOT_OWNER = "작성자나 공지 관리 권한이 있는 사용자만 수정·삭제할 수 있습니다.";
+
 	@Autowired
 	private SessionService sessionService;
 
 	@Autowired
 	private SqlSessionTemplate sqlSessionTemplate;
+
+	@Autowired
+	private SqlSessionFactory sqlSessionFactory;
 
 	@PostMapping("/list")
 	public Map<String, Object> getBoardList(@RequestBody Map<String, Object> params) {
@@ -58,8 +84,15 @@ public class BoardController {
 	}
 
 	@GetMapping("/{boardId}")
-	public Map<String, Object> getBoardById(@PathVariable String boardId) {
-		sqlSessionTemplate.update("board.incrementViewCnt", boardId);
+	public Map<String, Object> getBoardById(@PathVariable String boardId, HttpSession session) {
+		// 110 10.3-9 — 조회수는 세션당 한 번 (같은 사용자가 다시 열어도 그대로, 다시 로그인하면 새로 센다)
+		@SuppressWarnings("unchecked")
+		Set<String> viewed = (Set<String>) session.getAttribute(VIEWED_ATTR);
+		if (viewed == null) {
+			viewed = ConcurrentHashMap.newKeySet();
+			session.setAttribute(VIEWED_ATTR, viewed);
+		}
+		if (viewed.add(boardId)) sqlSessionTemplate.update("board.incrementViewCnt", boardId);
 		Map<String, Object> board = sqlSessionTemplate.selectOne("board.selectBoardById", boardId);
 		return board != null ? board : new HashMap<>();
 	}
@@ -74,8 +107,18 @@ public class BoardController {
 			@RequestParam(value = "files", required = false) List<MultipartFile> files) {
 		Response result = new Response();
 		try {
-			if ("NOTICE".equals(boardType) && !sessionService.hasPerm(PermCode.BOARD_ADMIN)) {
+			if (!BOARD_TYPES.contains(boardType)) {
+				result.setResultInfo(400, "게시판 유형이 올바르지 않습니다.");
+				return result;
+			}
+			boolean boardAdmin = sessionService.hasPerm(PermCode.BOARD_ADMIN);
+			if ("NOTICE".equals(boardType) && !boardAdmin) {
 				result.setResultInfo(RestResult.CODE_500.getCode(), "공지사항을 쓸 권한이 없습니다 (공지 관리 권한 필요).");
+				return result;
+			}
+			String fileErr = checkFiles(files, 0);
+			if (fileErr != null) {
+				result.setResultInfo(400, fileErr);
 				return result;
 			}
 			String boardId = StringUtils.getUUID();
@@ -85,7 +128,8 @@ public class BoardController {
 			params.put("title", title);
 			params.put("content", content != null ? content : "");
 			params.put("cretUserId", sessionService.getUserId());
-			params.put("pinYn", pinYn);
+			// 110 10.3-2a — 상단 고정은 공지 관리 권한만 (화면은 체크박스를 그 사용자에게만 보인다)
+			params.put("pinYn", boardAdmin ? pinYn : "N");
 			sqlSessionTemplate.insert("board.insertBoard", params);
 
 			saveFiles(boardId, files);
@@ -104,15 +148,61 @@ public class BoardController {
 			@RequestParam("title") String title,
 			@RequestParam(value = "content", required = false) String content,
 			@RequestParam(value = "pinYn", required = false, defaultValue = "N") String pinYn,
-			@RequestParam(value = "files", required = false) List<MultipartFile> files) {
+			@RequestParam(value = "files", required = false) List<MultipartFile> files,
+			@RequestParam(value = "deleteFileIds", required = false) List<String> deleteFileIds) {
 		Response result = new Response();
 		try {
+			Map<String, Object> board = sqlSessionTemplate.selectOne("board.selectBoardById", boardId);
+			if (board == null) {
+				result.setResultInfo(404, MSG_NOT_FOUND);
+				return result;
+			}
+			boolean boardAdmin = sessionService.hasPerm(PermCode.BOARD_ADMIN);
+			// 110 10.3-2b — 공지는 작성자여도 공지 관리 권한이 있어야 고친다
+			if ("NOTICE".equals(board.get("boardType")) && !boardAdmin) {
+				result.setResultInfo(403, "공지사항을 수정할 권한이 없습니다 (공지 관리 권한 필요).");
+				return result;
+			}
+			// 110 10.3-1 — 작성자 본인 또는 공지 관리 권한
+			if (!isOwner(board) && !boardAdmin) {
+				result.setResultInfo(403, MSG_NOT_OWNER);
+				return result;
+			}
+			// 110 10.3-6 — 수정 화면에서 X 로 뺀 기존 첨부. 저장할 때 한꺼번에 지운다 (그 글의 첨부만)
+			Map<String, String> pathById = new HashMap<>();
+			for (Map<String, Object> f : sqlSessionTemplate.<Map<String, Object>>selectList("board.selectBoardFilePathList", boardId)) {
+				pathById.put((String) f.get("fileId"), (String) f.get("filePath"));
+			}
+			Set<String> delIds = deleteFileIds == null ? new LinkedHashSet<>() : new LinkedHashSet<>(deleteFileIds);
+			for (String id : delIds) {
+				if (!pathById.containsKey(id)) {
+					result.setResultInfo(400, "이 글의 첨부 파일이 아닙니다: " + id);
+					return result;
+				}
+			}
+			String fileErr = checkFiles(files, pathById.size() - delIds.size());
+			if (fileErr != null) {
+				result.setResultInfo(400, fileErr);
+				return result;
+			}
+
 			Map<String, Object> params = new HashMap<>();
 			params.put("boardId", boardId);
 			params.put("title", title);
 			params.put("content", content != null ? content : "");
-			params.put("pinYn", pinYn);
-			sqlSessionTemplate.update("board.updateBoard", params);
+			// 110 10.3-2a — 공지 관리 권한이 없으면 상단 고정은 지금 값 그대로 (작성자가 고쳐도 풀리지 않게)
+			params.put("pinYn", boardAdmin ? pinYn : null);
+			try (SqlSession s = sqlSessionFactory.openSession()) {
+				s.update("board.updateBoard", params);
+				if (!delIds.isEmpty()) {
+					Map<String, Object> dp = new HashMap<>();
+					dp.put("boardId", boardId);
+					dp.put("fileIds", delIds);
+					s.delete("board.deleteBoardFilesByIds", dp);
+				}
+				s.commit();
+			}
+			for (String id : delIds) deleteDiskFile(pathById.get(id));
 
 			saveFiles(boardId, files);
 			result.setResultInfo(RestResult.CODE_200);
@@ -128,20 +218,64 @@ public class BoardController {
 		Response result = new Response();
 		try {
 			String boardId = (String) params.get("boardId");
-			// 첨부파일 삭제
-			List<Map<String, Object>> files = sqlSessionTemplate.selectList("board.selectBoardFileList", boardId);
-			for (Map<String, Object> f : files) {
-				try { new File((String) f.get("filePath")).delete(); } catch (Exception ignore) {}
+			Map<String, Object> board = sqlSessionTemplate.selectOne("board.selectBoardById", boardId);
+			if (board == null) {
+				result.setResultInfo(404, MSG_NOT_FOUND);
+				return result;
 			}
-			sqlSessionTemplate.delete("board.deleteBoardFilesByBoardId", boardId);
-			sqlSessionTemplate.delete("board.deleteBoardCommentsByBoardId", boardId);
-			sqlSessionTemplate.delete("board.deleteBoard", boardId);
+			// 110 10.3-1 — 작성자 본인 또는 공지 관리 권한
+			if (!isOwner(board) && !sessionService.hasPerm(PermCode.BOARD_ADMIN)) {
+				result.setResultInfo(403, MSG_NOT_OWNER);
+				return result;
+			}
+			// 110 10.3-11 — 첨부·댓글·글 DELETE 를 한 트랜잭션으로, 디스크 파일은 커밋한 뒤에 지운다
+			List<Map<String, Object>> files = sqlSessionTemplate.selectList("board.selectBoardFilePathList", boardId);
+			try (SqlSession s = sqlSessionFactory.openSession()) {
+				s.delete("board.deleteBoardFilesByBoardId", boardId);
+				s.delete("board.deleteBoardCommentsByBoardId", boardId);
+				s.delete("board.deleteBoard", boardId);
+				s.commit();
+			}
+			for (Map<String, Object> f : files) deleteDiskFile((String) f.get("filePath"));
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			log.error("deleteBoard error: {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return result;
+	}
+
+	/** 그 글·댓글을 세션 사용자가 썼는지 */
+	private boolean isOwner(Map<String, Object> row) {
+		return Objects.equals(row.get("cretUserId"), sessionService.getUserId());
+	}
+
+	/** DB 행을 지운 뒤 디스크 파일 삭제 — 실패는 로그만 (행은 이미 없다) */
+	private void deleteDiskFile(String filePath) {
+		try {
+			Files.deleteIfExists(Paths.get(filePath));
+		} catch (Exception e) {
+			log.warn("board file delete failed: {} ({})", filePath, e.getMessage());
+		}
+	}
+
+	/**
+	 * 110 10.3-4 — 첨부 확장자·글당 개수 검사 (DB·디스크 쓰기 전). 통과하면 null.
+	 * @param keepCount 이 글에 남는 기존 첨부 수 (등록은 0, 수정은 기존 − 삭제 표시)
+	 */
+	private String checkFiles(List<MultipartFile> files, int keepCount) {
+		int count = keepCount;
+		if (files != null) {
+			for (MultipartFile f : files) {
+				if (f.isEmpty()) continue;
+				String nm = f.getOriginalFilename();
+				int dot = nm == null ? -1 : nm.lastIndexOf('.');
+				String ext = dot < 0 ? "" : nm.substring(dot + 1).toLowerCase();
+				if (!FILE_EXTS.contains(ext)) return "첨부할 수 없는 파일 형식입니다: " + nm;
+				count++;
+			}
+		}
+		return count > MAX_FILES ? "첨부 파일은 글당 " + MAX_FILES + "개까지입니다." : null;
 	}
 
 	// === 파일 관련 ===
@@ -161,26 +295,11 @@ public class BoardController {
 		if (!resource.exists()) return ResponseEntity.notFound().build();
 
 		String fileName = (String) fileInfo.get("fileNm");
+		// 110 10.3-7 — URLEncoder 는 공백을 + 로 바꾼다 → %20. filename* 는 RFC 5987 (브라우저가 이 값을 쓴다)
+		String encoded = java.net.URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
 		return ResponseEntity.ok()
-				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + java.net.URLEncoder.encode(fileName, "UTF-8") + "\"")
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encoded + "\"; filename*=UTF-8''" + encoded)
 				.body(resource);
-	}
-
-	@PostMapping("/file/delete")
-	public Response deleteFile(@RequestBody Map<String, Object> params) {
-		Response result = new Response();
-		try {
-			String fileId = (String) params.get("fileId");
-			Map<String, Object> fileInfo = sqlSessionTemplate.selectOne("board.selectBoardFileById", fileId);
-			if (fileInfo != null) {
-				try { new File((String) fileInfo.get("filePath")).delete(); } catch (Exception ignore) {}
-			}
-			sqlSessionTemplate.delete("board.deleteBoardFile", fileId);
-			result.setResultInfo(RestResult.CODE_200);
-		} catch (Exception e) {
-			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
-		}
-		return result;
 	}
 
 	private void saveFiles(String boardId, List<MultipartFile> files) throws IOException {
@@ -268,6 +387,8 @@ public class BoardController {
 	public Response updateBoardComment(@RequestBody Map<String, Object> params) {
 		Response result = new Response();
 		try {
+			Response denied = checkCommentOwner((String) params.get("commentId"));
+			if (denied != null) return denied;
 			sqlSessionTemplate.update("board.updateBoardComment", params);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
@@ -280,11 +401,29 @@ public class BoardController {
 	public Response deleteBoardComment(@RequestBody Map<String, Object> params) {
 		Response result = new Response();
 		try {
-			sqlSessionTemplate.delete("board.deleteBoardComment", (String) params.get("commentId"));
+			String commentId = (String) params.get("commentId");
+			Response denied = checkCommentOwner(commentId);
+			if (denied != null) return denied;
+			sqlSessionTemplate.delete("board.deleteBoardComment", commentId);
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return result;
+	}
+
+	/** 110 10.3-1 — 댓글 수정·삭제는 작성자 본인 또는 공지 관리 권한. 통과하면 null */
+	private Response checkCommentOwner(String commentId) {
+		Map<String, Object> comment = sqlSessionTemplate.selectOne("board.selectBoardCommentById", commentId);
+		Response r = new Response();
+		if (comment == null) {
+			r.setResultInfo(404, "댓글을 찾을 수 없습니다.");
+			return r;
+		}
+		if (!isOwner(comment) && !sessionService.hasPerm(PermCode.BOARD_ADMIN)) {
+			r.setResultInfo(403, MSG_NOT_OWNER);
+			return r;
+		}
+		return null;
 	}
 }

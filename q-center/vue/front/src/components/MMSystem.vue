@@ -10,15 +10,15 @@
 
       </v-sheet>
       <v-sheet class="infoWrapper">
-        <!-- 버튼 영역 -->
-        <v-sheet v-show="selectedItem[0].sysCd !== ''"
+        <!-- 버튼 영역 — 110번 11.7-20 등록은 선택 없이도 보임(최상위 등록). 수정·삭제는 선택 안내가 막는다 -->
+        <v-sheet
           v-bind:style="[isMobile ? { 'padding': '12px 0px' } : { 'padding': '0px 15px', 'margin': '0 0 15px 0', 'display': 'flex', 'align-items': 'center', 'justify-content': 'flex-end' }]">
           <v-btn class="gradient" v-on:click="showModal('add')" title="등록" :style="{ marginRight: '20px' }">등록</v-btn>
           <v-btn class="gradient" v-on:click="showModal('update')" title="수정"
             :style="{ marginRight: '20px' }">수정</v-btn>
           <v-btn class="gradient" v-on:click="removeSystemData()" title="삭제">삭제</v-btn>
           <!-- 104번 WP7-25 — 이 시스템(하위 포함) 모델의 표준 준수 필수 일괄 설정 -->
-          <v-menu v-if="$can('DM_MANAGE')" offset-y>
+          <v-menu v-if="$can('DM_MANAGE') && selectedItem[0].sysCd !== ''" offset-y>
             <template v-slot:activator="{ on, attrs }">
               <v-btn id="sysStndReqMenu" class="ml-5" outlined color="indigo" v-bind="attrs" v-on="on">표준 준수 필수
                 <v-icon small right>mdi-menu-down</v-icon></v-btn>

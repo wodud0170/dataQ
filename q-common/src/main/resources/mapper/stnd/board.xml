@@ -79,8 +79,11 @@
     VALUES (#{boardId}, #{boardType}, #{title}, #{content}, #{cretUserId}, CURRENT_TIMESTAMP, 0, #{pinYn})
   </insert>
 
+  <!-- 110 10.3-2a: 공지 관리 권한이 없는 사용자가 고치면 pinYn 이 null — 상단 고정은 지금 값 그대로 -->
   <update id="updateBoard" parameterType="hashmap">
-    UPDATE TB_BOARD SET TITLE = #{title}, CONTENT = #{content}, PIN_YN = #{pinYn}, UPDT_DT = CURRENT_TIMESTAMP
+    UPDATE TB_BOARD SET TITLE = #{title}, CONTENT = #{content},
+      <if test="pinYn != null">PIN_YN = #{pinYn},</if>
+      UPDT_DT = CURRENT_TIMESTAMP
     WHERE BOARD_ID = #{boardId}
   </update>
 
@@ -97,6 +100,12 @@
     SELECT COMMENT_ID as "commentId", BOARD_ID as "boardId", CONTENT as "content",
       CRET_USER_ID as "cretUserId", to_char(CRET_DT, 'YYYY-MM-DD HH24:MI') as "cretDt"
     FROM TB_BOARD_COMMENT WHERE BOARD_ID = #{boardId} ORDER BY CRET_DT ASC
+  </select>
+
+  <!-- 110 10.3-1: 댓글 수정·삭제 전 작성자 확인 -->
+  <select id="selectBoardCommentById" parameterType="String" resultType="hashmap">
+    SELECT COMMENT_ID as "commentId", BOARD_ID as "boardId", CRET_USER_ID as "cretUserId"
+    FROM TB_BOARD_COMMENT WHERE COMMENT_ID = #{commentId}
   </select>
 
   <insert id="insertBoardComment" parameterType="hashmap">
@@ -117,11 +126,17 @@
   </delete>
 
   <!-- 파일 -->
+  <!-- 110 10.3-3: 화면에 돌려주는 목록이라 서버 경로(FILE_PATH)는 빼 둔다. 디스크 파일 삭제는 selectBoardFilePathList -->
   <select id="selectBoardFileList" parameterType="String" resultType="hashmap">
-    SELECT FILE_ID as "fileId", BOARD_ID as "boardId", FILE_NM as "fileNm",
-      FILE_PATH as "filePath", FILE_SIZE as "fileSize",
+    SELECT FILE_ID as "fileId", BOARD_ID as "boardId", FILE_NM as "fileNm", FILE_SIZE as "fileSize",
       CRET_USER_ID as "cretUserId", to_char(CRET_DT, 'YYYY-MM-DD HH24:MI') as "cretDt"
     FROM TB_BOARD_FILE WHERE BOARD_ID = #{boardId} ORDER BY CRET_DT ASC
+  </select>
+
+  <!-- 110 10.3-3·10.3-6·10.3-11: 서버 내부용 (글 삭제·수정 때 첨부 확인과 디스크 파일 삭제) -->
+  <select id="selectBoardFilePathList" parameterType="String" resultType="hashmap">
+    SELECT FILE_ID as "fileId", FILE_PATH as "filePath"
+    FROM TB_BOARD_FILE WHERE BOARD_ID = #{boardId}
   </select>
 
   <select id="selectBoardFileById" parameterType="String" resultType="hashmap">
@@ -134,8 +149,10 @@
     VALUES (#{fileId}, #{boardId}, #{fileNm}, #{filePath}, #{fileSize}, #{cretUserId}, CURRENT_TIMESTAMP)
   </insert>
 
-  <delete id="deleteBoardFile" parameterType="String">
-    DELETE FROM TB_BOARD_FILE WHERE FILE_ID = #{fileId}
+  <!-- 110 10.3-6: 글 수정 저장 때 X 로 뺀 기존 첨부 (그 글의 첨부만) -->
+  <delete id="deleteBoardFilesByIds" parameterType="hashmap">
+    DELETE FROM TB_BOARD_FILE WHERE BOARD_ID = #{boardId}
+      AND FILE_ID IN <foreach collection="fileIds" item="id" open="(" separator="," close=")">#{id}</foreach>
   </delete>
 
   <delete id="deleteBoardFilesByBoardId" parameterType="String">

@@ -51,6 +51,8 @@ public class MyBatisConfig {
                 new org.apache.ibatis.session.Configuration();
 
         configuration.setMapUnderscoreToCamelCase(true);
+        // resultType="map" 응답에서 NULL 컬럼도 키 유지 — Configuration 을 직접 만들어 application.properties 의 mybatis.configuration.* 는 적용되지 않는다
+        configuration.setCallSettersOnNulls(true);
         configuration.setLogImpl(org.apache.ibatis.logging.slf4j.Slf4jImpl.class);
         sessionFactory.setConfiguration(configuration);
 

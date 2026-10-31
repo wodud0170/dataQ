@@ -1,9 +1,13 @@
 package qualitycenter.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.ndata.common.NDConstant;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
 import com.ndata.module.StringUtils;
@@ -39,6 +44,19 @@ public class LoginController {
 
   @Autowired
   private RoleService roleService;
+
+  /**
+   * 이 컨트롤러가 거부한 사유(권한 없음·내장 관리자 삭제 등)를 화면이 받도록 본문 {success:false, message} 로 돌려준다 (110번 11.7-11b).
+   * Spring 기본 오류 응답은 사유(message)를 싣지 않아 화면에 사유를 보여 줄 수 없었다.
+   */
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<Map<String, Object>> onDenied(ResponseStatusException e) {
+    log.warn(">> login api 거부: {} {}", e.getStatus(), e.getReason());
+    Map<String, Object> body = new HashMap<>();
+    body.put("success", false);
+    body.put("message", e.getReason());
+    return ResponseEntity.status(e.getStatus()).body(body);
+  }
 
   @RequestMapping(value = "/getUser", method = RequestMethod.GET)
   public UserVo getUser() {
@@ -110,10 +128,13 @@ public class LoginController {
 		return Mono.just(result);
   }
 
-  /** 비밀번호 변경 — 로그인한 본인 것만 바꾼다(현재 비밀번호 확인). user 파라미터는 보지 않는다. */
-  @RequestMapping(value = "/changePassword", method = RequestMethod.GET)
-  public Response changePassword(String oldPassword, String newPassword) {
-    return sessionService.changePassword(sessionService.getUserId(), oldPassword, newPassword);
+  /**
+   * 비밀번호 변경 — 로그인한 본인 것만 바꾼다(현재 비밀번호 확인).
+   * 본문 {oldPassword, newPassword} (각각 Base64). 비밀번호가 주소·접속 기록에 남지 않게 POST 본문으로 받는다 (110번 11.7-3c).
+   */
+  @RequestMapping(value = "/changePassword", method = RequestMethod.POST)
+  public Response changePassword(@RequestBody Map<String, String> body) {
+    return sessionService.changePassword(sessionService.getUserId(), body.get("oldPassword"), body.get("newPassword"));
   }
 
   @RequestMapping(value = "/createUser", method = RequestMethod.POST)
@@ -130,6 +151,7 @@ public class LoginController {
         result.setResultInfo(403, "관리자 계정은 관리자만 만들 수 있습니다.");
         return Mono.just(result);
       }
+      // 삭제(DEL_YN) 된 같은 ID 는 여기를 지나 createUser 가 새 사용자로 되살린다 (110번 11.7-11a)
       if (sessionService.existUser(user.getId())) {
         throw new Exception("이미 존재하는 사용자입니다(" + user.getId() + ")");
       }
@@ -149,11 +171,21 @@ public class LoginController {
     if (!sessionService.hasPerm(PermCode.USER_ADMIN)) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "사용자를 삭제할 권한이 없습니다 (사용자·권한 관리 권한 필요).");
     }
+    // 내장 관리자가 없으면 모든 로그인이 거부된다(CustomAuthenticationProvider) — 관리자여도 지우지 못한다 (110번 11.7-4)
+    if (NDConstant.USER_ADMIN.equals(user.getId())) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "내장 관리자 계정은 삭제할 수 없습니다.");
+    }
     AdminVo target = user.getId() == null ? null : sessionService.getUserDetail(user.getId());
     if (target != null && target.isAdmin() && !sessionService.isAdmin()) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 계정은 관리자만 삭제할 수 있습니다.");
     }
-    return sessionService.removeUser(user);
+    boolean removed = sessionService.removeUser(user);
+    if (removed) {
+      // 삭제된 사용자가 로그인해 있으면 그 세션을 끊고, 권한 캐시도 비운다 (110번 11.7-14)
+      sessionService.expireSessions(user.getId());
+      permService.invalidate();
+    }
+    return removed;
   }
 
   /**
@@ -196,6 +228,8 @@ public class LoginController {
 				}
 			}
 			sessionService.updateUser(user);
+			// 관리자 지정·해제가 그 사용자의 다음 요청부터 반영되도록 권한 캐시를 비운다 (110번 11.7-14)
+			permService.invalidate();
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			log.error(">> update user failed : {}", e.getMessage());

@@ -1,4 +1,6 @@
 <template>
+  <!-- 탭 영역 안에서 세로 스크롤 — 1366x768 에서 비밀번호 변경 칸·버튼이 화면 밖에 잘리지 않게 -->
+  <div style="height:100%; overflow-y:auto;">
   <v-container fluid class="pa-6" style="max-width:700px;">
     <v-card outlined class="pa-6">
       <div class="d-flex align-center mb-4">
@@ -66,7 +68,8 @@
       </v-row>
       <v-row class="mt-2">
         <v-col class="text-right">
-          <v-btn color="red" dark @click="changePassword" :loading="changingPw"
+          <!-- btn-auto: 전역 100px 고정이면 '비밀번호 변경' 글자가 잘린다. dark 를 빼야 비활성일 때 흰 카드 위에서 보인다 -->
+          <v-btn color="red" class="white--text btn-auto" @click="changePassword" :loading="changingPw"
             :disabled="!oldPassword || !newPassword || newPassword !== confirmPassword">
             <v-icon small class="mr-1">mdi-lock-check</v-icon> 비밀번호 변경
           </v-btn>
@@ -74,6 +77,7 @@
       </v-row>
     </v-card>
   </v-container>
+  </div>
 </template>
 
 <script>
@@ -114,14 +118,19 @@ export default {
     },
     saveProfile() {
       this.saving = true;
-      // updateAdmin 은 NM/ADM_YN 까지 덮어쓰므로 기존 값을 그대로 보낸다.
-      axios.post(this.$APIURL.base + 'api/login/updateUser', {
-        id: this.userId,
-        name: this.userName,
-        admin: this.isAdmin,
-        email: this.userEmail || '',
-        phone: this.userPhone || ''
-      })
+      // updateAdmin 은 NM/ADM_YN 까지 덮어쓰므로 관리자 여부는 지금 값을 보낸다. 탭을 연 뒤 관리자 지정·해제가 바뀌었을 수 있어
+      // 저장 직전에 다시 읽는다 — 탭을 열 때 읽은 값을 보내면 관리자 지정이 말없이 풀린다 (110번 11.7-14)
+      axios.get(this.$APIURL.base + 'api/login/getUserDetail', { params: { userId: this.userId } })
+        .then(cur => {
+          this.isAdmin = cur.data.admin || false;
+          return axios.post(this.$APIURL.base + 'api/login/updateUser', {
+            id: this.userId,
+            name: this.userName,
+            admin: this.isAdmin,
+            email: this.userEmail || '',
+            phone: this.userPhone || ''
+          });
+        })
         .then(res => {
           if (res.data.resultCode === 200) {
             this.$swal.fire({ title: '저장되었습니다.', icon: 'success', timer: 1500, showConfirmButton: false });
@@ -137,10 +146,10 @@ export default {
     changePassword() {
       if (this.newPassword !== this.confirmPassword) return;
       this.changingPw = true;
-      let encoded_old = btoa(this.oldPassword);
-      let encoded_new = btoa(this.newPassword);
-      axios.get(this.$APIURL.base + 'api/login/changePassword', {
-        params: { user: this.userId, oldPassword: encoded_old, newPassword: encoded_new }
+      let encoded_old = this.$encodePw(this.oldPassword);
+      let encoded_new = this.$encodePw(this.newPassword);
+      axios.post(this.$APIURL.base + 'api/login/changePassword', {
+        oldPassword: encoded_old, newPassword: encoded_new
       }).then(res => {
         if (res.data.resultCode === 200) {
           this.$swal.fire({ title: '비밀번호가 변경되었습니다.', icon: 'success', confirmButtonText: '확인' });

@@ -283,7 +283,7 @@ public class StructDiagController {
 	 *   4. q-executor에 백그라운드 실행 요청
 	 */
 	@PostMapping("/execute")
-	public Mono<Response> execute(HttpServletRequest request, @RequestBody Map<String, Object> body) {
+	public Mono<Response> execute(@RequestBody Map<String, Object> body) {
 		String dataModelId = (String) body.get("dataModelId");
 		Response result = new Response();
 
@@ -331,10 +331,7 @@ public class StructDiagController {
 
 			WebClientHandler webClientHandler = new WebClientHandler(
 					NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/structDiag/run");
-			return webClientHandler.postData(
-					sessionService.getUserId(),
-					Objects.toString(request.getSession().getAttribute("SSID"), null),
-					params)
+			return webClientHandler.postData(sessionService.getUserId(), null, params)
 				.map(res -> {
 					// 110 6.10-5b — executor 가 기동을 거부하면 이력을 ERROR 로 (READY 로 남으면 다음 실행이 늘 409)
 					if (res.getResultCode() != RestResult.CODE_200.getCode()) {

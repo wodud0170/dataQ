@@ -6,9 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-
-import javax.servlet.http.HttpServletRequest;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -168,7 +165,7 @@ public class DiagScheduleController {
 
     /** 즉시 실행: LOG(RUNNING) insert 후 q-executor 로 실제 실행 요청 위임 */
     @PostMapping("/runNow")
-    public Response runNow(HttpServletRequest request, @RequestBody Map<String, String> body) {
+    public Response runNow(@RequestBody Map<String, String> body) {
         Response res = new Response();
         try {
             assertAdmin();
@@ -216,11 +213,7 @@ public class DiagScheduleController {
             // 실패 시 LOG 를 ERROR 로 즉시 마감.
             Response er;
             try {
-                er = webClient.postData(
-                        sessionService.getUserId(),
-                        Objects.toString(request.getSession().getAttribute("SSID"), null),
-                        params
-                ).block();
+                er = webClient.postData(sessionService.getUserId(), null, params).block();
             } catch (Exception we) {
                 finishRunNowError(scheduleId, log.getLogId(), "[CONFIG] q-executor 호출 실패: " + we.getMessage());
                 throw we;

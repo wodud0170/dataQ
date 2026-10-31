@@ -1,7 +1,8 @@
 package qualitycenter.service.auth;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jasypt.encryption.StringEncryptor;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -10,27 +11,24 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.session.SessionInformation;
+import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import qualitycenter.model.auth.AdminVo;
 import qualitycenter.model.auth.UserVo;
 
-import com.ndata.bean.AuthorityManager;
 import com.ndata.bean.SecurityManager;
 import com.ndata.common.NDConstant;
 import com.ndata.common.NDSeverity;
 import com.ndata.common.message.Response;
 import com.ndata.common.message.RestResult;
-import com.ndata.model.admin.RoleAuthorityVo;
-import com.ndata.model.admin.RoleVo;
-import com.ndata.model.admin.UserAsgnRoleVo;
 import com.ndata.module.DateUtils;
 import com.ndata.module.StringUtils;
 import com.ndata.quality.common.PermCode;
 import com.ndata.quality.service.PermService;
 
-import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -40,9 +38,6 @@ import java.util.List;
 @Slf4j
 @Component
 public class SessionService {
-	
-	@Resource(name = "jasyptStringEncryptor")
-	private StringEncryptor stringEncryptor;
 
 	@Autowired
 	SecurityManager securityManager;
@@ -51,7 +46,13 @@ public class SessionService {
 	private SqlSessionTemplate sqlSessionTemplate;
 
 	@Autowired
+	private SqlSessionFactory sqlSessionFactory;
+
+	@Autowired
 	private PermService permService;
+
+	@Autowired
+	private SessionRegistry sessionRegistry;
 
 
 	/**
@@ -86,7 +87,8 @@ public class SessionService {
     }
 
     /**
-     * 어드민 생성
+     * 어드민 생성.
+     * 내장 관리자 행이 삭제 표시(DEL_YN)로 남아 있으면 INSERT 가 기본키 중복이라 그 행을 되살린다 (110번 1.10-B1 안내 문구대로 만들 수 있게).
      */
     public boolean createAdmin(String password) {
 
@@ -102,11 +104,17 @@ public class SessionService {
         admin.setCreateDate(time);
         admin.setUpdateDate(time);
 
+        if ((int) sqlSessionTemplate.selectOne("login.selectDeletedUserCount", NDConstant.USER_ADMIN) > 0) {
+            int result = sqlSessionTemplate.update("login.restoreUser", admin);
+            permService.invalidate();
+            return result == 1;
+        }
+
         int result = sqlSessionTemplate.insert("login.createAdmin", admin);
 
         return result == 1;
     }
-     
+
     /**
      * 유저 상세 조회
      */
@@ -137,12 +145,25 @@ public class SessionService {
         }
     }
 
+    /**
+     * 로그인 사용자가 관리자인지. 권한 판정(hasPerm)과 같은 기준 — TB_USER.ADM_YN(PermService, 10초 캐시)으로 본다.
+     * 로그인 때 세션에 담은 값을 쓰면 관리자 지정·해제가 다시 로그인할 때까지 반영되지 않는다 (110번 11.7-14).
+     */
     public boolean isAdmin() {
-		UserVo userVo = getUser();
-		if (userVo != null) {
-			return userVo.isAdmin();
-		} else {
-			return false;
+		return permService.isAdmin(getUserId());
+    }
+
+    /**
+     * 그 사용자의 로그인 세션을 모두 만료시킨다 (사용자 삭제 — 110번 11.7-14).
+     * 만료된 세션의 다음 요청은 로그인이 없는 요청과 같이 처리된다 (WebSecurityConfiguration 세션 관리).
+     */
+    public void expireSessions(String userId) {
+		for (Object principal : sessionRegistry.getAllPrincipals()) {
+			if (userId.equals(((UserVo) principal).getId())) {
+				for (SessionInformation session : sessionRegistry.getAllSessions(principal, false)) {
+					session.expireNow();
+				}
+			}
 		}
     }
 
@@ -160,7 +181,8 @@ public class SessionService {
     }
 	
     /**
-     * 유저 생성
+     * 유저 생성.
+     * 삭제(DEL_YN) 된 같은 ID 가 있으면 그 행을 새 사용자로 되살린다 — 예전 역할·부서·부서장 지정은 비운다 (110번 11.7-11a).
      */
     public boolean createUser(AdminVo admin) {
 
@@ -170,6 +192,19 @@ public class SessionService {
         admin.setPassword(securityManager.createHash(securityManager.encryptSHA256(securityManager.decodeBase64(admin.getPassword()))));
         admin.setCreateDate(time);
         admin.setUpdateDate(time);
+
+        if ((int) sqlSessionTemplate.selectOne("login.selectDeletedUserCount", admin.getId()) > 0) {
+            admin.setUpdateUserId(getUserId());
+            int result;
+            try (SqlSession session = sqlSessionFactory.openSession(false)) {
+                result = session.update("login.restoreUser", admin);
+                session.delete("role.deleteUserRolesByUser", admin.getId());
+                session.update("login.clearOrgHead", admin);
+                session.commit();
+            }
+            permService.invalidate();
+            return result == 1;
+        }
 
         int result = sqlSessionTemplate.insert("login.createAdmin", admin);
 
@@ -202,111 +237,6 @@ public class SessionService {
         int result = sqlSessionTemplate.update("login.updateAdmin", admin);
 
         return result == 1;
-    }
-    
-    /**
-     * 역할 목록 조회
-     */
-    public List<RoleVo> getRoleList() {
-
-    	List<RoleVo> roleVos = sqlSessionTemplate.selectList("authority.getRoleList");
-    	
-    	if (roleVos != null) {
-    		for(RoleVo role : roleVos) {
-    			role.setAuthorities(sqlSessionTemplate.selectList("authority.getRoleAuthority", role.getRoleNm()));
-    		}
-    	}
-    	
-    	return roleVos;
-    }
-    
-    /**
-     * 역할(Role) 생성
-     */
-    public boolean createRole(RoleVo role) {
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-        String time = LocalDateTime.now().format(formatter);
-
-        role.setCreateDate(time);
-        role.setUpdateDate(time);
-        if (getUserId() != null) {
-        	role.setCreateUserId(getUserId());
-        }
-
-        int result = sqlSessionTemplate.insert("authority.insertRole", role);
-
-        // role 추가가 성공하고 role 접근권한이 NULL이 아닌 경우
-        if (result == 1 && role.getAuthorities() != null) {
-        	updateRoleAuthority(role, time);
-        }
-        
-        return result == 1;
-    }
-    
-    /**
-     * 역할(Role)명 수정
-     */
-    public boolean updateRoleName(RoleVo role) {
-        int result = sqlSessionTemplate.update("authority.updateRoleName", role);
-        return result == 1;
-    }
-
-    /**
-     * 역할(Role)삭제
-     */
-    public boolean deleteRole(RoleVo role) {
-        int result = sqlSessionTemplate.delete("authority.deleteRole", role);
-        return result == 1;
-    }
-    
-    /**
-     * 역할(Role) 수정
-     */
-    public void updateRoleAuthority(RoleVo role, String updateTime) {
-
-    	// 기존 권한 삭제
-        sqlSessionTemplate.delete("authority.deleteRoleAuthority", role.getRoleNm());
-        
-        // 신규 권한 추가
-        for (RoleAuthorityVo authority : role.getAuthorities()) {
-        	authority.setRoleNm(role.getRoleNm());
-    		authority.setCreateDate(updateTime);
-    		if (getUserId() != null) {
-    			authority.setCreateUserId(getUserId());
-            }
-    		sqlSessionTemplate.insert("authority.insertRoleAuthority", authority);
-    	}
-    }
-    
-    /**
-     * 유저 권한 추가
-     */
-    public boolean addUserRole(List<UserAsgnRoleVo> uas) {
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-        String time = LocalDateTime.now().format(formatter);
-        
-        int result = 0;
-        for (UserAsgnRoleVo ua : uas) {
-	        ua.setCreateDate(time);
-	        result += sqlSessionTemplate.insert("authority.insertUserAsgnRole", ua);
-        }
-
-        return result >= 1;
-    }
-    
-    /**
-     * 유저 권한 삭제
-     */
-    public boolean removeUserRole(List<UserAsgnRoleVo> uas) {
-
-    	int result = 0;
-        for (UserAsgnRoleVo ua : uas) {
-	        result += sqlSessionTemplate.delete("authority.deleteUserAsgnRole", ua);
-        }
-
-        return result >= 1;
     }
 
 	/**
@@ -343,37 +273,56 @@ public class SessionService {
 	}
 
 	/**
-	 * 비밀번호 변경
+	 * 비밀번호 변경 (110번 11.7-3b).
+	 * ① 로그인 차단 시간이 지나지 않았으면 거부(로그인과 같은 문구) ② 현재 비밀번호 확인 — 틀리면 로그인 실패와 같이 실패 횟수를 올린다
+	 * (5회면 10분 차단), 맞으면 로그인 성공과 같이 실패 횟수를 0 으로 ③ 새 비밀번호가 현재와 같으면 거부 ④ 저장.
+	 * 새 비밀번호가 현재와 같은지는 현재 비밀번호를 맞힌 뒤에만 알려준다.
 	 */
 	public Response changePassword(String user, String oldPassword, String newPassword) {
 		Response response = new Response();
 
+		String blockTime = sqlSessionTemplate.selectOne("login.getBlockTime", user);
+		if (blockTime != null && !DateUtils.compareTime(blockTime)) {
+			response.setResultInfo(RestResult.CODE_406.getCode(),
+					"로그인 차단 시간[" + DateUtils.changeTimeFormat(blockTime) + "]이 지나지 않았습니다.");
+			return response;
+		}
+
+		// 세션 중에 삭제된 사용자
 		AdminVo admin = sqlSessionTemplate.selectOne("login.getUser", user);
+		if (admin == null) {
+			response.setResultInfo(RestResult.CODE_404.getCode(), "존재하지 않는 사용자입니다.");
+			return response;
+		}
+
+		if (!securityManager.validatePassword(securityManager.encryptSHA256(securityManager.decodeBase64(oldPassword)),
+				admin.getPassword())) {
+			increaseLoginFailCount(user);
+			response.setResultInfo(RestResult.CODE_406.getCode(), "기존 비밀번호가 틀렸습니다.");
+			return response;
+		}
+		initializeLogin(user);
 
 		if (securityManager.validatePassword(securityManager.encryptSHA256(securityManager.decodeBase64(newPassword)),
 				admin.getPassword())) {
 			response.setResultInfo(RestResult.CODE_406.getCode(), "기존 비밀번호와 다른 비밀번호를 입력해야 합니다.");
-		} else {
-			if (securityManager.validatePassword(securityManager.encryptSHA256(securityManager.decodeBase64(oldPassword)),
-					admin.getPassword())) {
-				DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-				String time = LocalDateTime.now().format(formatter);
-
-				admin.setId(user);
-				admin.setPassword(
-						securityManager.createHash(securityManager.encryptSHA256(securityManager.decodeBase64(newPassword))));
-				admin.setUpdateDate(time);
-
-				if (sqlSessionTemplate.update("login.changePassword", admin) > 0) {
-					response.setResultInfo(RestResult.CODE_200);
-				} else {
-					response.setResultInfo(RestResult.CODE_520.getCode(), "비밀번호 변경에 실패했습니다.");
-				}
-			} else {
-				response.setResultInfo(RestResult.CODE_406.getCode(), "기존 비밀번호가 틀렸습니다.");
-			}
+			return response;
 		}
-		
+
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+		String time = LocalDateTime.now().format(formatter);
+
+		admin.setId(user);
+		admin.setPassword(
+				securityManager.createHash(securityManager.encryptSHA256(securityManager.decodeBase64(newPassword))));
+		admin.setUpdateDate(time);
+
+		if (sqlSessionTemplate.update("login.changePassword", admin) > 0) {
+			response.setResultInfo(RestResult.CODE_200);
+		} else {
+			response.setResultInfo(RestResult.CODE_520.getCode(), "비밀번호 변경에 실패했습니다.");
+		}
+
 		return response;
 	}
 
@@ -424,9 +373,10 @@ public class SessionService {
 			}
 		}
 
+		// 없는 아이디와 틀린 비밀번호는 같은 문구로 알린다 (어느 아이디가 있는지 드러내지 않는다)
 		AdminVo admin = sqlSessionTemplate.selectOne("login.getUser", user.getId());
 		if (admin == null) {
-			throw new AuthenticationServiceException("존재하지 않는 아이디입니다." + "||" + user.getId());
+			throw new AuthenticationServiceException("아이디 또는 비밀번호가 올바르지 않습니다." + "||" + user.getId());
 		}
 
 		if (securityManager.validatePassword(securityManager.encryptSHA256(user.getPassword()), admin.getPassword())) {
@@ -438,7 +388,7 @@ public class SessionService {
 			// 로그인 실패 횟수 초기화
 			initializeLogin(user.getId());
 		} else {
-			throw new AuthenticationServiceException("비밀번호가 올바르지 않습니다." + "||" + user.getId());
+			throw new AuthenticationServiceException("아이디 또는 비밀번호가 올바르지 않습니다." + "||" + user.getId());
 		}
 
 		return user;

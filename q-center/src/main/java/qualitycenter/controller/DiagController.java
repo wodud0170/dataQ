@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-
-import javax.servlet.http.HttpServletRequest;
 
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,7 +88,7 @@ public class DiagController {
 
     /** 진단 시작: Job 생성 후 q-executor에 실행 요청 */
     @PostMapping("/startDiag")
-    public Mono<Response> startDiag(HttpServletRequest request, @RequestBody StdDiagJobVo jobVo) {
+    public Mono<Response> startDiag(@RequestBody StdDiagJobVo jobVo) {
         Response result = new Response();
         try {
             // 중복 Job 체크: 동일 데이터모델에 READY/RUNNING 상태 Job이 있으면 거부
@@ -131,10 +128,7 @@ public class DiagController {
 
             WebClientHandler webClientHandler = new WebClientHandler(
                     NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/diag/runDiag");
-            return webClientHandler.postData(
-                    sessionService.getUserId(),
-                    Objects.toString(request.getSession().getAttribute("SSID"), null),
-                    params)
+            return webClientHandler.postData(sessionService.getUserId(), null, params)
                 .map(res -> {
                     // 110 6.10-5b — executor 가 기동을 거부하면 Job 을 ERROR 로 (READY 로 남으면 다음 진단이 늘 409)
                     if (res.getResultCode() != RestResult.CODE_200.getCode()) {
@@ -167,12 +161,9 @@ public class DiagController {
 
     /** 진단 중지: q-executor에 중지 요청 */
     @PostMapping("/stopDiag")
-    public Mono<Response> stopDiag(HttpServletRequest request, @RequestBody Map<String, String> params) {
+    public Mono<Response> stopDiag(@RequestBody Map<String, String> params) {
         WebClientHandler webClientHandler = new WebClientHandler(
                 NDQualityConstant.SVC_Q_EXECUTOR_URL + "/api/diag/stopDiag");
-        return webClientHandler.postData(
-                sessionService.getUserId(),
-                Objects.toString(request.getSession().getAttribute("SSID"), null),
-                params);
+        return webClientHandler.postData(sessionService.getUserId(), null, params);
     }
 }

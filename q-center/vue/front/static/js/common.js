@@ -1,5 +1,3 @@
-import axios from "axios";
-
 const DEVELOP_MODE = process.env.NODE_ENV === "production" ? false : true;
 // 운영(q-center 가 화면을 서빙)과 개발 서버 모두 같은 출처로 부른다.
 // 개발 서버는 config/index.js 의 proxyTable 이 q-center(28090)로 넘긴다 — 세션 쿠키가 실려야 API 가 열린다.
@@ -7,21 +5,6 @@ const APIURLBASE = "/";
 const LOGINSTATUSDATA = JSON.parse(sessionStorage.getItem("loginStatus"));
 
 const methods = {
-  checkSession: () => {
-    let _data = null;
-    axios
-      .get(APIURLBASE + "api/login/checkSession")
-      .then(result => {
-        if (_data) {
-          _data = null;
-        }
-        _data = result.data;
-      })
-      .catch(Error => {
-        console.log(Error);
-      });
-    return _data;
-  },
   getToday() {
     // 현재 날짜
     let today = new Date();
@@ -147,6 +130,10 @@ const methods = {
     document.addEventListener("mouseup", function() {
       thElm = undefined;
     });
+  },
+  encodePw(s) {
+    // 비밀번호를 UTF-8 바이트로 Base64 (btoa 만 쓰면 한글 등 Latin1 밖 글자에서 예외). 서버는 UTF-8 로 되돌린다.
+    return btoa(unescape(encodeURIComponent(s)));
   }
 };
 
@@ -155,13 +142,13 @@ export default {
     Vue.prototype.$APIURL = {
       base: APIURLBASE
     };
-    Vue.prototype.$checkSession = methods.checkSession;
     Vue.prototype.$devMode = DEVELOP_MODE;
     Vue.prototype.$getToday = methods.getToday;
     Vue.prototype.$getMonthAgo = methods.getMonthAgo;
     Vue.prototype.$formattedDate = methods.formattedDate;
     Vue.prototype.$dateToString = methods.dateToString;
     Vue.prototype.$resizableGrid = methods.resizableGrid;
+    Vue.prototype.$encodePw = methods.encodePw;
     Vue.prototype.$loginStatusData = LOGINSTATUSDATA;
   }
 };
