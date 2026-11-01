@@ -335,11 +335,17 @@ public class DataStandardController {
 			}
 			// 유사어 체크: 경고만 (등록은 허용, warning 메시지를 resultMessage에 포함)
 			String synonymMsg = checkSynonymWord(dataVo.getWordNm(), dataVo.getDictId());
+			// 108 §4.33 — 등록 신청이면 "요청자 지정" 결재 단계의 결재자를 행을 넣기 전에 본다
+			String pickMsg = pickMsg("WORD", dataVo.getAprvrPicks());
+			if (pickMsg != null) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), pickMsg);
+				return Mono.just(result);
+			}
 
 			sqlSessionTemplate.insert("word.insertWord", dataVo);
 			String msg = synonymMsg;
 			if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
-				String approvalMsg = pendingMsg(openAprv("WORD", dataVo.getId(), dataVo.getWordNm(), dataVo.getDictId()));
+				String approvalMsg = pendingMsg(openAprv("WORD", dataVo.getId(), dataVo.getWordNm(), dataVo.getDictId(), dataVo.getAprvrPicks()));
 				msg = msg != null ? msg + " " + approvalMsg : approvalMsg;
 			}
 			if (msg != null) {
@@ -370,11 +376,23 @@ public class DataStandardController {
 	 * 104번 WP1 — 승인 대기로 등록한 항목에 결재선이 있으면 결재 문서를 만들고 1단계 결재자에게 알린다.
 	 * 결재선이 없으면 null (지금처럼 표준 승인 권한자가 승인).
 	 */
-	private String openAprv(String reqTp, String itemId, String itemNm, String dictId) {
-		AprvService.Result r = aprvService.open(reqTp, itemId, itemNm, null, dictId, sessionService.getUserId());
+	private String openAprv(String reqTp, String itemId, String itemNm, String dictId, Map<String, String> picks) {
+		AprvService.Result r = aprvService.open(reqTp, itemId, itemNm, null, dictId, sessionService.getUserId(), picks);
 		if (r == null) return null;
 		websocketService.sendUserNotis(r.notis);
 		return r.message;
+	}
+
+	/** 108 §4.33 — 등록 신청(STD_MANAGE 없음)이면 "요청자 지정" 단계마다 고른 결재자 검사. 문제 없거나 즉시 승인이면 null */
+	private String pickMsg(String reqTp, Map<String, String> picks) {
+		if (sessionService.hasPerm(PermCode.STD_MANAGE)) return null;
+		return aprvService.checkPicks(reqTp, picks, sessionService.getUserId());
+	}
+
+	/** 108 §4.33 — Map 본문(한글컬럼 일괄 표준화)의 aprvrPicks {stepNo: userId} */
+	@SuppressWarnings("unchecked")
+	private static Map<String, String> picksOf(Map<String, Object> body) {
+		return (Map<String, String>) body.get("aprvrPicks");
 	}
 
 	/** 승인 대기 등록 안내 — 결재 문서가 생겼으면 결재 단계, 아니면 기존 문구 */
@@ -768,6 +786,9 @@ public class DataStandardController {
 			dataVo.setTermsEngAbrvNm(dictService.checkTermEngAbrv(dataVo.getDictId(), dataVo.getTermsEngAbrvNm()));
 			// 104번 WP6-3 — 코드 유형 검사 (코드일 때)
 			checkCodeType(session, dataVo, true);
+			// 108 §4.33 — 등록 신청이면 "요청자 지정" 결재 단계의 결재자 (코드 그룹이 있으면 CODE 결재선)
+			String pickMsg = pickMsg(isCode(dataVo.getCodeGrp()) ? "CODE" : "TERMS", dataVo.getAprvrPicks());
+			if (pickMsg != null) throw new Exception(pickMsg);
 			// 신규 용어 등록
 			session.insert("terms.insertTerms", dataVo);
 			wordList.stream().forEach(v -> v.setTermsId(dataVo.getId()));
@@ -777,7 +798,7 @@ public class DataStandardController {
 				// 코드도 TB_TERMS 에 저장된다 — 코드 그룹이 있으면 결재 요청 유형은 CODE
 				String reqTp = dataVo.getCodeGrp() != null && !dataVo.getCodeGrp().isEmpty() ? "CODE" : "TERMS";
 				result.setResultInfo(RestResult.CODE_200.getCode(),
-						pendingMsg(openAprv(reqTp, dataVo.getId(), dataVo.getTermsNm(), dataVo.getDictId())));
+						pendingMsg(openAprv(reqTp, dataVo.getId(), dataVo.getTermsNm(), dataVo.getDictId(), dataVo.getAprvrPicks())));
 			} else {
 				result.setResultInfo(RestResult.CODE_200);
 			}
@@ -1525,10 +1546,16 @@ public class DataStandardController {
 						: "승인 대기 중인 도메인명입니다.";
 				throw new Exception(dupMsg);
 			}
+			// 108 §4.33 — 등록 신청이면 "요청자 지정" 결재 단계의 결재자
+			String pickMsg = pickMsg("DOMAIN", dataVo.getAprvrPicks());
+			if (pickMsg != null) {
+				result.setResultInfo(RestResult.CODE_500.getCode(), pickMsg);
+				return Mono.just(result);
+			}
 			sqlSessionTemplate.insert("domain.insertDomain", dataVo);
 			if (!sessionService.hasPerm(PermCode.STD_MANAGE)) {
 				result.setResultInfo(RestResult.CODE_200.getCode(),
-						pendingMsg(openAprv("DOMAIN", dataVo.getId(), dataVo.getDomainNm(), dataVo.getDictId())));
+						pendingMsg(openAprv("DOMAIN", dataVo.getId(), dataVo.getDomainNm(), dataVo.getDictId(), dataVo.getAprvrPicks())));
 			} else {
 				result.setResultInfo(RestResult.CODE_200);
 			}
@@ -2892,6 +2919,14 @@ public class DataStandardController {
 		// 유사어 체크: 경고 메시지만 (등록은 진행)
 		String synonymMsg = checkSynonymWord(wordNm.trim(), dictId);
 
+		// 108 §4.33 — 등록 신청이면 "요청자 지정" 결재 단계의 결재자
+		String pickMsg = pickMsg("WORD", picksOf(body));
+		if (pickMsg != null) {
+			res.put("success", false);
+			res.put("message", pickMsg);
+			return res;
+		}
+
 		String userId = sessionService.getUserId();
 		boolean directApprove = sessionService.hasPerm(PermCode.STD_MANAGE);
 
@@ -2917,7 +2952,7 @@ public class DataStandardController {
 			saveChangeHistory("INSERT", "WORD", wordId, wordVo.getWordNm(),
 					null, wordVo.toString(), "단어 등록(표준화 추천): " + wordVo.getWordNm(), "AUTO_RECOMMEND");
 		} else {
-			openAprv("WORD", wordId, wordVo.getWordNm(), dictId);
+			openAprv("WORD", wordId, wordVo.getWordNm(), dictId, picksOf(body));
 		}
 
 		res.put("success", true);
@@ -2965,8 +3000,10 @@ public class DataStandardController {
 		// 98번 — 이 일괄 등록이 들어갈 사전. 화면에서 고른 값이 온다.
 		String dictId = resolveDictOrDefault(body.get("dictId"));
 		// 104번 WP5-14 — 참조 사전에는 등록하지 않는다 (항목마다 실패)
-		if (dictService.isRef(dictId)) {
-			String msg = refBlocked(dictId).getResultMessage();
+		// 108 §4.33 — 등록 신청인데 "요청자 지정" 결재 단계의 결재자가 맞지 않아도 항목마다 같은 문구로 실패
+		String blockMsg = dictService.isRef(dictId) ? refBlocked(dictId).getResultMessage() : pickMsg("TERMS", picksOf(body));
+		if (blockMsg != null) {
+			String msg = blockMsg;
 			List<Map<String, Object>> fails = new ArrayList<>();
 			for (Map<String, Object> it : items) {
 				Map<String, Object> d = new HashMap<>();
@@ -3077,7 +3114,7 @@ public class DataStandardController {
 				registeredTerms++;
 				// 104번 WP1 — 승인 대기로 들어간 용어에 결재선이 있으면 결재 문서
 				if (!directApprove) {
-					openAprv("TERMS", termsId, termsNm, dictId);
+					openAprv("TERMS", termsId, termsNm, dictId, picksOf(body));
 				}
 
 				// 88번 §16 — 변환 이력 기록 (사용자 원본 입력 → 등록된 표준 용어)

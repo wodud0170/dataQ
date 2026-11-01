@@ -427,6 +427,9 @@
                   </v-col>
                 </v-row>
 
+                <!-- 108 §4.33 — 등록 신청이면 코드 결재선의 "요청자 지정" 단계 결재자 -->
+                <AprvPicker ref="addCodeAprvPicker" :reqTps="['CODE']" :active="addCodeModalShow && !canManage" />
+
                 <v-col class="text-right">
                   <v-btn text class="gray white--text" @click="addCodeModalStep = 2"
                     :style="{ width: '80px !important', height: '30px !important' }">
@@ -932,6 +935,7 @@ import NdModal from "./../views/modal/NdModal.vue"
 import { eventBus } from './../eventBus.js'
 import DictSelector from './DictSelector.vue'
 import StdImpactDialog from './StdImpactDialog.vue'
+import AprvPicker from './AprvPicker.vue'
 
 export default {
   name: 'DSCode',
@@ -939,7 +943,8 @@ export default {
   components: {
     NdModal,
     DictSelector,
-    StdImpactDialog
+    StdImpactDialog,
+    AprvPicker
   },
   watch: {
     codeItems() {
@@ -2049,6 +2054,7 @@ export default {
           "allophSynmLst": arr_allophSynmLst,
           // 98번 — 고른 사전에 등록한다. 형식단어 강제 여부도 이 사전의 속성을 따른다.
           'dictId': this.dictId,
+          'aprvrPicks': this.$refs.addCodeAprvPicker ? this.$refs.addCodeAprvPicker.picksFor('CODE') : null,
         }
 
         axios.post(this.$APIURL.base + 'api/std/createCode', codeData).then(res => {
@@ -2354,6 +2360,12 @@ export default {
             icon: 'error',
           });
 
+          return false;
+        }
+        // 108 §4.33 — "요청자 지정" 결재 단계의 결재자
+        const pickMsg = this.$refs.addCodeAprvPicker && this.$refs.addCodeAprvPicker.validate();
+        if (pickMsg) {
+          this.$swal.fire({ title: pickMsg, confirmButtonText: '확인', confirmButtonColor: '#3F51B5', icon: 'error' });
           return false;
         }
       } else if (status === 'codeUpdate') {

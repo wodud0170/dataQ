@@ -80,6 +80,10 @@ public class DataModelApprovalController {
 			List<Object> seqList = (List<Object>) body.get("changeSeqList");
 			if (seqList == null || seqList.isEmpty())
 				throw new IllegalArgumentException("changeSeqList 필수");
+			// 108 §4.33 — "요청자 지정" 결재 단계의 결재자를 신청 전에 본다 (모델마다 문서를 따로 만들어도 고른 결재자는 같다)
+			Map<String, String> picks = (Map<String, String>) body.get("aprvrPicks");
+			String pickMsg = aprvService.checkPicks("DM_CHANGE", picks, changeHistory.safeUserId());
+			if (pickMsg != null) throw new IllegalArgumentException(pickMsg);
 			Map<String, List<Object>> byDm = new java.util.LinkedHashMap<>();
 			for (Object seq : seqList) {
 				Map<String, Object> h = sqlSessionTemplate.selectOne("dmChangeHistory.selectByChangeSeq", seq);
@@ -102,7 +106,7 @@ public class DataModelApprovalController {
 				String dmId = e.getKey();
 				Map<String, Object> model = sqlSessionTemplate.selectOne("datamodel.selectDataModelById", dmId);
 				String dmNm = model == null ? dmId : String.valueOf(model.get("dataModelNm"));
-				com.ndata.quality.service.AprvService.Result r = aprvService.open("DM_CHANGE", submissionId, dmNm + " 변경 " + n + "건", dmId, null, changeHistory.safeUserId());
+				com.ndata.quality.service.AprvService.Result r = aprvService.open("DM_CHANGE", submissionId, dmNm + " 변경 " + n + "건", dmId, null, changeHistory.safeUserId(), picks);
 				if (r != null) {
 					websocketService.sendUserNotis(r.notis);
 					if (r.message != null) aprvMsgs.add(r.message);

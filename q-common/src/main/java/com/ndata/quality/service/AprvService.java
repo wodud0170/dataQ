@@ -36,7 +36,8 @@ import org.springframework.stereotype.Service;
 public class AprvService {
 
 	public static final List<String> REQ_TYPES = Arrays.asList("WORD", "TERMS", "CODE", "DOMAIN", "DM_CHANGE");
-	public static final List<String> APRVR_TYPES = Arrays.asList("USER", "ROLE", "ORG_HEAD", "ADMIN");
+	/** 108 §4.33 — REQ_PICK(요청자 지정): 요청할 때 요청자가 그 단계 결재자 한 명을 고른다 */
+	public static final List<String> APRVR_TYPES = Arrays.asList("USER", "ROLE", "ORG_HEAD", "ADMIN", "REQ_PICK");
 
 	private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -106,6 +107,15 @@ public class AprvService {
 	 * 문서가 있으면 null.
 	 */
 	public Result open(String reqTp, String targetId, String targetNm, String dmId, String dictId, String reqUserId) {
+		return open(reqTp, targetId, targetNm, dmId, dictId, reqUserId, null);
+	}
+
+	/**
+	 * 108 §4.33 — picks: 요청자가 고른 "요청자 지정" 단계 결재자 {stepNo: userId}. 고르지 않은 단계(엑셀 일괄등록 등)는
+	 * 남는 사람이 없을 때의 규칙대로 관리자 전원
+	 */
+	public Result open(String reqTp, String targetId, String targetNm, String dmId, String dictId, String reqUserId,
+			Map<String, String> picks) {
 		try (SqlSession s = sqlSessionFactory.openSession()) {
 			Map<String, Object> line = s.selectOne("aprv.selectLine", reqTp);
 			if (line == null || !"Y".equals(line.get("useYn"))) return null;
@@ -134,7 +144,9 @@ public class AprvService {
 			String firstStepNm = null;
 			for (Map<String, Object> st : steps) {
 				int stepNo = ((Number) st.get("stepNo")).intValue();
-				List<String> aprvrs = resolveAprvrs(s, (String) st.get("aprvrTp"), (String) st.get("aprvrId"), reqUserId);
+				String aprvrTp = (String) st.get("aprvrTp");
+				String aprvrId = "REQ_PICK".equals(aprvrTp) && picks != null ? picks.get(String.valueOf(stepNo)) : (String) st.get("aprvrId");
+				List<String> aprvrs = resolveAprvrs(s, aprvrTp, aprvrId, reqUserId);
 				for (String u : aprvrs) {
 					Map<String, Object> p = new HashMap<>();
 					p.put("docId", docId);
@@ -163,8 +175,9 @@ public class AprvService {
 	/** 단계의 결재자. 요청자는 빼고, 아무도 없으면 관리자 전원 */
 	private List<String> resolveAprvrs(SqlSession s, String aprvrTp, String aprvrId, String reqUserId) {
 		Set<String> out = new LinkedHashSet<>();
-		if ("USER".equals(aprvrTp)) {
-			int active = s.selectOne("aprv.countActiveUser", aprvrId);
+		if ("USER".equals(aprvrTp) || "REQ_PICK".equals(aprvrTp)) {
+			// REQ_PICK 은 요청자가 고른 사용자 (고르지 않았으면 aprvrId 가 null — 아래 관리자 전원)
+			int active = aprvrId == null ? 0 : s.selectOne("aprv.countActiveUser", aprvrId);
 			if (active > 0) out.add(aprvrId);
 		} else if ("ROLE".equals(aprvrTp)) {
 			out.addAll(s.<String>selectList("aprv.selectRoleUserIds", aprvrId));
@@ -189,6 +202,47 @@ public class AprvService {
 			if (out.size() > 1) out.remove(reqUserId);
 		}
 		return new ArrayList<>(out);
+	}
+
+	/** 108 §4.33 — 요청 유형의 켜진 결재선에서 "요청자 지정" 단계 [{stepNo, stepNm, agreeYn}]. 결재선이 꺼졌거나 없으면 빈 목록 */
+	public List<Map<String, Object>> pickSteps(String reqTp) {
+		try (SqlSession s = sqlSessionFactory.openSession()) {
+			return pickSteps(s, reqTp);
+		}
+	}
+
+	private List<Map<String, Object>> pickSteps(SqlSession s, String reqTp) {
+		List<Map<String, Object>> out = new ArrayList<>();
+		Map<String, Object> line = s.selectOne("aprv.selectLine", reqTp);
+		if (line == null || !"Y".equals(line.get("useYn"))) return out;
+		for (Map<String, Object> st : s.<Map<String, Object>>selectList("aprv.selectLineSteps", reqTp)) {
+			if (!"REQ_PICK".equals(st.get("aprvrTp"))) continue;
+			Map<String, Object> m = new LinkedHashMap<>();
+			m.put("stepNo", st.get("stepNo"));
+			m.put("stepNm", st.get("stepNm"));
+			m.put("agreeYn", st.get("agreeYn"));
+			out.add(m);
+		}
+		return out;
+	}
+
+	/**
+	 * 108 §4.33 — 등록 신청 전에 "요청자 지정" 단계마다 고른 결재자를 본다. 문제가 없거나 그런 단계가 없으면 null,
+	 * 있으면 화면에 그대로 보일 문구. 호출한 쪽은 행을 넣기 전에 부른다
+	 */
+	public String checkPicks(String reqTp, Map<String, String> picks, String reqUserId) {
+		try (SqlSession s = sqlSessionFactory.openSession()) {
+			for (Map<String, Object> st : pickSteps(s, reqTp)) {
+				String no = String.valueOf(st.get("stepNo"));
+				String stepNm = (String) st.get("stepNm");
+				String label = no + "단계" + (stepNm == null || stepNm.isEmpty() ? "" : " (" + stepNm + ")");
+				String u = picks == null ? null : picks.get(no);
+				if (u == null || u.trim().isEmpty()) return "결재자를 지정하세요: " + reqTpNm(reqTp) + " " + label;
+				if ((int) s.selectOne("aprv.countActiveUser", u) == 0 || SYSTEM_USER_ID.equals(u)) return label + ": 없는 사용자입니다: " + u;
+				if (u.equals(reqUserId)) return label + ": 본인은 결재자로 지정할 수 없습니다.";
+			}
+			return null;
+		}
 	}
 
 	/** 알림 한 건. docId 가 없으면(결재 문서 없이 반려된 건) 누르면 열 문서가 없다 */

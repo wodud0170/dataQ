@@ -70,6 +70,17 @@
 		SELECT COUNT(*) FROM TB_USER WHERE USER_ID = #{userId} AND COALESCE(DEL_YN, false) = false
 	</select>
 
+	<!-- 108 §4.33 — "요청자 지정" 결재자로 고를 수 있는 사용자 (활성, 본인·시스템 처리자 뺌) -->
+	<select id="selectPickUsers" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT U.USER_ID as "userId", U.NM as "userNm", O.ORG_NM as "orgNm"
+		  FROM TB_USER U
+		  LEFT JOIN TB_ORG O ON O.ORG_ID = U.ORG_ID
+		 WHERE COALESCE(U.DEL_YN, false) = false
+		   AND U.USER_ID <![CDATA[<>]]> #{userId}
+		   AND U.USER_ID <![CDATA[<>]]> #{systemUserId}
+		 ORDER BY U.NM, U.USER_ID
+	</select>
+
 	<select id="selectUserOrgId" parameterType="String" resultType="String">
 		SELECT ORG_ID FROM TB_USER WHERE USER_ID = #{userId}
 	</select>

@@ -1,5 +1,7 @@
 package com.ndata.quality.model.std;
 
+import java.util.Map;
+
 import lombok.Data;
 
 @Data
@@ -41,6 +43,8 @@ public class StdTermsVo {
 	private String reqSysNm;
 
 	private Word[] wordList;
+	/** 108 §4.33 — 등록 신청 때 "요청자 지정" 결재 단계의 결재자 {stepNo: userId} (요청 본문만, 매퍼에 안 씀) */
+	private Map<String, String> aprvrPicks;
 
 	@Data
 	public static class Word {

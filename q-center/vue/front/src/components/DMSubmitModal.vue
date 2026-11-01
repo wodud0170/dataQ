@@ -31,6 +31,8 @@
         <div v-else style="color:#90A4AE; padding:24px; text-align:center;">
           저장된 DRAFT 가 없습니다.
         </div>
+        <!-- 108 §4.33 — 데이터 모델 변경 결재선의 "요청자 지정" 단계 결재자 -->
+        <AprvPicker v-if="drafts.length > 0" ref="aprvPicker" :reqTps="['DM_CHANGE']" :active="dialog" />
       </v-card-text>
       <v-divider />
       <v-card-actions>
@@ -50,9 +52,11 @@
 <script>
 import axios from 'axios';
 import { dmChangeTypeLabel } from './dmChangeType';
+import AprvPicker from './AprvPicker.vue';
 
 export default {
   name: 'DMSubmitModal',
+  components: { AprvPicker },
   props: {
     value: { type: Boolean, default: false },
   },
@@ -95,6 +99,13 @@ export default {
     },
     submitSelected() {
       const seqList = this.checked.map(d => d.changeSeq);
+      // 108 §4.33 — "요청자 지정" 결재 단계의 결재자
+      const picker = this.$refs.aprvPicker;
+      const pickMsg = picker && picker.validate();
+      if (pickMsg) {
+        this.$swal.fire({ title: pickMsg, icon: 'error', confirmButtonText: '확인' });
+        return;
+      }
       this.$swal.fire({
         title: `${seqList.length}건 신청`,
         text: '관리자 승인 대기(SUBMITTED) 상태로 전환됩니다.',
@@ -102,7 +113,9 @@ export default {
         confirmButtonText: '신청', cancelButtonText: '취소',
       }).then(r => {
         if (!r.isConfirmed) return;
-        axios.post(this.$APIURL.base + 'api/dmApproval/submit', { changeSeqList: seqList }).then(res => {
+        axios.post(this.$APIURL.base + 'api/dmApproval/submit', {
+          changeSeqList: seqList, aprvrPicks: picker ? picker.picksFor('DM_CHANGE') : null,
+        }).then(res => {
           if (res.data.resultCode !== 200) {
             this.$swal.fire({ title: '신청 실패', text: res.data.resultMessage || '', icon: 'error' });
             return;

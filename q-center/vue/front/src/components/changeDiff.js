@@ -9,6 +9,8 @@
 const HIDDEN = new Set([
   // 표준 (86번 #34·#37 에서 감추던 것)
   'id', 'aprvUserId', 'aprvStatUpdtDt', 'updtUserId', 'cretUserId', 'cretDt', 'updtDt', 'partOfSpeech', 'reqSysCd', 'reqSysNm', 'useYn',
+  // 108 §4.33 — 등록 신청 때 고른 결재자 (요청 본문만)
+  'aprvrPicks',
   // 사전은 수정으로 바뀌지 않는다 — 이전 값 VO 에는 비어 있어 없는 변경으로 보였다
   'dictId',
   // 데이터 모델

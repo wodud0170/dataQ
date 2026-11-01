@@ -587,6 +587,9 @@
               <v-textarea v-model="termRegTermsDesc" label="용어 설명" dense outlined hide-details rows="2" />
             </v-col>
           </v-row>
+          <!-- 108 §4.33 — 등록 신청이면 결재선의 "요청자 지정" 단계 결재자 (용어 — 코드면 코드 결재선, 미등록 단어 [등록] 때의 단어 결재선) -->
+          <AprvPicker ref="termRegAprvPicker" :reqTps="termRegPickTps" :active="termRegDialog && !$can('STD_MANAGE')"
+            :heads="{ WORD: '단어 (미등록 단어를 등록할 때)' }" />
         </v-card-text>
         <v-divider />
         <v-card-actions>
@@ -723,9 +726,11 @@
 <script>
 import axios from 'axios';
 import { eventBus } from '../eventBus';
+import AprvPicker from './AprvPicker.vue';
 
 export default {
   name: 'DSDataDiagResult',
+  components: { AprvPicker },
   data() {
     return {
       jobList: [],
@@ -847,6 +852,11 @@ export default {
     };
   },
   computed: {
+    // 108 §4.33 — 빠른 용어 등록의 결재 요청 유형 (서버 createTerms 와 같이 코드 그룹이 있으면 CODE) + 미등록 단어 등록의 WORD
+    termRegReqTp() {
+      return this.termRegDomainType === 'code' && this.termRegCode && this.termRegCode.codeGrp ? 'CODE' : 'TERMS';
+    },
+    termRegPickTps() { return [this.termRegReqTp, 'WORD']; },
     summaryPageCount() {
       return Math.ceil(this.filteredSummary.length / this.summaryItemsPerPage);
     },
@@ -1445,6 +1455,10 @@ export default {
       if (!w.wordNm) { this.$swal.fire({ icon: 'warning', title: '입력 필요', text: '한글명을 입력해주세요.', confirmButtonText: '확인' }); return; }
       // 110 6.10-17 — 서버(createWord)와 같은 규칙
       if (w.wordClsfYn === 'Y' && !w.domainClsfNm) { this.$swal.fire({ icon: 'warning', title: '입력 필요', text: '형식 단어는 도메인 분류명이 필수입니다.', confirmButtonText: '확인' }); return; }
+      // 108 §4.33 — 등록 신청이면 단어 결재선의 "요청자 지정" 단계 결재자 (창 아래 결재자 지정)
+      const picker = this.$refs.termRegAprvPicker;
+      const pickMsg = picker && picker.validate(['WORD']);
+      if (pickMsg) { this.$swal.fire({ icon: 'warning', title: pickMsg, confirmButtonText: '확인' }); return; }
       w.saving = true;
       this.$set(this.termRegWords, idx, { ...w });
       axios.post(this.$APIURL.base + 'api/std/createWord', {
@@ -1460,6 +1474,7 @@ export default {
         magntdOrd: '',
         reqSysCd: '',
         dictId: this.termRegDictId,
+        aprvrPicks: picker ? picker.picksFor('WORD') : null,
       }).then(res => {
         // 86번 #11 — 백엔드는 비즈니스 실패도 HTTP 200 + Response{resultCode:500,...} 로 내려옴.
         // .then() 에서 resultCode 검사 누락하면 가짜 success → 화면 거짓말. 반드시 체크.
@@ -1493,6 +1508,10 @@ export default {
     /** 용어 등록 */
     registerTerm() {
       var self = this;
+      // 108 §4.33 — 등록 신청이면 용어(코드) 결재선의 "요청자 지정" 단계 결재자
+      var picker = this.$refs.termRegAprvPicker;
+      var pickMsg = picker && picker.validate([this.termRegReqTp]);
+      if (pickMsg) { this.$swal.fire({ icon: 'warning', title: pickMsg, confirmButtonText: '확인' }); return; }
       this.termRegLoading = true;
       var wordList = this.termRegWords.map(function(w, i) {
         return {
@@ -1525,6 +1544,7 @@ export default {
         allophSynmLst: [],
         // 98번 — 이 진단에 쓴 사전에 등록한다. 형식단어 강제 여부도 그 사전의 속성을 따른다.
         dictId: this.termRegDictId,
+        aprvrPicks: picker ? picker.picksFor(this.termRegReqTp) : null,
       }).then(function(res) {
         self.termRegLoading = false;
         // 86번 #11 — 가짜 success 차단. 백엔드 Response.resultCode 가 500 이면 실패로 처리.

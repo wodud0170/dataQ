@@ -275,6 +275,24 @@ public class AprvController {
 		return Mono.just(r);
 	}
 
+	// ===== 108 §4.33 — 결재자 "요청자 지정" (등록 신청 화면) =====
+
+	/** 요청 유형의 켜진 결재선에서 "요청자 지정" 단계 [{stepNo, stepNm, agreeYn}] — 로그인 사용자 누구나. 없으면 빈 목록 */
+	@GetMapping("/pickSteps")
+	public Mono<Response> pickSteps(@RequestParam String reqTp) throws JsonProcessingException {
+		if (!AprvService.REQ_TYPES.contains(reqTp)) return Mono.just(fail(500, "없는 요청 유형입니다: " + reqTp));
+		return Mono.just(ok(aprvService.pickSteps(reqTp)));
+	}
+
+	/** 결재자로 고를 수 있는 사용자 — 활성 사용자 중 본인·시스템 처리자를 뺀 [{userId, userNm, orgNm}] 이름순 */
+	@GetMapping("/pickUsers")
+	public Mono<Response> pickUsers() throws JsonProcessingException {
+		Map<String, Object> p = new HashMap<>();
+		p.put("userId", sessionService.getUserId());
+		p.put("systemUserId", AprvService.SYSTEM_USER_ID);
+		return Mono.just(ok(sqlSessionTemplate.selectList("aprv.selectPickUsers", p)));
+	}
+
 	// ===== 결재선 설정 (관리 > 결재선, USER_ADMIN) =====
 
 	private Response deniedLine() {

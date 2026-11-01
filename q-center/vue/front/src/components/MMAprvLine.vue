@@ -57,7 +57,7 @@
                 <td>
                   <v-autocomplete v-if="s.aprvrTp === 'USER'" v-model="s.aprvrId" :items="userItems" dense hide-details placeholder="사용자 선택" />
                   <v-select v-else-if="s.aprvrTp === 'ROLE'" v-model="s.aprvrId" :items="roleItems" dense hide-details placeholder="역할 선택" />
-                  <span v-else style="font-size:.8rem; color:#546E7A;">{{ s.aprvrTp === 'ADMIN' ? '관리자 전원' : '요청자 부서의 부서장' }}</span>
+                  <span v-else style="font-size:.8rem; color:#546E7A;">{{ s.aprvrTp === 'ADMIN' ? '관리자 전원' : s.aprvrTp === 'REQ_PICK' ? '요청할 때 요청자가 고름' : '요청자 부서의 부서장' }}</span>
                 </td>
                 <td><v-checkbox v-model="s.agreeYn" true-value="Y" false-value="N" dense hide-details
                   :title="'합의: 이 단계 결재자 전원이 승인해야 다음 단계'" /></td>
@@ -105,6 +105,8 @@ export default {
         { text: '역할', value: 'ROLE' },
         { text: '요청자 부서장', value: 'ORG_HEAD' },
         { text: '관리자 전원', value: 'ADMIN' },
+        // 108 §4.33 — 요청할 때 요청자가 이 단계 결재자 한 명을 고른다
+        { text: '요청자 지정', value: 'REQ_PICK' },
       ],
       snackbar: false, snackbarMsg: '', snackbarColor: 'info',
     };
@@ -144,7 +146,7 @@ export default {
       };
     },
     stepSummary(s) {
-      const who = s.aprvrTp === 'ORG_HEAD' ? '부서장' : s.aprvrTp === 'ADMIN' ? '관리자' : (s.aprvrNm || s.aprvrId);
+      const who = s.aprvrTp === 'ORG_HEAD' ? '부서장' : s.aprvrTp === 'ADMIN' ? '관리자' : s.aprvrTp === 'REQ_PICK' ? '요청자 지정' : (s.aprvrNm || s.aprvrId);
       return (s.stepNm ? s.stepNm + ':' : '') + who;
     },
     addStep() {

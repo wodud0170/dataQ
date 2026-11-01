@@ -35,6 +35,8 @@
           </template>
         </v-data-table>
         <div v-else style="color:#90A4AE; padding:16px; text-align:center;">저장된 DRAFT 가 없습니다.</div>
+        <!-- 108 §4.33 — 데이터 모델 변경 결재선의 "요청자 지정" 단계 결재자 -->
+        <AprvPicker v-if="drafts.length > 0" ref="aprvPicker" :reqTps="['DM_CHANGE']" :active="true" style="max-width:640px;" />
       </v-sheet>
 
       <!-- SUBMITTED 영역 — 관리자 대기 -->
@@ -82,9 +84,11 @@
 <script>
 import axios from 'axios';
 import { dmChangeTypeLabel } from './dmChangeType';
+import AprvPicker from './AprvPicker.vue';
 
 export default {
   name: 'MMMyDataModelChanges',
+  components: { AprvPicker },
   props: ['isMobile'],
   data: () => ({
     drafts: [],
@@ -116,6 +120,8 @@ export default {
       return dmChangeTypeLabel(code);
     },
     loadAll() {
+      // 108 §4.33 — 결재선이 바뀌었을 수 있어 결재자 지정도 다시 읽는다
+      if (this.$refs.aprvPicker) this.$refs.aprvPicker.reload();
       // 본인 DRAFT
       axios.post(this.$APIURL.base + 'api/dmApproval/myDrafts', {}).then(res => {
         this.drafts = res.data || [];
@@ -135,6 +141,13 @@ export default {
     },
     submitSelected() {
       const seqList = this.checkedDrafts.map(d => d.changeSeq);
+      // 108 §4.33 — "요청자 지정" 결재 단계의 결재자
+      const picker = this.$refs.aprvPicker;
+      const pickMsg = picker && picker.validate();
+      if (pickMsg) {
+        this.$swal.fire({ title: pickMsg, icon: 'error', confirmButtonText: '확인' });
+        return;
+      }
       this.$swal.fire({
         title: `${seqList.length}건 신청`,
         text: '관리자 승인 대기 상태로 전환됩니다.',
@@ -143,7 +156,7 @@ export default {
       }).then(r => {
         if (!r.isConfirmed) return;
         axios.post(this.$APIURL.base + 'api/dmApproval/submit', {
-          changeSeqList: seqList,
+          changeSeqList: seqList, aprvrPicks: picker ? picker.picksFor('DM_CHANGE') : null,
         }).then(res => {
           if (res.data.resultCode !== 200) {
             this.$swal.fire({ title: '신청 실패', text: res.data.resultMessage || '', icon: 'error' });

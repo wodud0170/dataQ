@@ -372,6 +372,9 @@
                 </v-col>
               </v-row>
 
+              <!-- 108 §4.33 — 등록 신청이면 결재선의 "요청자 지정" 단계 결재자 -->
+              <AprvPicker ref="addDomainAprvPicker" :reqTps="['DOMAIN']" :active="addDomainModalShow && !canManage" />
+
             </v-form>
           </v-container>
         </template>
@@ -672,12 +675,14 @@ import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
 import { eventBus } from './../eventBus.js'
 import DictSelector from './DictSelector.vue'
+import AprvPicker from './AprvPicker.vue'
 
 export default {
   name: 'DSDomain',
   components: {
     NdModal,
-    DictSelector
+    DictSelector,
+    AprvPicker
   },
   watch: {
     addDomainModalShow(val) {
@@ -1196,6 +1201,12 @@ export default {
           return false;
         }
         if (!this.domainLenOk(this.addDomain_dataType, this.addDomain_dataLen)) return false;
+        // 108 §4.33 — "요청자 지정" 결재 단계의 결재자
+        const pickMsg = this.$refs.addDomainAprvPicker && this.$refs.addDomainAprvPicker.validate();
+        if (pickMsg) {
+          this.$swal.fire({ title: pickMsg, confirmButtonText: '확인', confirmButtonColor: '#3F51B5', icon: 'error' });
+          return false;
+        }
       } else if (status === 'update') {
         if (this.updateDomain_domainNm === null) {
           _attr = '도메인명은';
@@ -1267,6 +1278,7 @@ export default {
           'magntdOrd': this.addDomain_magntdOrd,
           'reqSysCd': this.addDomain_reqSysCd,
           'dictId': this.dictId,
+          'aprvrPicks': this.$refs.addDomainAprvPicker ? this.$refs.addDomainAprvPicker.picksFor('DOMAIN') : null,
         };
 
         axios.post(this.$APIURL.base + "api/std/createDomain", domainData)

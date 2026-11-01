@@ -872,14 +872,14 @@ COMMENT ON TABLE quality.tb_aprv_line_step IS '결재선 단계 (104번 WP1)';
 -- Name: COLUMN tb_aprv_line_step.aprvr_tp; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_aprv_line_step.aprvr_tp IS '결재자 방식 — USER(지정 사용자), ROLE(역할의 사용자), ADMIN(관리자 전원), ORG_HEAD(요청자 부서장)';
+COMMENT ON COLUMN quality.tb_aprv_line_step.aprvr_tp IS '결재자 방식 — USER(지정 사용자), ROLE(역할의 사용자), ADMIN(관리자 전원), ORG_HEAD(요청자 부서장), REQ_PICK(요청자 지정 — 요청할 때 요청자가 고름, 108 §4.33)';
 
 
 --
 -- Name: COLUMN tb_aprv_line_step.aprvr_id; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_aprv_line_step.aprvr_id IS 'USER 면 사용자 ID, ROLE 이면 역할 ID, ADMIN·ORG_HEAD 면 NULL';
+COMMENT ON COLUMN quality.tb_aprv_line_step.aprvr_id IS 'USER 면 사용자 ID, ROLE 이면 역할 ID, ADMIN·ORG_HEAD·REQ_PICK 이면 NULL';
 
 
 --

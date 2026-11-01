@@ -351,6 +351,9 @@
                 </v-col>
               </v-row>
 
+              <!-- 108 §4.33 — 등록 신청이면 결재선의 "요청자 지정" 단계 결재자 -->
+              <AprvPicker ref="addWordAprvPicker" :reqTps="['WORD']" :active="addWordModalShow && !canManage" />
+
             </v-form>
           </v-container>
         </template>
@@ -608,12 +611,14 @@ import axios from "axios";
 import NdModal from "./../views/modal/NdModal.vue"
 import { eventBus } from './../eventBus.js'
 import DictSelector from './DictSelector.vue'
+import AprvPicker from './AprvPicker.vue'
 
 export default {
   name: 'DSWord',
   components: {
     NdModal,
-    DictSelector
+    DictSelector,
+    AprvPicker
   },
   watch: {
     addWord_wordClsfYn(val) {
@@ -1400,6 +1405,12 @@ export default {
 
           return false;
         }
+        // 108 §4.33 — "요청자 지정" 결재 단계의 결재자
+        const pickMsg = this.$refs.addWordAprvPicker && this.$refs.addWordAprvPicker.validate();
+        if (pickMsg) {
+          this.$swal.fire({ title: pickMsg, confirmButtonText: '확인', confirmButtonColor: '#3F51B5', icon: 'error' });
+          return false;
+        }
 
       } else if (status === 'update') {
         if (this.updateWord_wordNm === null) {
@@ -1450,6 +1461,7 @@ export default {
           'magntdOrd': this.addWord_magntdOrd,
           'reqSysCd': this.addWord_reqSysCd,
           'dictId': this.dictId,
+          'aprvrPicks': this.$refs.addWordAprvPicker ? this.$refs.addWordAprvPicker.picksFor('WORD') : null,
         };
 
         // console.log(wordData);

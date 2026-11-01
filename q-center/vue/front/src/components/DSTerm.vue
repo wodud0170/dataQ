@@ -580,6 +580,9 @@
                 </v-expansion-panel-content>
               </v-expansion-panel>
             </v-expansion-panels>
+            <!-- 108 §4.33 — 등록 신청이면 결재선의 "요청자 지정" 단계 결재자 (용어 — 코드 도메인이면 코드 결재선, 창에서 새 단어를 등록할 때의 단어 결재선) -->
+            <AprvPicker ref="addTermAprvPicker" :reqTps="addTermPickTps" :active="addTermModalShow && !canManage"
+              :heads="{ WORD: '단어 (창에서 새 단어를 등록할 때)' }" />
           </v-form>
         </template>
       </NdModal>
@@ -820,6 +823,7 @@ import NdModal from "./../views/modal/NdModal.vue"
 import { eventBus } from './../eventBus.js'
 import DictSelector from './DictSelector.vue'
 import StdImpactDialog from './StdImpactDialog.vue'
+import AprvPicker from './AprvPicker.vue'
 
 export default {
   name: 'DSTerm',
@@ -827,7 +831,8 @@ export default {
   components: {
     NdModal,
     DictSelector,
-    StdImpactDialog
+    StdImpactDialog,
+    AprvPicker
   },
   watch: {
     termItems() {
@@ -1138,6 +1143,12 @@ export default {
   computed: {
     // 104번 WP2 — 표준 직접 관리 권한(관리자 또는 STD_MANAGE): 즉시 등록·수정·삭제·엑셀 업로드
     canManage() { return this.$can('STD_MANAGE') && this.editable; },
+    // 108 §4.33 — 용어 등록의 결재 요청 유형 (서버 createTerms 와 같이 코드 그룹이 있으면 CODE)
+    addTermReqTp() {
+      const cg = this.addTerm_domainType === 'code' && this.addTerm_selectedCode ? this.addTerm_selectedCode.codeGrp : this.addTerm_codeGrp;
+      return cg ? 'CODE' : 'TERMS';
+    },
+    addTermPickTps() { return [this.addTermReqTp, 'WORD']; },
     // 104번 WP5-14·11 — 참조 사전이거나 상위 사전 포함으로 보는 동안은 등록·수정·삭제하지 않는다
     refDict() { return !!(this.dictMeta && this.dictMeta.dictTp === 'REF'); },
     editable() { return !this.refDict && this.inclParentYn !== 'Y'; },
@@ -1629,6 +1640,12 @@ export default {
 
           return false;
         }
+        // 108 §4.33 — "요청자 지정" 결재 단계의 결재자 (용어·코드 결재선만 — 단어 결재선은 창 안 [단어 등록] 때 본다)
+        const pickMsg = this.$refs.addTermAprvPicker && this.$refs.addTermAprvPicker.validate([this.addTermReqTp]);
+        if (pickMsg) {
+          this.$swal.fire({ title: pickMsg, confirmButtonText: '확인', confirmButtonColor: '#3F51B5', icon: 'error' });
+          return false;
+        }
 
       } else if (status === 'update') {
         if (this.updateTerm_termNm === null) {
@@ -1691,6 +1708,7 @@ export default {
           "allophSynmLst": arr_allophSynmLst,
           // 98번 — 고른 사전에 등록한다. 형식단어 강제 여부도 이 사전의 속성을 따른다.
           'dictId': this.dictId,
+          'aprvrPicks': this.$refs.addTermAprvPicker ? this.$refs.addTermAprvPicker.picksFor(this.addTermReqTp) : null,
         }
 
         axios.post(this.$APIURL.base + 'api/std/createTerms', termData).then(res => {
@@ -2637,6 +2655,13 @@ export default {
         this.$swal.fire({ title: '영문약어를 입력해주세요.', confirmButtonText: '확인', icon: 'warning' });
         return;
       }
+      // 108 §4.33 — 등록 신청이면 단어 결재선의 "요청자 지정" 단계 결재자 (창 아래 결재자 지정)
+      var picker = this.addTermModalShow ? this.$refs.addTermAprvPicker : null;
+      var pickMsg = picker && picker.validate(['WORD']);
+      if (pickMsg) {
+        this.$swal.fire({ title: pickMsg, confirmButtonText: '확인', icon: 'warning' });
+        return;
+      }
       var self = this;
       // 86번 #31 — arr[index] 를 사본으로 교체하지 않고 item 의 reactive prop 만 직접 set.
       //   이전 fix(#26) 가 시작 시 arr[index]=copy(item) 으로 교체해서 'item' 변수가 detached 됐고,
@@ -2659,6 +2684,7 @@ export default {
         magntdOrd: '',
         reqSysCd: '',
         dictId: this.dictId,
+        aprvrPicks: picker ? picker.picksFor('WORD') : null,
       }).then(function(res) {
         // resultCode 검사
         var rc = res && res.data && res.data.resultCode;

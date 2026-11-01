@@ -158,6 +158,12 @@
             </v-btn>
           </v-card-actions>
 
+          <!-- 108 §4.33 — 등록 신청이면 결재선의 "요청자 지정" 단계 결재자 (용어 등록, [단어등록]으로 새 단어를 등록할 때) -->
+          <div class="px-4">
+            <AprvPicker ref="aprvPicker" :reqTps="['TERMS', 'WORD']" :active="currentStep === 3 && !canManage"
+              :heads="{ WORD: '단어 ([단어등록]으로 새 단어를 등록할 때)' }" />
+          </div>
+
           <!-- Review table -->
           <v-data-table
             :headers="visibleHeaders"
@@ -438,9 +444,11 @@
 
 <script>
 import axios from 'axios';
+import AprvPicker from './AprvPicker.vue';
 
 export default {
   name: 'DSTermRecommend',
+  components: { AprvPicker },
   props: ['isMobile'],
   data: function() {
     return {
@@ -1087,6 +1095,12 @@ export default {
         self.$swal.fire({ title: '입력 오류', text: '영문명을 먼저 입력해주세요.', icon: 'warning', confirmButtonText: '확인' });
         return;
       }
+      // 108 §4.33 — 등록 신청이면 단어 결재선의 "요청자 지정" 단계 결재자 (화면 위 결재자 지정)
+      var pickMsg = self.$refs.aprvPicker && self.$refs.aprvPicker.validate(['WORD']);
+      if (pickMsg) {
+        self.$swal.fire({ title: pickMsg, text: '목록 위 "결재자 지정"에서 고르세요.', icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
       self.$set(w, '_registering', true);
       axios.post(self.$APIURL.base + 'api/std/registerWord', {
         wordNm: w.wordNm,
@@ -1094,7 +1108,8 @@ export default {
         wordEngNm: w.newWord.wordEngNm,
         wordDesc: w.wordNm,
         domainClsfNm: w.newWord.domainClsfNm || '',
-        dictId: self.dictId
+        dictId: self.dictId,
+        aprvrPicks: self.$refs.aprvPicker ? self.$refs.aprvPicker.picksFor('WORD') : null
       }).then(function(res) {
         self.$set(w, '_registering', false);
         if (res.data.success) {
@@ -1324,6 +1339,12 @@ export default {
         self.$swal.fire({ title: '등록할 항목이 없습니다.', icon: 'info', confirmButtonText: '확인' });
         return;
       }
+      // 108 §4.33 — 등록 신청이면 용어 결재선의 "요청자 지정" 단계 결재자
+      var pickMsg = self.$refs.aprvPicker && self.$refs.aprvPicker.validate(['TERMS']);
+      if (pickMsg) {
+        self.$swal.fire({ title: pickMsg, icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
 
       self.$swal.fire({
         title: '표준화 등록',
@@ -1336,7 +1357,7 @@ export default {
         if (!result.value) return;
 
         self.isRegistering = true;
-        axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: items, dictId: self.dictId })
+        axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: items, dictId: self.dictId, aprvrPicks: self.termsPicks() })
           .then(function(res) {
             self.registerResult = res.data;
             self.applyDetailsToRows(res.data && res.data.details, targetRows);
@@ -1360,15 +1381,25 @@ export default {
     /**
      * row 1 건만 등록
      */
+    // 108 §4.33 — 용어 결재선의 "요청자 지정" 단계에서 고른 결재자 (그런 단계가 없으면 null)
+    termsPicks: function() {
+      return this.$refs.aprvPicker ? this.$refs.aprvPicker.picksFor('TERMS') : null;
+    },
     registerOne: function(item) {
       var self = this;
       if (!self.isRowRegisterable(item)) {
         self.$swal.fire({ title: '등록 불가', text: self.getBlockReasonDetail(item), icon: 'info', confirmButtonText: '확인' });
         return;
       }
+      // 108 §4.33 — 등록 신청이면 용어 결재선의 "요청자 지정" 단계 결재자
+      var pickMsg = self.$refs.aprvPicker && self.$refs.aprvPicker.validate(['TERMS']);
+      if (pickMsg) {
+        self.$swal.fire({ title: pickMsg, icon: 'warning', confirmButtonText: '확인' });
+        return;
+      }
       var payload = self.buildItemPayload(item);
       self.$set(item, '_registering', true);
-      axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: [payload], dictId: self.dictId })
+      axios.post(self.$APIURL.base + 'api/std/registerTermsBatch', { items: [payload], dictId: self.dictId, aprvrPicks: self.termsPicks() })
         .then(function(res) {
           self.applyDetailsToRows(res.data && res.data.details, [item]);
           var d = (res.data && res.data.details && res.data.details[0]) || {};
