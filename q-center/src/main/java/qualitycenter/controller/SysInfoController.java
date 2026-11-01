@@ -1,10 +1,12 @@
 package qualitycenter.controller;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.ibatis.session.SqlSession;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ndata.bean.DriverLoader;
 import com.ndata.bean.SecurityManager;
 import com.ndata.common.message.Response;
@@ -23,10 +26,12 @@ import com.ndata.module.StringUtils;
 import com.ndata.quality.common.PermCode;
 import com.ndata.quality.model.mgmt.DataSourceExtVo;
 import com.ndata.quality.model.mgmt.SysInfoVo;
+import com.ndata.quality.service.AprvService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
+import qualitycenter.service.ws.WebSocketService;
 import reactor.core.publisher.Mono;
 
 @Tag(name = "시스템정보", description = "시스템정보 API")
@@ -34,6 +39,14 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/sysinfo")
 public class SysInfoController {
+
+	private static final ObjectMapper OM = new ObjectMapper();
+
+	@Autowired
+	private AprvService aprvService;
+
+	@Autowired
+	private WebSocketService websocketService;
 
 	@Autowired
 	private SessionService sessionService;
@@ -56,8 +69,11 @@ public class SysInfoController {
 		Response result = new Response();
 
 		try {
-			sqlSessionTemplate.insert("sysinfo.insertSysInfo", dataVo);
+			// 108 §4.35 — 시스템 결재선이 켜져 있으면 결재 뒤 반영
+			String aprvMsg = requestAprv("SAVE", dataVo, null);
+			if (aprvMsg == null) sqlSessionTemplate.insert("sysinfo.insertSysInfo", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
+			if (aprvMsg != null) result.setContents(aprvContents(aprvMsg));
 		} catch (Exception e) {
 			log.error(">> createSysInfo failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -76,8 +92,10 @@ public class SysInfoController {
 		Response result = new Response();
 
 		try {
-			sqlSessionTemplate.update("sysinfo.updateSysInfo", dataVo);
+			String aprvMsg = requestAprv("SAVE", dataVo, sysOf(dataVo.getSysCd()));
+			if (aprvMsg == null) sqlSessionTemplate.update("sysinfo.updateSysInfo", dataVo);
 			result.setResultInfo(RestResult.CODE_200);
+			if (aprvMsg != null) result.setContents(aprvContents(aprvMsg));
 		} catch (Exception e) {
 			log.error(">> updateSysInfo failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -92,13 +110,76 @@ public class SysInfoController {
 		Response result = new Response();
 
 		try {
-			sqlSessionTemplate.delete("sysinfo.deleteSysInfos", dataVos);
+			// 108 §4.35 — 결재선이 켜져 있으면 시스템마다 결재 문서 (진행 중 결재가 있는 시스템이 하나라도 있으면 아무것도 안 함)
+			for (SysInfoVo v : dataVos) {
+				if (aprvService.openDoc("SYS", v.getSysCd()) != null) throw new IllegalStateException(
+						"결재 진행 중인 변경이 있습니다 — 결재가 끝난 뒤 다시 하세요. (" + v.getSysNm() + ")");
+			}
+			if (aprvService.isLineOn("SYS")) {
+				List<String> msgs = new ArrayList<>();
+				for (SysInfoVo v : dataVos) msgs.add(requestAprv("DELETE", v, sysOf(v.getSysCd())));
+				result.setContents(aprvContents(msgs.get(0) + (msgs.size() > 1 ? " (시스템 " + msgs.size() + "개)" : "")));
+			} else {
+				sqlSessionTemplate.delete("sysinfo.deleteSysInfos", dataVos);
+			}
 			result.setResultInfo(RestResult.CODE_200);
 		} catch (Exception e) {
 			log.error(">> deleteSysInfos failed : {}", e.getMessage());
 			result.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(result);
+	}
+
+	// ===== 108 §4.35 — 시스템 결재 (요청 유형 SYS) =====
+
+	private static String aprvContents(String aprvMsg) throws Exception {
+		Map<String, Object> c = new LinkedHashMap<>();
+		c.put("aprvMsg", aprvMsg);
+		return OM.writeValueAsString(c);
+	}
+
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> sysOf(String sysCd) {
+		for (SysInfoVo v : sqlSessionTemplate.<SysInfoVo>selectList("sysinfo.selectSysInfoList")) {
+			if (Objects.equals(v.getSysCd(), sysCd)) return OM.convertValue(v, Map.class);
+		}
+		return null;
+	}
+
+	/**
+	 * 같은 시스템에 진행 중 결재가 있으면 거부. 시스템 결재선이 꺼져 있으면 null(호출한 쪽이 바로 반영),
+	 * 켜져 있으면 결재 문서를 열고 안내 문구 — 반영은 최종 승인 때 {@link #applyPayload}
+	 */
+	@SuppressWarnings("unchecked")
+	private String requestAprv(String action, SysInfoVo v, Map<String, Object> before) throws Exception {
+		if (aprvService.openDoc("SYS", v.getSysCd()) != null) throw new IllegalStateException("결재 진행 중인 변경이 있습니다 — 결재가 끝난 뒤 다시 하세요.");
+		if (!aprvService.isLineOn("SYS")) return null;
+		String userId = sessionService.getUserId();
+		String pickMsg = aprvService.checkPicks("SYS", v.getAprvrPicks(), userId);
+		if (pickMsg != null) throw new IllegalArgumentException(pickMsg);
+		Map<String, Object> payload = new LinkedHashMap<>();
+		payload.put("action", action);
+		payload.put("kind", "SYS");
+		Map<String, Object> data = OM.convertValue(v, Map.class);
+		data.remove("aprvrPicks");
+		payload.put("data", data);
+		payload.put("before", before);
+		// 결재 문서 대상 이름 — 이미 있는 시스템은 지금 이름(수정으로 바꿀 이름은 상세에)
+		String nm = before != null ? (String) before.get("sysNm") : v.getSysNm();
+		AprvService.Result r = aprvService.open("SYS", v.getSysCd(), nm, null, null, userId, v.getAprvrPicks(), OM.writeValueAsString(payload));
+		websocketService.sendUserNotis(r.notis);
+		return r.message;
+	}
+
+	/** 최종 승인 때 대기 내용을 반영한다 (결재와 같은 트랜잭션 s). 수정·삭제 대상이 그사이 없어졌으면 거부 */
+	@SuppressWarnings("unchecked")
+	public void applyPayload(SqlSession s, Map<String, Object> payload) {
+		SysInfoVo v = OM.convertValue(payload.get("data"), SysInfoVo.class);
+		boolean exists = sysOf(v.getSysCd()) != null;
+		if ((payload.get("before") != null || "DELETE".equals(payload.get("action"))) && !exists) throw new IllegalStateException("대상이 없습니다 (다른 경로로 삭제됨)");
+		if ("DELETE".equals(payload.get("action"))) s.delete("sysinfo.deleteSysInfos", java.util.Collections.singletonList(v));
+		else if (payload.get("before") == null) s.insert("sysinfo.insertSysInfo", v);
+		else s.update("sysinfo.updateSysInfo", v);
 	}
 
 	@RequestMapping(value = "/getSysInfoList", method = RequestMethod.GET)

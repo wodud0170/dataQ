@@ -1,10 +1,12 @@
 package qualitycenter.controller;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.ibatis.session.SqlSession;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,27 +14,37 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ndata.common.message.Response;
 import com.ndata.quality.common.PermCode;
+import com.ndata.quality.service.AprvService;
 import com.ndata.common.message.RestResult;
 
 import lombok.extern.slf4j.Slf4j;
 import qualitycenter.service.auth.SessionService;
 import qualitycenter.service.governance.ChangeHistoryService;
+import qualitycenter.service.ws.WebSocketService;
 import reactor.core.publisher.Mono;
 
 /**
  * 88번 §15 — 업무영역 (BIZ_AREA, 논리) / 주제영역 (SUBJ_AREA, 물리) CRUD.
  * 영역 자체 생성/수정/삭제는 영역 관리 권한(관리자 또는 AREA_ADMIN)만.
+ *
+ * <p>108 §4.35 (104번 WP1-51) — 영역 결재선(요청 유형 AREA)이 켜져 있으면 추가·수정·삭제를 바로 반영하지 않고
+ * 결재 문서(REQ_PAYLOAD)에 담아 두었다가 최종 승인 때 {@link #applyPayload} 로 반영한다. 테이블 연결(subj/link)은 대상이 아니다.</p>
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/area")
 public class BizSubjAreaController {
 
+	private static final ObjectMapper OM = new ObjectMapper();
+
 	@Autowired private SqlSessionTemplate sqlSessionTemplate;
 	@Autowired private SessionService sessionService;
 	@Autowired private ChangeHistoryService changeHistory;
+	@Autowired private AprvService aprvService;
+	@Autowired private WebSocketService websocketService;
 
 	@PostMapping("/biz/list")
 	public List<Map<String, Object>> bizList(@RequestBody(required = false) Map<String, Object> body) {
@@ -58,9 +70,10 @@ public class BizSubjAreaController {
 			p.put("parentId", body.get("parentId"));
 			p.put("sortOrder", body.get("sortOrder") == null ? 0 : body.get("sortOrder"));
 			p.put("userId", changeHistory.safeUserId());
-			sqlSessionTemplate.insert("area.insertBizArea", p);
+			String aprvMsg = requestAprv("BIZ", "SAVE", id, (String) body.get("bizAreaNm"), p, bizMap().get(id), body);
+			if (aprvMsg == null) sqlSessionTemplate.insert("area.insertBizArea", p);
 			res.setResultInfo(RestResult.CODE_200);
-			res.setContents("{\"bizAreaId\":\"" + id + "\"}");
+			res.setContents(contents("bizAreaId", id, aprvMsg));
 		} catch (Exception e) {
 			log.error(">> bizSave failed: {}", e.getMessage(), e);
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -79,16 +92,15 @@ public class BizSubjAreaController {
 			p.put("subjAreaId", id);
 			p.put("subjAreaNm", body.get("subjAreaNm"));
 			p.put("subjAreaDesc", body.get("subjAreaDesc"));
-			String nm = body.get("subjAreaNm") == null ? "" : body.get("subjAreaNm").toString().trim();
-			if (nm.isEmpty()) throw new IllegalArgumentException("주제영역명을 넣어 주세요.");
 			String parent = body.get("parentId") == null ? "" : body.get("parentId").toString().trim();
-			checkSubjTree(id, parent);   // 104번 WP8-38
 			p.put("parentId", parent.isEmpty() ? null : parent);
 			p.put("sortOrder", body.get("sortOrder") == null ? 0 : body.get("sortOrder"));
 			p.put("userId", changeHistory.safeUserId());
-			sqlSessionTemplate.insert("area.insertSubjArea", p);
+			checkSubjSave(p);
+			String aprvMsg = requestAprv("SUBJ", "SAVE", id, (String) p.get("subjAreaNm"), p, subjMap().get(id), body);
+			if (aprvMsg == null) sqlSessionTemplate.insert("area.insertSubjArea", p);
 			res.setResultInfo(RestResult.CODE_200);
-			res.setContents("{\"subjAreaId\":\"" + id + "\"}");
+			res.setContents(contents("subjAreaId", id, aprvMsg));
 		} catch (Exception e) {
 			log.error(">> subjSave failed: {}", e.getMessage(), e);
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
@@ -102,8 +114,13 @@ public class BizSubjAreaController {
 		try {
 			if (!sessionService.hasPerm(PermCode.AREA_ADMIN)) throw new IllegalStateException("권한이 없습니다 (영역 관리 권한 필요)");
 			String id = (String) body.get("bizAreaId");
-			sqlSessionTemplate.update("area.deleteBizArea", id);
+			Map<String, Object> a = bizMap().get(id);
+			Map<String, Object> p = new HashMap<>();
+			p.put("bizAreaId", id);
+			String aprvMsg = requestAprv("BIZ", "DELETE", id, a == null ? id : (String) a.get("bizAreaNm"), p, a, body);
+			if (aprvMsg == null) sqlSessionTemplate.update("area.deleteBizArea", id);
 			res.setResultInfo(RestResult.CODE_200);
+			res.setContents(contents("bizAreaId", id, aprvMsg));
 		} catch (Exception e) {
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
@@ -116,17 +133,95 @@ public class BizSubjAreaController {
 		try {
 			if (!sessionService.hasPerm(PermCode.AREA_ADMIN)) throw new IllegalStateException("권한이 없습니다 (영역 관리 권한 필요)");
 			String id = (String) body.get("subjAreaId");
-			// 104번 WP8-38 — 하위 영역이나 연결된 테이블이 있으면 지우지 않는다
+			checkSubjDelete(id);
 			Map<String, Object> a = subjMap().get(id);
-			if (a != null && (((Number) a.get("childCnt")).intValue() > 0 || ((Number) a.get("tableCnt")).intValue() > 0)) {
-				throw new IllegalStateException("주제영역 '" + a.get("subjAreaNm") + "' 에 하위 영역 " + a.get("childCnt") + "개·연결 테이블 " + a.get("tableCnt") + "개가 있어 지울 수 없습니다.");
-			}
-			sqlSessionTemplate.update("area.deleteSubjArea", id);
+			Map<String, Object> p = new HashMap<>();
+			p.put("subjAreaId", id);
+			String aprvMsg = requestAprv("SUBJ", "DELETE", id, a == null ? id : (String) a.get("subjAreaNm"), p, a, body);
+			if (aprvMsg == null) sqlSessionTemplate.update("area.deleteSubjArea", id);
 			res.setResultInfo(RestResult.CODE_200);
+			res.setContents(contents("subjAreaId", id, aprvMsg));
 		} catch (Exception e) {
 			res.setResultInfo(RestResult.CODE_500.getCode(), e.getMessage());
 		}
 		return Mono.just(res);
+	}
+
+	// ===== 108 §4.35 — 영역 결재 (요청 유형 AREA) =====
+
+	private static String contents(String idKey, String id, String aprvMsg) throws Exception {
+		Map<String, Object> c = new LinkedHashMap<>();
+		c.put(idKey, id);
+		if (aprvMsg != null) c.put("aprvMsg", aprvMsg);
+		return OM.writeValueAsString(c);
+	}
+
+	/**
+	 * 같은 영역에 진행 중 결재가 있으면 거부. 영역 결재선이 꺼져 있으면 null(호출한 쪽이 바로 반영),
+	 * 켜져 있으면 결재 문서를 열고 안내 문구 — 반영은 최종 승인 때
+	 */
+	@SuppressWarnings("unchecked")
+	private String requestAprv(String kind, String action, String id, String nm, Map<String, Object> data,
+			Map<String, Object> before, Map<String, Object> body) throws Exception {
+		if (aprvService.openDoc("AREA", id) != null) throw new IllegalStateException("결재 진행 중인 변경이 있습니다 — 결재가 끝난 뒤 다시 하세요.");
+		if (!aprvService.isLineOn("AREA")) return null;
+		// 결재 문서 대상 이름 — 이미 있는 영역은 지금 이름(수정으로 바꿀 이름은 상세에)
+		if (before != null) nm = (String) before.get("SUBJ".equals(kind) ? "subjAreaNm" : "bizAreaNm");
+		String userId = sessionService.getUserId();
+		Map<String, String> picks = (Map<String, String>) body.get("aprvrPicks");
+		String pickMsg = aprvService.checkPicks("AREA", picks, userId);
+		if (pickMsg != null) throw new IllegalArgumentException(pickMsg);
+		Map<String, Object> payload = new LinkedHashMap<>();
+		payload.put("action", action);
+		payload.put("kind", kind);
+		payload.put("data", data);
+		payload.put("before", before);
+		AprvService.Result r = aprvService.open("AREA", id, nm, null, null, userId, picks, OM.writeValueAsString(payload));
+		websocketService.sendUserNotis(r.notis);
+		return r.message;
+	}
+
+	/**
+	 * 최종 승인 때 대기 내용을 반영한다 (결재와 같은 트랜잭션 s). 요청 때와 같은 검사를 다시 하고,
+	 * 수정·삭제 대상이 그사이 없어졌으면 거부한다 — 예외면 호출한 쪽이 결재까지 롤백한다
+	 */
+	@SuppressWarnings("unchecked")
+	public void applyPayload(SqlSession s, Map<String, Object> payload) {
+		String kind = (String) payload.get("kind");
+		String action = (String) payload.get("action");
+		Map<String, Object> data = (Map<String, Object>) payload.get("data");
+		boolean subj = "SUBJ".equals(kind);
+		String id = (String) data.get(subj ? "subjAreaId" : "bizAreaId");
+		boolean exists = (subj ? subjMap() : bizMap()).containsKey(id);
+		if ((payload.get("before") != null || "DELETE".equals(action)) && !exists) throw new IllegalStateException("대상이 없습니다 (다른 경로로 삭제됨)");
+		if ("DELETE".equals(action)) {
+			if (subj) checkSubjDelete(id);
+			s.update(subj ? "area.deleteSubjArea" : "area.deleteBizArea", id);
+		} else {
+			if (subj) checkSubjSave(data);
+			s.insert(subj ? "area.insertSubjArea" : "area.insertBizArea", data);
+		}
+	}
+
+	private Map<String, Map<String, Object>> bizMap() {
+		Map<String, Map<String, Object>> m = new LinkedHashMap<>();
+		for (Map<String, Object> a : sqlSessionTemplate.<Map<String, Object>>selectList("area.selectBizAreas")) m.put((String) a.get("bizAreaId"), a);
+		return m;
+	}
+
+	/** 주제영역 저장 검사 — 이름 필수, 트리(104번 WP8-38) */
+	private void checkSubjSave(Map<String, Object> p) {
+		String nm = p.get("subjAreaNm") == null ? "" : p.get("subjAreaNm").toString().trim();
+		if (nm.isEmpty()) throw new IllegalArgumentException("주제영역명을 넣어 주세요.");
+		checkSubjTree((String) p.get("subjAreaId"), p.get("parentId") == null ? "" : (String) p.get("parentId"));
+	}
+
+	/** 104번 WP8-38 — 하위 영역이나 연결된 테이블이 있으면 지우지 않는다 */
+	private void checkSubjDelete(String id) {
+		Map<String, Object> a = subjMap().get(id);
+		if (a != null && (((Number) a.get("childCnt")).intValue() > 0 || ((Number) a.get("tableCnt")).intValue() > 0)) {
+			throw new IllegalStateException("주제영역 '" + a.get("subjAreaNm") + "' 에 하위 영역 " + a.get("childCnt") + "개·연결 테이블 " + a.get("tableCnt") + "개가 있어 지울 수 없습니다.");
+		}
 	}
 
 	// ===== 104번 WP8-38 — 주제영역 트리·테이블 연결 =====

@@ -757,7 +757,8 @@ CREATE TABLE quality.tb_aprv_doc (
     doc_stat character varying(20) NOT NULL,
     cur_step_no integer NOT NULL,
     step_cnt integer NOT NULL,
-    end_dt character varying(14)
+    end_dt character varying(14),
+    req_payload text
 );
 
 
@@ -765,14 +766,14 @@ CREATE TABLE quality.tb_aprv_doc (
 -- Name: TABLE tb_aprv_doc; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON TABLE quality.tb_aprv_doc IS '결재 문서 (104번 WP1) — 표준사전 항목 하나 또는 데이터 모델 신청(SUBMISSION_ID) 하나';
+COMMENT ON TABLE quality.tb_aprv_doc IS '결재 문서 (104번 WP1) — 표준사전 항목 하나, 데이터 모델 신청(SUBMISSION_ID) 하나, 또는 영역·시스템 변경 하나(108 §4.35)';
 
 
 --
 -- Name: COLUMN tb_aprv_doc.target_id; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_aprv_doc.target_id IS 'WORD·TERMS·CODE·DOMAIN 은 항목 ID, DM_CHANGE 는 SUBMISSION_ID';
+COMMENT ON COLUMN quality.tb_aprv_doc.target_id IS 'WORD·TERMS·CODE·DOMAIN 은 항목 ID, DM_CHANGE 는 SUBMISSION_ID, AREA 는 업무·주제영역 ID, SYS 는 시스템 코드';
 
 
 --
@@ -780,6 +781,13 @@ COMMENT ON COLUMN quality.tb_aprv_doc.target_id IS 'WORD·TERMS·CODE·DOMAIN �
 --
 
 COMMENT ON COLUMN quality.tb_aprv_doc.doc_stat IS 'PROGRESS, APPROVED, REJECTED, CANCELED(대상이 다른 경로로 없어짐)';
+
+
+--
+-- Name: COLUMN tb_aprv_doc.req_payload; Type: COMMENT; Schema: quality; Owner: -
+--
+
+COMMENT ON COLUMN quality.tb_aprv_doc.req_payload IS '최종 승인 때 반영할 내용(JSON) — AREA·SYS 만 {action: SAVE·DELETE, kind: BIZ·SUBJ·SYS, data, before} (108 §4.35)';
 
 
 --
@@ -844,7 +852,7 @@ COMMENT ON TABLE quality.tb_aprv_line IS '요청 유형별 결재선 (104번 WP1
 -- Name: COLUMN tb_aprv_line.req_tp; Type: COMMENT; Schema: quality; Owner: -
 --
 
-COMMENT ON COLUMN quality.tb_aprv_line.req_tp IS '요청 유형 — WORD, TERMS, CODE, DOMAIN, DM_CHANGE';
+COMMENT ON COLUMN quality.tb_aprv_line.req_tp IS '요청 유형 — WORD, TERMS, CODE, DOMAIN, DM_CHANGE, AREA(업무·주제영역), SYS(시스템)';
 
 
 --

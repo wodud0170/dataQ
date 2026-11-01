@@ -30,6 +30,11 @@
           </v-menu>
         </v-sheet>
 
+        <!-- 108 §4.35 — 고른 시스템에 진행 중 결재가 있으면 -->
+        <v-alert v-if="selPending" id="sysPendingAlert" dense outlined type="warning" class="mx-4 mb-3" style="font-size:.85rem;">
+          이 시스템의 변경이 결재 중입니다 ({{ selPending.curStepNo }}/{{ selPending.stepCnt }} 단계, 현재 결재자 {{ selPending.curAprvrNms || '-' }}).
+          결재가 끝날 때까지 수정·삭제할 수 없습니다.
+        </v-alert>
         <!-- 테이블 -->
         <v-data-table id="systemInfo_table" :items="selectedItem" hide-default-footer class="px-4 pb-3">
           <template v-slot:body="{ items }">
@@ -177,6 +182,8 @@
               </v-col>
             </v-row>
 
+            <!-- 108 §4.35 — 시스템 결재선의 "요청자 지정" 단계 결재자 -->
+            <AprvPicker ref="addSysAprvPicker" :reqTps="['SYS']" :active="addSystemModalShow" />
           </v-form>
         </template>
       </NdModal>
@@ -306,6 +313,7 @@
               </v-col>
             </v-row>
 
+            <AprvPicker ref="updSysAprvPicker" :reqTps="['SYS']" :active="updateSystemModalShow" />
           </v-form>
         </template>
       </NdModal>
@@ -318,15 +326,18 @@
 import axios from "axios";
 import VJstree from 'vue-jstree'
 import NdModal from "./../views/modal/NdModal.vue"
+import AprvPicker from './AprvPicker.vue'
 
 export default {
   name: 'MMSystem',
   props: ['isMobile'],
   components: {
     VJstree,
-    NdModal
+    NdModal,
+    AprvPicker
   },
   data: () => ({
+    selPending: null, // 108 §4.35 — 고른 시스템의 진행 중 결재 문서
     systemInfoList: [], // 시스템 정보 리스트
     datasourceItems: [], // 데이터 베이스 소스
     system_parentSysCdItems: [], // 시스템일 때 상위 시스템 목록
@@ -463,6 +474,7 @@ export default {
       }
 
       this.selectedItem = [data.model];
+      this.loadSelPending();
 
       // this.selectedItem에 데이터 소스명 추가
       this.selectedItem[0].sysDsLstNm = _dsNm;
@@ -490,15 +502,38 @@ export default {
     },
     submitDialog(value) {
       if (value === 'add') {
-        if (this.fieldcheck('add')) {
+        if (this.fieldcheck('add') && !this._pickMsg('addSysAprvPicker')) {
           this.createSystemData();
         }
 
       } else if (value === 'update') {
-        if (this.fieldcheck('update')) {
+        if (this.fieldcheck('update') && !this._pickMsg('updSysAprvPicker')) {
           this.updateSystemData();
         }
       }
+    },
+    // ===== 108 §4.35 — 시스템 결재 =====
+    loadSelPending() {
+      const cd = this.selectedItem[0] && this.selectedItem[0].sysCd;
+      this.selPending = null;
+      if (!cd) return;
+      axios.post(this.$APIURL.base + 'api/aprv/openDocs', { targetIds: [cd] }).then(r => {
+        const d = (r.data || {})[cd];
+        this.selPending = d && d.reqTp === 'SYS' ? d : null;
+      }).catch(() => { this.selPending = null; });
+    },
+    _pickMsg(ref) {
+      const p = this.$refs[ref];
+      const msg = p && p.validate();
+      if (msg) this.$swal.fire({ title: msg, icon: 'warning', confirmButtonText: '확인' });
+      return msg;
+    },
+    /** 응답에 결재 요청 문구가 있으면 안내하고 true (바로 반영 안 됨) */
+    _aprvDone(res, tail) {
+      const c = res.data.contents ? JSON.parse(res.data.contents) : {};
+      if (!c.aprvMsg) return false;
+      this.$swal.fire({ title: '결재 요청', text: `${c.aprvMsg}. 결재가 끝나면 ${tail}.`, icon: 'info', confirmButtonText: '확인' });
+      return true;
     },
     // 수정 버튼 클릭 시 선택한 데이터가 있는지 확인
     checkSelected() {
@@ -803,6 +838,7 @@ export default {
         'sysDsLst': _sysDsLst,
         'sysDesc': this.addSystem_sysDesc,
         'dictId': this.addSystem_dictId,
+        'aprvrPicks': this.$refs.addSysAprvPicker ? this.$refs.addSysAprvPicker.picksFor('SYS') : null,
       }
 
       axios.post(this.$APIURL.base + 'api/sysinfo/createSysInfo', _systemData).then(res => {
@@ -811,7 +847,8 @@ export default {
         if (res.data.resultCode === 200) {
           this.hideModal('add');
 
-          this.$swal.fire({
+          // 108 §4.35 — 시스템 결재선이 켜져 있으면 결재 요청 안내 (바로 등록 안 됨)
+          if (!this._aprvDone(res, '등록됩니다')) this.$swal.fire({
             title: '새로운 시스템 정보가 등록되었습니다.',
             icon: 'success',
             showConfirmButton: false,
@@ -860,6 +897,7 @@ export default {
         'sysDsLst': _sysDsLst,
         'sysDesc': this.updateSystem_sysDesc,
         'dictId': this.updateSystem_dictId,
+        'aprvrPicks': this.$refs.updSysAprvPicker ? this.$refs.updSysAprvPicker.picksFor('SYS') : null,
       }
 
       console.log(_systemData);
@@ -870,7 +908,7 @@ export default {
         if (res.data.resultCode === 200) {
           this.hideModal('update');
 
-          this.$swal.fire({
+          if (!this._aprvDone(res, '반영됩니다')) this.$swal.fire({
             title: '시스템 정보가 수정되었습니다.',
             icon: 'success',
             showConfirmButton: false,
@@ -953,7 +991,7 @@ export default {
 
               if (res.data.resultCode === 200) {
 
-                this.$swal.fire({
+                if (!this._aprvDone(res, '지워집니다')) this.$swal.fire({
                   title: '시스템 정보가 삭제되었습니다.',
                   icon: 'success',
                   showConfirmButton: false,
@@ -985,6 +1023,7 @@ export default {
 
     },
     resetSelectedItem() {
+      this.selPending = null;
       this.selectedItem = [{
         sysCd: '',
         sysNm: '',

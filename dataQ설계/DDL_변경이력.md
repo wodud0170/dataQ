@@ -104,3 +104,5 @@ docker exec -i dataq-db psql -U admin -d postgres < dataQ설계/DDL_full_schema.
   - 덤프 갱신: `DDL_full_schema.sql`·`01_schema.sql` 모두 splice 로 tb_std_dict·tb_word·tb_terms 블록과 새 주석 4·새 인덱스 2 블록을 pg_dump 위치에 넣고, 바뀐 인덱스 2 블록(tb_word_ux_3·tb_terms_ux_2)은 pg_dump 줄로 바꿨다(갱신 전·후 블록 비교로 이 11블록 말고 차이 없음 확인).
 - 2026-11-01 | 108 §4.23 보완 7 (104번 WP1 결재자 "요청자 지정") 세션 | PC1 | 컬럼 주석 2개 | `TB_APRV_LINE_STEP.APRVR_TP` 주석에 REQ_PICK(요청자 지정 — 요청할 때 요청자가 고름), `APRVR_ID` 주석 "ADMIN·ORG_HEAD·REQ_PICK 이면 NULL". 칸 형식 그대로(값 검사는 앱). sync `sync/PC_align_2026-11-01_aprv_req_pick.sql`(멱등, 두 번 적용 확인) — PC2 도 적용
   - 덤프 갱신: `DDL_full_schema.sql`·`01_schema.sql` 의 두 주석 줄을 pg_dump 줄로 바꿈(pg_dump 결과와 같음 확인)
+- 2026-11-01 | 108 §4.23 보완 8 (104번 WP1-51 결재 대상 확대 — 주제영역·시스템 설정) 세션 | PC1 | 컬럼 1개·주석 3개 | `TB_APRV_DOC.REQ_PAYLOAD` text 추가(주석 — 최종 승인 때 반영할 내용 JSON, AREA·SYS 만), `TB_APRV_DOC` 표 주석·`TARGET_ID` 주석·`TB_APRV_LINE.REQ_TP` 주석에 AREA·SYS. sync `sync/PC_align_2026-11-01_aprv_area_sys.sql`(멱등, 두 번 적용 확인) — PC2 도 적용
+  - 덤프 갱신: `DDL_full_schema.sql`·`01_schema.sql` 모두 splice 로 tb_aprv_doc 블록·새 주석 블록, 바뀐 주석 3줄은 pg_dump 줄로(갱신 전·후 diff 로 이 5곳만 다름 확인)

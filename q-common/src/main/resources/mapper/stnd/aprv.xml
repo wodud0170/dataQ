@@ -92,9 +92,10 @@
 	<!-- ===== 결재 문서 ===== -->
 
 	<insert id="insertDoc" parameterType="java.util.Map">
-		INSERT INTO TB_APRV_DOC (DOC_ID, REQ_TP, TARGET_ID, TARGET_NM, DM_ID, DICT_ID, REQ_USER_ID, REQ_DT, DOC_STAT, CUR_STEP_NO, STEP_CNT)
+		<!-- 108 §4.35 — REQ_PAYLOAD: 영역·시스템 변경은 최종 승인 때 반영할 내용(JSON) -->
+		INSERT INTO TB_APRV_DOC (DOC_ID, REQ_TP, TARGET_ID, TARGET_NM, DM_ID, DICT_ID, REQ_USER_ID, REQ_DT, DOC_STAT, CUR_STEP_NO, STEP_CNT, REQ_PAYLOAD)
 		VALUES (#{docId}, #{reqTp}, #{targetId}, #{targetNm, jdbcType=VARCHAR}, #{dmId, jdbcType=VARCHAR}, #{dictId, jdbcType=VARCHAR},
-		        #{reqUserId}, #{now}, 'PROGRESS', 1, #{stepCnt})
+		        #{reqUserId}, #{now}, 'PROGRESS', 1, #{stepCnt}, #{payload, jdbcType=VARCHAR})
 	</insert>
 
 	<insert id="insertDocStep" parameterType="java.util.Map">
@@ -113,7 +114,7 @@
 	</sql>
 
 	<select id="selectDoc" parameterType="String" resultType="java.util.LinkedHashMap">
-		SELECT <include refid="docCols"/> FROM TB_APRV_DOC D WHERE D.DOC_ID = #{docId}
+		SELECT <include refid="docCols"/>, D.REQ_PAYLOAD as "reqPayload" FROM TB_APRV_DOC D WHERE D.DOC_ID = #{docId}
 	</select>
 
 	<!-- 109번 #10 — 결재(act) 시작 때 문서 행을 잠근다. 같은 문서의 결재는 앞 트랜잭션이 끝날 때까지 기다린다 -->
@@ -139,8 +140,11 @@
 		<if test="viewerId != null">
 		   AND (D.REQ_USER_ID = #{viewerId}
 		        OR EXISTS (SELECT 1 FROM TB_APRV_DOC_STEP S WHERE S.DOC_ID = D.DOC_ID AND S.APRVR_USER_ID = #{viewerId})
-		        <if test="stdApprove"> OR D.REQ_TP &lt;&gt; 'DM_CHANGE' </if>
-		        <if test="dmApprove"> OR D.REQ_TP = 'DM_CHANGE' </if>)
+		        <if test="stdApprove"> OR D.REQ_TP IN ('WORD', 'TERMS', 'CODE', 'DOMAIN') </if>
+		        <if test="dmApprove"> OR D.REQ_TP = 'DM_CHANGE' </if>
+		        <!-- 108 §4.35 — 영역·시스템 결재는 그 관리 권한자도 본다 -->
+		        <if test="areaAdmin"> OR D.REQ_TP = 'AREA' </if>
+		        <if test="sysAdmin"> OR D.REQ_TP = 'SYS' </if>)
 		</if>
 	</select>
 
@@ -172,6 +176,8 @@
 			<when test="reqTp == 'WORD'">SELECT COUNT(*) FROM TB_WORD WHERE WORD_ID = #{targetId} AND APRV_YN = 'N'</when>
 			<when test="reqTp == 'TERMS' or reqTp == 'CODE'">SELECT COUNT(*) FROM TB_TERMS WHERE TERMS_ID = #{targetId} AND APRV_YN = 'N'</when>
 			<when test="reqTp == 'DOMAIN'">SELECT COUNT(*) FROM TB_DOMAIN WHERE DOMAIN_ID = #{targetId} AND APRV_YN = 'N'</when>
+			<!-- 108 §4.35 — 영역·시스템은 결재 문서 자체가 대기 내용이라 늘 대기 (결재함이 자동으로 닫지 않는다) -->
+			<when test="reqTp == 'AREA' or reqTp == 'SYS'">SELECT 1</when>
 			<otherwise>SELECT COUNT(*) FROM TB_DATA_MODEL_CHANGE_HISTORY WHERE SUBMISSION_ID = #{targetId} AND APRV_STATUS = 'SUBMITTED'</otherwise>
 		</choose>
 	</select>

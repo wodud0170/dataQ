@@ -4,6 +4,11 @@
       <!-- 헤더 -->
       <v-row no-gutters align="center" class="mb-2">
         <h2><v-icon>mdi-folder-multiple-outline</v-icon>&nbsp;&nbsp;영역 관리</h2>
+        <!-- 108 §4.35 — 내가 올려 결재 중인 영역 추가 (결재가 끝나야 목록에 생긴다) -->
+        <span v-if="pendingAdds.length" id="areaPendingAdds" class="ml-4 orange--text text--darken-2" style="font-size:.8rem;"
+          :title="pendingAdds.join(', ')">
+          <v-icon small color="orange darken-2">mdi-clock-outline</v-icon> 결재 중인 영역 추가 {{ pendingAdds.length }}건 — {{ pendingAdds.slice(0, 3).join(', ') }}{{ pendingAdds.length > 3 ? ' 외' : '' }} (결재함에서 볼 수 있습니다)
+        </span>
         <v-spacer />
         <v-btn small color="primary" outlined v-on:click="loadAll">
           <v-icon small left>mdi-refresh</v-icon>새로고침
@@ -30,15 +35,19 @@
         <v-data-table :headers="bizHeaders" :items="bizList" item-key="bizAreaId"
           :items-per-page="20" hide-default-footer dense class="elevation-1"
           no-data-text="등록된 업무영역이 없습니다.">
+          <!-- 108 §4.35 — 진행 중 결재가 있는 영역 -->
+          <template #item.bizAreaNm="{ item }">
+            {{ item.bizAreaNm }}<v-chip v-if="pending[item.bizAreaId]" x-small color="orange" text-color="white" class="ml-1 aprv-chip" :title="pendingTitle(item.bizAreaId)">결재 중</v-chip>
+          </template>
           <template #item.bizAreaDesc="{ item }">
             <span :class="{ 'grey--text': !item.bizAreaDesc }">{{ item.bizAreaDesc || '-' }}</span>
           </template>
           <template #item.actions="{ item }">
             <div class="d-flex justify-center" :style="{ gap: '4px' }">
-              <v-btn icon small v-on:click="openBiz(item)" title="수정">
+              <v-btn icon small v-on:click="openBiz(item)" :disabled="!!pending[item.bizAreaId]" :title="pending[item.bizAreaId] ? '결재 진행 중' : '수정'">
                 <v-icon small color="ndColor">mdi-pencil</v-icon>
               </v-btn>
-              <v-btn icon small v-on:click="delBiz(item)" title="삭제">
+              <v-btn icon small v-on:click="delBiz(item)" :disabled="!!pending[item.bizAreaId]" :title="pending[item.bizAreaId] ? '결재 진행 중' : '삭제'">
                 <v-icon small color="error">mdi-delete</v-icon>
               </v-btn>
             </div>
@@ -64,15 +73,15 @@
               no-data-text="등록된 주제영역이 없습니다." @click:row="pickSubj">
               <template #item.subjAreaNm="{ item }">
                 <div class="subj-nm" :style="{ paddingLeft: ((item.level - 1) * 18) + 'px' }">
-                  <v-icon x-small v-if="item.level > 1" class="subj-arrow">mdi-subdirectory-arrow-right</v-icon>{{ item.subjAreaNm }}
+                  <v-icon x-small v-if="item.level > 1" class="subj-arrow">mdi-subdirectory-arrow-right</v-icon>{{ item.subjAreaNm }}<v-chip v-if="pending[item.subjAreaId]" x-small color="orange" text-color="white" class="ml-1 aprv-chip" :title="pendingTitle(item.subjAreaId)">결재 중</v-chip>
                 </div>
               </template>
               <template #item.actions="{ item }">
                 <div class="d-flex justify-center" :style="{ gap: '4px' }">
-                  <v-btn icon small v-on:click.stop="openSubj(item)" title="수정">
+                  <v-btn icon small v-on:click.stop="openSubj(item)" :disabled="!!pending[item.subjAreaId]" :title="pending[item.subjAreaId] ? '결재 진행 중' : '수정'">
                     <v-icon small color="ndColor">mdi-pencil</v-icon>
                   </v-btn>
-                  <v-btn icon small v-on:click.stop="delSubj(item)" title="삭제">
+                  <v-btn icon small v-on:click.stop="delSubj(item)" :disabled="!!pending[item.subjAreaId]" :title="pending[item.subjAreaId] ? '결재 진행 중' : '삭제'">
                     <v-icon small color="error">mdi-delete</v-icon>
                   </v-btn>
                 </div>
@@ -114,6 +123,8 @@
             color="ndColor" hide-details="auto" class="mb-3" />
           <v-text-field v-model.number="bizForm.sortOrder" label="정렬 순서" type="number" dense outlined
             color="ndColor" hide-details="auto" />
+          <!-- 108 §4.35 — 영역 결재선의 "요청자 지정" 단계 결재자 -->
+          <AprvPicker ref="bizAprvPicker" :reqTps="['AREA']" :active="bizDialog" />
         </v-card-text>
         <v-divider />
         <v-card-actions>
@@ -141,6 +152,7 @@
             color="ndColor" hide-details="auto" class="mb-3" />
           <v-text-field v-model.number="subjForm.sortOrder" label="정렬 순서" type="number" dense outlined
             color="ndColor" hide-details="auto" />
+          <AprvPicker ref="subjAprvPicker" :reqTps="['AREA']" :active="subjDialog" />
         </v-card-text>
         <v-divider />
         <v-card-actions>
@@ -186,12 +198,17 @@
 
 <script>
 import axios from 'axios';
+import AprvPicker from './AprvPicker.vue';
 
 export default {
   name: 'MMBizSubjArea',
   props: ['isMobile'],
+  components: { AprvPicker },
   data: () => ({
     tab: 0,
+    // 108 §4.35 — 진행 중 결재가 있는 영역 {영역 ID: 결재 문서}, 내가 올려 결재 중인 추가(목록에 아직 없는 영역 이름)
+    pending: {},
+    pendingAdds: [],
     bizList: [],
     bizHeaders: [
       { text: '업무영역명', value: 'bizAreaNm', align: 'start' },
@@ -266,8 +283,42 @@ export default {
       axios.post(this.$APIURL.base + 'api/area/biz/list', {}).then(r => {
         // 응답이 배열일 때만 사용 — API 오류 시 fallback HTML 등 비배열이 들어오면 빈 목록 처리
         this.bizList = Array.isArray(r.data) ? r.data : [];
-      }).catch(() => { this.bizList = []; });
-      this.loadSubj();
+      }).catch(() => { this.bizList = []; })
+        // 108 §4.35 — 결재 중 표시는 두 목록이 다 온 뒤(loadSubj 끝에서) 한 번 계산한다
+        .then(() => this.loadSubj());
+    },
+    // ===== 108 §4.35 — 영역 결재 =====
+    loadPending() {
+      const ids = this.bizList.map(b => b.bizAreaId).concat(this.subjList.map(s => s.subjAreaId));
+      axios.get(this.$APIURL.base + 'api/aprv/box', { params: { box: 'MINE', reqTp: 'AREA' } }).then(r => {
+        const rows = r.data && r.data.resultCode === 200 ? JSON.parse(r.data.contents || '[]') : [];
+        this.pendingAdds = rows.filter(d => d.docStat === 'PROGRESS' && !ids.includes(d.targetId)).map(d => d.targetNm);
+      }).catch(() => { this.pendingAdds = []; });
+      if (!ids.length) { this.pending = {}; return; }
+      axios.post(this.$APIURL.base + 'api/aprv/openDocs', { targetIds: ids }).then(r => {
+        const m = {};
+        Object.values(r.data || {}).filter(d => d.reqTp === 'AREA').forEach(d => { m[d.targetId] = d; });
+        this.pending = m;
+      }).catch(() => { this.pending = {}; });
+    },
+    pendingTitle(id) {
+      const d = this.pending[id];
+      return d ? `결재 진행 중 — ${d.curStepNo}/${d.stepCnt} 단계, 현재 결재자 ${d.curAprvrNms || '-'}` : '';
+    },
+    /** 저장·삭제 결과 — 영역 결재선이 켜져 있으면 결재 요청(바로 반영 안 됨) 안내, 아니면 doneTitle */
+    _done(res, doneTitle, aprvTail) {
+      const c = res.data.contents ? JSON.parse(res.data.contents) : {};
+      if (c.aprvMsg) {
+        this.$swal.fire({ title: '결재 요청', text: `${c.aprvMsg}. 결재가 끝나면 ${aprvTail}.`, icon: 'info', confirmButtonText: '확인' });
+      } else if (doneTitle) {
+        this.$swal.fire({ title: doneTitle, icon: 'success', timer: 1000, showConfirmButton: false });
+      }
+    },
+    _pickMsg(ref) {
+      const p = this.$refs[ref];
+      const msg = p && p.validate();
+      if (msg) this.$swal.fire({ title: msg, icon: 'warning', confirmButtonText: '확인' });
+      return msg;
     },
     openBiz(item) {
       this.bizForm = item
@@ -277,9 +328,10 @@ export default {
     },
     saveBiz() {
       if (!this.bizForm.bizAreaNm) { this.$swal.fire({ title: '업무영역명 필수', icon: 'warning' }); return; }
-      axios.post(this.$APIURL.base + 'api/area/biz/save', this.bizForm).then((res) => {
+      if (this._pickMsg('bizAprvPicker')) return;
+      axios.post(this.$APIURL.base + 'api/area/biz/save', { ...this.bizForm, aprvrPicks: this.$refs.bizAprvPicker.picksFor('AREA') }).then((res) => {
         if (!(res.data && res.data.resultCode === 200)) { this.$swal.fire({ title: '저장 실패', text: this._msg(res), icon: 'error' }); return; }
-        this.$swal.fire({ title: '저장 완료', icon: 'success', timer: 1000, showConfirmButton: false });
+        this._done(res, '저장 완료', '반영됩니다');
         this.bizDialog = false; this.loadAll();
       }).catch((e) => this.$swal.fire({ title: '저장 실패', text: this._msg(null, e), icon: 'error' }));
     },
@@ -289,6 +341,7 @@ export default {
         if (!r.isConfirmed) return;
         axios.post(this.$APIURL.base + 'api/area/biz/delete', { bizAreaId: item.bizAreaId }).then((res) => {
           if (!(res.data && res.data.resultCode === 200)) { this.$swal.fire({ title: '삭제 실패', text: this._msg(res), icon: 'error' }); return; }
+          this._done(res, null, '지워집니다');
           this.loadAll();
         }).catch((e) => this.$swal.fire({ title: '삭제 실패', text: this._msg(null, e), icon: 'error' }));
       });
@@ -297,6 +350,7 @@ export default {
     loadSubj() {
       axios.post(this.$APIURL.base + 'api/area/subj/list', {}).then(r => {
         this.subjList = Array.isArray(r.data) ? r.data : [];
+        this.loadPending();
         if (this.selSubj) {
           this.selSubj = this.subjList.find(s => s.subjAreaId === this.selSubj.subjAreaId) || null;
           this.loadSubjTables();
@@ -322,9 +376,10 @@ export default {
     },
     saveSubj() {
       if (!this.subjForm.subjAreaNm) { this.$swal.fire({ title: '주제영역명을 넣어 주세요.', icon: 'warning' }); return; }
-      axios.post(this.$APIURL.base + 'api/area/subj/save', this.subjForm).then((res) => {
+      if (this._pickMsg('subjAprvPicker')) return;
+      axios.post(this.$APIURL.base + 'api/area/subj/save', { ...this.subjForm, aprvrPicks: this.$refs.subjAprvPicker.picksFor('AREA') }).then((res) => {
         if (!(res.data && res.data.resultCode === 200)) { this.$swal.fire({ title: '저장 실패', text: this._msg(res), icon: 'error' }); return; }
-        this.$swal.fire({ title: '저장 완료', icon: 'success', timer: 1000, showConfirmButton: false });
+        this._done(res, '저장 완료', '반영됩니다');
         this.subjDialog = false; this.loadSubj();
       }).catch((e) => this.$swal.fire({ title: '저장 실패', text: this._msg(null, e), icon: 'error' }));
     },
@@ -333,7 +388,9 @@ export default {
         if (!r.isConfirmed) return;
         axios.post(this.$APIURL.base + 'api/area/subj/delete', { subjAreaId: item.subjAreaId }).then((res) => {
           if (!(res.data && res.data.resultCode === 200)) { this.$swal.fire({ title: '삭제 실패', text: this._msg(res), icon: 'error' }); return; }
-          if (this.selSubj && this.selSubj.subjAreaId === item.subjAreaId) this.selSubj = null;
+          const c = res.data.contents ? JSON.parse(res.data.contents) : {};
+          if (!c.aprvMsg && this.selSubj && this.selSubj.subjAreaId === item.subjAreaId) this.selSubj = null;
+          this._done(res, null, '지워집니다');
           this.loadSubj();
         });
       });

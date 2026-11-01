@@ -35,7 +35,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class AprvService {
 
-	public static final List<String> REQ_TYPES = Arrays.asList("WORD", "TERMS", "CODE", "DOMAIN", "DM_CHANGE");
+	/** 108 §4.35 — AREA(업무·주제영역)·SYS(시스템)는 결재선이 켜져 있으면 최종 승인 때 대기 내용(REQ_PAYLOAD)을 반영한다 */
+	public static final List<String> REQ_TYPES = Arrays.asList("WORD", "TERMS", "CODE", "DOMAIN", "DM_CHANGE", "AREA", "SYS");
 	/** 108 §4.33 — REQ_PICK(요청자 지정): 요청할 때 요청자가 그 단계 결재자 한 명을 고른다 */
 	public static final List<String> APRVR_TYPES = Arrays.asList("USER", "ROLE", "ORG_HEAD", "ADMIN", "REQ_PICK");
 
@@ -94,6 +95,8 @@ public class AprvService {
 			case "CODE": return "코드";
 			case "DOMAIN": return "도메인";
 			case "DM_CHANGE": return "데이터 모델 변경";
+			case "AREA": return "영역";
+			case "SYS": return "시스템";
 			default: return reqTp;
 		}
 	}
@@ -116,6 +119,12 @@ public class AprvService {
 	 */
 	public Result open(String reqTp, String targetId, String targetNm, String dmId, String dictId, String reqUserId,
 			Map<String, String> picks) {
+		return open(reqTp, targetId, targetNm, dmId, dictId, reqUserId, picks, null);
+	}
+
+	/** 108 §4.35 — payload: 최종 승인 때 반영할 내용(영역·시스템 변경, JSON) */
+	public Result open(String reqTp, String targetId, String targetNm, String dmId, String dictId, String reqUserId,
+			Map<String, String> picks, String payload) {
 		try (SqlSession s = sqlSessionFactory.openSession()) {
 			Map<String, Object> line = s.selectOne("aprv.selectLine", reqTp);
 			if (line == null || !"Y".equals(line.get("useYn"))) return null;
@@ -138,6 +147,7 @@ public class AprvService {
 			doc.put("reqUserId", reqUserId);
 			doc.put("now", now);
 			doc.put("stepCnt", steps.size());
+			doc.put("payload", payload);
 			s.insert("aprv.insertDoc", doc);
 
 			List<String> firstAprvrs = null;
@@ -202,6 +212,14 @@ public class AprvService {
 			if (out.size() > 1) out.remove(reqUserId);
 		}
 		return new ArrayList<>(out);
+	}
+
+	/** 108 §4.35 — 요청 유형에 켜진 결재선(단계 1개 이상)이 있는가 — 영역·시스템 변경을 바로 반영할지 결재로 보낼지 */
+	public boolean isLineOn(String reqTp) {
+		try (SqlSession s = sqlSessionFactory.openSession()) {
+			Map<String, Object> line = s.selectOne("aprv.selectLine", reqTp);
+			return line != null && "Y".equals(line.get("useYn")) && !s.selectList("aprv.selectLineSteps", reqTp).isEmpty();
+		}
 	}
 
 	/** 108 §4.33 — 요청 유형의 켜진 결재선에서 "요청자 지정" 단계 [{stepNo, stepNm, agreeYn}]. 결재선이 꺼졌거나 없으면 빈 목록 */

@@ -74,6 +74,24 @@
               <tr v-for="f in targetFields" :key="f.key"><th style="width:130px;">{{ f.label }}</th><td>{{ doc.target[f.key] }}</td></tr>
             </tbody>
           </v-simple-table>
+          <!-- 108 §4.35 — 영역·시스템: 최종 승인 때 반영할 내용 -->
+          <template v-else-if="doc.payload">
+            <div id="aprvPayloadHead" class="mb-1" style="font-size:.8rem;">
+              <b>{{ payloadKindNm }} {{ doc.payload.action === 'DELETE' ? '삭제' : doc.payload.before ? '수정' : '추가' }}</b>
+              <span class="grey--text"> — 최종 승인 때 반영됩니다</span>
+            </div>
+            <v-simple-table id="aprvPayloadTable" dense class="mb-3">
+              <!-- 추가는 지금 값이 없어 바꿀 값만, 삭제는 지금 값만 -->
+              <thead><tr><th style="width:120px;">항목</th><th v-if="doc.payload.before">지금</th><th v-if="doc.payload.action !== 'DELETE'">{{ doc.payload.before ? '바꿀 값' : '값' }}</th></tr></thead>
+              <tbody>
+                <tr v-for="f in payloadFields" :key="f.key" :class="{ 'pl-changed': payloadChanged(f.key) }">
+                  <th>{{ f.label }}</th>
+                  <td v-if="doc.payload.before" style="white-space:normal;">{{ payloadVal(doc.payload.before, f.key) }}</td>
+                  <td v-if="doc.payload.action !== 'DELETE'" style="white-space:normal;">{{ payloadVal(doc.payload.data, f.key) }}</td>
+                </tr>
+              </tbody>
+            </v-simple-table>
+          </template>
           <div v-else-if="doc.reqTp !== 'DM_CHANGE'" class="mb-3 grey--text" style="font-size:.8rem;">대상 항목이 없습니다 (다른 경로로 삭제됨).</div>
           <v-simple-table v-if="doc.items" dense class="mb-3">
             <thead><tr><th>#</th><th>유형</th><th>대상</th><th>상태</th></tr></thead>
@@ -154,6 +172,8 @@ export default {
       reqTpItems: [
         { text: '단어', value: 'WORD' }, { text: '용어', value: 'TERMS' }, { text: '코드', value: 'CODE' },
         { text: '도메인', value: 'DOMAIN' }, { text: '데이터 모델 변경', value: 'DM_CHANGE' },
+        // 108 §4.35
+        { text: '영역', value: 'AREA' }, { text: '시스템', value: 'SYS' },
       ],
       docs: [],
       turnCnt: 0,
@@ -174,6 +194,24 @@ export default {
     };
   },
   computed: {
+    // 108 §4.35 — 영역·시스템 결재의 대기 내용
+    payloadKindNm() {
+      const p = this.doc && this.doc.payload;
+      return !p ? '' : p.kind === 'SYS' ? '시스템' : p.kind === 'SUBJ' ? '주제영역' : '업무영역';
+    },
+    payloadFields() {
+      const p = this.doc && this.doc.payload;
+      if (!p) return [];
+      if (p.kind === 'SYS') return [
+        { key: 'sysNm', label: '시스템 이름' }, { key: 'sysTpNm', label: '시스템 타입' }, { key: 'parentNm', label: '상위 시스템' },
+        { key: 'sysDesc', label: '설명' }, { key: 'dsNms', label: '데이터 소스' }, { key: 'dictNm', label: '기본 표준사전' },
+      ];
+      if (p.kind === 'SUBJ') return [
+        { key: 'subjAreaNm', label: '주제영역명' }, { key: 'parentNm', label: '상위 주제영역' }, { key: 'subjAreaDesc', label: '설명' },
+        { key: 'sortOrder', label: '정렬 순서' },
+      ];
+      return [{ key: 'bizAreaNm', label: '업무영역명' }, { key: 'bizAreaDesc', label: '설명' }, { key: 'sortOrder', label: '정렬 순서' }];
+    },
     targetFields() {
       if (!this.doc) return [];
       switch (this.doc.reqTp) {
@@ -209,6 +247,17 @@ export default {
     eventBus.$off('APRV_CHANGED', this.load);
   },
   methods: {
+    // 108 §4.35 — 대기 내용 칸 값 (배열은 쉼표로, 없으면 -)
+    payloadVal(m, key) {
+      if (!m) return '-';
+      const v = m[key];
+      if (Array.isArray(v)) return v.length ? v.join(', ') : '-';
+      return v === null || v === undefined || v === '' ? '-' : String(v);
+    },
+    payloadChanged(key) {
+      const p = this.doc && this.doc.payload;
+      return !!p && !!p.before && p.action !== 'DELETE' && this.payloadVal(p.before, key) !== this.payloadVal(p.data, key);
+    },
     applyPending() {
       if (eventBus.pendingAprvDoc) {
         const docId = eventBus.pendingAprvDoc;
@@ -300,6 +349,8 @@ export default {
 <style scoped>
 .sec-title { font-size: .85rem; font-weight: 600; color: #1A237E; margin: 4px 0; }
 .cur-step { background: #E3F2FD; }
+/* 108 §4.35 — 바뀌는 칸 */
+.pl-changed td { background: #FFF8E1; }
 .agree { color: #6A1B9A; font-size: .75rem; }
 .act-APPROVED { color: #2E7D32; font-weight: 600; }
 .act-REJECTED { color: #C62828; font-weight: 600; }

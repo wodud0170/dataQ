@@ -120,6 +120,9 @@ def cleanup():
         r = sa.post(BASE + "/api/aprv/line/save", json={"reqTp": l["reqTp"], "lineNm": l.get("lineNm"), "useYn": l.get("useYn") or "N", "steps": steps}, timeout=20).json()
         if r.get("resultCode") != 200:
             print("  [결재선 되돌리기 실패]", l["reqTp"], r)
+        # 처음에 없던 결재선(이름·단계 없음)은 되돌리며 생긴 행을 지운다
+        if not l.get("lineNm") and not l["steps"]:
+            psql(f"delete from quality.tb_aprv_line where req_tp={q(l['reqTp'])}")
     d = psql(f"select dict_id from quality.tb_std_dict where dict_nm={q(DICTNM)}")
     ids = f"select word_id from quality.tb_word where dict_id={q(d)}"
     subs = f"select submission_id from quality.tb_data_model_change_history where dm_id={q(DM)}"
@@ -207,7 +210,8 @@ def main():
     u = Ui(d)
     try:
         def _s1():
-            u.open_menu("mmGroup", "nav_aprvLine", LINE + "return !!c && c.lines.length === 5 && !!c.form;")
+            # 108 §4.35 — 요청 유형 7개(영역·시스템 추가)
+            u.open_menu("mmGroup", "nav_aprvLine", LINE + "return !!c && c.lines.length === 7 && !!c.form;")
             assert u.js(LINE + "return c.form.reqTp;") == "WORD"
             # 1단계 방식 칸을 열어 "요청자 지정" 고르기
             u.js("const r = document.querySelectorAll('#tab_aprv_line tbody tr')[0]; r.querySelectorAll('.v-select .v-input__slot')[0].click();")

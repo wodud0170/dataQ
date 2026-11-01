@@ -51,6 +51,10 @@ public class AprvController {
 	@Autowired private SqlSessionFactory sqlSessionFactory;
 	@Autowired private DataStandardController dataStandardController;
 	@Autowired private DataModelApprovalController dataModelApprovalController;
+	@Autowired private BizSubjAreaController bizSubjAreaController;
+	@Autowired private SysInfoController sysInfoController;
+	@Autowired private qualitycenter.service.ws.WebSocketService websocketService;
+	@Autowired private com.ndata.quality.service.StdDictService dictService;
 
 	private Response ok(Object data) throws JsonProcessingException {
 		Response r = new Response();
@@ -112,6 +116,8 @@ public class AprvController {
 			p.put("viewerId", sessionService.getUserId());
 			p.put("stdApprove", sessionService.hasPerm(PermCode.STD_APPROVE));
 			p.put("dmApprove", sessionService.hasPerm(PermCode.DM_APPROVE));
+			p.put("areaAdmin", sessionService.hasPerm(PermCode.AREA_ADMIN));
+			p.put("sysAdmin", sessionService.hasPerm(PermCode.SYS_ADMIN));
 		}
 		for (Map<String, Object> d : sqlSessionTemplate.<Map<String, Object>>selectList("aprv.selectOpenDocsByTargets", p)) {
 			out.put((String) d.get("targetId"), d);
@@ -130,7 +136,7 @@ public class AprvController {
 		List<Map<String, Object>> steps = (List<Map<String, Object>>) doc.get("steps");
 		boolean related = userId.equals(doc.get("reqUserId")) || sessionService.isAdmin()
 				|| steps.stream().anyMatch(s -> userId.equals(s.get("aprvrUserId")))
-				|| ("DM_CHANGE".equals(reqTp) ? sessionService.hasPerm(PermCode.DM_APPROVE) : sessionService.hasPerm(PermCode.STD_APPROVE));
+				|| sessionService.hasPerm(viewPerm(reqTp));
 		if (!related) return Mono.just(fail(403, "이 결재를 볼 권한이 없습니다."));
 		aprvService.cancelIfGone(doc);
 		doc.put("reqTpNm", AprvService.reqTpNm(reqTp));
@@ -138,12 +144,92 @@ public class AprvController {
 		Map<String, Object> key = new HashMap<>();
 		key.put("reqTp", reqTp);
 		key.put("targetId", doc.get("targetId"));
+		Object payload = doc.remove("reqPayload");
 		if ("DM_CHANGE".equals(reqTp)) {
 			doc.put("items", sqlSessionTemplate.selectList("dmChangeHistory.selectBySubmissionId", doc.get("targetId")));
+		} else if (PAYLOAD_TYPES.contains(reqTp)) {
+			doc.put("payload", payloadView(reqTp, (String) payload));   // 108 §4.35
 		} else {
 			doc.put("target", sqlSessionTemplate.selectOne("aprv.selectStdTarget", key));
 		}
 		return Mono.just(ok(doc));
+	}
+
+	// ===== 108 §4.35 — 영역·시스템 결재 (대기 내용을 최종 승인 때 반영) =====
+
+	private static final List<String> PAYLOAD_TYPES = java.util.Arrays.asList("AREA", "SYS");
+
+	/** 문서 상세를 볼 수 있는 유형별 권한 (요청자·결재자·관리자 말고) */
+	private static PermCode viewPerm(String reqTp) {
+		switch (reqTp) {
+			case "DM_CHANGE": return PermCode.DM_APPROVE;
+			case "AREA": return PermCode.AREA_ADMIN;
+			case "SYS": return PermCode.SYS_ADMIN;
+			default: return PermCode.STD_APPROVE;
+		}
+	}
+
+	/** 결재함 상세용 대기 내용 — 상위 영역·상위 시스템은 이름(parentNm)도 */
+	@SuppressWarnings("unchecked")
+	private Map<String, Object> payloadView(String reqTp, String json) throws JsonProcessingException {
+		Map<String, Object> p = new ObjectMapper().readValue(json, Map.class);
+		Map<String, String> names = new HashMap<>();
+		if ("SYS".equals(reqTp)) {
+			for (com.ndata.quality.model.mgmt.SysInfoVo v : sqlSessionTemplate.<com.ndata.quality.model.mgmt.SysInfoVo>selectList("sysinfo.selectSysInfoList")) names.put(v.getSysCd(), v.getSysNm());
+		} else {
+			boolean subj = "SUBJ".equals(p.get("kind"));
+			for (Map<String, Object> a : sqlSessionTemplate.<Map<String, Object>>selectList(subj ? "area.selectSubjAreas" : "area.selectBizAreas"))
+				names.put((String) a.get(subj ? "subjAreaId" : "bizAreaId"), (String) a.get(subj ? "subjAreaNm" : "bizAreaNm"));
+		}
+		String parentKey = "SYS".equals(reqTp) ? "parentSysCd" : "parentId";
+		Map<String, Object> dsNm = new HashMap<>(), dictNm = new HashMap<>();
+		if ("SYS".equals(reqTp)) {
+			for (com.ndata.quality.model.mgmt.DataSourceExtVo d : sqlSessionTemplate.<com.ndata.quality.model.mgmt.DataSourceExtVo>selectList("sysinfo.selectDataSourceList")) dsNm.put(d.getId(), d.getDsn());
+			for (Map<String, Object> d : dictService.list()) dictNm.put((String) d.get("dictId"), d.get("dictNm"));
+		}
+		for (String k : new String[] { "data", "before" }) {
+			Map<String, Object> m = (Map<String, Object>) p.get(k);
+			if (m == null) continue;
+			if (m.get(parentKey) != null) m.put("parentNm", names.get(m.get(parentKey)));
+			if ("SYS".equals(reqTp)) {
+				// 시스템 — 타입·기본 표준사전·데이터 소스는 이름으로
+				m.put("sysTpNm", Integer.valueOf(0).equals(m.get("sysTp")) ? "시스템 그룹" : "시스템");
+				if (m.get("dictId") != null) m.put("dictNm", dictNm.getOrDefault(m.get("dictId"), m.get("dictId")));
+				List<Object> ds = new ArrayList<>();
+				if (m.get("sysDsLst") instanceof List) for (Object id : (List<Object>) m.get("sysDsLst")) ds.add(dsNm.getOrDefault(id, id));
+				m.put("dsNms", ds);
+			}
+		}
+		return p;
+	}
+
+	/**
+	 * 영역·시스템 결재 — 한 트랜잭션에서 단계를 진행하고, 최종 승인이면 대기 내용을 반영한다.
+	 * 반영 전 검사(요청 때와 같음)가 실패하면 결재도 처리하지 않는다(롤백 — 결재자는 반려할 수 있다)
+	 */
+	@SuppressWarnings("unchecked")
+	private Response actPayload(Map<String, Object> doc, boolean approve, String comment) {
+		String reqTp = (String) doc.get("reqTp");
+		try (SqlSession s = sqlSessionFactory.openSession()) {
+			try {
+				AprvService.Result r = aprvService.act(s, (String) doc.get("docId"), sessionService.getUserId(), approve, comment);
+				if (r.done && r.approved) {
+					Map<String, Object> payload = new ObjectMapper().readValue((String) doc.get("reqPayload"), Map.class);
+					if ("AREA".equals(reqTp)) bizSubjAreaController.applyPayload(s, payload);
+					else sysInfoController.applyPayload(s, payload);
+				}
+				s.commit();
+				websocketService.sendUserNotis(r.notis);
+				Response res = new Response();
+				res.setResultInfo(RestResult.CODE_200.getCode(), r.message);
+				return res;
+			} catch (IllegalArgumentException | IllegalStateException e) {
+				s.rollback();
+				return fail(500, e.getMessage());
+			}
+		} catch (Exception e) {
+			return fail(500, e.getMessage());
+		}
 	}
 
 	/** 결재 — {docId, approve, comment}. 대상별 기존 승인 API 로 보낸다 */
@@ -156,6 +242,7 @@ public class AprvController {
 		if (doc == null) return Mono.just(fail(404, "결재 문서가 없습니다."));
 		if (!approve && (comment == null || comment.trim().isEmpty())) return Mono.just(fail(500, "반려 사유는 필수입니다."));
 		String reqTp = (String) doc.get("reqTp");
+		if (PAYLOAD_TYPES.contains(reqTp)) return Mono.just(actPayload(doc, approve, comment));
 		if ("DM_CHANGE".equals(reqTp)) {
 			List<StdDataModelChangeHistoryVo> items = sqlSessionTemplate.selectList("dmChangeHistory.selectBySubmissionId", doc.get("targetId"));
 			List<Object> seqs = new ArrayList<>();

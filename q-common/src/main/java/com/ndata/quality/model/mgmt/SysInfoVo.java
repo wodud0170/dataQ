@@ -1,5 +1,7 @@
 package com.ndata.quality.model.mgmt;
 
+import java.util.Map;
+
 import lombok.Data;
 
 @Data
@@ -20,4 +22,6 @@ public class SysInfoVo {
     private String dictId;
     /** 화면 표시용 사전명 (조회 전용) */
     private String dictNm;
+    /** 108 §4.35 — 시스템 결재선의 "요청자 지정" 단계 결재자 {stepNo: userId} (요청 본문만, 매퍼에 안 씀) */
+    private Map<String, String> aprvrPicks;
 }
