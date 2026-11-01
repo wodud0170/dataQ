@@ -13,7 +13,7 @@
                         :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                         :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
                         :navMyPageGroup="navMyPageGroup"
-                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup" :navGovMetaGroup="navGovMetaGroup"
+                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup" :navGovMetaGroup="navGovMetaGroup" :navAnalysisGroup="navAnalysisGroup"
                         @addTabItem="addTabItem" @addActiveContent="addActiveContent" @navAllGroupClose="navAllGroupClose"
                         @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                         @addNavSubGroupData="addNavSubGroupData" @resetSplit="resetSplit" />
@@ -35,7 +35,7 @@
                 :navDmGroup="navDmGroup" :navDsStatusGroup="navDsStatusGroup" :navDiagGroup="navDiagGroup"
                 :navStructDiagGroup="navStructDiagGroup" :navAutoStdGroup="navAutoStdGroup"
                         :navMyPageGroup="navMyPageGroup"
-                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup" :navGovMetaGroup="navGovMetaGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
+                        :navCommunityGroup="navCommunityGroup" :navScheduleGroup="navScheduleGroup" :navQualGroup="navQualGroup" :navGovMetaGroup="navGovMetaGroup" :navAnalysisGroup="navAnalysisGroup" @addTabItem="addTabItem" @addActiveContent="addActiveContent"
                 @navAllGroupClose="navAllGroupClose" @navSubGropClose="navSubGropClose" @addNavGroupData="addNavGroupData"
                 @addNavSubGroupData="addNavSubGroupData" />
             <router-view name="content" :isMobile="isMobile" :tab="tab" :drawer="drawer" :activeContent="activeContent"
@@ -76,6 +76,7 @@ export default {
         navCommunityGroup: null,
         navScheduleGroup: null,
         navGovMetaGroup: null,
+        navAnalysisGroup: null,   // 108 §4.37 — 분석
         navQualGroup: null,
         navMyPageGroup: null,
     }),
@@ -201,6 +202,9 @@ export default {
                 case "govMetaItems":
                 case "govMetaSend":
                     this._activateGroup("govMetaGroup");
+                    break;
+                case "analysisReport":
+                    this._activateGroup("analysisGroup");
                     break;
                 case "dataDiag":
                 case "dataDiagResult":
@@ -393,6 +397,8 @@ export default {
 
                 } else if (tabName === 'govMetaConf' || tabName === 'govMetaSys' || tabName === 'govMetaItems' || tabName === 'govMetaSend') {
                     this._activateGroup("govMetaGroup");
+                } else if (tabName === 'analysisReport') {
+                    this._activateGroup("analysisGroup");
                 } else if (tabName === 'dataDiag' || tabName === 'dataDiagResult') {
                     this._activateGroup("diagGroup");
                 } else if (tabName === 'structDiag' || tabName === 'structDiagResult') {
@@ -439,6 +445,7 @@ export default {
             this.navCommunityGroup = null;
             this.navScheduleGroup = null;
             this.navGovMetaGroup = null;
+            this.navAnalysisGroup = null;
             this.navQualGroup = null;
             this.navSubGropClose();
         },
@@ -566,6 +573,15 @@ export default {
                     }
                     break;
 
+                case "analysisGroup":
+
+                    if (this.navAnalysisGroup === null) {
+                        this.navAnalysisGroup = false;
+                    } else {
+                        this.navAnalysisGroup = !this.navAnalysisGroup;
+                    }
+                    break;
+
                 case "qualGroup":
 
                     if (this.navQualGroup === null) {
@@ -623,6 +639,9 @@ export default {
                 return;
             } else if (tabitem === 'govMetaConf' || tabitem === 'govMetaSys' || tabitem === 'govMetaItems' || tabitem === 'govMetaSend') {
                 this.navGovMetaGroup = true;
+                return;
+            } else if (tabitem === 'analysisReport') {
+                this.navAnalysisGroup = true;
                 return;
             } else if (tabitem === 'dataDiag' || tabitem === 'dataDiagResult') {
                 this.navDiagGroup = true;

@@ -402,6 +402,13 @@
                     <aprvBox :key="aprvBoxKey" :isMobile="isMobile" />
                 </keep-alive>
             </div>
+            <!-- 108 §4.37 (92번) — 분석 > 종합 분석 보고서 -->
+            <div v-if="this.activeContent === 'analysisReport'" id="tab_analysisReport" class="tab_contents"
+                :class="{ active: this.activeContent === 'analysisReport' }">
+                <keep-alive>
+                    <analysisReport :key="analysisReportKey" :isMobile="isMobile" />
+                </keep-alive>
+            </div>
             <div v-if="this.activeContent === 'aprvLine'" id="tab_aprv_line" class="tab_contents"
                 :class="{ active: this.activeContent === 'aprvLine' }">
                 <keep-alive>
@@ -559,6 +566,7 @@ import DSGovMetaSys from "./../../components/DSGovMetaSys.vue"
 import DSGovMetaItems from "./../../components/DSGovMetaItems.vue"
 import DSGovMetaSend from "./../../components/DSGovMetaSend.vue"
 import MMAprvLine from "./../../components/MMAprvLine.vue"
+import AnalysisReport from "./../../components/AnalysisReport.vue"
 import MMOrg from "./../../components/MMOrg.vue"
 import ANDscurrent from "./../../components/ANDscurrent.vue"
 import ANDqcurrent from "./../../components/ANDqcurrent.vue"
@@ -654,6 +662,7 @@ export default {
             udpDefKey: this.createUUID(),
             aprvBoxKey: this.createUUID(),
             aprvLineKey: this.createUUID(),
+            analysisReportKey: this.createUUID(),
             orgKey: this.createUUID(),
             scurrentKey: this.createUUID(),
             qcurrentKey: this.createUUID(),
@@ -729,6 +738,7 @@ export default {
         "udpDef": MMUdpDef,
         "aprvBox": DSAprvBox,
         "aprvLine": MMAprvLine,
+        "analysisReport": AnalysisReport,
         "org": MMOrg,
         "scurrent": ANDscurrent,
         "qcurrent": ANDqcurrent,
@@ -933,6 +943,9 @@ export default {
                     break;
                 case "aprvLine":
                     this.aprvLineKey = this.createUUID();
+                    break;
+                case "analysisReport":
+                    this.analysisReportKey = this.createUUID();
                     break;
                 case "org":
                     this.orgKey = this.createUUID();

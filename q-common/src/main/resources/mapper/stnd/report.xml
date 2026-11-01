@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 108 §4.37 (92번) — 종합 분석 보고서. 모델 하나의 테이블·컬럼·진단·변경 이력. 가시성(남의 미승인 행 빼기)·소유자 필터·점검은 화면 쪽(ReportService)이 한다 -->
+<mapper namespace="report">
+
+	<select id="selectObjs" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT COALESCE(O.OBJ_OWNER, '') as "objOwner", O.OBJ_NM as "objNm", O.OBJ_NM_KR as "objNmKr",
+		       O.OBJ_COMMENT as "objComment", O.TABLESPACE_NM as "tablespaceNm",
+		       (SELECT B.BIZ_AREA_NM FROM TB_BIZ_AREA B WHERE B.BIZ_AREA_ID = O.BIZ_AREA_ID AND COALESCE(B.USE_YN, 'Y') = 'Y') as "bizAreaNm",
+		       (SELECT S.SUBJ_AREA_NM FROM TB_SUBJ_AREA S WHERE S.SUBJ_AREA_ID = O.SUBJ_AREA_ID AND COALESCE(S.USE_YN, 'Y') = 'Y') as "subjAreaNm",
+		       O.APRV_STATUS as "aprvStatus", O.REQUESTER_USER_ID as "requesterUserId"
+		  FROM TB_DATA_MODEL_OBJ O
+		 WHERE O.DM_ID = #{value} AND COALESCE(O.USE_YN, 'Y') = 'Y'
+		 ORDER BY 1, 2
+	</select>
+
+	<select id="selectAttrs" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT COALESCE(A.OBJ_OWNER, '') as "objOwner", A.OBJ_NM as "objNm", A.ATTR_ORD as "attrOrd", A.ATTR_NM as "attrNm",
+		       A.ATTR_NM_KR as "attrNmKr", A.DATA_TYPE as "dataType", A.DATA_LEN as "dataLen", A.DATA_DECIMAL_LEN as "dataDecimalLen",
+		       A.PK_YN as "pkYn", A.FK_YN as "fkYn", A.NULLABLE_YN as "nullableYn", A.DEFAULT_VAL as "defaultVal", A.ATTR_COMMENT as "attrComment",
+		       A.TERMS_STND_YN as "termsStndYn", A.DOMAIN_STND_YN as "domainStndYn", A.WORD_LST as "wordLst",
+		       A.FK_PARENT_OBJ_OWNER as "fkParentObjOwner", A.FK_PARENT_OBJ_NM as "fkParentObjNm", A.FK_PARENT_ATTR_NM as "fkParentAttrNm",
+		       A.APRV_STATUS as "aprvStatus", A.REQUESTER_USER_ID as "requesterUserId"
+		  FROM TB_DATA_MODEL_ATTR A
+		  JOIN TB_DATA_MODEL_OBJ O ON O.DM_ID = A.DM_ID AND COALESCE(O.OBJ_OWNER, '') = COALESCE(A.OBJ_OWNER, '') AND O.OBJ_NM = A.OBJ_NM
+		                          AND COALESCE(O.USE_YN, 'Y') = 'Y'
+		 WHERE A.DM_ID = #{value} AND COALESCE(A.USE_YN, 'Y') = 'Y'
+		 ORDER BY 1, 2, 3
+	</select>
+
+	<!-- 인덱스 — 화면 조회(datamodel.selectDataModelIndexListByDmId)와 같은 행 + 가시성 칸 -->
+	<select id="selectIndexes" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT OBJ_OWNER as "objOwner", TABLE_NM as "tableNm", INDEX_NM as "indexNm", INDEX_TYPE as "indexType", UNIQUENESS as "uniqueness",
+		       COLUMN_NM as "columnNm", COLUMN_POS as "columnPos", SORT_ORDER as "sortOrder", TABLESPACE_NM as "tablespaceNm",
+		       APRV_STATUS as "aprvStatus", REQUESTER_USER_ID as "requesterUserId"
+		  FROM TB_DATA_MODEL_INDEX
+		 WHERE DM_ID = #{value} AND USE_YN = 'Y'
+		 ORDER BY OBJ_OWNER, TABLE_NM, INDEX_NM, COLUMN_POS
+	</select>
+
+	<!-- 마지막으로 끝난 표준 진단 -->
+	<select id="selectLatestDiagJob" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT J.DIAG_JOB_ID as "diagJobId", J.TOTAL_CNT as "totalCnt", J.RESULT_CNT as "resultCnt",
+		       to_char(to_timestamp(J.END_DT, 'YYYYMMDDHH24MISS'), 'YYYY-MM-DD HH24:MI:SS') as "endDt", J.CRET_USER_ID as "cretUserId",
+		       (SELECT D.DICT_NM FROM TB_STD_DICT D WHERE D.DICT_ID = J.DICT_ID) as "dictNm"
+		  FROM TB_DIAG_JOB J
+		 WHERE J.DM_ID = #{value} AND J.STATUS = 'DONE'
+		 ORDER BY J.END_DT DESC NULLS LAST, J.CRET_DT DESC
+		 LIMIT 1
+	</select>
+
+	<select id="selectDiagResults" parameterType="String" resultType="java.util.LinkedHashMap">
+		SELECT COALESCE(R.OBJ_OWNER, '') as "objOwner", R.OBJ_NM as "objNm", R.ATTR_NM as "attrNm", R.ATTR_NM_KR as "attrNmKr",
+		       R.DIAG_TYPE as "diagType", R.DIAG_DETAIL as "diagDetail", R.STD_VALUE as "stdValue", R.ACTUAL_VALUE as "actualValue"
+		  FROM TB_DIAG_RESULT R
+		 WHERE R.DIAG_JOB_ID = #{value}
+		 ORDER BY 1, 2, 3, 5
+	</select>
+
+	<!-- 변경 이력 — fromDt(yyyyMMddHHmmss) 이후, userId 를 주면 그 사용자 것만 -->
+	<select id="selectChanges" parameterType="java.util.Map" resultType="java.util.LinkedHashMap">
+		SELECT H.CHANGE_SEQ as "changeSeq", H.CHANGE_DT as "changeDt", H.CHANGE_USER_ID as "changeUserId",
+		       (SELECT U.NM FROM TB_USER U WHERE U.USER_ID = H.CHANGE_USER_ID) as "changeUserNm",
+		       H.CHANGE_TYPE as "changeType", COALESCE(H.OBJ_OWNER, '') as "objOwner", H.OBJ_NM as "objNm", H.ATTR_NM as "attrNm",
+		       H.CONSTRAINT_NM as "constraintNm", H.INDEX_NM as "indexNm", H.APRV_STATUS as "aprvStatus", H.APRV_USER_ID as "aprvUserId",
+		       H.APRV_DT as "aprvDt", H.SUBMIT_DT as "submitDt"
+		  FROM TB_DATA_MODEL_CHANGE_HISTORY H
+		 WHERE H.DM_ID = #{dmId}
+		<if test="fromDt != null"> AND H.CHANGE_DT &gt;= #{fromDt} </if>
+		<if test="pendingOnly"> AND H.APRV_STATUS IN ('DRAFT', 'SUBMITTED') </if>
+		<if test="userId != null"> AND H.CHANGE_USER_ID = #{userId} </if>
+		 ORDER BY H.CHANGE_DT DESC, H.CHANGE_SEQ DESC
+	</select>
+
+	<!-- 사전(상위 사전 포함)의 승인 단어 영문약어 — 미등재 단어(C3) -->
+	<select id="selectWordAbrvs" parameterType="java.util.Map" resultType="String">
+		SELECT DISTINCT UPPER(W.WORD_ENG_ABRV_NM)
+		  FROM TB_WORD W
+		 WHERE W.APRV_YN = 'Y' AND W.WORD_ENG_ABRV_NM IS NOT NULL
+		   AND W.DICT_ID IN <foreach collection="dictIds" item="d" open="(" separator="," close=")">#{d}</foreach>
+	</select>
+</mapper>

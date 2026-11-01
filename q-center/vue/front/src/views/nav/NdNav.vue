@@ -481,6 +481,24 @@
                     </v-list-item>
                 </v-list-group>
 
+                <!-- 108 §4.37 (92번) — 분석 -->
+                <v-list-group link v-cloak :value="navAnalysisGroup" prepend-icon="mdi-file-chart"
+                    active-class="ndColor--text" id="analysisGroup" title="분석"
+                    v-on:click.stop="addNavGroupData('analysisGroup');">
+                    <template v-slot:activator>
+                        <v-list-item-content>
+                            <v-list-item-title :ripple="false">분석</v-list-item-title>
+                        </v-list-item-content>
+                    </template>
+
+                    <v-list-item link id="nav_analysisReport" href="#tab_analysisReport" active-class="ndColor--text"
+                        title="종합 분석 보고서"
+                        v-on:click.stop="addTabItem('종합 분석 보고서', 'analysisReport');">
+                        <v-list-item-icon><v-icon></v-icon></v-list-item-icon>
+                        <v-list-item-title>종합 분석 보고서</v-list-item-title>
+                    </v-list-item>
+                </v-list-group>
+
                 <!-- 마이페이지 -->
                 <v-list-group link v-cloak :value="navMyPageGroup" prepend-icon="mdi-account-circle"
                     active-class="ndColor--text" id="myPageGroup" title="마이페이지"
@@ -680,6 +698,7 @@ export default {
         'navScheduleGroup',
         'navQualGroup',
         'navGovMetaGroup',
+        'navAnalysisGroup',
         'navMyPageGroup'],
     data: () => ({
         selectedList: null,
